@@ -6,7 +6,7 @@ on:
       duration_hours:
         description: 'How long to run (max 5.5 hours)'
         required: false
-        default: '5.5'
+        default: '5'
         type: string
       auto_restart:
         description: 'Auto-restart before timeout'
@@ -94,15 +94,23 @@ jobs:
 
       - name: Health monitoring loop
         env:
-          DURATION_HOURS: ${{ inputs.duration_hours || '5.5' }}
+          DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
           AUTO_RESTART: ${{ inputs.auto_restart }}
+          QWEN_API_URL: ${{ inputs.qwen_api_url || secrets.QWEN_API_URL }}
+          PHI_API_URL: ${{ inputs.phi_api_url || secrets.PHI_API_URL }}
+          LLAMA_API_URL: ${{ inputs.llama_api_url || secrets.LLAMA_API_URL }}
         run: |
-          END_TIME=$(date -d "+${DURATION_HOURS} hours" +%s)
-          RESTART_TIME=$(date -d "+${DURATION_HOURS} hours -5 minutes" +%s)
+          # Convert hours to seconds (handle integer hours)
+          DURATION_SECONDS=$((DURATION_HOURS * 3600))
+          RESTART_BUFFER=300  # 5 minutes before end
+
+          END_TIME=$(($(date +%s) + DURATION_SECONDS))
+          RESTART_TIME=$((END_TIME - RESTART_BUFFER))
 
           echo "=== Chat Interface Server ==="
           echo "Server running on port 8080"
-          echo "Will run until: $(date -d "@$END_TIME")"
+          echo "Duration: ${DURATION_HOURS} hours"
+          echo "Will run until: $(date -d @$END_TIME)"
           echo "=============================="
           echo ""
           echo "Model endpoints configured:"
@@ -134,14 +142,10 @@ jobs:
             # Health check
             if curl -s http://localhost:8080/health | grep -q "healthy"; then
               echo "[$(date)] Chat interface healthy"
-
-              # Check connected models
-              MODELS_STATUS=$(curl -s http://localhost:8080/api/models)
-              echo "  Models: $MODELS_STATUS"
             else
               echo "[$(date)] Chat interface unhealthy, attempting restart..."
-              cd app/chat-interface
               pkill -f chat_server.py || true
+              cd app/chat-interface
               python chat_server.py &
               sleep 10
             fi
