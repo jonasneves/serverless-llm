@@ -372,24 +372,24 @@ Focus on contributing what you do best. Keep your response focused and additive.
             completed_turns = []
             evaluations = []
 
+            # Get all available local models
+            all_models = list(self.model_endpoints.keys())
+
             for turn_num in range(analysis.expected_turns):
                 # Determine which models participate this turn
                 if turn_num == 0:
                     # Turn 1: Only lead model
                     participating_models = [analysis.discussion_lead]
                 else:
-                    # Turn 2+: Supporting models (ranked by expertise, exclude lead)
+                    # Turn 2+: All other models participate (ranked by expertise)
                     ranked = rank_models_for_query(analysis.domain_weights)
                     participating_models = [
                         model_id for model_id, score in ranked
-                        if model_id != analysis.discussion_lead and score >= 0.5
+                        if model_id != analysis.discussion_lead and model_id in all_models
                     ]
 
-                    # Limit to top 2 supporting models per turn
-                    participating_models = participating_models[:2]
-
                     if not participating_models:
-                        # No qualified supporting models
+                        # No other models available
                         break
 
                 # Execute turn for each participating model
