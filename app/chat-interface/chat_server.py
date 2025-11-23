@@ -75,6 +75,7 @@ CHAT_HTML = """
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#1e3a5f">
   <title>LLM Arena</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
       --bg-primary: #ffffff;
@@ -331,38 +332,46 @@ CHAT_HTML = """
       border-color: #21262d;
     }
 
-    /* Markdown styles */
+    /* Markdown styles for marked.js output */
+    .message-content p {
+      margin: 0 0 0.75em 0;
+    }
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+    .message-content h1,
     .message-content h2 {
-      font-size: 1.2em;
+      font-size: 1.15em;
       font-weight: 600;
-      margin: 1.25em 0 0.5em 0;
+      margin: 1em 0 0.5em 0;
       color: var(--text-primary);
-      padding-bottom: 0.3em;
+      padding-bottom: 0.25em;
       border-bottom: 1px solid var(--border-color);
     }
     .message-content h3 {
-      font-size: 1.1em;
+      font-size: 1.05em;
       font-weight: 600;
-      margin: 1em 0 0.4em 0;
+      margin: 0.9em 0 0.4em 0;
       color: var(--text-primary);
     }
-    .message-content h4 {
-      font-size: 1em;
+    .message-content h4,
+    .message-content h5,
+    .message-content h6 {
+      font-size: 0.95em;
       font-weight: 600;
-      margin: 0.8em 0 0.3em 0;
+      margin: 0.75em 0 0.3em 0;
       color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      font-size: 0.85em;
     }
+    .message-content h1:first-child,
     .message-content h2:first-child,
     .message-content h3:first-child,
     .message-content h4:first-child {
       margin-top: 0;
     }
-    .message-content ul, .message-content ol {
-      margin: 0.6em 0;
-      padding-left: 1.25em;
+    .message-content ul,
+    .message-content ol {
+      margin: 0.5em 0;
+      padding-left: 1.5em;
     }
     .message-content ul {
       list-style-type: disc;
@@ -371,9 +380,11 @@ CHAT_HTML = """
       list-style-type: decimal;
     }
     .message-content li {
-      margin: 0.35em 0;
-      padding-left: 0.25em;
+      margin: 0.25em 0;
       line-height: 1.5;
+    }
+    .message-content li > p {
+      margin: 0;
     }
     .message-content li::marker {
       color: var(--accent-color);
@@ -384,7 +395,6 @@ CHAT_HTML = """
     }
     .message-content em {
       font-style: italic;
-      color: var(--text-secondary);
     }
     .message-content a {
       color: var(--accent-color);
@@ -402,6 +412,33 @@ CHAT_HTML = """
       background: var(--bg-secondary);
       border-radius: 0 6px 6px 0;
       color: var(--text-secondary);
+    }
+    .message-content blockquote p {
+      margin: 0;
+    }
+    .message-content hr {
+      border: none;
+      border-top: 1px solid var(--border-color);
+      margin: 1em 0;
+    }
+    .message-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0.75em 0;
+      font-size: 0.9em;
+    }
+    .message-content th,
+    .message-content td {
+      border: 1px solid var(--border-color);
+      padding: 0.5em 0.75em;
+      text-align: left;
+    }
+    .message-content th {
+      background: var(--bg-secondary);
+      font-weight: 600;
+    }
+    .message-content tr:nth-child(even) {
+      background: var(--bg-secondary);
     }
 
     .message-footer {
@@ -1318,55 +1355,39 @@ CHAT_HTML = """
       chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
+    // Configure marked.js
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false
+    });
+
+    // Custom renderer for better styling
+    const renderer = new marked.Renderer();
+
+    // Make links open in new tab
+    renderer.link = function(href, title, text) {
+      const titleAttr = title ? ` title="${title}"` : '';
+      return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+    };
+
+    marked.use({ renderer });
+
     function formatContent(content) {
       if (!content) return '';
 
-      // Escape HTML to prevent XSS
-      let text = content
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-      // Code blocks with language (```language\\ncode```)
-      text = text.replace(/```(\\w*)\\n([\\s\\S]*?)```/g, (match, lang, code) => {
-        return `<pre><code class="language-${lang || 'plaintext'}">${code.trim()}</code></pre>`;
-      });
-
-      // Code blocks without language
-      text = text.replace(/```([\\s\\S]*?)```/g, '<pre><code>$1</code></pre>');
-
-      // Inline code
-      text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-      // Bold
-      text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
-
-      // Italic
-      text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
-
-      // Headers (must be at start of line)
-      text = text.replace(/^### (.+)$/gm, '<h4>$1</h4>');
-      text = text.replace(/^## (.+)$/gm, '<h3>$1</h3>');
-      text = text.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-
-      // Unordered lists
-      text = text.replace(/^[\\-\\*] (.+)$/gm, '<li>$1</li>');
-      text = text.replace(/(<li>.*<\\/li>\\n?)+/g, '<ul>$&</ul>');
-
-      // Ordered lists
-      text = text.replace(/^\\d+\\. (.+)$/gm, '<li>$1</li>');
-
-      // Links [text](url)
-      text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-
-      // Line breaks (but not inside pre blocks)
-      text = text.replace(/(?<!<\\/pre>)\\n(?!<pre)/g, '<br>');
-
-      // Clean up extra br tags around block elements
-      text = text.replace(/<br>\\s*(<\\/?(?:pre|ul|ol|li|h[2-4]))/g, '$1');
-      text = text.replace(/(<\\/(?:pre|ul|ol|li|h[2-4])>)\\s*<br>/g, '$1');
-
-      return text;
+      try {
+        // Use marked.js for proper markdown parsing
+        return marked.parse(content);
+      } catch (e) {
+        // Fallback: escape HTML and preserve line breaks
+        return content
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\\n/g, '<br>');
+      }
     }
 
     // Create streaming response container
