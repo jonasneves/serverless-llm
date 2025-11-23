@@ -4,9 +4,11 @@ Web-based chat UI for interacting with different LLM backends
 """
 
 import os
+import re
 import time
 import asyncio
 import json
+import logging
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +16,47 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional, AsyncGenerator
 import uvicorn
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
+    """
+    Sanitize error messages to hide raw HTML/technical details from users.
+    Logs full details server-side.
+    """
+    # Log full error for debugging
+    logger.error(f"Model error from {endpoint}: {error_text[:500]}...")
+
+    # Check for common error patterns and return user-friendly messages
+    error_lower = error_text.lower()
+
+    if "cloudflare" in error_lower or "<!doctype" in error_lower or "<html" in error_lower:
+        return "Service temporarily unavailable. The model server may be down or experiencing issues."
+
+    if "timeout" in error_lower:
+        return "Request timed out. Please try again."
+
+    if "connection refused" in error_lower or "connect error" in error_lower:
+        return "Cannot connect to model server. Please try again later."
+
+    if "502" in error_text or "503" in error_text or "504" in error_text:
+        return "Model server is temporarily unavailable."
+
+    if "520" in error_text or "521" in error_text or "522" in error_text:
+        return "Service temporarily unavailable (CDN error)."
+
+    # Strip any HTML tags as a fallback
+    clean_text = re.sub(r'<[^>]+>', '', error_text)
+    clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+
+    # Truncate if still too long
+    if len(clean_text) > 200:
+        return clean_text[:200] + "..."
+
+    return clean_text if clean_text else "An unexpected error occurred."
 
 app = FastAPI(
     title="LLM Chat Interface",
@@ -1719,9 +1762,10 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
         elapsed = time.time() - start_time
 
         if response.status_code != 200:
+            error_msg = sanitize_error_message(response.text, endpoint)
             return {
                 "model": display_name,
-                "content": f"Error: {response.text}",
+                "content": error_msg,
                 "error": True,
                 "time": elapsed
             }
@@ -1736,23 +1780,26 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
         }
 
     except httpx.TimeoutException:
+        logger.error(f"Timeout querying {endpoint}")
         return {
             "model": display_name,
-            "content": "Request timeout",
+            "content": "Request timed out. Please try again.",
             "error": True,
             "time": time.time() - start_time
         }
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error to {endpoint}: {e}")
         return {
             "model": display_name,
-            "content": f"Cannot connect to {endpoint}",
+            "content": "Cannot connect to model server. Please try again later.",
             "error": True,
             "time": time.time() - start_time
         }
     except Exception as e:
+        logger.exception(f"Unexpected error querying {endpoint}")
         return {
             "model": display_name,
-            "content": str(e),
+            "content": "An unexpected error occurred. Please try again.",
             "error": True,
             "time": time.time() - start_time
         }
@@ -1795,7 +1842,8 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
             ) as response:
                 if response.status_code != 200:
                     error_text = await response.aread()
-                    yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': f'Error: {error_text.decode()}'})}\n\n"
+                    error_msg = sanitize_error_message(error_text.decode(), endpoint)
+                    yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': error_msg})}\n\n"
                     return
 
                 # Send initial event
@@ -1823,11 +1871,14 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                 yield f"data: {json.dumps({'model': display_name, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
 
     except httpx.TimeoutException:
-        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'Request timeout'})}\n\n"
-    except httpx.ConnectError:
-        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': f'Cannot connect to {endpoint}'})}\n\n"
+        logger.error(f"Timeout connecting to {endpoint}")
+        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'Request timed out. Please try again.'})}\n\n"
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error to {endpoint}: {e}")
+        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'Cannot connect to model server. Please try again later.'})}\n\n"
     except Exception as e:
-        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': str(e)})}\n\n"
+        logger.exception(f"Unexpected error streaming from {endpoint}")
+        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'An unexpected error occurred. Please try again.'})}\n\n"
 
 
 async def stream_multiple_models(models: list, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
