@@ -29,9 +29,9 @@ app.add_middleware(
 
 # Model endpoints configuration
 MODEL_ENDPOINTS = {
-    "qwen2.5-14b": os.getenv("QWEN_API_URL", "http://localhost:8001"),
-    "phi-3-medium": os.getenv("PHI_API_URL", "http://localhost:8002"),
-    "llama-3.2-8b": os.getenv("LLAMA_API_URL", "http://localhost:8003"),
+    "qwen2.5-7b": os.getenv("QWEN_API_URL", "http://localhost:8001"),
+    "phi-3-mini": os.getenv("PHI_API_URL", "http://localhost:8002"),
+    "llama-3.2-3b": os.getenv("LLAMA_API_URL", "http://localhost:8003"),
 }
 
 class ChatMessage(BaseModel):
@@ -222,9 +222,9 @@ CHAT_HTML = """
             <div class="control-group">
                 <label for="model-select">Model:</label>
                 <select id="model-select">
-                    <option value="qwen2.5-14b">Qwen 2.5-14B</option>
-                    <option value="phi-3-medium">Phi-3 Medium</option>
-                    <option value="llama-3.2-8b">Llama 3.2-8B</option>
+                    <option value="qwen2.5-7b">Qwen 2.5-7B</option>
+                    <option value="phi-3-mini">Phi-3 Mini</option>
+                    <option value="llama-3.2-3b">Llama 3.2-3B</option>
                 </select>
                 <span id="model-status" class="status-indicator status-checking"></span>
             </div>

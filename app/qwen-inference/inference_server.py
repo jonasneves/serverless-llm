@@ -49,8 +49,8 @@ class GenerateResponse(BaseModel):
 
 def download_model():
     """Download GGUF model from Hugging Face"""
-    repo_id = os.getenv("MODEL_REPO", "Qwen/Qwen2.5-7B-Instruct-GGUF")
-    filename = os.getenv("MODEL_FILE", "qwen2.5-7b-instruct-q4_k_m.gguf")
+    repo_id = os.getenv("MODEL_REPO", "bartowski/Qwen2.5-7B-Instruct-GGUF")
+    filename = os.getenv("MODEL_FILE", "Qwen2.5-7B-Instruct-Q4_K_M.gguf")
 
     print(f"Downloading model: {repo_id}/{filename}")
     model_path = hf_hub_download(
