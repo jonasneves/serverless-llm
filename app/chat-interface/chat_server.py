@@ -111,15 +111,29 @@ CHAT_HTML = """
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html {
+      height: 100%;
+      height: -webkit-fill-available;
+    }
+
     body {
       font-family: var(--font-sans);
       background-color: var(--bg-primary);
       color: var(--text-primary);
       height: 100vh;
+      height: calc(var(--vh, 1vh) * 100);
+      height: 100dvh;
+      min-height: -webkit-fill-available;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       transition: background-color 0.3s, color 0.3s;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
     }
 
     header {
@@ -191,15 +205,18 @@ CHAT_HTML = """
     }
 
     main {
-      flex: 1;
+      flex: 1 1 0;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
 
     .chat-history {
-      flex: 1;
+      flex: 1 1 0;
+      min-height: 0;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       padding: 1rem;
       display: flex;
       flex-direction: column;
@@ -331,6 +348,7 @@ CHAT_HTML = """
     }
 
     .input-container {
+      flex-shrink: 0;
       padding: 1rem;
       background-color: var(--bg-primary);
       border-top: 1px solid var(--border-color);
@@ -974,6 +992,24 @@ CHAT_HTML = """
   </main>
 
   <script>
+    // Mobile viewport height fix
+    function setViewportHeight() {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    setViewportHeight();
+    window.addEventListener('resize', setViewportHeight);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(setViewportHeight, 100);
+    });
+
+    // Handle virtual keyboard on mobile
+    if ('visualViewport' in window) {
+      window.visualViewport.addEventListener('resize', () => {
+        document.body.style.height = `${window.visualViewport.height}px`;
+      });
+    }
+
     const MODELS = {
       'qwen2.5-7b': { name: 'Qwen 2.5-7B', status: 'checking' },
       'phi-3-mini': { name: 'Phi-3 Mini', status: 'checking' },
