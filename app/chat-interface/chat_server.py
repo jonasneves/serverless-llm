@@ -2087,7 +2087,7 @@ async def stream_discussion_events(
         engine = DiscussionEngine(
             orchestrator=orchestrator,
             model_endpoints=MODEL_ENDPOINTS,
-            timeout_per_turn=30
+            timeout_per_turn=60
         )
 
         # Run discussion with streaming events

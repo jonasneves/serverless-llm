@@ -793,7 +793,7 @@
           </div>
           <div class="param-control">
             <label>Max Tokens:</label>
-            <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128">
+            <input type="number" id="maxTokens" value="1024" min="256" max="4096" step="256">
           </div>
           <div class="param-control">
             <label>Temperature:</label>
@@ -1144,6 +1144,14 @@
                     currentTurn.content += event.chunk;
                     showTurn(currentTurn, true);
                   }
+                  break;
+
+                case 'turn_error':
+                  if (currentTurn && currentTurn.model_id === event.model_id) {
+                    currentTurn.content = `⚠️ **Error:** ${event.error}`;
+                    showTurn(currentTurn, false);
+                  }
+                  currentTurn = null;
                   break;
 
                 case 'turn_complete':
