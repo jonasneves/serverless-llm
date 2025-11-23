@@ -1882,22 +1882,48 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
 
 
 async def stream_multiple_models(models: list, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
-    """Stream responses from multiple models, interleaving their outputs"""
+    """Stream responses from multiple models, yielding chunks in real-time as they arrive"""
 
-    async def model_stream_wrapper(model_id: str):
-        results = []
-        async for chunk in stream_model_response(model_id, messages, max_tokens, temperature):
-            results.append(chunk)
-        return results
+    # Use a queue to collect chunks from all models in real-time
+    queue: asyncio.Queue = asyncio.Queue()
+    active_streams = len([m for m in models if m in MODEL_ENDPOINTS])
+    completed_streams = 0
+
+    async def stream_to_queue(model_id: str):
+        """Stream from a single model and put chunks into the shared queue"""
+        nonlocal completed_streams
+        try:
+            async for chunk in stream_model_response(model_id, messages, max_tokens, temperature):
+                await queue.put(chunk)
+        finally:
+            completed_streams += 1
+            # Signal completion when all streams are done
+            if completed_streams >= active_streams:
+                await queue.put(None)  # Sentinel to signal completion
 
     # Start all streams concurrently
-    tasks = [model_stream_wrapper(model_id) for model_id in models if model_id in MODEL_ENDPOINTS]
+    tasks = [
+        asyncio.create_task(stream_to_queue(model_id))
+        for model_id in models
+        if model_id in MODEL_ENDPOINTS
+    ]
 
-    # Use asyncio.as_completed to yield results as they come in
-    for coro in asyncio.as_completed(tasks):
-        chunks = await coro
-        for chunk in chunks:
+    if not tasks:
+        yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
+        return
+
+    # Yield chunks as they arrive from any model
+    try:
+        while True:
+            chunk = await queue.get()
+            if chunk is None:  # Sentinel - all streams completed
+                break
             yield chunk
+    finally:
+        # Ensure all tasks are cleaned up
+        for task in tasks:
+            if not task.done():
+                task.cancel()
 
     # Send final done event
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
