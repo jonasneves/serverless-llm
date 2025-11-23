@@ -593,6 +593,59 @@ CHAT_HTML = """
       font-size: 12px;
     }
 
+    /* Custom range slider styling */
+    .control-group input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border-color);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      border: 2px solid var(--bg-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .control-group input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      border: 2px solid var(--bg-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .control-group input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 3px;
+    }
+
+    .control-group input[type="range"]::-moz-range-track {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border-color);
+    }
+
+    .control-group input[type="range"]:focus {
+      outline: none;
+    }
+
+    .control-group input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.2);
+    }
+
     .input-wrapper {
       position: relative;
       border: 1px solid var(--border-color);
