@@ -6,12 +6,13 @@ Web-based chat UI for interacting with different LLM backends
 import os
 import time
 import asyncio
+import json
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, AsyncGenerator
 import uvicorn
 
 app = FastAPI(
@@ -318,6 +319,51 @@ CHAT_HTML = """
       border: none;
     }
 
+    /* Markdown styles */
+    .message-content h2 {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin: 1em 0 0.5em 0;
+      color: var(--text-primary);
+    }
+    .message-content h3 {
+      font-size: 1.15em;
+      font-weight: 600;
+      margin: 0.8em 0 0.4em 0;
+      color: var(--text-primary);
+    }
+    .message-content h4 {
+      font-size: 1em;
+      font-weight: 600;
+      margin: 0.6em 0 0.3em 0;
+      color: var(--text-primary);
+    }
+    .message-content h2:first-child,
+    .message-content h3:first-child,
+    .message-content h4:first-child {
+      margin-top: 0;
+    }
+    .message-content ul, .message-content ol {
+      margin: 0.5em 0;
+      padding-left: 1.5em;
+    }
+    .message-content li {
+      margin: 0.25em 0;
+    }
+    .message-content strong {
+      font-weight: 600;
+    }
+    .message-content em {
+      font-style: italic;
+    }
+    .message-content a {
+      color: var(--accent-color);
+      text-decoration: underline;
+    }
+    .message-content a:hover {
+      text-decoration: none;
+    }
+
     .message-footer {
       margin-top: 12px;
       padding-top: 12px;
@@ -566,6 +612,30 @@ CHAT_HTML = """
     .clear-btn:hover {
       background: var(--bg-tertiary);
       color: var(--text-primary);
+    }
+
+    /* Streaming cursor animation */
+    .cursor {
+      display: inline-block;
+      animation: blink 1s infinite;
+      color: var(--accent-color);
+      font-weight: normal;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    .streaming-badge {
+      background: var(--accent-color) !important;
+      color: white !important;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
 
     /* Mobile Responsive Styles */
@@ -1190,10 +1260,168 @@ CHAT_HTML = """
     }
 
     function formatContent(content) {
-      return content
-        .replace(/```([\\s\\S]*?)```/g, '<pre><code>$1</code></pre>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/\\n/g, '<br>');
+      if (!content) return '';
+
+      // Escape HTML to prevent XSS
+      let text = content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Code blocks with language (```language\\ncode```)
+      text = text.replace(/```(\\w*)\\n([\\s\\S]*?)```/g, (match, lang, code) => {
+        return `<pre><code class="language-${lang || 'plaintext'}">${code.trim()}</code></pre>`;
+      });
+
+      // Code blocks without language
+      text = text.replace(/```([\\s\\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+      // Inline code
+      text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Bold
+      text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
+
+      // Italic
+      text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
+
+      // Headers (must be at start of line)
+      text = text.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+      text = text.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+      text = text.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+
+      // Unordered lists
+      text = text.replace(/^[\\-\\*] (.+)$/gm, '<li>$1</li>');
+      text = text.replace(/(<li>.*<\\/li>\\n?)+/g, '<ul>$&</ul>');
+
+      // Ordered lists
+      text = text.replace(/^\\d+\\. (.+)$/gm, '<li>$1</li>');
+
+      // Links [text](url)
+      text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+      // Line breaks (but not inside pre blocks)
+      text = text.replace(/(?<!<\\/pre>)\\n(?!<pre)/g, '<br>');
+
+      // Clean up extra br tags around block elements
+      text = text.replace(/<br>\\s*(<\\/?(?:pre|ul|ol|li|h[2-4]))/g, '$1');
+      text = text.replace(/(<\\/(?:pre|ul|ol|li|h[2-4])>)\\s*<br>/g, '$1');
+
+      return text;
+    }
+
+    // Create streaming response container
+    function createStreamingContainer(models) {
+      const modelData = {};
+
+      if (models.length === 1) {
+        const modelName = MODELS[models[0]]?.name || models[0];
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+        messageDiv.innerHTML = `
+          <div class="model-header">
+            <span class="model-name">${modelName}</span>
+            <span class="model-badge streaming-badge">Streaming...</span>
+          </div>
+          <div class="message-content" data-model="${modelName}"><span class="cursor">▋</span></div>
+          <div class="message-footer" style="display: none;" data-footer="${modelName}">
+            <div class="stat-item">
+              <span class="stat-label">Tokens</span>
+              <span class="stat-value" data-tokens="${modelName}">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Time</span>
+              <span class="stat-value" data-time="${modelName}">-</span>
+            </div>
+          </div>
+        `;
+        chatHistory.appendChild(messageDiv);
+        modelData[modelName] = { content: '', element: messageDiv };
+      } else {
+        const container = document.createElement('div');
+        container.className = 'model-responses';
+
+        for (const modelId of models) {
+          const modelName = MODELS[modelId]?.name || modelId;
+          const responseDiv = document.createElement('div');
+          responseDiv.className = 'model-response';
+          responseDiv.innerHTML = `
+            <div class="model-header">
+              <span class="model-name">${modelName}</span>
+              <span class="model-badge streaming-badge">Waiting...</span>
+            </div>
+            <div class="message-content" data-model="${modelName}"><span class="cursor">▋</span></div>
+            <div class="message-footer" style="display: none;" data-footer="${modelName}">
+              <div class="stat-item">
+                <span class="stat-label">Tokens</span>
+                <span class="stat-value" data-tokens="${modelName}">-</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Time</span>
+                <span class="stat-value" data-time="${modelName}">-</span>
+              </div>
+            </div>
+          `;
+          container.appendChild(responseDiv);
+          modelData[modelName] = { content: '', element: responseDiv };
+        }
+        chatHistory.appendChild(container);
+      }
+
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      return modelData;
+    }
+
+    // Update streaming content for a model
+    function updateStreamingContent(modelData, modelName, content, isToken = true) {
+      if (!modelData[modelName]) return;
+
+      if (isToken) {
+        modelData[modelName].content += content;
+      }
+
+      const contentEl = modelData[modelName].element.querySelector(`[data-model="${modelName}"]`);
+      if (contentEl) {
+        contentEl.innerHTML = formatContent(modelData[modelName].content) + '<span class="cursor">▋</span>';
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      }
+    }
+
+    // Finalize streaming for a model
+    function finalizeStreaming(modelData, modelName, time, tokenEstimate, error = false) {
+      if (!modelData[modelName]) return;
+
+      const el = modelData[modelName].element;
+
+      // Remove streaming badge
+      const badge = el.querySelector('.streaming-badge');
+      if (badge) {
+        if (error) {
+          badge.textContent = 'Error';
+          badge.style.background = '#fecaca';
+          badge.style.color = '#dc2626';
+        } else {
+          badge.remove();
+        }
+      }
+
+      // Remove cursor
+      const contentEl = el.querySelector(`[data-model="${modelName}"]`);
+      if (contentEl) {
+        contentEl.innerHTML = formatContent(modelData[modelName].content);
+      }
+
+      // Show footer with stats
+      if (!error && time) {
+        const footer = el.querySelector(`[data-footer="${modelName}"]`);
+        if (footer) {
+          footer.style.display = 'flex';
+          const timeEl = el.querySelector(`[data-time="${modelName}"]`);
+          const tokensEl = el.querySelector(`[data-tokens="${modelName}"]`);
+          if (timeEl) timeEl.textContent = time.toFixed(2) + 's';
+          if (tokensEl) tokensEl.textContent = tokenEstimate || '-';
+        }
+      }
     }
 
     async function sendMessage() {
@@ -1208,9 +1436,12 @@ CHAT_HTML = """
       userInput.disabled = true;
       typingIndicator.classList.add('active');
 
+      const models = Array.from(selectedModels);
+      const modelData = createStreamingContainer(models);
+      let firstContent = '';
+
       try {
-        const models = Array.from(selectedModels);
-        const response = await fetch('/api/chat/multi', {
+        const response = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1221,20 +1452,64 @@ CHAT_HTML = """
           })
         });
 
-        const data = await response.json();
-        addModelResponses(data.responses);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-        // Add first successful response to history
-        const firstSuccess = data.responses.find(r => !r.error);
-        if (firstSuccess) {
-          conversationHistory.push({ role: 'assistant', content: firstSuccess.content });
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.event === 'start') {
+                  // Model started streaming
+                  const badge = modelData[data.model]?.element.querySelector('.streaming-badge');
+                  if (badge) badge.textContent = 'Streaming...';
+                } else if (data.event === 'token' && data.content) {
+                  // Received a token
+                  updateStreamingContent(modelData, data.model, data.content);
+                } else if (data.event === 'done') {
+                  // Model finished
+                  if (!firstContent && data.total_content) {
+                    firstContent = data.total_content;
+                  }
+                  finalizeStreaming(modelData, data.model, data.time, data.token_estimate);
+                } else if (data.error) {
+                  // Error occurred
+                  modelData[data.model].content = data.content || 'Error occurred';
+                  updateStreamingContent(modelData, data.model, '', false);
+                  finalizeStreaming(modelData, data.model, null, null, true);
+                } else if (data.event === 'all_done') {
+                  // All models finished
+                  typingIndicator.classList.remove('active');
+                }
+              } catch (e) {
+                console.error('Parse error:', e);
+              }
+            }
+          }
         }
+
+        // Add first successful response to conversation history
+        if (firstContent) {
+          conversationHistory.push({ role: 'assistant', content: firstContent });
+        }
+
       } catch (error) {
-        addModelResponses([{
-          model: 'System',
-          content: `Connection error: ${error.message}`,
-          error: true
-        }]);
+        // Handle connection errors
+        for (const modelName of Object.keys(modelData)) {
+          modelData[modelName].content = `Connection error: ${error.message}`;
+          updateStreamingContent(modelData, modelName, '', false);
+          finalizeStreaming(modelData, modelName, null, null, true);
+        }
       } finally {
         sendBtn.disabled = selectedModels.size === 0;
         userInput.disabled = false;
@@ -1417,6 +1692,101 @@ async def chat_multi(request: MultiChatRequest):
         responses = await asyncio.gather(*tasks)
 
     return {"responses": responses}
+
+
+async def stream_model_response(model_id: str, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
+    """Stream response from a single model using SSE format"""
+    endpoint = MODEL_ENDPOINTS[model_id]
+    display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
+    start_time = time.time()
+    total_content = ""
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream(
+                "POST",
+                f"{endpoint}/v1/chat/completions",
+                json={
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "stream": True
+                }
+            ) as response:
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': f'Error: {error_text.decode()}'})}\n\n"
+                    return
+
+                # Send initial event
+                yield f"data: {json.dumps({'model': display_name, 'event': 'start'})}\n\n"
+
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if "choices" in data and len(data["choices"]) > 0:
+                                delta = data["choices"][0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    total_content += content
+                                    yield f"data: {json.dumps({'model': display_name, 'content': content, 'event': 'token'})}\n\n"
+                        except json.JSONDecodeError:
+                            pass
+
+                # Send completion event with stats
+                elapsed = time.time() - start_time
+                token_count = len(total_content.split())  # Rough estimate
+                yield f"data: {json.dumps({'model': display_name, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
+
+    except httpx.TimeoutException:
+        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'Request timeout'})}\n\n"
+    except httpx.ConnectError:
+        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': f'Cannot connect to {endpoint}'})}\n\n"
+    except Exception as e:
+        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': str(e)})}\n\n"
+
+
+async def stream_multiple_models(models: list, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
+    """Stream responses from multiple models, interleaving their outputs"""
+
+    async def model_stream_wrapper(model_id: str):
+        results = []
+        async for chunk in stream_model_response(model_id, messages, max_tokens, temperature):
+            results.append(chunk)
+        return results
+
+    # Start all streams concurrently
+    tasks = [model_stream_wrapper(model_id) for model_id in models if model_id in MODEL_ENDPOINTS]
+
+    # Use asyncio.as_completed to yield results as they come in
+    for coro in asyncio.as_completed(tasks):
+        chunks = await coro
+        for chunk in chunks:
+            yield chunk
+
+    # Send final done event
+    yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
+
+
+@app.post("/api/chat/stream")
+async def chat_stream(request: MultiChatRequest):
+    """Stream chat responses using Server-Sent Events"""
+    messages = [{"role": m.role, "content": m.content} for m in request.messages]
+
+    return StreamingResponse(
+        stream_multiple_models(request.models, messages, request.max_tokens, request.temperature),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8080"))

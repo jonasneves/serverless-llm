@@ -4,10 +4,12 @@ FastAPI-based REST API using llama-cpp-python for efficient CPU inference
 """
 
 import os
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Generator
 import uvicorn
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
@@ -103,6 +105,31 @@ async def list_models():
         ]
     }
 
+def generate_stream(messages: list, max_tokens: int, temperature: float, top_p: float) -> Generator[str, None, None]:
+    """Generate streaming response"""
+    global llm
+
+    try:
+        response = llm.create_chat_completion(
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            stream=True
+        )
+
+        for chunk in response:
+            if "choices" in chunk and len(chunk["choices"]) > 0:
+                delta = chunk["choices"][0].get("delta", {})
+                if "content" in delta:
+                    yield f"data: {json.dumps(chunk)}\n\n"
+
+        yield "data: [DONE]\n\n"
+
+    except Exception as e:
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(request: GenerateRequest):
     global llm
@@ -119,7 +146,18 @@ async def chat_completions(request: GenerateRequest):
         else:
             raise HTTPException(status_code=400, detail="Either messages or prompt required")
 
-        # Generate response
+        # Check if streaming is requested
+        if request.stream:
+            return StreamingResponse(
+                generate_stream(messages, request.max_tokens, request.temperature, request.top_p),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive"
+                }
+            )
+
+        # Generate response (non-streaming)
         response = llm.create_chat_completion(
             messages=messages,
             max_tokens=request.max_tokens,
