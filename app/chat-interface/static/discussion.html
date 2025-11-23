@@ -1041,18 +1041,18 @@
           </div>
         </div>
         <button class="orchestrator-info-btn" type="button">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
           </svg>
           <div class="orchestrator-tooltip">
-            <strong>What does the orchestrator do?</strong><br><br>
-            Coordinates discussion via small API calls (~300 tokens each). It:<br>
-            • <strong>Analyzes</strong> your query and scores model expertise<br>
-            • <strong>Evaluates</strong> each response for quality<br>
-            • <strong>Synthesizes</strong> the final answer<br><br>
-            The orchestrator doesn't generate content—it just directs traffic between local models.
+            <strong>What does the orchestrator do?</strong>
+            <p style="margin: 8px 0 6px 0;">Coordinates discussion via small API calls (~300 tokens each):</p>
+            <ul style="margin: 0; padding-left: 16px;">
+              <li><strong>Analyzes</strong> your query and scores model expertise</li>
+              <li><strong>Evaluates</strong> each response for quality</li>
+              <li><strong>Synthesizes</strong> the final answer</li>
+            </ul>
+            <p style="margin: 8px 0 0 0;">It doesn't generate content—just directs traffic between local models.</p>
           </div>
         </button>
       </div>

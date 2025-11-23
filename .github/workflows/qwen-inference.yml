@@ -13,6 +13,15 @@ on:
         required: false
         default: true
         type: boolean
+      instances:
+        description: 'Number of parallel instances (1-3)'
+        required: false
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
 
   repository_dispatch:
     types: [restart-qwen-inference]
@@ -24,7 +33,7 @@ jobs:
     timeout-minutes: 350
     strategy:
       matrix:
-        instance: [1, 2, 3]
+        instance: ${{ fromJson(github.event.inputs.instances == '3' && '[1,2,3]' || github.event.inputs.instances == '2' && '[1,2]' || '[1]') }}
       fail-fast: false
 
     steps:
