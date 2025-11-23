@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discussion Mode - LLM Arena</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #FAFAFA;
+      --bg-tertiary: #F3F4F6;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --border-color: #E5E7EB;
+      --accent-color: #1e3a5f;
+      --accent-hover: #2c4f7c;
+      --accent-text: #ffffff;
+      --success-color: #059669;
+      --warning-color: #D97706;
+      --info-color: #0284C7;
+      --qwen-color: #8B5CF6;
+      --phi-color: #EC4899;
+      --llama-color: #14B8A6;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0a0e14;
+      --bg-secondary: #12161e;
+      --bg-tertiary: #1a1f2b;
+      --text-primary: #e4e7eb;
+      --text-secondary: #9ca3af;
+      --border-color: #1f2937;
+      --accent-color: #1e3a8a;
+      --accent-hover: #1e40af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .mode-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 12px;
+    }
+
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      transition: background 0.2s;
+    }
+
+    .nav-links a:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      flex: 1;
+      width: 100%;
+    }
+
+    .discussion-area {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .input-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .input-section h2 {
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+
+    .query-input {
+      width: 100%;
+      min-height: 100px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      resize: vertical;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .param-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .param-control label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .param-control input[type="number"] {
+      width: 80px;
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .analysis-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .analysis-card h3 {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .domain-weights {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .domain-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .turn-card {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .turn-card.streaming {
+      border-color: var(--info-color);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+    }
+
+    .turn-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .model-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .model-badge {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .model-badge.qwen { background: var(--qwen-color); color: white; }
+    .model-badge.phi { background: var(--phi-color); color: white; }
+    .model-badge.llama { background: var(--llama-color); color: white; }
+
+    .expertise-score {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .turn-content {
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+
+    .turn-content pre {
+      background: var(--bg-tertiary);
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .turn-content code {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    .turn-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .evaluation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .evaluation-badge.high { background: rgba(5, 150, 105, 0.1); color: var(--success-color); }
+    .evaluation-badge.medium { background: rgba(217, 119, 6, 0.1); color: var(--warning-color); }
+    .evaluation-badge.low { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+
+    .synthesis-card {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    .synthesis-card h3 {
+      margin-bottom: 16px;
+      font-size: 20px;
+    }
+
+    .final-response {
+      background: rgba(255, 255, 255, 0.95);
+      color: #111827;
+      padding: 20px;
+      border-radius: 8px;
+      line-height: 1.6;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-indicator.analyzing {
+      background: rgba(2, 132, 199, 0.1);
+      color: var(--info-color);
+    }
+
+    .status-indicator.discussing {
+      background: rgba(5, 150, 105, 0.1);
+      color: var(--success-color);
+    }
+
+    .status-indicator.synthesizing {
+      background: rgba(139, 92, 246, 0.1);
+      color: var(--qwen-color);
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-card {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #EF4444;
+      color: #EF4444;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <span>🤖</span>
+      <span>LLM Arena</span>
+      <span class="mode-badge">Discussion Mode</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">← Arena Mode</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="discussion-area">
+      <!-- Input Section -->
+      <div class="input-section">
+        <h2>Ask a Question</h2>
+        <textarea
+          id="queryInput"
+          class="query-input"
+          placeholder="Enter your question... Models will discuss together before responding."
+        ></textarea>
+        <div class="controls">
+          <button id="startBtn" class="btn btn-primary">Start Discussion</button>
+          <div class="param-control">
+            <label>Max Tokens:</label>
+            <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128">
+          </div>
+          <div class="param-control">
+            <label>Temperature:</label>
+            <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
+          </div>
+          <div id="statusIndicator"></div>
+        </div>
+      </div>
+
+      <!-- Discussion Content -->
+      <div id="discussionContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const queryInput = document.getElementById('queryInput');
+    const startBtn = document.getElementById('startBtn');
+    const maxTokensInput = document.getElementById('maxTokens');
+    const temperatureInput = document.getElementById('temperature');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const discussionContent = document.getElementById('discussionContent');
+
+    let currentDiscussion = null;
+
+    function setStatus(status, text) {
+      statusIndicator.innerHTML = `
+        <div class="status-indicator ${status}">
+          <div class="spinner"></div>
+          ${text}
+        </div>
+      `;
+    }
+
+    function clearStatus() {
+      statusIndicator.innerHTML = '';
+    }
+
+    function getModelClass(modelId) {
+      if (modelId.includes('qwen')) return 'qwen';
+      if (modelId.includes('phi')) return 'phi';
+      if (modelId.includes('llama')) return 'llama';
+      return 'qwen';
+    }
+
+    function showAnalysis(analysis) {
+      const domainBadges = Object.entries(analysis.domain_weights || {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([domain, weight]) => `
+          <div class="domain-badge">${domain}: ${(weight * 100).toFixed(0)}%</div>
+        `).join('');
+
+      discussionContent.innerHTML += `
+        <div class="analysis-card">
+          <h3>🔍 Query Analysis</h3>
+          <p><strong>Lead Model:</strong> ${analysis.discussion_lead || 'Unknown'}</p>
+          <p><strong>Expected Turns:</strong> ${analysis.expected_turns || 0}</p>
+          <p><strong>Reasoning:</strong> ${analysis.reasoning || 'N/A'}</p>
+          <div class="domain-weights">${domainBadges}</div>
+        </div>
+      `;
+    }
+
+    function showTurn(turn, streaming = false) {
+      const turnId = `turn-${turn.model_id}-${turn.turn_number}`;
+      const existing = document.getElementById(turnId);
+
+      const modelClass = getModelClass(turn.model_id);
+      const expertisePercent = ((turn.expertise_score || 0) * 100).toFixed(0);
+
+      if (existing) {
+        // Update existing turn
+        const content = existing.querySelector('.turn-content');
+        if (content) {
+          content.innerHTML = marked.parse(turn.content || '');
+        }
+        existing.classList.toggle('streaming', streaming);
+      } else {
+        // Create new turn
+        discussionContent.innerHTML += `
+          <div id="${turnId}" class="turn-card ${streaming ? 'streaming' : ''}">
+            <div class="turn-header">
+              <div class="model-info">
+                <div class="model-badge ${modelClass}">${turn.model_name || turn.model_id}</div>
+                <div class="expertise-score">Expertise: ${expertisePercent}%</div>
+              </div>
+              <div>Turn ${turn.turn_number + 1}</div>
+            </div>
+            <div class="turn-content">${marked.parse(turn.content || '')}</div>
+          </div>
+        `;
+      }
+
+      // Scroll to bottom
+      discussionContent.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function showEvaluation(turnId, evaluation) {
+      const card = document.getElementById(turnId);
+      if (!card) return;
+
+      card.classList.remove('streaming');
+      const confidence = evaluation.confidence_assessment || 'medium';
+
+      const evalHtml = `
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span class="evaluation-badge ${confidence}">Confidence: ${confidence}</span>
+            <span>Quality: ${((evaluation.quality_score || 0) * 100).toFixed(0)}%</span>
+            <span>Relevance: ${((evaluation.relevance_score || 0) * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      `;
+
+      card.querySelector('.turn-content').insertAdjacentHTML('afterend', evalHtml);
+    }
+
+    function showSynthesis(synthesis, finalResponse) {
+      discussionContent.innerHTML += `
+        <div class="synthesis-card">
+          <h3>✨ Final Synthesis</h3>
+          <p style="margin-bottom: 16px; opacity: 0.9;">
+            <strong>Strategy:</strong> ${synthesis.merge_strategy || 'Unknown'} |
+            <strong>Primary Source:</strong> ${synthesis.primary_source_model || 'Unknown'} |
+            <strong>Confidence:</strong> ${((synthesis.final_confidence || 0) * 100).toFixed(0)}%
+          </p>
+          <div class="final-response">${marked.parse(finalResponse || 'Generating...')}</div>
+        </div>
+      `;
+    }
+
+    function showError(error) {
+      discussionContent.innerHTML += `
+        <div class="error-card">
+          <strong>Error:</strong> ${error}
+        </div>
+      `;
+    }
+
+    async function startDiscussion() {
+      const query = queryInput.value.trim();
+      if (!query) {
+        alert('Please enter a question');
+        return;
+      }
+
+      const maxTokens = parseInt(maxTokensInput.value);
+      const temperature = parseFloat(temperatureInput.value);
+
+      // Reset UI
+      discussionContent.innerHTML = '';
+      startBtn.disabled = true;
+      queryInput.disabled = true;
+
+      try {
+        setStatus('analyzing', 'Analyzing query...');
+
+        const response = await fetch('/api/chat/discussion/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, max_tokens: maxTokens, temperature })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let currentTurn = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+
+            const data = line.slice(6);
+            if (!data || data === '[DONE]') continue;
+
+            try {
+              const event = JSON.parse(data);
+
+              switch (event.event) {
+                case 'analysis_complete':
+                  clearStatus();
+                  showAnalysis(event.analysis);
+                  setStatus('discussing', 'Models discussing...');
+                  break;
+
+                case 'turn_start':
+                  currentTurn = {
+                    model_id: event.model_id,
+                    model_name: event.model_name,
+                    turn_number: event.turn_number,
+                    expertise_score: event.expertise_score,
+                    content: ''
+                  };
+                  showTurn(currentTurn, true);
+                  break;
+
+                case 'turn_chunk':
+                  if (currentTurn && currentTurn.model_id === event.model_id) {
+                    currentTurn.content += event.chunk;
+                    showTurn(currentTurn, true);
+                  }
+                  break;
+
+                case 'turn_complete':
+                  if (event.evaluation) {
+                    const turnId = `turn-${event.turn.model_id}-${event.turn.turn_number}`;
+                    showEvaluation(turnId, event.evaluation);
+                  }
+                  currentTurn = null;
+                  break;
+
+                case 'synthesis_start':
+                  setStatus('synthesizing', 'Synthesizing final response...');
+                  break;
+
+                case 'synthesis_complete':
+                  clearStatus();
+                  break;
+
+                case 'discussion_complete':
+                  showSynthesis(event.synthesis || {}, event.final_response);
+                  clearStatus();
+                  break;
+
+                case 'error':
+                  showError(event.error);
+                  clearStatus();
+                  break;
+              }
+            } catch (e) {
+              console.error('Failed to parse event:', e, data);
+            }
+          }
+        }
+
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        startBtn.disabled = false;
+        queryInput.disabled = false;
+        clearStatus();
+      }
+    }
+
+    startBtn.addEventListener('click', startDiscussion);
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        startDiscussion();
+      }
+    });
+
+    // Auto-focus
+    queryInput.focus();
+  </script>
+</body>
+</html>

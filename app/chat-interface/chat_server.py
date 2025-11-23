@@ -17,6 +17,11 @@ from pydantic import BaseModel
 from typing import List, Optional, AsyncGenerator
 import uvicorn
 
+# Discussion mode imports
+from orchestrator import GitHubModelsOrchestrator
+from discussion_engine import DiscussionEngine
+from model_profiles import MODEL_PROFILES
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -105,6 +110,11 @@ class ModelStatus(BaseModel):
     model: str
     status: str
     endpoint: str
+
+class DiscussionRequest(BaseModel):
+    query: str
+    max_tokens: int = 512
+    temperature: float = 0.7
 
 # HTML Chat Interface
 CHAT_HTML = """
@@ -1734,6 +1744,16 @@ CHAT_HTML = """
 async def chat_interface():
     return CHAT_HTML
 
+@app.get("/discussion", response_class=HTMLResponse)
+async def discussion_interface():
+    """Serve discussion mode interface"""
+    import pathlib
+    discussion_html_path = pathlib.Path(__file__).parent / "static" / "discussion.html"
+    if discussion_html_path.exists():
+        return discussion_html_path.read_text()
+    else:
+        raise HTTPException(status_code=404, detail="Discussion interface not found")
+
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "chat-interface"}
@@ -1990,6 +2010,88 @@ async def chat_stream(request: MultiChatRequest):
 
     return StreamingResponse(
         stream_multiple_models(request.models, messages, request.max_tokens, request.temperature),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+async def stream_discussion_events(
+    query: str,
+    max_tokens: int,
+    temperature: float
+) -> AsyncGenerator[str, None]:
+    """
+    Stream discussion events as Server-Sent Events
+
+    Events:
+    - analysis_start: Orchestrator begins analyzing query
+    - analysis_complete: Query analysis results with domain weights
+    - turn_start: Model begins responding
+    - turn_chunk: Streaming response content
+    - turn_complete: Turn finished with evaluation
+    - synthesis_start: Begin creating final response
+    - synthesis_complete: Synthesis plan ready
+    - discussion_complete: Full discussion finished
+    - error: Error occurred
+    """
+    try:
+        # Initialize orchestrator
+        github_token = os.getenv("GH_MODELS_TOKEN")
+        if not github_token:
+            yield f"data: {json.dumps({'event': 'error', 'error': 'GH_MODELS_TOKEN not configured'})}\n\n"
+            return
+
+        orchestrator = GitHubModelsOrchestrator(github_token=github_token)
+
+        # Initialize discussion engine
+        engine = DiscussionEngine(
+            orchestrator=orchestrator,
+            model_endpoints=MODEL_ENDPOINTS,
+            timeout_per_turn=30
+        )
+
+        # Run discussion with streaming events
+        async for event in engine.run_discussion(
+            query=query,
+            max_tokens=max_tokens,
+            temperature=temperature
+        ):
+            # Forward all events to client
+            yield f"data: {json.dumps({'event': event['type'], **event})}\n\n"
+
+    except Exception as e:
+        logger.error(f"Discussion error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
+
+
+@app.post("/api/chat/discussion/stream")
+async def discussion_stream(request: DiscussionRequest):
+    """
+    Stream collaborative multi-model discussion using Server-Sent Events
+
+    Models discuss the query together, guided by an orchestrator (GPT-5-nano)
+    that evaluates contributions based on each model's benchmark-proven strengths.
+
+    Request body:
+    - query: User's question or request
+    - max_tokens: Max tokens per model response (default: 512)
+    - temperature: Sampling temperature (default: 0.7)
+
+    Stream events (all sent as SSE):
+    - analysis_complete: Orchestrator's query analysis with domain classification
+    - turn_start: Model begins turn with expertise score
+    - turn_chunk: Streaming response content
+    - turn_complete: Turn finished with quality evaluation
+    - synthesis_complete: Final synthesis plan
+    - discussion_complete: Full discussion with final response
+    - error: Error details
+    """
+    return StreamingResponse(
+        stream_discussion_events(request.query, request.max_tokens, request.temperature),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
