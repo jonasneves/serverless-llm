@@ -157,11 +157,11 @@ serverless-llm/
 
 ## Models
 
-| Model | Parameters | Quantization | Use Case |
-|-------|------------|--------------|----------|
-| Qwen 2.5 | 7B | Q4_K_M | General purpose, coding |
-| Phi-3 Mini | 3.8B | Q4_K_M | Reasoning, instruction following |
-| Llama 3.2 | 3B | Q4_K_M | Chat, creative writing |
+| Model | Creator | Parameters | Quantization | Use Case |
+|-------|---------|------------|--------------|----------|
+| Qwen 2.5 | Alibaba | 7B | Q4_K_M | General purpose, coding |
+| Phi-3 Mini | Microsoft | 3.8B | Q4_K_M | Reasoning, instruction following |
+| Llama 3.2 | Meta | 3B | Q4_K_M | Chat, creative writing |
 
 ## Configuration
 
