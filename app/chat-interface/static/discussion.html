@@ -788,6 +788,10 @@
             <span id="orchestratorBadge" class="model-type-badge api">API</span>
           </div>
           <div class="param-control">
+            <label>Turns:</label>
+            <input type="number" id="discussionTurns" value="2" min="1" max="4" step="1" title="Discussion rounds (all models participate each round)">
+          </div>
+          <div class="param-control">
             <label>Max Tokens:</label>
             <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128">
           </div>
@@ -1062,6 +1066,7 @@
       const temperature = parseFloat(temperatureInput.value);
       const orchestrator = orchestratorModel.value;
       const userToken = githubToken.value.trim();
+      const turns = parseInt(document.getElementById('discussionTurns').value);
 
       // Reset UI
       discussionContent.innerHTML = '';
@@ -1075,7 +1080,8 @@
           query,
           max_tokens: maxTokens,
           temperature,
-          orchestrator_model: orchestrator
+          orchestrator_model: orchestrator,
+          turns: turns
         };
 
         // Include user token if provided

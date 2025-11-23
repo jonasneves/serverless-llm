@@ -117,6 +117,7 @@ class DiscussionRequest(BaseModel):
     temperature: float = 0.7
     orchestrator_model: Optional[str] = None  # Model ID for orchestrator (e.g., 'gpt-5-nano', 'qwen2.5-7b')
     github_token: Optional[str] = None  # User-provided GitHub token for API models
+    turns: int = 2  # Number of discussion rounds (all models participate each round)
 
 # HTML Chat Interface
 CHAT_HTML = """
@@ -2031,7 +2032,8 @@ async def stream_discussion_events(
     max_tokens: int,
     temperature: float,
     orchestrator_model: Optional[str] = None,
-    github_token: Optional[str] = None
+    github_token: Optional[str] = None,
+    turns: int = 2
 ) -> AsyncGenerator[str, None]:
     """
     Stream discussion events as Server-Sent Events
@@ -2092,7 +2094,8 @@ async def stream_discussion_events(
         async for event in engine.run_discussion(
             query=query,
             max_tokens=max_tokens,
-            temperature=temperature
+            temperature=temperature,
+            turns=turns
         ):
             # Forward all events to client
             yield f"data: {json.dumps({'event': event['type'], **event})}\n\n"
@@ -2130,7 +2133,8 @@ async def discussion_stream(request: DiscussionRequest):
             request.max_tokens,
             request.temperature,
             request.orchestrator_model,
-            request.github_token
+            request.github_token,
+            request.turns
         ),
         media_type="text/event-stream",
         headers={

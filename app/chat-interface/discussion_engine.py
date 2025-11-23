@@ -130,7 +130,12 @@ Query domains: {domain_context}
 User Query:
 {query}
 
-Provide your analysis and response. Focus on areas where you excel. Be thorough but concise - other models will build on your response in subsequent turns."""
+Provide your analysis and response. Show your work step by step, especially for:
+- Counting tasks: list each item explicitly
+- Math problems: show each calculation
+- Logical reasoning: explain each step
+
+Be thorough and precise - other models will verify and critique your response."""
 
         else:
             # Supporting models - respond with full context
@@ -139,7 +144,7 @@ Provide your analysis and response. Focus on areas where you excel. Be thorough 
                 for turn in previous_turns
             ])
 
-            return f"""You are participating in a collaborative discussion with other AI models.
+            return f"""You are participating in a critical debate with other AI models.
 
 Your strengths: {strengths}
 Your expertise score for this query: {expertise_score:.2f} out of 1.0
@@ -152,13 +157,14 @@ Discussion so far:
 
 ---
 
-Add your perspective to this discussion. You can:
-- Build on strong points from previous responses
-- Offer alternative viewpoints in your areas of expertise
-- Fill gaps or add details where others may have been brief
-- Raise concerns or corrections if you notice issues
+CRITICALLY EVALUATE the previous responses and add your perspective:
 
-Focus on contributing what you do best. Keep your response focused and additive."""
+1. **VERIFY**: Check the accuracy of claims, calculations, and reasoning. If you find errors, explicitly point them out.
+2. **CHALLENGE**: If you disagree with any conclusions, explain why with evidence.
+3. **IMPROVE**: Offer corrections, alternative approaches, or additional details.
+4. **CONFIRM**: If you agree the answer is correct, explain why you're confident.
+
+Be direct and specific. Don't just agree - actively verify and critique. If counting letters, numbers, or items, do the count yourself step by step."""
 
     async def _call_model_api(
         self,
@@ -335,7 +341,8 @@ Focus on contributing what you do best. Keep your response focused and additive.
         self,
         query: str,
         max_tokens: int = 512,
-        temperature: float = 0.7
+        temperature: float = 0.7,
+        turns: int = 2
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Run complete discussion with streaming events
@@ -372,25 +379,17 @@ Focus on contributing what you do best. Keep your response focused and additive.
             completed_turns = []
             evaluations = []
 
-            # Get all available local models
+            # Get all available local models, ranked by expertise
             all_models = list(self.model_endpoints.keys())
+            ranked = rank_models_for_query(analysis.domain_weights)
+            # Order: lead model first, then others by expertise
+            participating_models = [analysis.discussion_lead] + [
+                model_id for model_id, score in ranked
+                if model_id != analysis.discussion_lead and model_id in all_models
+            ]
 
-            for turn_num in range(analysis.expected_turns):
-                # Determine which models participate this turn
-                if turn_num == 0:
-                    # Turn 1: Only lead model
-                    participating_models = [analysis.discussion_lead]
-                else:
-                    # Turn 2+: All other models participate (ranked by expertise)
-                    ranked = rank_models_for_query(analysis.domain_weights)
-                    participating_models = [
-                        model_id for model_id, score in ranked
-                        if model_id != analysis.discussion_lead and model_id in all_models
-                    ]
-
-                    if not participating_models:
-                        # No other models available
-                        break
+            # Use user-specified turns, all models participate each turn
+            for turn_num in range(turns):
 
                 # Execute turn for each participating model
                 for model_id in participating_models:
