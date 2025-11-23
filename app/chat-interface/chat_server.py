@@ -79,8 +79,8 @@ CHAT_HTML = """
       --text-secondary: #6B7280;
       --text-tertiary: #9CA3AF;
       --border-color: #E5E7EB;
-      --accent-color: #2563eb;
-      --accent-hover: #1d4ed8;
+      --accent-color: #1e3a5f;
+      --accent-hover: #2c4f7c;
       --accent-text: #ffffff;
       --danger-color: #DC2626;
       --warning-color: #D97706;
@@ -99,8 +99,8 @@ CHAT_HTML = """
       --text-secondary: #9ca3af;
       --text-tertiary: #6b7280;
       --border-color: #1f2937;
-      --accent-color: #3b82f6;
-      --accent-hover: #2563eb;
+      --accent-color: #1e3a8a;
+      --accent-hover: #1e40af;
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
     }
@@ -214,7 +214,7 @@ CHAT_HTML = """
       color: white;
       padding: 12px 16px;
       border-radius: 16px 16px 4px 16px;
-      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+      box-shadow: 0 2px 8px rgba(30, 58, 95, 0.2);
     }
 
     .message.assistant {
@@ -411,7 +411,7 @@ CHAT_HTML = """
 
     .input-wrapper:focus-within {
       border-color: var(--accent-color);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
     }
 
     textarea {
@@ -458,7 +458,7 @@ CHAT_HTML = """
 
     .send-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
     }
 
     .send-btn:disabled {
