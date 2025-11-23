@@ -1,4 +1,4 @@
-name: Phi-3 Medium Inference Server
+name: Phi-3 Mini Inference Server
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
       duration_hours:
         description: 'How long to run (max 5.5 hours)'
         required: false
-        default: '5.5'
+        default: '5'
         type: string
       auto_restart:
         description: 'Auto-restart before timeout'
@@ -19,7 +19,7 @@ on:
 
 jobs:
   inference:
-    name: Phi-3 Medium Server
+    name: Phi-3 Mini Server
     runs-on: ubuntu-latest
     timeout-minutes: 350
 
@@ -34,15 +34,19 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'app/phi-inference/requirements.txt'
 
+      - name: Cache GGUF models
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            /tmp/hf_cache
+          key: gguf-phi3-mini-q4-${{ runner.os }}
+          restore-keys: |
+            gguf-phi3-mini-
+
       - name: Install dependencies
         run: |
           pip install -r app/phi-inference/requirements.txt
-
-      - name: Cache Hugging Face models
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: hf-phi3-medium-${{ runner.os }}
 
       - name: Install cloudflared
         run: |
@@ -52,23 +56,27 @@ jobs:
 
       - name: Start inference server
         env:
-          MODEL_NAME: microsoft/Phi-3-medium-4k-instruct
-          USE_4BIT: "true"
+          MODEL_REPO: microsoft/Phi-3-mini-4k-instruct-gguf
+          MODEL_FILE: Phi-3-mini-4k-instruct-q4.gguf
+          N_CTX: "4096"
+          N_THREADS: "4"
           PORT: "8000"
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_HOME: /tmp/hf_cache
         run: |
           cd app/phi-inference
           python inference_server.py &
-          echo "Waiting for server to start..."
-          sleep 30
+          SERVER_PID=$!
+          echo "Server PID: $SERVER_PID"
+          echo "Waiting for model to download and load..."
 
-          # Health check
-          for i in {1..30}; do
+          # Wait for server with longer timeout for model download
+          for i in {1..60}; do
             if curl -s http://localhost:8000/health | grep -q "healthy"; then
               echo "Server is healthy!"
               break
             fi
-            echo "Waiting for server... attempt $i"
+            echo "Waiting for server... attempt $i/60"
             sleep 10
           done
 
@@ -85,16 +93,21 @@ jobs:
 
       - name: Health monitoring loop
         env:
-          DURATION_HOURS: ${{ inputs.duration_hours || '5.5' }}
+          DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
           AUTO_RESTART: ${{ inputs.auto_restart }}
         run: |
-          END_TIME=$(date -d "+${DURATION_HOURS} hours" +%s)
-          RESTART_TIME=$(date -d "+${DURATION_HOURS} hours -5 minutes" +%s)
+          # Convert hours to seconds (handle integer hours)
+          DURATION_SECONDS=$((DURATION_HOURS * 3600))
+          RESTART_BUFFER=300  # 5 minutes before end
 
-          echo "=== Phi-3 Medium Inference Server ==="
+          END_TIME=$(($(date +%s) + DURATION_SECONDS))
+          RESTART_TIME=$((END_TIME - RESTART_BUFFER))
+
+          echo "=== Phi-3 Mini Inference Server (GGUF) ==="
           echo "Server running on port 8000"
-          echo "Will run until: $(date -d "@$END_TIME")"
-          echo "======================================"
+          echo "Duration: ${DURATION_HOURS} hours"
+          echo "Will run until: $(date -d @$END_TIME)"
+          echo "==========================================="
 
           while true; do
             CURRENT_TIME=$(date +%s)
@@ -118,13 +131,13 @@ jobs:
 
             # Health check
             if curl -s http://localhost:8000/health | grep -q "healthy"; then
-              echo "[$(date)] Server healthy - GPU: $(curl -s http://localhost:8000/health | jq -r '.gpu_available')"
+              echo "[$(date)] Server healthy - Model: $(curl -s http://localhost:8000/health | jq -r '.model')"
             else
               echo "[$(date)] Server unhealthy, attempting restart..."
-              cd app/phi-inference
               pkill -f inference_server.py || true
+              cd app/phi-inference
               python inference_server.py &
-              sleep 30
+              sleep 60
             fi
 
             sleep 30

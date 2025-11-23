@@ -1,20 +1,20 @@
 """
-Qwen2.5-14B Inference Server
-FastAPI-based REST API for LLM inference
+Qwen2.5 Inference Server (GGUF)
+FastAPI-based REST API using llama-cpp-python for efficient CPU inference
 """
 
 import os
-import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from huggingface_hub import hf_hub_download
+from llama_cpp import Llama
 
 app = FastAPI(
-    title="Qwen2.5-14B Inference API",
-    description="REST API for Qwen2.5-14B model inference",
+    title="Qwen2.5 Inference API",
+    description="REST API for Qwen2.5 model inference using GGUF",
     version="1.0.0"
 )
 
@@ -26,9 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global model and tokenizer
-model = None
-tokenizer = None
+# Global model
+llm = None
+MODEL_NAME = "Qwen2.5-7B-Instruct"
 
 class ChatMessage(BaseModel):
     role: str
@@ -47,53 +47,48 @@ class GenerateResponse(BaseModel):
     model: str
     usage: dict
 
-@app.on_event("startup")
-async def load_model():
-    global model, tokenizer
+def download_model():
+    """Download GGUF model from Hugging Face"""
+    repo_id = os.getenv("MODEL_REPO", "Qwen/Qwen2.5-7B-Instruct-GGUF")
+    filename = os.getenv("MODEL_FILE", "qwen2.5-7b-instruct-q4_k_m.gguf")
 
-    model_name = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-14B-Instruct")
-    use_4bit = os.getenv("USE_4BIT", "true").lower() == "true"
-
-    print(f"Loading model: {model_name}")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        trust_remote_code=True
+    print(f"Downloading model: {repo_id}/{filename}")
+    model_path = hf_hub_download(
+        repo_id=repo_id,
+        filename=filename,
+        cache_dir=os.getenv("HF_HOME", "/tmp/hf_cache")
     )
+    print(f"Model downloaded to: {model_path}")
+    return model_path
 
-    if use_4bit and torch.cuda.is_available():
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4"
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            quantization_config=quantization_config,
-            device_map="auto",
-            trust_remote_code=True
-        )
-    else:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=dtype,
-            device_map="auto" if torch.cuda.is_available() else None,
-            trust_remote_code=True
-        )
-        if device == "cpu":
-            model = model.to(device)
+def load_model():
+    """Load the GGUF model"""
+    global llm
 
-    print(f"Model loaded successfully on {next(model.parameters()).device}")
+    model_path = download_model()
+    n_ctx = int(os.getenv("N_CTX", "4096"))
+    n_threads = int(os.getenv("N_THREADS", "4"))
+
+    print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}")
+    llm = Llama(
+        model_path=model_path,
+        n_ctx=n_ctx,
+        n_threads=n_threads,
+        verbose=True
+    )
+    print("Model loaded successfully!")
+
+# Load model on startup
+@app.on_event("startup")
+async def startup_event():
+    load_model()
 
 @app.get("/health")
 async def health():
     return {
-        "status": "healthy",
-        "model": "Qwen2.5-14B-Instruct",
-        "gpu_available": torch.cuda.is_available()
+        "status": "healthy" if llm is not None else "loading",
+        "model": MODEL_NAME,
+        "format": "GGUF"
     }
 
 @app.get("/v1/models")
@@ -101,7 +96,7 @@ async def list_models():
     return {
         "data": [
             {
-                "id": "qwen2.5-14b-instruct",
+                "id": "qwen2.5-7b-instruct",
                 "object": "model",
                 "owned_by": "qwen"
             }
@@ -110,61 +105,34 @@ async def list_models():
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: GenerateRequest):
-    global model, tokenizer
+    global llm
 
-    if model is None:
+    if llm is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     try:
-        # Build conversation from messages
+        # Build prompt from messages
         if request.messages:
-            text = tokenizer.apply_chat_template(
-                [{"role": m.role, "content": m.content} for m in request.messages],
-                tokenize=False,
-                add_generation_prompt=True
-            )
+            messages = [{"role": m.role, "content": m.content} for m in request.messages]
         elif request.prompt:
-            text = request.prompt
+            messages = [{"role": "user", "content": request.prompt}]
         else:
             raise HTTPException(status_code=400, detail="Either messages or prompt required")
 
-        inputs = tokenizer(text, return_tensors="pt").to(model.device)
-        input_length = inputs.input_ids.shape[1]
-
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=request.max_tokens,
-                temperature=request.temperature,
-                top_p=request.top_p,
-                do_sample=request.temperature > 0,
-                pad_token_id=tokenizer.eos_token_id
-            )
-
-        generated_text = tokenizer.decode(
-            outputs[0][input_length:],
-            skip_special_tokens=True
+        # Generate response
+        response = llm.create_chat_completion(
+            messages=messages,
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            top_p=request.top_p,
         )
 
         return {
             "id": "chatcmpl-qwen",
             "object": "chat.completion",
-            "model": "qwen2.5-14b-instruct",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": generated_text
-                    },
-                    "finish_reason": "stop"
-                }
-            ],
-            "usage": {
-                "prompt_tokens": input_length,
-                "completion_tokens": outputs.shape[1] - input_length,
-                "total_tokens": outputs.shape[1]
-            }
+            "model": "qwen2.5-7b-instruct",
+            "choices": response["choices"],
+            "usage": response["usage"]
         }
 
     except Exception as e:
@@ -176,7 +144,7 @@ async def generate(request: GenerateRequest):
     response = await chat_completions(request)
     return GenerateResponse(
         text=response["choices"][0]["message"]["content"],
-        model="qwen2.5-14b-instruct",
+        model="qwen2.5-7b-instruct",
         usage=response["usage"]
     )
 
