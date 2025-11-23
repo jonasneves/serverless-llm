@@ -593,57 +593,58 @@ CHAT_HTML = """
       font-size: 12px;
     }
 
-    /* Custom range slider styling */
+    /* Custom range slider - minimal robust styling */
     .control-group input[type="range"] {
       -webkit-appearance: none;
       appearance: none;
-      height: 6px;
-      border-radius: 3px;
-      background: var(--border-color);
+      width: 80px;
+      height: 20px;
+      background: transparent;
+      cursor: pointer;
       border: none;
       padding: 0;
-      cursor: pointer;
+      margin: 0;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      background: var(--border-color);
+      border-radius: 2px;
+      border: none;
     }
 
     .control-group input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
+      width: 14px;
+      height: 14px;
       background: var(--accent-color);
-      cursor: pointer;
-      border: 2px solid var(--bg-primary);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    }
-
-    .control-group input[type="range"]::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
       border-radius: 50%;
-      background: var(--accent-color);
+      border: none;
+      margin-top: -5px;
       cursor: pointer;
-      border: 2px solid var(--bg-primary);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    }
-
-    .control-group input[type="range"]::-webkit-slider-runnable-track {
-      height: 6px;
-      border-radius: 3px;
     }
 
     .control-group input[type="range"]::-moz-range-track {
-      height: 6px;
-      border-radius: 3px;
+      width: 100%;
+      height: 4px;
       background: var(--border-color);
+      border-radius: 2px;
+      border: none;
+    }
+
+    .control-group input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
     }
 
     .control-group input[type="range"]:focus {
       outline: none;
-    }
-
-    .control-group input[type="range"]:focus::-webkit-slider-thumb {
-      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.2);
     }
 
     .input-wrapper {
@@ -1226,7 +1227,7 @@ CHAT_HTML = """
         <div class="controls-secondary">
           <div class="control-group">
             <label>Temp:</label>
-            <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7" style="width: 80px;">
+            <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
             <span id="tempValue">0.7</span>
           </div>
           <div class="control-group">
