@@ -21,37 +21,41 @@ Compare responses from multiple AI models side-by-side with real-time streaming 
 ## Architecture
 
 ```mermaid
-graph TB
-    subgraph GHA["GitHub Actions (Free Tier)"]
-        subgraph Runners["Parallel Workflow Runners"]
-            Qwen["Qwen 2.5-7B<br/>(llama-cpp-python)"]
-            Phi["Phi-3 Mini<br/>(llama-cpp-python)"]
-            Llama["Llama 3.2-3B<br/>(llama-cpp-python)"]
-            Chat["Chat Interface<br/>(FastAPI)"]
-        end
+flowchart LR
+    subgraph GHA["GitHub Actions"]
+        direction TB
+        Qwen["Qwen 2.5-7B"]
+        Phi["Phi-3 Mini"]
+        Llama["Llama 3.2-3B"]
+        Chat["Chat Interface"]
     end
 
-    subgraph CF["Cloudflare Tunnels"]
+    subgraph CF["Cloudflare"]
+        direction TB
         T1["qwen.domain"]
         T2["phi.domain"]
         T3["llama.domain"]
         T4["chat.domain"]
     end
 
-    Qwen --> T1
-    Phi --> T2
-    Llama --> T3
-    Chat --> T4
+    Qwen -.-> T1
+    Phi -.-> T2
+    Llama -.-> T3
+    Chat -.-> T4
 
-    T1 & T2 & T3 --> Chat
+    T1 --> Chat
+    T2 --> Chat
+    T3 --> Chat
 
-    User["User"] --> T4
+    User(("User")) --> T4
 
-    style Qwen fill:#7c3aed,stroke:#333,stroke-width:2px,color:#fff
-    style Phi fill:#0ea5e9,stroke:#333,stroke-width:2px,color:#fff
-    style Llama fill:#f97316,stroke:#333,stroke-width:2px,color:#fff
-    style Chat fill:#1e3a5f,stroke:#333,stroke-width:2px,color:#fff
-    style User fill:#10b981,stroke:#333,stroke-width:2px,color:#fff
+    style Qwen fill:#7c3aed,stroke:#333,color:#fff
+    style Phi fill:#0ea5e9,stroke:#333,color:#fff
+    style Llama fill:#f97316,stroke:#333,color:#fff
+    style Chat fill:#1e3a5f,stroke:#333,color:#fff
+    style User fill:#10b981,stroke:#333,color:#fff
+    style GHA fill:#f8f9fa,stroke:#2088ff,stroke-width:2px
+    style CF fill:#fff8f0,stroke:#f38020,stroke-width:2px
 ```
 
 ## Features
