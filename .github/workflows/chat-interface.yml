@@ -39,6 +39,26 @@ jobs:
     timeout-minutes: 350
 
     steps:
+      - name: Find previous running workflow
+        id: find_previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find other running instances of this workflow (excluding current run)
+          PREVIOUS_RUN_ID=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/chat-interface.yml/runs?status=in_progress" \
+            | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
+
+          if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ]; then
+            echo "Found previous running workflow: $PREVIOUS_RUN_ID"
+            echo "previous_run_id=$PREVIOUS_RUN_ID" >> $GITHUB_OUTPUT
+          else
+            echo "No previous running workflow found"
+            echo "previous_run_id=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -88,9 +108,27 @@ jobs:
           if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
             cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN" &
             echo "Cloudflare tunnel started"
+            # Wait for tunnel to establish
+            sleep 15
           else
             echo "No tunnel token provided, server only accessible locally"
           fi
+
+      - name: Cancel previous workflow (graceful handoff)
+        if: steps.find_previous.outputs.previous_run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIOUS_RUN_ID: ${{ steps.find_previous.outputs.previous_run_id }}
+        run: |
+          echo "New server is ready, cancelling previous workflow run: $PREVIOUS_RUN_ID"
+
+          # Cancel the previous workflow run
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel"
+
+          echo "Previous workflow cancelled. Traffic will now be served by this instance."
 
       - name: Health monitoring loop
         env:
