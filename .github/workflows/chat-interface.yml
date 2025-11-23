@@ -37,6 +37,9 @@ jobs:
     name: Chat Interface Server
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    permissions:
+      actions: write
+      contents: read
 
     steps:
       - name: Find previous running workflow
@@ -44,18 +47,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "Current run ID: ${{ github.run_id }}"
+
           # Find other running instances of this workflow (excluding current run)
-          PREVIOUS_RUN_ID=$(curl -s \
+          API_RESPONSE=$(curl -s \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/chat-interface.yml/runs?status=in_progress" \
-            | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/chat-interface.yml/runs?status=in_progress")
 
-          if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ]; then
+          echo "API Response (first 500 chars): ${API_RESPONSE:0:500}"
+
+          # Get count of in_progress runs
+          RUN_COUNT=$(echo "$API_RESPONSE" | jq '.total_count')
+          echo "Total in_progress runs found: $RUN_COUNT"
+
+          # List all running workflow IDs
+          echo "All running workflow IDs:"
+          echo "$API_RESPONSE" | jq -r '.workflow_runs[].id'
+
+          # Find the previous run (not current)
+          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
+
+          if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ] && [ "$PREVIOUS_RUN_ID" != "" ]; then
             echo "Found previous running workflow: $PREVIOUS_RUN_ID"
             echo "previous_run_id=$PREVIOUS_RUN_ID" >> $GITHUB_OUTPUT
           else
-            echo "No previous running workflow found"
+            echo "No previous running workflow found (this is the only instance)"
             echo "previous_run_id=" >> $GITHUB_OUTPUT
           fi
 
@@ -123,12 +140,34 @@ jobs:
           echo "New server is ready, cancelling previous workflow run: $PREVIOUS_RUN_ID"
 
           # Cancel the previous workflow run
-          curl -s -X POST \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel"
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel")
 
-          echo "Previous workflow cancelled. Traffic will now be served by this instance."
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "Cancel API response code: $HTTP_CODE"
+          echo "Cancel API response body: $BODY"
+
+          if [ "$HTTP_CODE" = "202" ]; then
+            echo "✓ Previous workflow cancellation accepted. Traffic will now be served by this instance."
+          else
+            echo "⚠ Cancel request returned code $HTTP_CODE - previous workflow may have already ended"
+          fi
+
+          # Wait a moment for the cancellation to take effect
+          sleep 5
+
+          # Verify the previous workflow is no longer running
+          STATUS=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID" \
+            | jq -r '.status')
+
+          echo "Previous workflow status after cancellation: $STATUS"
 
       - name: Health monitoring loop
         env:
@@ -157,21 +196,25 @@ jobs:
           echo "  - Llama: ${LLAMA_API_URL:-not configured}"
           echo ""
 
+          RESTART_TRIGGERED=false
+
           while true; do
             CURRENT_TIME=$(date +%s)
 
-            # Check if we need to restart
-            if [ "$AUTO_RESTART" = "true" ] && [ $CURRENT_TIME -ge $RESTART_TIME ]; then
+            # Check if we need to trigger restart (only once)
+            if [ "$AUTO_RESTART" = "true" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ $CURRENT_TIME -ge $RESTART_TIME ]; then
               echo "Approaching timeout, triggering restart..."
               curl -X POST \
                 -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                 -H "Accept: application/vnd.github.v3+json" \
                 "https://api.github.com/repos/${{ github.repository }}/dispatches" \
                 -d '{"event_type":"restart-chat-interface"}'
-              break
+              RESTART_TRIGGERED=true
+              echo "Restart triggered. Continuing to serve traffic until new instance is ready..."
+              # Don't break - keep running until cancelled by new workflow or hard timeout
             fi
 
-            # Check if time exceeded
+            # Check if hard timeout exceeded (only exit if restart was triggered and we've waited long enough)
             if [ $CURRENT_TIME -ge $END_TIME ]; then
               echo "Duration exceeded, shutting down..."
               break
