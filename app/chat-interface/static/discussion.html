@@ -155,10 +155,18 @@
       border: 1px solid var(--border-color);
       border-radius: 8px;
       font-size: 13px;
+      position: sticky;
+      top: 80px;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .orchestrator-bar.visible {
       display: flex;
+    }
+
+    [data-theme="dark"] .orchestrator-bar {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
     .orchestrator-bar-icon {
