@@ -52,7 +52,7 @@ Compare responses from multiple AI models side-by-side with real-time streaming 
 
 ## Features
 
-### Discussion Mode 🆕
+### Discussion Mode
 
 Multi-model collaborative discussions with GPT-5-nano orchestration:
 
