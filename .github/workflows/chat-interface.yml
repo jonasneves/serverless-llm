@@ -102,6 +102,7 @@ jobs:
           QWEN_API_URL: ${{ inputs.qwen_api_url || secrets.QWEN_API_URL }}
           PHI_API_URL: ${{ inputs.phi_api_url || secrets.PHI_API_URL }}
           LLAMA_API_URL: ${{ inputs.llama_api_url || secrets.LLAMA_API_URL }}
+          GITHUB_TOKEN: ${{ secrets.DISCUSSION_GITHUB_TOKEN }}
         run: |
           cd app/chat-interface
           python chat_server.py &

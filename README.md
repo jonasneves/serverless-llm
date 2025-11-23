@@ -10,6 +10,8 @@
 
 Compare responses from multiple AI models side-by-side with real-time streaming in a modern web interface.
 
+**NEW:** [Discussion Mode](DISCUSSION_MODE.md) - Models collaborate on responses through GPT-5-nano orchestrated discussions.
+
 ## Overview
 
 - **Zero Infrastructure Cost**: Runs entirely on GitHub Actions free tier
@@ -49,6 +51,18 @@ Compare responses from multiple AI models side-by-side with real-time streaming 
 **Flow:** User → Chat Interface → Model Servers (Qwen/Phi/Llama) → Streaming Response
 
 ## Features
+
+### Discussion Mode 🆕
+
+Multi-model collaborative discussions with GPT-5-nano orchestration:
+
+- **Intelligent Orchestration**: GPT-5-nano analyzes queries and assigns expertise scores
+- **Turn-Based Discussion**: Models "think out loud together" based on their strengths
+- **Benchmark-Driven**: Expertise profiles based on MMLU, HumanEval, BigBench-Hard, etc.
+- **Real-Time Streaming**: Watch the discussion unfold with live evaluations
+- **Smart Synthesis**: Weighted final response combines the best from each model
+
+[→ See Discussion Mode Documentation](DISCUSSION_MODE.md)
 
 ### LLM Arena Interface
 
@@ -98,6 +112,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | `QWEN_API_URL` | Public URL (e.g., `https://qwen.domain`) |
 | `PHI_API_URL` | Public URL for Phi |
 | `LLAMA_API_URL` | Public URL for Llama |
+| `DISCUSSION_GITHUB_TOKEN` | GitHub token for Discussion Mode (optional, [user_models:read](https://github.com/settings/personal-access-tokens/new)) |
 
 ### 2. Create Cloudflare Tunnels
 

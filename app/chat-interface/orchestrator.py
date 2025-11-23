@@ -1,0 +1,371 @@
+"""
+Discussion Orchestrator using GPT-5-nano via GitHub Models API
+
+This module provides intelligent orchestration for multi-model discussions,
+using GPT-5-nano to analyze queries, evaluate contributions, and synthesize
+final responses with structured outputs.
+"""
+
+import os
+import json
+import aiohttp
+from typing import List, Dict, Any, Optional, Type
+from pydantic import BaseModel, Field
+from enum import Enum
+
+
+class DomainType(str, Enum):
+    """Domain types for query classification"""
+    MATHEMATICS = "mathematics"
+    CODING = "coding"
+    REASONING = "reasoning"
+    CREATIVE_WRITING = "creative_writing"
+    CONVERSATION = "conversation"
+    SUMMARIZATION = "summarization"
+    SCIENTIFIC = "scientific_knowledge"
+    COMMON_SENSE = "common_sense"
+
+
+class QueryAnalysis(BaseModel):
+    """Structured output for initial query analysis"""
+    query_domains: List[DomainType] = Field(description="Relevant domains for this query")
+    domain_weights: Dict[str, float] = Field(description="Weight for each domain (sum to 1.0)")
+    model_expertise_scores: Dict[str, float] = Field(description="Expertise score per model (0-1)")
+    discussion_lead: str = Field(description="Model ID that should respond first")
+    expected_turns: int = Field(description="Number of discussion rounds needed (1-4)", ge=1, le=4)
+    reasoning: str = Field(description="Brief explanation of the analysis")
+
+
+class ConfidenceLevel(str, Enum):
+    """Confidence assessment levels"""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class TurnEvaluation(BaseModel):
+    """Structured output for evaluating each model's turn"""
+    quality_score: float = Field(description="Overall quality (0-1)", ge=0, le=1)
+    relevance_score: float = Field(description="Relevance to query (0-1)", ge=0, le=1)
+    expertise_alignment: float = Field(description="How well it used its strengths (0-1)", ge=0, le=1)
+    confidence_assessment: ConfidenceLevel = Field(description="Confidence level")
+    key_contributions: List[str] = Field(description="Key points made")
+    conflicts_with_previous: bool = Field(description="Conflicts with earlier responses")
+    should_continue_discussion: bool = Field(description="Whether more discussion is needed")
+
+
+class MergeStrategy(str, Enum):
+    """Strategy for synthesizing final response"""
+    PRIORITIZE_LEAD = "prioritize_lead"
+    COMBINE_BEST = "combine_best"
+    CONSENSUS = "consensus"
+
+
+class SynthesisSection(BaseModel):
+    """Section to include in synthesis"""
+    source_model: str = Field(description="Model ID to source from")
+    content_type: str = Field(description="Type of content (e.g., 'code', 'explanation', 'analysis')")
+    priority: int = Field(description="Order priority (lower = earlier)", ge=1)
+
+
+class SynthesisResult(BaseModel):
+    """Structured output for synthesis plan"""
+    primary_source_model: str = Field(description="Model to prioritize")
+    source_weights: Dict[str, float] = Field(description="Weight per model in synthesis")
+    merge_strategy: MergeStrategy = Field(description="How to merge responses")
+    sections_to_include: List[SynthesisSection] = Field(description="Sections to include in order")
+    final_confidence: float = Field(description="Overall confidence (0-1)", ge=0, le=1)
+    synthesis_instructions: str = Field(description="Instructions for generating final response")
+
+
+class GitHubModelsOrchestrator:
+    """
+    Orchestrator using GPT-5-nano via GitHub Models API
+
+    Provides minimal, structured API calls for:
+    - Query analysis and domain classification
+    - Turn-by-turn evaluation
+    - Final response synthesis
+    """
+
+    def __init__(
+        self,
+        github_token: Optional[str] = None,
+        model_id: str = "gpt-5-nano",
+        api_url: str = "https://models.github.ai/inference/chat/completions",
+        max_tokens: int = 1024
+    ):
+        """
+        Initialize orchestrator with GitHub Models API credentials
+
+        Args:
+            github_token: GitHub Personal Access Token (user_models:read permission)
+            model_id: Model to use (default: gpt-5-nano)
+            api_url: GitHub Models API endpoint
+            max_tokens: Maximum tokens per response
+        """
+        self.github_token = github_token or os.getenv("GITHUB_TOKEN")
+        self.model_id = model_id
+        self.api_url = api_url
+        self.max_tokens = max_tokens
+
+        if not self.github_token:
+            raise ValueError("GitHub token required. Set GITHUB_TOKEN env var or pass github_token parameter.")
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get authentication headers for GitHub Models API"""
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.github_token}",
+            "X-GitHub-Api-Version": "2022-11-28"
+        }
+
+    async def _call_structured(
+        self,
+        prompt: str,
+        response_format: Type[BaseModel],
+        temperature: float = 0.3
+    ) -> BaseModel:
+        """
+        Make structured output call to GPT-5-nano
+
+        Args:
+            prompt: System + user prompt
+            response_format: Pydantic model for response validation
+            temperature: Sampling temperature (lower = more deterministic)
+
+        Returns:
+            Validated Pydantic model instance
+        """
+        # Add JSON schema instruction to prompt
+        schema = response_format.schema()
+        structured_prompt = f"""{prompt}
+
+IMPORTANT: Respond with ONLY valid JSON matching this exact schema:
+
+{json.dumps(schema, indent=2)}
+
+Do not include any explanatory text outside the JSON object."""
+
+        async with aiohttp.ClientSession() as session:
+            payload = {
+                "model": self.model_id,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a precise analytical assistant. Always respond with valid JSON only."
+                    },
+                    {
+                        "role": "user",
+                        "content": structured_prompt
+                    }
+                ],
+                "max_tokens": self.max_tokens,
+                "temperature": temperature,
+                "stream": False
+            }
+
+            async with session.post(
+                self.api_url,
+                headers=self._get_headers(),
+                json=payload
+            ) as response:
+                if response.status == 429:
+                    rate_limit_reset = response.headers.get("x-ratelimit-reset")
+                    raise Exception(f"Rate limit exceeded. Reset at: {rate_limit_reset}")
+
+                if not response.ok:
+                    error_text = await response.text()
+                    raise Exception(f"GitHub Models API error {response.status}: {error_text}")
+
+                data = await response.json()
+                content = data["choices"][0]["message"]["content"]
+
+                # Parse JSON response
+                try:
+                    # Handle potential markdown code blocks
+                    if "```json" in content:
+                        content = content.split("```json")[1].split("```")[0].strip()
+                    elif "```" in content:
+                        content = content.split("```")[1].split("```")[0].strip()
+
+                    json_data = json.loads(content)
+                    return response_format.parse_obj(json_data)
+                except (json.JSONDecodeError, ValueError) as e:
+                    raise Exception(f"Failed to parse structured output: {e}\nContent: {content}")
+
+    async def analyze_query(self, query: str, model_profiles: Dict[str, Dict]) -> QueryAnalysis:
+        """
+        Analyze user query and determine discussion parameters
+
+        Args:
+            query: User's question/request
+            model_profiles: Dict of model capabilities
+
+        Returns:
+            QueryAnalysis with domain classification and model scores
+        """
+        # Build model capabilities summary
+        capabilities_summary = "\n".join([
+            f"- {model_id}: {', '.join([f'{domain}({score:.2f})' for domain, score in profile['expertise_domains'].items() if score >= 0.70])}"
+            for model_id, profile in model_profiles.items()
+        ])
+
+        prompt = f"""Analyze this user query and determine the optimal discussion strategy.
+
+User Query: {query}
+
+Available Models and Their Expertise:
+{capabilities_summary}
+
+Determine:
+1. What domains this query requires (mathematics, coding, reasoning, creative_writing, conversation, summarization, scientific_knowledge, common_sense)
+2. How much weight each domain should have (must sum to 1.0)
+3. Expertise score for each model on THIS specific query (0-1 based on domain match)
+4. Which model should lead the discussion (highest expertise)
+5. How many discussion turns are needed (1-4):
+   - 1 turn: Simple query, one model is clearly expert
+   - 2 turns: Moderate complexity, benefit from one supporting perspective
+   - 3 turns: Complex multi-domain query, need multiple perspectives
+   - 4 turns: Very complex, requires extensive collaboration
+
+Provide brief reasoning for your analysis."""
+
+        return await self._call_structured(prompt, QueryAnalysis, temperature=0.2)
+
+    async def evaluate_turn(
+        self,
+        model_id: str,
+        model_response: str,
+        query: str,
+        context: List[Dict[str, Any]],
+        expertise_score: float
+    ) -> TurnEvaluation:
+        """
+        Evaluate a model's contribution to the discussion
+
+        Args:
+            model_id: ID of model being evaluated
+            model_response: The model's response text
+            query: Original user query
+            context: Previous discussion turns
+            expertise_score: Model's expertise score for this query
+
+        Returns:
+            TurnEvaluation with quality metrics
+        """
+        # Build context summary
+        context_summary = "\n\n".join([
+            f"Turn {i+1} - {turn['model']}:\n{turn['response'][:500]}..."
+            for i, turn in enumerate(context)
+        ]) if context else "No previous turns"
+
+        prompt = f"""Evaluate this model's contribution to an ongoing discussion.
+
+Original Query: {query}
+
+Model: {model_id}
+Expected Expertise Score: {expertise_score:.2f}
+
+Previous Discussion:
+{context_summary}
+
+Current Response:
+{model_response}
+
+Evaluate:
+1. Quality score (0-1): Overall quality of response
+2. Relevance score (0-1): How well it addresses the query
+3. Expertise alignment (0-1): How well it leveraged its strengths
+4. Confidence level: high/medium/low based on response certainty
+5. Key contributions: List 2-4 specific points this model contributed
+6. Conflicts: Does it contradict previous responses?
+7. Should continue: Does the discussion need more input?
+
+Consider:
+- Is this response adding new value or just repeating others?
+- Is it staying within its expertise area?
+- Are there gaps remaining that other models could fill?"""
+
+        return await self._call_structured(prompt, TurnEvaluation, temperature=0.3)
+
+    async def synthesize_final(
+        self,
+        query: str,
+        discussion_turns: List[Dict[str, Any]],
+        evaluations: List[TurnEvaluation],
+        model_profiles: Dict[str, Dict]
+    ) -> SynthesisResult:
+        """
+        Create synthesis plan for final response
+
+        Args:
+            query: Original user query
+            discussion_turns: All model responses
+            evaluations: Evaluations for each turn
+            model_profiles: Model capability profiles
+
+        Returns:
+            SynthesisResult with merge strategy
+        """
+        # Build discussion summary
+        discussion_summary = "\n\n".join([
+            f"""Model: {turn['model']}
+Response: {turn['response'][:300]}...
+Evaluation: Quality={eval.quality_score:.2f}, Relevance={eval.relevance_score:.2f}, Expertise={eval.expertise_alignment:.2f}
+Key Points: {', '.join(eval.key_contributions[:3])}"""
+            for turn, eval in zip(discussion_turns, evaluations)
+        ])
+
+        prompt = f"""Create a synthesis plan to combine model responses into one optimal answer.
+
+Original Query: {query}
+
+Discussion Summary:
+{discussion_summary}
+
+Create a synthesis plan that:
+1. Identifies the primary source model (highest quality × expertise)
+2. Assigns weights to each model's contribution (sum to 1.0)
+3. Chooses merge strategy:
+   - prioritize_lead: Mainly use lead model, add minor enhancements
+   - combine_best: Take best parts from each model
+   - consensus: Blend where models agree, note disagreements
+4. Lists sections to include (ordered by priority):
+   - Which model to source each section from
+   - What type of content (code, explanation, analysis, etc.)
+   - Priority order (1=first, 2=second, etc.)
+5. Overall confidence in synthesized response (0-1)
+6. Instructions for generating the final response
+
+The synthesis should create a cohesive response that feels like one expert speaking, not a patchwork."""
+
+        return await self._call_structured(prompt, SynthesisResult, temperature=0.4)
+
+    async def check_rate_limits(self) -> Dict[str, Any]:
+        """
+        Check current rate limit status
+
+        Returns:
+            Dict with limit, remaining, and reset information
+        """
+        async with aiohttp.ClientSession() as session:
+            # Make minimal request to check headers
+            payload = {
+                "model": self.model_id,
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 1,
+                "stream": False
+            }
+
+            async with session.post(
+                self.api_url,
+                headers=self._get_headers(),
+                json=payload
+            ) as response:
+                return {
+                    "limit": response.headers.get("x-ratelimit-limit"),
+                    "remaining": response.headers.get("x-ratelimit-remaining"),
+                    "reset": response.headers.get("x-ratelimit-reset"),
+                    "status": "ok" if response.ok else f"error_{response.status}"
+                }
