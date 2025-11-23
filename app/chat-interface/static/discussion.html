@@ -591,7 +591,10 @@
               autocomplete="off"
             >
             <div class="token-hint">
-              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a token</a> with <code>user_models:read</code> permission. Leave empty to use server default.
+              <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Arena&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled). Leave empty to use server default.
+            </div>
+            <div class="token-hint" style="margin-top: 2px; opacity: 0.7;">
+              🔒 Token is saved in your browser only, never sent to our servers for storage.
             </div>
           </div>
         </div>
@@ -636,6 +639,22 @@
       tokenInputWrapper.classList.toggle('visible');
       const svg = tokenToggle.querySelector('svg');
       svg.style.transform = tokenInputWrapper.classList.contains('visible') ? 'rotate(180deg)' : '';
+    });
+
+    // Load saved token from localStorage
+    const savedToken = localStorage.getItem('github_models_token');
+    if (savedToken) {
+      githubToken.value = savedToken;
+    }
+
+    // Save token to localStorage when changed
+    githubToken.addEventListener('input', () => {
+      const token = githubToken.value.trim();
+      if (token) {
+        localStorage.setItem('github_models_token', token);
+      } else {
+        localStorage.removeItem('github_models_token');
+      }
     });
 
     orchestratorModel.addEventListener('change', updateOrchestratorUI);
