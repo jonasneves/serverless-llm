@@ -22,31 +22,7 @@ Compare responses from multiple AI models side-by-side with real-time streaming 
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          GitHub Actions (Free Tier)                         │
-│                                                                             │
-│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
-│   │ Qwen 2.5-7B │    │ Phi-3 Mini  │    │ Llama 3.2-3B│    │    Chat     │  │
-│   │   Server    │    │   Server    │    │   Server    │    │  Interface  │  │
-│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    └──────┬──────┘  │
-│          │                  │                  │                  │         │
-└──────────┼──────────────────┼──────────────────┼──────────────────┼─────────┘
-           │                  │                  │                  │
-           ▼                  ▼                  ▼                  ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                            Cloudflare Tunnels                                │
-│    qwen.domain         phi.domain        llama.domain        chat.domain    │
-└──────────┬──────────────────┬──────────────────┬──────────────────┬─────────┘
-           │                  │                  │                  │
-           └──────────────────┴────────┬─────────┴──────────────────┘
-                                       │
-                                       ▼
-                              ┌─────────────────┐
-                              │      User       │
-                              │    (Browser)    │
-                              └─────────────────┘
-```
+![Architecture](architecture.png)
 
 **Flow:** User → Chat Interface → Model Servers (Qwen/Phi/Llama) → Streaming Response
 

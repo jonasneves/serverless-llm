@@ -115,6 +115,7 @@ class DiscussionRequest(BaseModel):
     query: str
     max_tokens: int = 512
     temperature: float = 0.7
+    orchestrator_model: Optional[str] = None  # Model ID for orchestrator (e.g., 'gpt-5-nano', 'qwen2.5-7b')
 
 # HTML Chat Interface
 CHAT_HTML = """
@@ -2027,7 +2028,8 @@ async def chat_stream(request: MultiChatRequest):
 async def stream_discussion_events(
     query: str,
     max_tokens: int,
-    temperature: float
+    temperature: float,
+    orchestrator_model: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     """
     Stream discussion events as Server-Sent Events
@@ -2044,13 +2046,37 @@ async def stream_discussion_events(
     - error: Error occurred
     """
     try:
-        # Initialize orchestrator
-        github_token = os.getenv("GH_MODELS_TOKEN")
-        if not github_token:
-            yield f"data: {json.dumps({'event': 'error', 'error': 'GH_MODELS_TOKEN not configured'})}\n\n"
-            return
+        # Determine orchestrator model type
+        api_models = ['gpt-5-nano', 'gpt-4o-mini']
+        local_models = list(MODEL_ENDPOINTS.keys())
 
-        orchestrator = GitHubModelsOrchestrator(github_token=github_token)
+        selected_orchestrator = orchestrator_model or 'gpt-5-nano'
+        is_api_model = selected_orchestrator in api_models
+
+        if is_api_model:
+            # Initialize GitHub Models API orchestrator
+            github_token = os.getenv("GH_MODELS_TOKEN")
+            if not github_token:
+                yield f"data: {json.dumps({'event': 'error', 'error': 'GH_MODELS_TOKEN not configured for API orchestrator'})}\n\n"
+                return
+
+            orchestrator = GitHubModelsOrchestrator(
+                github_token=github_token,
+                model_id=selected_orchestrator
+            )
+        elif selected_orchestrator in local_models:
+            # Initialize local model orchestrator
+            local_endpoint = MODEL_ENDPOINTS[selected_orchestrator]
+            orchestrator = GitHubModelsOrchestrator(
+                github_token="local",  # Placeholder, won't be used
+                model_id=selected_orchestrator,
+                api_url=f"{local_endpoint}/v1/chat/completions"
+            )
+            # Override the headers method for local models
+            orchestrator._get_headers = lambda: {"Content-Type": "application/json"}
+        else:
+            yield f"data: {json.dumps({'event': 'error', 'error': f'Unknown orchestrator model: {selected_orchestrator}'})}\n\n"
+            return
 
         # Initialize discussion engine
         engine = DiscussionEngine(
@@ -2096,7 +2122,7 @@ async def discussion_stream(request: DiscussionRequest):
     - error: Error details
     """
     return StreamingResponse(
-        stream_discussion_events(request.query, request.max_tokens, request.temperature),
+        stream_discussion_events(request.query, request.max_tokens, request.temperature, request.orchestrator_model),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -378,6 +378,64 @@
       border-radius: 8px;
       margin: 16px 0;
     }
+
+    .orchestrator-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .orchestrator-control label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .orchestrator-control select {
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 13px;
+      min-width: 160px;
+    }
+
+    .model-type-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .model-type-badge.api {
+      background: rgba(217, 119, 6, 0.15);
+      color: var(--warning-color);
+    }
+
+    .model-type-badge.local {
+      background: rgba(5, 150, 105, 0.15);
+      color: var(--success-color);
+    }
+
+    .api-warning {
+      font-size: 11px;
+      color: var(--warning-color);
+      display: none;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .api-warning.visible {
+      display: flex;
+    }
+
+    .api-warning svg {
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -423,6 +481,21 @@
         ></textarea>
         <div class="controls">
           <button id="startBtn" class="btn btn-primary">Start Discussion</button>
+          <div class="orchestrator-control">
+            <label>Orchestrator:</label>
+            <select id="orchestratorModel">
+              <optgroup label="API Models">
+                <option value="gpt-5-nano" selected>GPT-5 Nano</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+              </optgroup>
+              <optgroup label="Local Models">
+                <option value="qwen2.5-7b">Qwen 2.5-7B</option>
+                <option value="phi-3-mini">Phi-3 Mini</option>
+                <option value="llama-3.2-3b">Llama 3.2-3B</option>
+              </optgroup>
+            </select>
+            <span id="orchestratorBadge" class="model-type-badge api">API</span>
+          </div>
           <div class="param-control">
             <label>Max Tokens:</label>
             <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128">
@@ -432,6 +505,14 @@
             <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
           </div>
           <div id="statusIndicator"></div>
+        </div>
+        <div id="apiWarning" class="api-warning">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>API models may consume credits from your GitHub Models quota</span>
         </div>
       </div>
 
@@ -447,8 +528,25 @@
     const temperatureInput = document.getElementById('temperature');
     const statusIndicator = document.getElementById('statusIndicator');
     const discussionContent = document.getElementById('discussionContent');
+    const orchestratorModel = document.getElementById('orchestratorModel');
+    const orchestratorBadge = document.getElementById('orchestratorBadge');
+    const apiWarning = document.getElementById('apiWarning');
 
     let currentDiscussion = null;
+
+    // API models that consume GitHub Models credits
+    const API_MODELS = ['gpt-5-nano', 'gpt-4o-mini'];
+
+    // Update badge and warning based on orchestrator selection
+    function updateOrchestratorUI() {
+      const isApiModel = API_MODELS.includes(orchestratorModel.value);
+      orchestratorBadge.textContent = isApiModel ? 'API' : 'Local';
+      orchestratorBadge.className = `model-type-badge ${isApiModel ? 'api' : 'local'}`;
+      apiWarning.classList.toggle('visible', isApiModel);
+    }
+
+    orchestratorModel.addEventListener('change', updateOrchestratorUI);
+    updateOrchestratorUI(); // Initialize on load
 
     // Theme toggle functionality
     const themeToggle = document.getElementById('themeToggle');
@@ -584,6 +682,7 @@
 
       const maxTokens = parseInt(maxTokensInput.value);
       const temperature = parseFloat(temperatureInput.value);
+      const orchestrator = orchestratorModel.value;
 
       // Reset UI
       discussionContent.innerHTML = '';
@@ -596,7 +695,7 @@
         const response = await fetch('/api/chat/discussion/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, max_tokens: maxTokens, temperature })
+          body: JSON.stringify({ query, max_tokens: maxTokens, temperature, orchestrator_model: orchestrator })
         });
 
         if (!response.ok) {
