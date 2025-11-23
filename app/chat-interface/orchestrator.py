@@ -8,10 +8,14 @@ final responses with structured outputs.
 
 import os
 import json
+import logging
 import aiohttp
 from typing import List, Dict, Any, Optional, Type
 from pydantic import BaseModel, Field
 from enum import Enum
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class DomainType(str, Enum):
@@ -176,7 +180,24 @@ Do not include any explanatory text outside the JSON object."""
                     raise Exception(f"GitHub Models API error {response.status}: {error_text}")
 
                 data = await response.json()
+
+                # Log the full response for debugging
+                logger.info(f"Orchestrator API response: {json.dumps(data, indent=2)}")
+
+                # Extract content from response
+                if "choices" not in data or not data["choices"]:
+                    raise Exception(f"No choices in API response. Full response: {json.dumps(data)}")
+
+                if "message" not in data["choices"][0]:
+                    raise Exception(f"No message in choice. Full response: {json.dumps(data)}")
+
+                if "content" not in data["choices"][0]["message"]:
+                    raise Exception(f"No content in message. Full response: {json.dumps(data)}")
+
                 content = data["choices"][0]["message"]["content"]
+
+                if not content or content.strip() == "":
+                    raise Exception(f"Empty content from API. Full response: {json.dumps(data)}")
 
                 # Parse JSON response
                 try:
@@ -189,7 +210,8 @@ Do not include any explanatory text outside the JSON object."""
                     json_data = json.loads(content)
                     return response_format.parse_obj(json_data)
                 except (json.JSONDecodeError, ValueError) as e:
-                    raise Exception(f"Failed to parse structured output: {e}\nContent: {content}")
+                    logger.error(f"Failed to parse JSON. Content: {content[:500]}")
+                    raise Exception(f"Failed to parse structured output: {e}\nContent preview: {content[:500]}")
 
     async def analyze_query(self, query: str, model_profiles: Dict[str, Dict]) -> QueryAnalysis:
         """
