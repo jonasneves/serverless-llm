@@ -1218,7 +1218,6 @@
       queryInput.disabled = true;
 
       try {
-        setStatus('analyzing', 'Analyzing query...');
         showOrchestratorBar(orchestrator);
         updateOrchestratorStatus('Analyzing query...');
 
@@ -1269,9 +1268,7 @@
 
               switch (event.event) {
                 case 'analysis_complete':
-                  clearStatus();
                   showAnalysis(event.analysis);
-                  setStatus('discussing', 'Models discussing...');
                   updateOrchestratorStatus('Waiting for model responses...');
                   break;
 
@@ -1312,24 +1309,20 @@
                   break;
 
                 case 'synthesis_start':
-                  setStatus('synthesizing', 'Synthesizing final response...');
                   updateOrchestratorStatus('Synthesizing final response...');
                   break;
 
                 case 'synthesis_complete':
-                  clearStatus();
                   break;
 
                 case 'discussion_complete':
                   showSynthesis(event.synthesis || {}, event.final_response);
-                  clearStatus();
                   updateOrchestratorStatus('Discussion complete', false);
                   setTimeout(() => hideOrchestratorBar(), 3000);
                   break;
 
                 case 'error':
                   showError(event.error);
-                  clearStatus();
                   hideOrchestratorBar();
                   break;
               }
@@ -1345,7 +1338,6 @@
       } finally {
         startBtn.disabled = false;
         queryInput.disabled = false;
-        clearStatus();
       }
     }
 
