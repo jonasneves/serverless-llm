@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Models Arena",
+  "version": "1.0",
+  "description": "Compare and test multiple AI models from GitHub Models API with auto-fallback and rate limit tracking",
+  "permissions": [
+    "activeTab",
+    "sidePanel",
+    "scripting",
+    "storage",
+    "cookies"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Open GitHub Models Arena"
+  },
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

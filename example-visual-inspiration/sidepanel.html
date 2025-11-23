@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Models Arena</title>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #FAFAFA;
+      --bg-tertiary: #F3F4F6;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --text-tertiary: #9CA3AF;
+      --border-color: #E5E7EB;
+      --accent-color: #1e3a5f;
+      --accent-hover: #2c4f7c;
+      --accent-text: #ffffff;
+      --danger-color: #DC2626;
+      --warning-color: #D97706;
+      --success-color: #059669;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+      
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0a0e14;
+      --bg-secondary: #12161e;
+      --bg-tertiary: #1a1f2b;
+      --text-primary: #e4e7eb;
+      --text-secondary: #9ca3af;
+      --text-tertiary: #6b7280;
+      --border-color: #1f2937;
+      --accent-color: #1e3a8a;
+      --accent-hover: #1e40af;
+      --accent-text: #ffffff;
+      --danger-color: #ef4444;
+      --warning-color: #f59e0b;
+      --success-color: #10b981;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Utility Classes */
+    .hidden { display: none !important; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-4 { gap: 1rem; }
+    .text-sm { font-size: 0.875rem; }
+    .text-xs { font-size: 0.75rem; }
+    .font-bold { font-weight: 600; }
+    .cursor-pointer { cursor: pointer; }
+    .w-full { width: 100%; }
+
+    /* Header */
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-subtitle {
+      font-size: 11px;
+      opacity: 0.85;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+    
+    .header-icon {
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 6px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .header-icon svg {
+      stroke: white;
+      color: white;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .icon-btn.active {
+      background: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+    }
+    
+    .icon-btn svg {
+      stroke: white;
+      color: white;
+    }
+
+    /* Main Layout */
+    main {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    /* Chat View */
+    .chat-history {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .message {
+      max-width: 90%;
+      line-height: 1.5;
+      font-size: 0.9rem;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 16px 16px 4px 16px;
+      box-shadow: 0 2px 8px rgba(30, 58, 95, 0.2);
+      font-size: 14px;
+    }
+    
+    .message.user .message-content {
+      color: white;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      width: 100%;
+      background: white;
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .model-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .message-content {
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    /* Markdown Styles inside messages - Subtle & Clean */
+    .message-content p {
+      margin-bottom: 0.75em;
+      line-height: 1.6;
+    }
+    .message-content p:last-child { margin-bottom: 0; }
+
+    /* Headings - More subtle */
+    .message-content h1 {
+      font-size: 1.25em;
+      font-weight: 600;
+      margin: 1em 0 0.5em 0;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.3em;
+    }
+    .message-content h2 {
+      font-size: 1.15em;
+      font-weight: 600;
+      margin: 0.9em 0 0.4em 0;
+      color: var(--text-primary);
+    }
+    .message-content h3 {
+      font-size: 1.05em;
+      font-weight: 600;
+      margin: 0.8em 0 0.4em 0;
+      color: var(--text-primary);
+    }
+    .message-content h4, .message-content h5, .message-content h6 {
+      font-size: 1em;
+      font-weight: 500;
+      margin: 0.7em 0 0.3em 0;
+      color: var(--text-secondary);
+    }
+
+    /* Bold and Italic - More subtle */
+    .message-content strong {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .message-content em {
+      font-style: italic;
+      color: var(--text-secondary);
+    }
+
+    /* Inline Code - Subtle */
+    .message-content code {
+      font-family: var(--font-mono);
+      background-color: var(--bg-tertiary);
+      padding: 0.15em 0.4em;
+      border-radius: 3px;
+      font-size: 0.9em;
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    /* Code Blocks - Clean */
+    .message-content pre {
+      background-color: var(--bg-secondary);
+      padding: 0.75rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 0.75em 0;
+      border: 1px solid var(--border-color);
+      line-height: 1.5;
+    }
+    .message-content pre code {
+      background-color: transparent;
+      padding: 0;
+      border: none;
+      color: var(--text-primary);
+      font-size: 0.9em;
+    }
+
+    /* Lists - Compact */
+    .message-content ul, .message-content ol {
+      padding-left: 1.5rem;
+      margin: 0.5em 0;
+    }
+    .message-content li {
+      margin-bottom: 0.25em;
+      line-height: 1.5;
+    }
+    .message-content li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Links - Subtle */
+    .message-content a {
+      color: var(--accent-color);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .message-content a:hover {
+      border-bottom-color: var(--accent-color);
+    }
+
+    /* Blockquotes - Minimal */
+    .message-content blockquote {
+      border-left: 3px solid var(--border-color);
+      padding-left: 1em;
+      margin: 0.75em 0;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    /* Horizontal Rules */
+    .message-content hr {
+      border: none;
+      border-top: 1px solid var(--border-color);
+      margin: 1em 0;
+    }
+
+    /* Tables - If needed */
+    .message-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0.75em 0;
+      font-size: 0.9em;
+    }
+    .message-content th, .message-content td {
+      border: 1px solid var(--border-color);
+      padding: 0.5em;
+      text-align: left;
+    }
+    .message-content th {
+      background: var(--bg-tertiary);
+      font-weight: 500;
+    }
+
+    /* Input Area */
+    .input-container {
+      padding: 1rem;
+      background-color: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .context-indicator {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(5, 150, 105, 0.1);
+      border: 1px solid rgba(5, 150, 105, 0.2);
+      border-radius: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .input-wrapper {
+      position: relative;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background-color: white;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+    }
+
+    textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      padding: 12px 16px;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      min-height: 60px;
+      max-height: 150px;
+      outline: none;
+    }
+    
+    textarea::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .input-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    .model-trigger {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: white;
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    
+    .model-trigger:hover {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      border-color: var(--accent-color);
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Settings/Models View */
+    .settings-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+    }
+    
+    .settings-header .icon-btn {
+      color: var(--text-primary);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .settings-header .icon-btn:hover {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+    }
+    
+    .settings-header .icon-btn:hover svg {
+      stroke: white;
+    }
+    
+    .settings-header .icon-btn svg {
+      stroke: currentColor;
+      color: currentColor;
+    }
+
+    .settings-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg-secondary);
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .model-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .model-item:hover {
+      background-color: var(--bg-tertiary);
+    }
+
+    .model-item.active {
+      background-color: rgba(30, 58, 95, 0.1);
+      border: 1px solid var(--accent-color);
+    }
+    
+    .model-info {
+      flex: 1;
+    }
+    
+    .model-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .model-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Loading States */
+    .typing-indicator {
+      display: flex;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      width: fit-content;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #D1D5DB;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9CA3AF;
+    }
+    
+    /* Dark Theme Specific Overrides */
+    [data-theme="dark"] body {
+      background: var(--bg-primary);
+    }
+    
+    [data-theme="dark"] .message.user {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    [data-theme="dark"] .message.assistant {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    
+    [data-theme="dark"] .model-header {
+      background: var(--bg-tertiary);
+      border-bottom-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .card {
+      background: var(--bg-secondary);
+      border-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .input-wrapper {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    [data-theme="dark"] .input-wrapper:focus-within {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    [data-theme="dark"] .input-footer {
+      background: rgba(26, 31, 43, 0.8);
+      border-top: 1px solid var(--border-color);
+    }
+    
+    [data-theme="dark"] .model-trigger {
+      background: var(--bg-tertiary);
+      border-color: var(--border-color);
+      color: var(--text-secondary);
+    }
+    
+    [data-theme="dark"] .model-trigger:hover {
+      background: var(--bg-secondary);
+      border-color: var(--accent-color);
+      color: var(--text-primary);
+    }
+    
+    [data-theme="dark"] .settings-header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    [data-theme="dark"] .settings-content {
+      background: var(--bg-primary);
+    }
+    
+    [data-theme="dark"] .settings-header .icon-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+    
+    [data-theme="dark"] .settings-header .icon-btn:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+      color: white;
+    }
+    
+    [data-theme="dark"] .context-indicator {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success-color);
+    }
+    
+    [data-theme="dark"] .model-list-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+    }
+    
+    [data-theme="dark"] .model-list-item:hover {
+      background: var(--bg-tertiary);
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    }
+    
+    [data-theme="dark"] .model-list-item.selected {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+    }
+    
+    [data-theme="dark"] .rate-limit-badge {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger-color);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    [data-theme="dark"] .model-select-label,
+    [data-theme="dark"] .tier-section-title {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    [data-theme="dark"] button {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    
+    [data-theme="dark"] button:hover {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: var(--accent-color);
+    }
+    
+    [data-theme="dark"] button.primary {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+    }
+    
+    [data-theme="dark"] button.primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    [data-theme="dark"] .welcome-message {
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      backdrop-filter: blur(10px);
+    }
+    
+    [data-theme="dark"] .typing-indicator {
+      background: var(--bg-tertiary);
+    }
+    
+    [data-theme="dark"] .dot {
+      background: var(--accent-color);
+    }
+    
+    [data-theme="dark"] ::-webkit-scrollbar-thumb {
+      background: #374151;
+    }
+
+    [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+      background: #4b5563;
+    }
+    
+    [data-theme="dark"] ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    /* Stats Footer */
+    .message-footer {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-color);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 0.5rem;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+    
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    
+    .stat-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      opacity: 0.7;
+    }
+    
+    .stat-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Tier Badges */
+    .tier-badge {
+        font-size: 10px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-left: 8px;
+        letter-spacing: 0.5px;
+    }
+    .tier-high { 
+      background: #ECFDF5; 
+      color: #059669; 
+      border: 1px solid #D1FAE5; 
+    }
+    .tier-low { 
+      background: #FEF3C7; 
+      color: #D97706; 
+      border: 1px solid #FDE68A; 
+    }
+    .tier-custom {
+      background: #EFF6FF;
+      color: #2563EB;
+      border: 1px solid #DBEAFE;
+    }
+    [data-theme="dark"] .tier-high { 
+      background: rgba(16, 185, 129, 0.2); 
+      color: #34d399; 
+      border: 1px solid rgba(16, 185, 129, 0.4); 
+    }
+    [data-theme="dark"] .tier-low { 
+      background: rgba(245, 158, 11, 0.2); 
+      color: #fbbf24; 
+      border: 1px solid rgba(245, 158, 11, 0.4); 
+    }
+    [data-theme="dark"] .tier-custom { 
+      background: rgba(59, 130, 246, 0.2); 
+      color: #60a5fa; 
+      border: 1px solid rgba(59, 130, 246, 0.4); 
+    }
+    
+    /* Model Status Indicators */
+    .status-indicator {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+    .status-success { background: var(--success-color); }
+    .status-warning { background: var(--warning-color); }
+    .status-error { background: var(--danger-color); }
+    
+    /* Rate Limit Info Card */
+    .info-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .info-card-title {
+      font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .info-card-content {
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+    
+    /* Progress Bar for Quotas */
+    .quota-bar {
+        height: 4px;
+        background: var(--bg-tertiary);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 0.25rem;
+    }
+    
+    .quota-fill {
+        height: 100%;
+        background: var(--accent-color);
+        transition: width 0.3s ease;
+    }
+    
+    .quota-fill.low { background: var(--warning-color); }
+    .quota-fill.critical { background: var(--danger-color); }
+
+    /* Reasoning/Thinking Section */
+    .thinking-section {
+      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--bg-tertiary);
+    }
+
+    .thinking-header {
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+      transition: background 0.2s;
+      user-select: none;
+    }
+
+    .thinking-header:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .thinking-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .thinking-title svg {
+      flex-shrink: 0;
+    }
+
+    .thinking-chevron {
+      transition: transform 0.2s;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .thinking-chevron.expanded {
+      transform: rotate(180deg);
+    }
+
+    .thinking-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+      background: var(--bg-tertiary);
+    }
+
+    .thinking-content.expanded {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .thinking-text {
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      font-family: var(--font-sans);
+      background: var(--bg-tertiary);
+    }
+
+    /* Dark theme thinking section */
+    [data-theme="dark"] .thinking-section {
+      background: var(--bg-tertiary);
+      border-color: var(--border-color);
+    }
+
+    [data-theme="dark"] .thinking-header {
+      background: rgba(26, 31, 43, 0.6);
+    }
+
+    [data-theme="dark"] .thinking-header:hover {
+      background: rgba(26, 31, 43, 0.8);
+    }
+
+    [data-theme="dark"] .thinking-content {
+      background: var(--bg-tertiary);
+    }
+
+    [data-theme="dark"] .thinking-text {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    /* Welcome Card */
+    .welcome-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .welcome-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .welcome-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .examples-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Example Prompts */
+    .example-prompt {
+      text-align: left;
+      padding: 12px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-primary);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .example-prompt:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--accent-color);
+      transform: translateX(4px);
+    }
+
+    .example-prompt svg {
+      flex-shrink: 0;
+      color: var(--accent-color);
+    }
+
+    [data-theme="dark"] .welcome-card {
+      background: var(--bg-secondary);
+    }
+
+    /* Tabs List */
+    .tabs-list {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      animation: slideDown 0.2s ease-out;
+    }
+
+    [data-theme="dark"] .tabs-list {
+      background: var(--bg-secondary);
+    }
+
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: 1px solid transparent;
+    }
+
+    .tab-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .tab-item.active-tab {
+      border-color: var(--accent-color);
+      background: rgba(30, 58, 95, 0.05);
+    }
+
+    [data-theme="dark"] .tab-item.active-tab {
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .tab-item input[type="checkbox"] {
+      flex-shrink: 0;
+    }
+
+    .tab-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .tab-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab-url {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: var(--font-mono);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Model Selection Popup */
+    .model-popup {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      z-index: 100;
+      animation: slideUp 0.2s ease-out;
+      min-width: 350px;
+      max-width: 450px;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .model-popup-content {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+    }
+
+    [data-theme="dark"] .model-popup-content {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .model-popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    .model-popup-body {
+      padding: 16px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+  </style>
+  <script src="marked.min.js"></script>
+</head>
+<body>
+  <header class="flex items-center justify-between">
+    <div class="logo">
+      <div class="header-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-title">GitHub Models Arena</span>
+        <span class="logo-subtitle">Free AI models from GitHub</span>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button id="themeToggle" class="icon-btn" title="Toggle Theme">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.93 4.93 1.41 1.41"></path>
+          <path d="m17.66 17.66 1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.34 17.66-1.41 1.41"></path>
+          <path d="m19.07 4.93-1.41 1.41"></path>
+        </svg>
+      </button>
+      <button id="settingsToggle" class="icon-btn" title="Settings & Models">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+          </div>
+  </header>
+
+  <main>
+    <!-- Chat View -->
+    <div id="chatView" class="view">
+      <div id="chatHistory" class="chat-history">
+        <!-- Welcome Message with Example Prompts -->
+        <div id="welcomeCard" class="welcome-card">
+          <div style="margin-bottom: 16px;">
+            <div class="welcome-title">Ask questions using free AI models</div>
+            <div class="welcome-subtitle">All models are available with free rate-limited quotas. Try these examples:</div>
+          </div>
+
+          <div class="examples-container">
+            <button class="example-prompt" data-prompt="Summarize the key points from all my open tabs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <line x1="10" y1="9" x2="8" y2="9"></line>
+              </svg>
+              <span>Summarize the key points from all my open tabs</span>
+            </button>
+
+            <button class="example-prompt" data-prompt="Explain this code and suggest improvements">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              <span>Explain this code and suggest improvements</span>
+            </button>
+
+            <button class="example-prompt" data-prompt="Compare the content across these tabs and highlight differences">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+              </svg>
+              <span>Compare the content across these tabs and highlight differences</span>
+            </button>
+
+            <button class="example-prompt" data-prompt="What are the main topics discussed on this page?">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span>What are the main topics discussed on this page?</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-container">
+        <div id="pageContextIndicator" class="context-indicator hidden" style="cursor: pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success-color);">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <line x1="10" y1="9" x2="8" y2="9"></line>
+          </svg>
+          <span>Context: </span>
+          <span id="pageContextTitle" style="font-weight: 500;">Current Page</span>
+          <svg id="tabsChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; transition: transform 0.2s;">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+
+        <div id="tabsList" class="tabs-list hidden" style="margin-bottom: 12px;">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="input-wrapper">
+          <textarea id="chatInput" placeholder="Ask a question..."></textarea>
+          <div class="input-footer">
+            <div style="position: relative;">
+              <button id="modelTrigger" class="model-trigger">
+                <span id="modelTriggerText">Auto</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5;">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+
+              <!-- Model Selection Popup -->
+              <div id="modelPopup" class="model-popup hidden">
+                <div class="model-popup-content">
+                  <div class="model-popup-header">
+                    <span style="font-weight: 600; font-size: 14px;">Model Selection</span>
+                    <button id="closePopup" class="icon-btn" style="width: 24px; height: 24px; padding: 4px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="model-popup-body">
+                    <div class="section-title" style="margin-bottom: 8px;">Mode</div>
+                    <label class="model-item" style="margin-bottom: 8px;">
+                      <div class="checkbox-wrapper">
+                        <input type="radio" name="selectionModePopup" value="auto" checked>
+                        <div class="model-info">
+                          <div class="model-name">Auto</div>
+                          <div class="model-meta">Automatically picks the best available model</div>
+                        </div>
+                      </div>
+                    </label>
+                    <label class="model-item">
+                      <div class="checkbox-wrapper">
+                        <input type="radio" name="selectionModePopup" value="manual">
+                        <div class="model-info">
+                          <div class="model-name">Manual</div>
+                          <div class="model-meta">Select specific models to query</div>
+                        </div>
+                      </div>
+                    </label>
+
+                    <div id="popupManualSelection" class="hidden" style="margin-top: 16px;">
+                      <div class="section-title" style="margin-bottom: 8px;">Select Models</div>
+                      <div style="position: relative; margin-bottom: 12px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); pointer-events: none;">
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" id="modelSearchInput" placeholder="Search models..." style="width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: var(--bg-secondary); color: var(--text-primary);">
+                      </div>
+                      <div id="popupModelsList" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Populated by JS -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button id="sendBtn" class="send-btn" disabled>
+              <span>Send</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings/Models View -->
+    <div id="settingsView" class="view hidden">
+      <div class="settings-header">
+        <button id="backToChat" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+        </button>
+        <span class="font-bold">Models & Settings</span>
+      </div>
+      <div class="settings-content">
+
+        <div class="section-title">API Token</div>
+        <div class="card">
+          <div style="margin-bottom: 16px;">
+            <div class="model-name" style="margin-bottom: 8px;">GitHub Models Token Required</div>
+            <div class="model-meta" style="line-height: 1.6;">
+              You need a Personal Access Token with <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px; font-size: 11px;">user_models:read</code> permission.
+            </div>
+          </div>
+
+          <div class="info-card" style="margin-bottom: 16px;">
+            <div class="info-card-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color);">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span>Setup Instructions</span>
+            </div>
+            <ol style="margin: 0 0 12px 0; padding-left: 20px; color: var(--text-secondary); font-size: 0.8rem; line-height: 1.6;">
+              <li>Click "Create Token" below to open GitHub</li>
+              <li>Set expiration to "No expiration"</li>
+              <li>Click "Generate token" at the bottom</li>
+              <li>Copy and paste the token below</li>
+            </ol>
+            <button id="createTokenBtn" class="send-btn" style="width: 100%; justify-content: center; margin: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              <span>Create Token on GitHub</span>
+            </button>
+          </div>
+
+          <div style="margin-bottom: 8px; position: relative;">
+            <input type="password" id="apiKeyField" placeholder="Paste your GitHub token here..." style="width: 100%; padding: 10px 40px 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); font-family: var(--font-mono);">
+            <button id="toggleTokenVisibility" type="button" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: color 0.2s;" title="Toggle visibility">
+              <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg id="eyeOffIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <button id="saveApiKey" class="send-btn" style="width: 100%; justify-content: center; margin: 0; background: var(--success-color);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Save Token</span>
+          </button>
+
+          <div id="authStatus" style="margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; display: none; line-height: 1.5;">
+            <span id="authStatusText"></span>
+          </div>
+        </div>
+
+        <div id="rateLimitSection" class="hidden">
+            <div class="section-title">Rate Limit Status</div>
+            <div id="rateLimitCards">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div class="section-title">Free Tier Information</div>
+        <div class="card">
+          <div class="info-card-title" style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success-color);">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>All models are free to use</span>
+          </div>
+          <div class="text-sm" style="color: var(--text-secondary); line-height: 1.7;">
+            GitHub Models provides free access to all AI models with rate-limited quotas. Each model has different limits that reset periodically.
+            <br><br>
+            <strong style="color: var(--text-primary);">What this means:</strong>
+            <ul style="margin: 8px 0 0 20px; padding: 0;">
+              <li>✓ No API costs - completely free</li>
+              <li>✓ Rate limits vary by model</li>
+              <li>✓ Quotas reset automatically</li>
+              <li>✓ Auto mode switches to available models</li>
+            </ul>
+            <br>
+            <a href="https://github.com/marketplace/models" target="_blank" style="color: var(--accent-color); text-decoration: none; font-weight: 500;">
+              Learn more about GitHub Models →
+            </a>
+          </div>
+        </div>
+
+        <div class="section-title">About</div>
+        <div class="card">
+            <div class="text-sm" style="color: var(--text-secondary); line-height: 1.6;">
+                GitHub Models Arena Extension<br>
+                Version 1.0<br><br>
+                <button id="clearCache" style="background: transparent; border: 1px solid var(--border-color); padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer; color: var(--text-secondary); font-size: 0.75rem;">Clear Cache</button>
+            </div>
+      </div>
+
+      </div>
+    </div>
+  </main>
+  
+  <script src="sidepanel.js"></script>
+</body>
+</html>
