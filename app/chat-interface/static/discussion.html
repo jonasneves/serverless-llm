@@ -146,6 +146,73 @@
       scroll-margin-top: 80px;
     }
 
+    .orchestrator-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .orchestrator-bar.visible {
+      display: flex;
+    }
+
+    .orchestrator-bar-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--accent-color);
+      border-radius: 6px;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .orchestrator-bar-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .orchestrator-bar-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-tertiary);
+      font-weight: 600;
+    }
+
+    .orchestrator-bar-status {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .orchestrator-bar-model {
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+
+    .orchestrator-bar-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .orchestrator-bar-spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
     .query-input {
       width: 100%;
       min-height: 100px;
@@ -862,6 +929,26 @@
         </div>
       </div>
 
+      <!-- Orchestrator Status Bar -->
+      <div id="orchestratorBar" class="orchestrator-bar">
+        <div class="orchestrator-bar-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+        </div>
+        <div class="orchestrator-bar-content">
+          <div class="orchestrator-bar-label">Orchestrator</div>
+          <div class="orchestrator-bar-status">
+            <span class="orchestrator-bar-model" id="orchestratorModelName">Loading...</span>
+            <span class="orchestrator-bar-action" id="orchestratorAction">
+              <span class="orchestrator-bar-spinner"></span>
+              <span id="orchestratorActionText">Initializing...</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Discussion Content -->
       <div id="discussionContent"></div>
     </div>
@@ -899,11 +986,40 @@
     const githubToken = document.getElementById('githubToken');
     const tokenVisibilityBtn = document.getElementById('tokenVisibilityBtn');
     const eyeIcon = document.getElementById('eyeIcon');
+    const orchestratorBar = document.getElementById('orchestratorBar');
+    const orchestratorModelName = document.getElementById('orchestratorModelName');
+    const orchestratorAction = document.getElementById('orchestratorAction');
+    const orchestratorActionText = document.getElementById('orchestratorActionText');
 
     let currentDiscussion = null;
 
     // API models that consume GitHub Models credits
     const API_MODELS = ['gpt-5-nano', 'gpt-4o-mini'];
+
+    // Model display names
+    const MODEL_NAMES = {
+      'gpt-5-nano': 'GPT-5 Nano',
+      'gpt-4o-mini': 'GPT-4o Mini',
+      'qwen2.5-7b': 'Qwen 2.5-7B',
+      'phi-3-mini': 'Phi-3 Mini',
+      'llama-3.2-3b': 'Llama 3.2-3B'
+    };
+
+    // Update orchestrator status bar
+    function updateOrchestratorStatus(action, showSpinner = true) {
+      orchestratorActionText.textContent = action;
+      orchestratorAction.querySelector('.orchestrator-bar-spinner').style.display = showSpinner ? 'block' : 'none';
+    }
+
+    function showOrchestratorBar(modelId) {
+      const displayName = MODEL_NAMES[modelId] || modelId;
+      orchestratorModelName.textContent = displayName + ' · ';
+      orchestratorBar.classList.add('visible');
+    }
+
+    function hideOrchestratorBar() {
+      orchestratorBar.classList.remove('visible');
+    }
 
     // Update badge and warning based on orchestrator selection
     function updateOrchestratorUI() {
@@ -1095,6 +1211,8 @@
 
       try {
         setStatus('analyzing', 'Analyzing query...');
+        showOrchestratorBar(orchestrator);
+        updateOrchestratorStatus('Analyzing query...');
 
         const requestBody = {
           query,
@@ -1146,6 +1264,7 @@
                   clearStatus();
                   showAnalysis(event.analysis);
                   setStatus('discussing', 'Models discussing...');
+                  updateOrchestratorStatus('Waiting for model responses...');
                   break;
 
                 case 'turn_start':
@@ -1157,6 +1276,7 @@
                     content: ''
                   };
                   showTurn(currentTurn, true);
+                  updateOrchestratorStatus(`Listening to ${event.model_name}...`);
                   break;
 
                 case 'turn_chunk':
@@ -1178,12 +1298,14 @@
                   if (event.evaluation) {
                     const turnId = `turn-${event.turn.model_id}-${event.turn.turn_number}`;
                     showEvaluation(turnId, event.evaluation);
+                    updateOrchestratorStatus(`Evaluated ${event.turn.model_name} (${Math.round(event.evaluation.quality_score * 100)}% quality)`);
                   }
                   currentTurn = null;
                   break;
 
                 case 'synthesis_start':
                   setStatus('synthesizing', 'Synthesizing final response...');
+                  updateOrchestratorStatus('Synthesizing final response...');
                   break;
 
                 case 'synthesis_complete':
@@ -1193,11 +1315,14 @@
                 case 'discussion_complete':
                   showSynthesis(event.synthesis || {}, event.final_response);
                   clearStatus();
+                  updateOrchestratorStatus('Discussion complete', false);
+                  setTimeout(() => hideOrchestratorBar(), 3000);
                   break;
 
                 case 'error':
                   showError(event.error);
                   clearStatus();
+                  hideOrchestratorBar();
                   break;
               }
             } catch (e) {
@@ -1208,6 +1333,7 @@
 
       } catch (error) {
         showError(error.message);
+        hideOrchestratorBar();
       } finally {
         startBtn.disabled = false;
         queryInput.disabled = false;
