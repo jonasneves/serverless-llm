@@ -68,7 +68,11 @@ CHAT_HTML = """
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1e3a5f">
   <title>LLM Arena</title>
   <style>
     :root {
@@ -389,6 +393,13 @@ CHAT_HTML = """
       color: var(--text-secondary);
     }
 
+    .controls-secondary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
     .control-group input, .control-group select {
       padding: 6px 10px;
       border: 1px solid var(--border-color);
@@ -538,6 +549,349 @@ CHAT_HTML = """
       background: var(--bg-tertiary);
       color: var(--text-primary);
     }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      header {
+        padding: 12px 16px;
+      }
+
+      .logo-title {
+        font-size: 16px;
+      }
+
+      .logo-subtitle {
+        font-size: 10px;
+      }
+
+      .chat-history {
+        padding: 0.75rem;
+        gap: 1rem;
+      }
+
+      .welcome-card {
+        padding: 16px;
+      }
+
+      .welcome-title {
+        font-size: 14px;
+      }
+
+      .welcome-subtitle {
+        font-size: 12px;
+      }
+
+      .message {
+        font-size: 13px;
+        max-width: 95%;
+      }
+
+      .message.user {
+        padding: 10px 14px;
+      }
+
+      .message.assistant {
+        padding: 12px;
+      }
+
+      .model-responses {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .model-response {
+        padding: 12px;
+      }
+
+      .model-header {
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+      }
+
+      .message-content {
+        font-size: 13px;
+      }
+
+      .message-footer {
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 10px;
+      }
+
+      .input-container {
+        padding: 0.75rem;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+      }
+
+      .controls-row {
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .model-selector {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .model-selector::-webkit-scrollbar {
+        display: none;
+      }
+
+      .model-chip {
+        padding: 8px 12px;
+        font-size: 11px;
+        flex-shrink: 0;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+      }
+
+      .control-group {
+        font-size: 11px;
+      }
+
+      .control-group input[type="range"] {
+        width: 60px;
+      }
+
+      .control-group input[type="number"] {
+        width: 60px;
+        padding: 6px 8px;
+      }
+
+      .clear-btn {
+        padding: 8px 10px;
+        font-size: 11px;
+        min-height: 36px;
+      }
+
+      textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 10px 14px;
+        min-height: 50px;
+      }
+
+      .input-footer {
+        padding: 6px 10px;
+      }
+
+      .send-btn {
+        padding: 10px 14px;
+        font-size: 12px;
+        min-height: 40px;
+      }
+
+      .typing-indicator {
+        margin: 0.5rem 0.75rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      header {
+        padding: 10px 12px;
+      }
+
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        padding: 5px;
+      }
+
+      .logo-icon svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .logo {
+        gap: 8px;
+      }
+
+      .logo-title {
+        font-size: 14px;
+      }
+
+      .logo-subtitle {
+        display: none;
+      }
+
+      .icon-btn {
+        width: 32px;
+        height: 32px;
+      }
+
+      .chat-history {
+        padding: 0.5rem;
+      }
+
+      .welcome-card {
+        padding: 14px;
+      }
+
+      .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .controls-row > div[style="flex: 1;"] {
+        display: none;
+      }
+
+      .model-selector {
+        order: 1;
+      }
+
+      .controls-secondary {
+        display: flex;
+        gap: 8px;
+        order: 2;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .control-group {
+        flex: 1;
+      }
+
+      .control-group input[type="range"] {
+        width: 50px;
+      }
+
+      .control-group input[type="number"] {
+        width: 50px;
+      }
+
+      .input-container {
+        padding: 0.5rem;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+      }
+
+      .input-wrapper {
+        border-radius: 10px;
+      }
+
+      textarea {
+        padding: 10px 12px;
+      }
+
+      .send-btn {
+        padding: 8px 12px;
+      }
+
+      .send-btn span {
+        display: none;
+      }
+
+      .send-btn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .message.user {
+        padding: 8px 12px;
+        border-radius: 12px 12px 4px 12px;
+      }
+
+      .model-response, .message.assistant {
+        padding: 10px;
+        border-radius: 10px;
+      }
+
+      .message-footer {
+        margin-top: 10px;
+        padding-top: 10px;
+        gap: 8px;
+      }
+
+      .stat-item {
+        min-width: 0;
+      }
+
+      .stat-label {
+        font-size: 9px;
+      }
+
+      .stat-value {
+        font-size: 10px;
+      }
+    }
+
+    /* Safe area insets for notched devices */
+    @supports (padding: env(safe-area-inset-bottom)) {
+      .input-container {
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+      }
+
+      @media (max-width: 768px) {
+        .input-container {
+          padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+        }
+      }
+
+      @media (max-width: 480px) {
+        .input-container {
+          padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+        }
+      }
+    }
+
+    /* Landscape mode on mobile */
+    @media (max-height: 500px) and (orientation: landscape) {
+      header {
+        padding: 8px 16px;
+      }
+
+      .logo-subtitle {
+        display: none;
+      }
+
+      .chat-history {
+        padding: 0.5rem;
+        gap: 0.75rem;
+      }
+
+      .welcome-card {
+        padding: 12px;
+      }
+
+      textarea {
+        min-height: 40px;
+        max-height: 80px;
+      }
+
+      .controls-row {
+        margin-bottom: 8px;
+      }
+    }
+
+    /* Touch-friendly improvements */
+    @media (hover: none) and (pointer: coarse) {
+      .model-chip {
+        min-height: 44px;
+        padding: 10px 14px;
+      }
+
+      .icon-btn {
+        min-width: 44px;
+        min-height: 44px;
+      }
+
+      .send-btn {
+        min-height: 44px;
+      }
+
+      .clear-btn {
+        min-height: 44px;
+      }
+
+      .control-group input, .control-group select {
+        min-height: 36px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -589,16 +943,18 @@ CHAT_HTML = """
           <!-- Model chips populated by JS -->
         </div>
         <div style="flex: 1;"></div>
-        <div class="control-group">
-          <label>Temp:</label>
-          <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7" style="width: 80px;">
-          <span id="tempValue">0.7</span>
+        <div class="controls-secondary">
+          <div class="control-group">
+            <label>Temp:</label>
+            <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7" style="width: 80px;">
+            <span id="tempValue">0.7</span>
+          </div>
+          <div class="control-group">
+            <label>Tokens:</label>
+            <input type="number" id="maxTokens" value="512" min="1" max="4096" style="width: 70px;">
+          </div>
+          <button class="clear-btn" onclick="clearChat()">Clear</button>
         </div>
-        <div class="control-group">
-          <label>Tokens:</label>
-          <input type="number" id="maxTokens" value="512" min="1" max="4096" style="width: 70px;">
-        </div>
-        <button class="clear-btn" onclick="clearChat()">Clear</button>
       </div>
 
       <div class="input-wrapper">
