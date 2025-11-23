@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Discussion Mode - LLM Arena</title>
+  <title>Model Roundtable - Orchestrated Discussion</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
@@ -816,8 +816,8 @@
         </svg>
       </div>
       <div class="logo-text">
-        <span class="logo-title">LLM Arena</span>
-        <span class="logo-subtitle">Discussion Mode</span>
+        <span class="logo-title">Model Roundtable</span>
+        <span class="logo-subtitle">Orchestrated Discussion</span>
       </div>
     </div>
     <div class="header-actions">
@@ -1276,7 +1276,7 @@
                     content: ''
                   };
                   showTurn(currentTurn, true);
-                  updateOrchestratorStatus(`Listening to ${event.model_name}...`);
+                  updateOrchestratorStatus(`Round ${event.turn_number + 1} · ${event.model_name} responding...`);
                   break;
 
                 case 'turn_chunk':
@@ -1298,9 +1298,9 @@
                   if (event.evaluation) {
                     const turnId = `turn-${event.turn.model_id}-${event.turn.turn_number}`;
                     showEvaluation(turnId, event.evaluation);
-                    updateOrchestratorStatus(`Evaluated ${event.turn.model_name} (${Math.round(event.evaluation.quality_score * 100)}% quality)`);
                   }
                   currentTurn = null;
+                  // Status will be updated by next turn_start or synthesis_start
                   break;
 
                 case 'synthesis_start':
