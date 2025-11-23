@@ -24,8 +24,6 @@ Compare responses from multiple AI models side-by-side with real-time streaming 
 
 ![Architecture](architecture.png)
 
-**Flow:** User → Chat Interface → Model Servers (Qwen/Phi/Llama) → Streaming Response
-
 ## Features
 
 ### Discussion Mode
