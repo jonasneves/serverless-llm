@@ -36,7 +36,7 @@ class QueryAnalysis(BaseModel):
     domain_weights: Dict[str, float] = Field(description="Weight for each domain (sum to 1.0)")
     model_expertise_scores: Dict[str, float] = Field(description="Expertise score per model (0-1)")
     discussion_lead: str = Field(description="Model ID that should respond first")
-    expected_turns: int = Field(description="Number of discussion rounds needed (1-4)", ge=1, le=4)
+    expected_turns: int = Field(description="Number of discussion rounds needed (2-4)", ge=2, le=4)
     reasoning: str = Field(description="Brief explanation of the analysis")
 
 
@@ -254,11 +254,11 @@ Determine:
 2. How much weight each domain should have (must sum to 1.0)
 3. Expertise score for each model on THIS specific query (0-1 based on domain match)
 4. Which model should lead the discussion (highest expertise)
-5. How many discussion turns are needed (1-4):
-   - 1 turn: Simple query, one model is clearly expert
-   - 2 turns: Moderate complexity, benefit from one supporting perspective
+5. How many discussion turns are needed (2-4):
+   - 2 turns: Simple to moderate query, lead model plus one supporting perspective
    - 3 turns: Complex multi-domain query, need multiple perspectives
    - 4 turns: Very complex, requires extensive collaboration
+   NOTE: Always use at least 2 turns to enable multi-model collaboration.
 
 Provide brief reasoning for your analysis."""
 
