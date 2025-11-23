@@ -141,13 +141,25 @@ class GitHubModelsOrchestrator:
         """
         # Add JSON schema instruction to prompt
         schema = response_format.schema()
+
+        # Extract just the property names and types for clearer instruction
+        properties = schema.get("properties", {})
+        fields_description = "\n".join([
+            f"- {name}: {prop.get('description', prop.get('type', 'any'))}"
+            for name, prop in properties.items()
+        ])
+
         structured_prompt = f"""{prompt}
 
-IMPORTANT: Respond with ONLY valid JSON matching this exact schema:
+IMPORTANT: Respond with a JSON object containing these fields:
+{fields_description}
 
-{json.dumps(schema, indent=2)}
+Example format (fill in actual values based on your analysis):
+{{
+{', '.join([f'  "{name}": <your value>' for name in properties.keys()])}
+}}
 
-Do not include any explanatory text outside the JSON object."""
+Respond with ONLY the JSON object. Do not include the schema definition, explanations, or any text outside the JSON."""
 
         async with aiohttp.ClientSession() as session:
             payload = {
