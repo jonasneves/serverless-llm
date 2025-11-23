@@ -468,8 +468,14 @@
       display: block;
     }
 
+    .token-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
     .token-input {
-      width: 100%;
+      flex: 1;
       padding: 8px 12px;
       border: 1px solid var(--border-color);
       border-radius: 6px;
@@ -477,6 +483,23 @@
       color: var(--text-primary);
       font-size: 12px;
       font-family: monospace;
+    }
+
+    .token-visibility-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .token-visibility-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
     }
 
     .token-input::placeholder {
@@ -496,6 +519,40 @@
 
     .token-hint a:hover {
       text-decoration: underline;
+    }
+
+    .example-prompts {
+      margin-top: 12px;
+    }
+
+    .example-prompts-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .example-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .example-chip {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .example-chip:hover {
+      background: var(--bg-secondary);
+      border-color: var(--accent-color);
+      color: var(--text-primary);
     }
   </style>
 </head>
@@ -540,6 +597,15 @@
           class="query-input"
           placeholder="Enter your question... Models will discuss together before responding."
         ></textarea>
+        <div class="example-prompts">
+          <div class="example-prompts-label">Try an example:</div>
+          <div class="example-chips">
+            <button class="example-chip" data-prompt="How many R's are in the word 'strawberry'?">Count R's in strawberry</button>
+            <button class="example-chip" data-prompt="Which number is bigger: 9.11 or 9.9?">9.11 vs 9.9</button>
+            <button class="example-chip" data-prompt="I have 3 apples, eat 2, buy 5 more, and give away 3. How many do I have?">Apple math problem</button>
+            <button class="example-chip" data-prompt="Write a sentence where every word starts with the letter 'A'.">All A's sentence</button>
+          </div>
+        </div>
         <div class="controls">
           <button id="startBtn" class="btn btn-primary">Start Discussion</button>
           <div class="orchestrator-control">
@@ -583,13 +649,21 @@
             <span>Use your own GitHub token</span>
           </button>
           <div id="tokenInputWrapper" class="token-input-wrapper">
-            <input
-              type="password"
-              id="githubToken"
-              class="token-input"
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              autocomplete="off"
-            >
+            <div class="token-input-row">
+              <input
+                type="password"
+                id="githubToken"
+                class="token-input"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                autocomplete="off"
+              >
+              <button type="button" id="tokenVisibilityBtn" class="token-visibility-btn" title="Show/hide token">
+                <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
             <div class="token-hint">
               <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Arena&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled). Leave empty to use server default.
             </div>
@@ -619,6 +693,8 @@
     const tokenToggle = document.getElementById('tokenToggle');
     const tokenInputWrapper = document.getElementById('tokenInputWrapper');
     const githubToken = document.getElementById('githubToken');
+    const tokenVisibilityBtn = document.getElementById('tokenVisibilityBtn');
+    const eyeIcon = document.getElementById('eyeIcon');
 
     let currentDiscussion = null;
 
@@ -639,6 +715,16 @@
       tokenInputWrapper.classList.toggle('visible');
       const svg = tokenToggle.querySelector('svg');
       svg.style.transform = tokenInputWrapper.classList.contains('visible') ? 'rotate(180deg)' : '';
+    });
+
+    // Toggle token show/hide
+    tokenVisibilityBtn.addEventListener('click', () => {
+      const isPassword = githubToken.type === 'password';
+      githubToken.type = isPassword ? 'text' : 'password';
+      // Update icon: eye-open for hidden, eye-off for visible
+      eyeIcon.innerHTML = isPassword
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
     });
 
     // Load saved token from localStorage
@@ -920,6 +1006,14 @@
       if (e.key === 'Enter' && e.ctrlKey) {
         startDiscussion();
       }
+    });
+
+    // Example prompt chips
+    document.querySelectorAll('.example-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        queryInput.value = chip.dataset.prompt;
+        queryInput.focus();
+      });
     });
 
     // Auto-focus
