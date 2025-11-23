@@ -451,6 +451,7 @@ Focus on contributing what you do best. Keep your response focused and additive.
             yield {
                 "type": "discussion_complete",
                 "final_response": final_response,
+                "synthesis": synthesis.dict(),
                 "discussion_summary": {
                     "total_turns": len(completed_turns),
                     "participating_models": list(set(t.model_id for t in completed_turns)),

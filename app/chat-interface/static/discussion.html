@@ -200,10 +200,11 @@
     }
 
     .analysis-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 12px;
-      padding: 20px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--accent-color);
+      border-radius: 8px;
+      padding: 16px 20px;
       margin-bottom: 16px;
     }
 
@@ -212,6 +213,10 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      color: var(--accent-color);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .domain-weights {
@@ -222,10 +227,12 @@
     }
 
     .domain-badge {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 13px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--text-secondary);
     }
 
     .turn-card {
@@ -312,23 +319,36 @@
     .evaluation-badge.low { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
 
     .synthesis-card {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      color: white;
-      border-radius: 12px;
-      padding: 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--success-color);
+      border-radius: 8px;
+      padding: 16px 20px;
       margin-top: 20px;
     }
 
     .synthesis-card h3 {
-      margin-bottom: 16px;
-      font-size: 20px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--success-color);
+    }
+
+    .synthesis-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .final-response {
-      background: rgba(255, 255, 255, 0.95);
-      color: #111827;
-      padding: 20px;
-      border-radius: 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 16px;
+      border-radius: 6px;
       line-height: 1.6;
     }
 
@@ -787,9 +807,9 @@
       discussionContent.innerHTML += `
         <div class="analysis-card">
           <h3>Query Analysis</h3>
-          <p><strong>Lead Model:</strong> ${analysis.discussion_lead || 'Unknown'}</p>
-          <p><strong>Expected Turns:</strong> ${analysis.expected_turns || 0}</p>
-          <p><strong>Reasoning:</strong> ${analysis.reasoning || 'N/A'}</p>
+          <p style="margin-bottom: 8px; color: var(--text-primary);"><strong>Lead Model:</strong> ${analysis.discussion_lead || 'Unknown'}</p>
+          <p style="margin-bottom: 8px; color: var(--text-primary);"><strong>Expected Turns:</strong> ${analysis.expected_turns || 0}</p>
+          <p style="margin-bottom: 8px; color: var(--text-secondary); font-size: 13px;"><strong>Reasoning:</strong> ${analysis.reasoning || 'N/A'}</p>
           <div class="domain-weights">${domainBadges}</div>
         </div>
       `;
@@ -852,12 +872,12 @@
     function showSynthesis(synthesis, finalResponse) {
       discussionContent.innerHTML += `
         <div class="synthesis-card">
-          <h3>Final Synthesis</h3>
-          <p style="margin-bottom: 16px; opacity: 0.9;">
-            <strong>Strategy:</strong> ${synthesis.merge_strategy || 'Unknown'} |
-            <strong>Primary Source:</strong> ${synthesis.primary_source_model || 'Unknown'} |
+          <h3>Final Response</h3>
+          <div class="synthesis-meta">
+            <strong>Strategy:</strong> ${synthesis.merge_strategy || 'Unknown'} ·
+            <strong>Source:</strong> ${synthesis.primary_source_model || 'Unknown'} ·
             <strong>Confidence:</strong> ${((synthesis.final_confidence || 0) * 100).toFixed(0)}%
-          </p>
+          </div>
           <div class="final-response">${marked.parse(finalResponse || 'Generating...')}</div>
         </div>
       `;
