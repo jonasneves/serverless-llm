@@ -1,0 +1,150 @@
+name: Chat Interface
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_hours:
+        description: 'How long to run (max 5.5 hours)'
+        required: false
+        default: '5.5'
+        type: string
+      auto_restart:
+        description: 'Auto-restart before timeout'
+        required: false
+        default: true
+        type: boolean
+      qwen_api_url:
+        description: 'Qwen API URL (Cloudflare tunnel URL)'
+        required: false
+        default: ''
+        type: string
+      phi_api_url:
+        description: 'Phi API URL (Cloudflare tunnel URL)'
+        required: false
+        default: ''
+        type: string
+      llama_api_url:
+        description: 'Llama API URL (Cloudflare tunnel URL)'
+        required: false
+        default: ''
+        type: string
+
+  repository_dispatch:
+    types: [restart-chat-interface]
+
+jobs:
+  chat:
+    name: Chat Interface Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'app/chat-interface/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          pip install -r app/chat-interface/requirements.txt
+
+      - name: Install cloudflared
+        run: |
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/
+
+      - name: Start chat interface server
+        env:
+          PORT: "8080"
+          QWEN_API_URL: ${{ inputs.qwen_api_url || secrets.QWEN_API_URL }}
+          PHI_API_URL: ${{ inputs.phi_api_url || secrets.PHI_API_URL }}
+          LLAMA_API_URL: ${{ inputs.llama_api_url || secrets.LLAMA_API_URL }}
+        run: |
+          cd app/chat-interface
+          python chat_server.py &
+          echo "Waiting for server to start..."
+          sleep 10
+
+          # Health check
+          for i in {1..10}; do
+            if curl -s http://localhost:8080/health | grep -q "healthy"; then
+              echo "Chat interface is healthy!"
+              break
+            fi
+            echo "Waiting for server... attempt $i"
+            sleep 5
+          done
+
+      - name: Start Cloudflare Tunnel
+        env:
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
+        run: |
+          if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+            cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN" &
+            echo "Cloudflare tunnel started"
+          else
+            echo "No tunnel token provided, server only accessible locally"
+          fi
+
+      - name: Health monitoring loop
+        env:
+          DURATION_HOURS: ${{ inputs.duration_hours || '5.5' }}
+          AUTO_RESTART: ${{ inputs.auto_restart }}
+        run: |
+          END_TIME=$(date -d "+${DURATION_HOURS} hours" +%s)
+          RESTART_TIME=$(date -d "+${DURATION_HOURS} hours -5 minutes" +%s)
+
+          echo "=== Chat Interface Server ==="
+          echo "Server running on port 8080"
+          echo "Will run until: $(date -d "@$END_TIME")"
+          echo "=============================="
+          echo ""
+          echo "Model endpoints configured:"
+          echo "  - Qwen: ${QWEN_API_URL:-not configured}"
+          echo "  - Phi: ${PHI_API_URL:-not configured}"
+          echo "  - Llama: ${LLAMA_API_URL:-not configured}"
+          echo ""
+
+          while true; do
+            CURRENT_TIME=$(date +%s)
+
+            # Check if we need to restart
+            if [ "$AUTO_RESTART" = "true" ] && [ $CURRENT_TIME -ge $RESTART_TIME ]; then
+              echo "Approaching timeout, triggering restart..."
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+                -d '{"event_type":"restart-chat-interface"}'
+              break
+            fi
+
+            # Check if time exceeded
+            if [ $CURRENT_TIME -ge $END_TIME ]; then
+              echo "Duration exceeded, shutting down..."
+              break
+            fi
+
+            # Health check
+            if curl -s http://localhost:8080/health | grep -q "healthy"; then
+              echo "[$(date)] Chat interface healthy"
+
+              # Check connected models
+              MODELS_STATUS=$(curl -s http://localhost:8080/api/models)
+              echo "  Models: $MODELS_STATUS"
+            else
+              echo "[$(date)] Chat interface unhealthy, attempting restart..."
+              cd app/chat-interface
+              pkill -f chat_server.py || true
+              python chat_server.py &
+              sleep 10
+            fi
+
+            sleep 30
+          done
