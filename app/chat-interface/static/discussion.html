@@ -836,7 +836,7 @@
     .orchestrator-tooltip {
       display: none;
       position: absolute;
-      bottom: calc(100% + 8px);
+      top: calc(100% + 8px);
       right: 0;
       background: var(--bg-primary);
       border: 1px solid var(--border-color);
@@ -1309,7 +1309,9 @@
         <div class="token-summary">
           <div class="token-summary-item">
             <span class="token-summary-label">Orchestrator:</span>
-            <span class="token-summary-value orchestrator">${orchestrator.total || 0} tokens</span>
+            <span class="token-summary-value orchestrator">${(orchestrator.prompt || 0).toLocaleString()} in</span>
+            <span class="token-summary-label">/</span>
+            <span class="token-summary-value orchestrator">${(orchestrator.completion || 0).toLocaleString()} out</span>
             <span class="token-summary-label">(${orchestrator.calls || 0} calls)</span>
           </div>
           <div class="token-summary-divider"></div>
