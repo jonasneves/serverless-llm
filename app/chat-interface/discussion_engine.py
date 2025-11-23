@@ -11,7 +11,7 @@ from typing import Dict, List, Any, AsyncGenerator, Optional
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
-from orchestrator import GitHubModelsOrchestrator, QueryAnalysis, TurnEvaluation, SynthesisResult
+from orchestrator import GitHubModelsOrchestrator, QueryAnalysis, TurnEvaluation, SynthesisResult, TokenUsage
 from model_profiles import MODEL_PROFILES, rank_models_for_query
 
 
@@ -292,7 +292,7 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
 
         # Evaluate turn (orchestrator call)
         try:
-            evaluation = await self.orchestrator.evaluate_turn(
+            evaluation, eval_usage = await self.orchestrator.evaluate_turn(
                 model_id=model_id,
                 model_response=full_response,
                 query=query,
@@ -316,7 +316,12 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
             yield {
                 "type": "turn_complete",
                 "turn": asdict(turn),
-                "evaluation": evaluation.dict()
+                "evaluation": evaluation.dict(),
+                "orchestrator_usage": {
+                    "prompt_tokens": eval_usage.prompt_tokens,
+                    "completion_tokens": eval_usage.completion_tokens,
+                    "total_tokens": eval_usage.total_tokens
+                }
             }
 
         except Exception as e:
@@ -365,10 +370,17 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
             - error: If something goes wrong
         """
         try:
+            # Track orchestrator token usage
+            orchestrator_tokens = {"prompt": 0, "completion": 0, "total": 0, "calls": 0}
+
             # Phase 1: Orchestrator analyzes query
             yield {"type": "analysis_start"}
 
-            analysis = await self.orchestrator.analyze_query(query, MODEL_PROFILES)
+            analysis, usage = await self.orchestrator.analyze_query(query, MODEL_PROFILES)
+            orchestrator_tokens["prompt"] += usage.prompt_tokens
+            orchestrator_tokens["completion"] += usage.completion_tokens
+            orchestrator_tokens["total"] += usage.total_tokens
+            orchestrator_tokens["calls"] += 1
 
             yield {
                 "type": "analysis_complete",
@@ -409,6 +421,14 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
                             turn = DiscussionTurn(**event["turn"])
                             completed_turns.append(turn)
 
+                            # Accumulate orchestrator usage from evaluation
+                            if event.get("orchestrator_usage"):
+                                usage = event["orchestrator_usage"]
+                                orchestrator_tokens["prompt"] += usage["prompt_tokens"]
+                                orchestrator_tokens["completion"] += usage["completion_tokens"]
+                                orchestrator_tokens["total"] += usage["total_tokens"]
+                                orchestrator_tokens["calls"] += 1
+
                             if event.get("evaluation"):
                                 evaluation = TurnEvaluation(**event["evaluation"])
                                 evaluations.append(evaluation)
@@ -425,7 +445,7 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
             # Phase 3: Synthesis
             yield {"type": "synthesis_start"}
 
-            synthesis = await self.orchestrator.synthesize_final(
+            synthesis, synth_usage = await self.orchestrator.synthesize_final(
                 query=query,
                 discussion_turns=[{
                     "model": t.model_id,
@@ -434,6 +454,10 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
                 evaluations=evaluations,
                 model_profiles=MODEL_PROFILES
             )
+            orchestrator_tokens["prompt"] += synth_usage.prompt_tokens
+            orchestrator_tokens["completion"] += synth_usage.completion_tokens
+            orchestrator_tokens["total"] += synth_usage.total_tokens
+            orchestrator_tokens["calls"] += 1
 
             yield {
                 "type": "synthesis_complete",
@@ -447,6 +471,10 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
                 synthesis=synthesis
             )
 
+            # Calculate local model token estimate (rough: 4 chars per token)
+            local_model_chars = sum(len(t.response) for t in completed_turns)
+            local_model_tokens_estimate = local_model_chars // 4
+
             yield {
                 "type": "discussion_complete",
                 "final_response": final_response,
@@ -455,6 +483,10 @@ Be direct and specific. Don't just agree - actively verify and critique. If coun
                     "total_turns": len(completed_turns),
                     "participating_models": list(set(t.model_id for t in completed_turns)),
                     "total_time_ms": sum(t.response_time_ms for t in completed_turns)
+                },
+                "token_usage": {
+                    "orchestrator": orchestrator_tokens,
+                    "local_models_estimate": local_model_tokens_estimate
                 }
             }
 

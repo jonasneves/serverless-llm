@@ -82,6 +82,13 @@ class SynthesisResult(BaseModel):
     synthesis_instructions: str = Field(description="Instructions for generating final response")
 
 
+class TokenUsage(BaseModel):
+    """Token usage statistics from an API call"""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+
 class GitHubModelsOrchestrator:
     """
     Orchestrator using GPT-5-nano via GitHub Models API
@@ -128,7 +135,7 @@ class GitHubModelsOrchestrator:
         self,
         prompt: str,
         response_format: Type[BaseModel]
-    ) -> BaseModel:
+    ) -> tuple[BaseModel, TokenUsage]:
         """
         Make structured output call to GPT-5-nano
 
@@ -137,7 +144,7 @@ class GitHubModelsOrchestrator:
             response_format: Pydantic model for response validation
 
         Returns:
-            Validated Pydantic model instance
+            Tuple of (Validated Pydantic model instance, TokenUsage)
         """
         # Add JSON schema instruction to prompt
         schema = response_format.schema()
@@ -196,6 +203,14 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                 # Log the full response for debugging
                 logger.info(f"Orchestrator API response: {json.dumps(data, indent=2)}")
 
+                # Extract token usage
+                usage_data = data.get("usage", {})
+                token_usage = TokenUsage(
+                    prompt_tokens=usage_data.get("prompt_tokens", 0),
+                    completion_tokens=usage_data.get("completion_tokens", 0),
+                    total_tokens=usage_data.get("total_tokens", 0)
+                )
+
                 # Extract content from response
                 if "choices" not in data or not data["choices"]:
                     raise Exception(f"No choices in API response. Full response: {json.dumps(data)}")
@@ -220,12 +235,12 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                         content = content.split("```")[1].split("```")[0].strip()
 
                     json_data = json.loads(content)
-                    return response_format.parse_obj(json_data)
+                    return response_format.parse_obj(json_data), token_usage
                 except (json.JSONDecodeError, ValueError) as e:
                     logger.error(f"Failed to parse JSON. Content: {content[:500]}")
                     raise Exception(f"Failed to parse structured output: {e}\nContent preview: {content[:500]}")
 
-    async def analyze_query(self, query: str, model_profiles: Dict[str, Dict]) -> QueryAnalysis:
+    async def analyze_query(self, query: str, model_profiles: Dict[str, Dict]) -> tuple[QueryAnalysis, TokenUsage]:
         """
         Analyze user query and determine discussion parameters
 
@@ -234,7 +249,7 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
             model_profiles: Dict of model capabilities
 
         Returns:
-            QueryAnalysis with domain classification and model scores
+            Tuple of (QueryAnalysis with domain classification and model scores, TokenUsage)
         """
         # Build model capabilities summary
         capabilities_summary = "\n".join([
@@ -271,7 +286,7 @@ Provide brief reasoning for your analysis."""
         query: str,
         context: List[Dict[str, Any]],
         expertise_score: float
-    ) -> TurnEvaluation:
+    ) -> tuple[TurnEvaluation, TokenUsage]:
         """
         Evaluate a model's contribution to the discussion
 
@@ -283,7 +298,7 @@ Provide brief reasoning for your analysis."""
             expertise_score: Model's expertise score for this query
 
         Returns:
-            TurnEvaluation with quality metrics
+            Tuple of (TurnEvaluation with quality metrics, TokenUsage)
         """
         # Build context summary
         context_summary = "\n\n".join([
@@ -326,7 +341,7 @@ Consider:
         discussion_turns: List[Dict[str, Any]],
         evaluations: List[TurnEvaluation],
         model_profiles: Dict[str, Dict]
-    ) -> SynthesisResult:
+    ) -> tuple[SynthesisResult, TokenUsage]:
         """
         Create synthesis plan for final response
 
@@ -337,7 +352,7 @@ Consider:
             model_profiles: Model capability profiles
 
         Returns:
-            SynthesisResult with merge strategy
+            Tuple of (SynthesisResult with merge strategy, TokenUsage)
         """
         # Build discussion summary
         discussion_summary = "\n\n".join([

@@ -813,6 +813,91 @@
       border-color: var(--accent-color);
       color: var(--text-primary);
     }
+
+    .orchestrator-info-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .orchestrator-info-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .orchestrator-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      width: 280px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 200;
+    }
+
+    .orchestrator-info-btn:hover .orchestrator-tooltip {
+      display: block;
+    }
+
+    .orchestrator-tooltip strong {
+      color: var(--text-primary);
+    }
+
+    .token-summary {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .token-summary-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .token-summary-label {
+      color: var(--text-secondary);
+    }
+
+    .token-summary-value {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .token-summary-value.orchestrator {
+      color: var(--accent-color);
+    }
+
+    .token-summary-value.local {
+      color: var(--success-color);
+    }
+
+    .token-summary-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border-color);
+    }
   </style>
 </head>
 <body>
@@ -955,6 +1040,21 @@
             </span>
           </div>
         </div>
+        <button class="orchestrator-info-btn" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <div class="orchestrator-tooltip">
+            <strong>What does the orchestrator do?</strong><br><br>
+            Coordinates discussion via small API calls (~300 tokens each). It:<br>
+            • <strong>Analyzes</strong> your query and scores model expertise<br>
+            • <strong>Evaluates</strong> each response for quality<br>
+            • <strong>Synthesizes</strong> the final answer<br><br>
+            The orchestrator doesn't generate content—it just directs traffic between local models.
+          </div>
+        </button>
       </div>
 
       <!-- Discussion Content -->
@@ -1199,6 +1299,28 @@
       `;
     }
 
+    function showTokenSummary(tokenUsage) {
+      if (!tokenUsage) return;
+
+      const orchestrator = tokenUsage.orchestrator || {};
+      const localEstimate = tokenUsage.local_models_estimate || 0;
+
+      discussionContent.innerHTML += `
+        <div class="token-summary">
+          <div class="token-summary-item">
+            <span class="token-summary-label">Orchestrator:</span>
+            <span class="token-summary-value orchestrator">${orchestrator.total || 0} tokens</span>
+            <span class="token-summary-label">(${orchestrator.calls || 0} calls)</span>
+          </div>
+          <div class="token-summary-divider"></div>
+          <div class="token-summary-item">
+            <span class="token-summary-label">Local Models:</span>
+            <span class="token-summary-value local">~${localEstimate.toLocaleString()} tokens</span>
+          </div>
+        </div>
+      `;
+    }
+
     async function startDiscussion() {
       const query = queryInput.value.trim();
       if (!query) {
@@ -1317,6 +1439,7 @@
 
                 case 'discussion_complete':
                   showSynthesis(event.synthesis || {}, event.final_response);
+                  showTokenSummary(event.token_usage);
                   updateOrchestratorStatus('Discussion complete', false);
                   setTimeout(() => hideOrchestratorBar(), 3000);
                   break;
