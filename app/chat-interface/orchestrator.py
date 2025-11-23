@@ -123,8 +123,7 @@ class GitHubModelsOrchestrator:
     async def _call_structured(
         self,
         prompt: str,
-        response_format: Type[BaseModel],
-        temperature: float = 0.3
+        response_format: Type[BaseModel]
     ) -> BaseModel:
         """
         Make structured output call to GPT-5-nano
@@ -132,7 +131,6 @@ class GitHubModelsOrchestrator:
         Args:
             prompt: System + user prompt
             response_format: Pydantic model for response validation
-            temperature: Sampling temperature (lower = more deterministic)
 
         Returns:
             Validated Pydantic model instance
@@ -161,7 +159,6 @@ Do not include any explanatory text outside the JSON object."""
                     }
                 ],
                 "max_completion_tokens": self.max_tokens,
-                "temperature": temperature,
                 "stream": False
             }
 
@@ -231,7 +228,7 @@ Determine:
 
 Provide brief reasoning for your analysis."""
 
-        return await self._call_structured(prompt, QueryAnalysis, temperature=0.2)
+        return await self._call_structured(prompt, QueryAnalysis)
 
     async def evaluate_turn(
         self,
@@ -287,7 +284,7 @@ Consider:
 - Is it staying within its expertise area?
 - Are there gaps remaining that other models could fill?"""
 
-        return await self._call_structured(prompt, TurnEvaluation, temperature=0.3)
+        return await self._call_structured(prompt, TurnEvaluation)
 
     async def synthesize_final(
         self,
@@ -340,7 +337,7 @@ Create a synthesis plan that:
 
 The synthesis should create a cohesive response that feels like one expert speaking, not a patchwork."""
 
-        return await self._call_structured(prompt, SynthesisResult, temperature=0.4)
+        return await self._call_structured(prompt, SynthesisResult)
 
     async def check_rate_limits(self) -> Dict[str, Any]:
         """

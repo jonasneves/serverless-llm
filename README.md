@@ -10,7 +10,7 @@
 
 Compare responses from multiple AI models side-by-side with real-time streaming in a modern web interface.
 
-**NEW:** [Discussion Mode](DISCUSSION_MODE.md) - Models collaborate on responses through GPT-5-nano orchestrated discussions.
+[Discussion Mode](DISCUSSION_MODE.md) - Models collaborate on responses through GPT-5-nano orchestrated discussions.
 
 ## Overview
 
