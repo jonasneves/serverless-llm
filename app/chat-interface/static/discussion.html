@@ -436,6 +436,67 @@
     .api-warning svg {
       flex-shrink: 0;
     }
+
+    .token-section {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .token-toggle {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0;
+    }
+
+    .token-toggle:hover {
+      color: var(--text-primary);
+    }
+
+    .token-input-wrapper {
+      display: none;
+      margin-top: 8px;
+    }
+
+    .token-input-wrapper.visible {
+      display: block;
+    }
+
+    .token-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    .token-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .token-hint {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 4px;
+    }
+
+    .token-hint a {
+      color: var(--info-color);
+      text-decoration: none;
+    }
+
+    .token-hint a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -512,7 +573,27 @@
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
-          <span>API models may consume credits from your GitHub Models quota</span>
+          <span>API models consume GitHub Models credits</span>
+        </div>
+        <div id="tokenSection" class="token-section" style="display: none;">
+          <button id="tokenToggle" class="token-toggle">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span>Use your own GitHub token</span>
+          </button>
+          <div id="tokenInputWrapper" class="token-input-wrapper">
+            <input
+              type="password"
+              id="githubToken"
+              class="token-input"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              autocomplete="off"
+            >
+            <div class="token-hint">
+              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a token</a> with <code>user_models:read</code> permission. Leave empty to use server default.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -531,6 +612,10 @@
     const orchestratorModel = document.getElementById('orchestratorModel');
     const orchestratorBadge = document.getElementById('orchestratorBadge');
     const apiWarning = document.getElementById('apiWarning');
+    const tokenSection = document.getElementById('tokenSection');
+    const tokenToggle = document.getElementById('tokenToggle');
+    const tokenInputWrapper = document.getElementById('tokenInputWrapper');
+    const githubToken = document.getElementById('githubToken');
 
     let currentDiscussion = null;
 
@@ -543,7 +628,15 @@
       orchestratorBadge.textContent = isApiModel ? 'API' : 'Local';
       orchestratorBadge.className = `model-type-badge ${isApiModel ? 'api' : 'local'}`;
       apiWarning.classList.toggle('visible', isApiModel);
+      tokenSection.style.display = isApiModel ? 'block' : 'none';
     }
+
+    // Toggle token input visibility
+    tokenToggle.addEventListener('click', () => {
+      tokenInputWrapper.classList.toggle('visible');
+      const svg = tokenToggle.querySelector('svg');
+      svg.style.transform = tokenInputWrapper.classList.contains('visible') ? 'rotate(180deg)' : '';
+    });
 
     orchestratorModel.addEventListener('change', updateOrchestratorUI);
     updateOrchestratorUI(); // Initialize on load
@@ -683,6 +776,7 @@
       const maxTokens = parseInt(maxTokensInput.value);
       const temperature = parseFloat(temperatureInput.value);
       const orchestrator = orchestratorModel.value;
+      const userToken = githubToken.value.trim();
 
       // Reset UI
       discussionContent.innerHTML = '';
@@ -692,10 +786,22 @@
       try {
         setStatus('analyzing', 'Analyzing query...');
 
+        const requestBody = {
+          query,
+          max_tokens: maxTokens,
+          temperature,
+          orchestrator_model: orchestrator
+        };
+
+        // Include user token if provided
+        if (userToken) {
+          requestBody.github_token = userToken;
+        }
+
         const response = await fetch('/api/chat/discussion/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, max_tokens: maxTokens, temperature, orchestrator_model: orchestrator })
+          body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {

@@ -116,6 +116,7 @@ class DiscussionRequest(BaseModel):
     max_tokens: int = 512
     temperature: float = 0.7
     orchestrator_model: Optional[str] = None  # Model ID for orchestrator (e.g., 'gpt-5-nano', 'qwen2.5-7b')
+    github_token: Optional[str] = None  # User-provided GitHub token for API models
 
 # HTML Chat Interface
 CHAT_HTML = """
@@ -2029,7 +2030,8 @@ async def stream_discussion_events(
     query: str,
     max_tokens: int,
     temperature: float,
-    orchestrator_model: Optional[str] = None
+    orchestrator_model: Optional[str] = None,
+    github_token: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     """
     Stream discussion events as Server-Sent Events
@@ -2055,13 +2057,14 @@ async def stream_discussion_events(
 
         if is_api_model:
             # Initialize GitHub Models API orchestrator
-            github_token = os.getenv("GH_MODELS_TOKEN")
-            if not github_token:
-                yield f"data: {json.dumps({'event': 'error', 'error': 'GH_MODELS_TOKEN not configured for API orchestrator'})}\n\n"
+            # Use user-provided token if available, otherwise fall back to server env var
+            token = github_token or os.getenv("GH_MODELS_TOKEN")
+            if not token:
+                yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for API orchestrator. Please provide your token or contact the server admin.'})}\n\n"
                 return
 
             orchestrator = GitHubModelsOrchestrator(
-                github_token=github_token,
+                github_token=token,
                 model_id=selected_orchestrator
             )
         elif selected_orchestrator in local_models:
@@ -2122,7 +2125,13 @@ async def discussion_stream(request: DiscussionRequest):
     - error: Error details
     """
     return StreamingResponse(
-        stream_discussion_events(request.query, request.max_tokens, request.temperature, request.orchestrator_model),
+        stream_discussion_events(
+            request.query,
+            request.max_tokens,
+            request.temperature,
+            request.orchestrator_model,
+            request.github_token
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

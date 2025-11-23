@@ -355,21 +355,18 @@ Original Query: {query}
 Discussion Summary:
 {discussion_summary}
 
-Create a synthesis plan that:
-1. Identifies the primary source model (highest quality × expertise)
-2. Assigns weights to each model's contribution (sum to 1.0)
-3. Chooses merge strategy:
-   - prioritize_lead: Mainly use lead model, add minor enhancements
-   - combine_best: Take best parts from each model
-   - consensus: Blend where models agree, note disagreements
-4. Lists sections to include (ordered by priority):
-   - Which model to source each section from
-   - What type of content (code, explanation, analysis, etc.)
-   - Priority order (1=first, 2=second, etc.)
-5. Overall confidence in synthesized response (0-1)
-6. Instructions for generating the final response
+Create a synthesis plan with these exact fields:
+1. primary_source_model: The model ID to prioritize (e.g., "phi-3-mini", "qwen2.5-7b")
+2. source_weights: Weight per model as decimal (sum to 1.0)
+3. merge_strategy: One of "prioritize_lead", "combine_best", or "consensus"
+4. sections_to_include: Array of sections, each with:
+   - source_model: Model ID to source from (e.g., "phi-3-mini")
+   - content_type: Type like "code", "explanation", "analysis"
+   - priority: Integer order (1=first, 2=second)
+5. final_confidence: Overall confidence 0-1
+6. synthesis_instructions: How to generate the final response
 
-The synthesis should create a cohesive response that feels like one expert speaking, not a patchwork."""
+Use actual model IDs from the discussion, not generic names like "Model A"."""
 
         return await self._call_structured(prompt, SynthesisResult)
 
