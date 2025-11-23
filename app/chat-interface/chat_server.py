@@ -300,43 +300,60 @@ CHAT_HTML = """
     .message-content code {
       font-family: var(--font-mono);
       background-color: var(--bg-tertiary);
-      padding: 0.15em 0.4em;
-      border-radius: 3px;
-      font-size: 0.9em;
+      padding: 0.2em 0.45em;
+      border-radius: 4px;
+      font-size: 0.875em;
       border: 1px solid var(--border-color);
+      color: var(--accent-color);
     }
     .message-content pre {
       background-color: var(--bg-secondary);
-      padding: 0.75rem;
-      border-radius: 6px;
+      padding: 1rem;
+      border-radius: 8px;
       overflow-x: auto;
-      margin: 0.75em 0;
+      margin: 1em 0;
       border: 1px solid var(--border-color);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     .message-content pre code {
       background: transparent;
       padding: 0;
       border: none;
+      color: var(--text-primary);
+      font-size: 0.85em;
+      line-height: 1.6;
+    }
+    [data-theme="dark"] .message-content code {
+      color: #93c5fd;
+    }
+    [data-theme="dark"] .message-content pre {
+      background-color: #0d1117;
+      border-color: #21262d;
     }
 
     /* Markdown styles */
     .message-content h2 {
-      font-size: 1.3em;
+      font-size: 1.2em;
       font-weight: 600;
-      margin: 1em 0 0.5em 0;
+      margin: 1.25em 0 0.5em 0;
       color: var(--text-primary);
+      padding-bottom: 0.3em;
+      border-bottom: 1px solid var(--border-color);
     }
     .message-content h3 {
-      font-size: 1.15em;
+      font-size: 1.1em;
       font-weight: 600;
-      margin: 0.8em 0 0.4em 0;
+      margin: 1em 0 0.4em 0;
       color: var(--text-primary);
     }
     .message-content h4 {
       font-size: 1em;
       font-weight: 600;
-      margin: 0.6em 0 0.3em 0;
-      color: var(--text-primary);
+      margin: 0.8em 0 0.3em 0;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      font-size: 0.85em;
     }
     .message-content h2:first-child,
     .message-content h3:first-child,
@@ -344,24 +361,47 @@ CHAT_HTML = """
       margin-top: 0;
     }
     .message-content ul, .message-content ol {
-      margin: 0.5em 0;
-      padding-left: 1.5em;
+      margin: 0.6em 0;
+      padding-left: 1.25em;
+    }
+    .message-content ul {
+      list-style-type: disc;
+    }
+    .message-content ol {
+      list-style-type: decimal;
     }
     .message-content li {
-      margin: 0.25em 0;
+      margin: 0.35em 0;
+      padding-left: 0.25em;
+      line-height: 1.5;
+    }
+    .message-content li::marker {
+      color: var(--accent-color);
     }
     .message-content strong {
       font-weight: 600;
+      color: var(--text-primary);
     }
     .message-content em {
       font-style: italic;
+      color: var(--text-secondary);
     }
     .message-content a {
       color: var(--accent-color);
-      text-decoration: underline;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.15s ease;
     }
     .message-content a:hover {
-      text-decoration: none;
+      border-bottom-color: var(--accent-color);
+    }
+    .message-content blockquote {
+      margin: 0.75em 0;
+      padding: 0.5em 1em;
+      border-left: 3px solid var(--accent-color);
+      background: var(--bg-secondary);
+      border-radius: 0 6px 6px 0;
+      color: var(--text-secondary);
     }
 
     .message-footer {
@@ -616,26 +656,45 @@ CHAT_HTML = """
 
     /* Streaming cursor animation */
     .cursor {
-      display: inline-block;
-      animation: blink 1s infinite;
+      display: inline;
+      font-weight: 400;
       color: var(--accent-color);
-      font-weight: normal;
+      opacity: 0.8;
+      animation: cursorBlink 1s ease-in-out infinite;
+      margin-left: 1px;
     }
 
-    @keyframes blink {
-      0%, 50% { opacity: 1; }
-      51%, 100% { opacity: 0; }
+    @keyframes cursorBlink {
+      0%, 45% { opacity: 0.8; }
+      50%, 95% { opacity: 0; }
+      100% { opacity: 0.8; }
     }
 
     .streaming-badge {
-      background: var(--accent-color) !important;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%) !important;
       color: white !important;
-      animation: pulse 1.5s infinite;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      box-shadow: 0 1px 3px rgba(30, 58, 95, 0.2);
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
+    .streaming-badge::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: white;
+      border-radius: 50%;
+      margin-right: 5px;
+      animation: streamingDot 1.2s ease-in-out infinite;
+    }
+
+    @keyframes streamingDot {
+      0%, 100% { opacity: 0.4; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1); }
     }
 
     /* Mobile Responsive Styles */
