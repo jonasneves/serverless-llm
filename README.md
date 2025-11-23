@@ -112,7 +112,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | `QWEN_API_URL` | Public URL (e.g., `https://qwen.domain`) |
 | `PHI_API_URL` | Public URL for Phi |
 | `LLAMA_API_URL` | Public URL for Llama |
-| `DISCUSSION_GITHUB_TOKEN` | GitHub token for Discussion Mode (optional, [user_models:read](https://github.com/settings/personal-access-tokens/new)) |
+| `GH_MODELS_TOKEN` | GitHub token for Discussion Mode (optional, [user_models:read](https://github.com/settings/personal-access-tokens/new)) |
 
 ### 2. Create Cloudflare Tunnels
 

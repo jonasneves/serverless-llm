@@ -104,13 +104,13 @@ class GitHubModelsOrchestrator:
             api_url: GitHub Models API endpoint
             max_tokens: Maximum tokens per response
         """
-        self.github_token = github_token or os.getenv("GITHUB_TOKEN")
+        self.github_token = github_token or os.getenv("GH_MODELS_TOKEN")
         self.model_id = model_id
         self.api_url = api_url
         self.max_tokens = max_tokens
 
         if not self.github_token:
-            raise ValueError("GitHub token required. Set GITHUB_TOKEN env var or pass github_token parameter.")
+            raise ValueError("GitHub token required. Set GH_MODELS_TOKEN env var or pass github_token parameter.")
 
     def _get_headers(self) -> Dict[str, str]:
         """Get authentication headers for GitHub Models API"""

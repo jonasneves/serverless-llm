@@ -2040,9 +2040,9 @@ async def stream_discussion_events(
     """
     try:
         # Initialize orchestrator
-        github_token = os.getenv("GITHUB_TOKEN")
+        github_token = os.getenv("GH_MODELS_TOKEN")
         if not github_token:
-            yield f"data: {json.dumps({'event': 'error', 'error': 'GITHUB_TOKEN not configured'})}\n\n"
+            yield f"data: {json.dumps({'event': 'error', 'error': 'GH_MODELS_TOKEN not configured'})}\n\n"
             return
 
         orchestrator = GitHubModelsOrchestrator(github_token=github_token)

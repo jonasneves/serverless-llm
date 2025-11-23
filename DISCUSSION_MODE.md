@@ -100,7 +100,7 @@ Add to **Settings > Secrets and variables > Actions**:
 
 | Secret | Description | How to Get |
 |--------|-------------|------------|
-| `DISCUSSION_GITHUB_TOKEN` | GitHub Personal Access Token with `user_models:read` permission | [Create Token](https://github.com/settings/personal-access-tokens/new) |
+| `GH_MODELS_TOKEN` | GitHub Personal Access Token with `user_models:read` permission | [Create Token](https://github.com/settings/personal-access-tokens/new) |
 
 **Creating the Token:**
 1. Go to https://github.com/settings/personal-access-tokens/new
@@ -114,8 +114,8 @@ Add to **Settings > Secrets and variables > Actions**:
 
 The workflow automatically configures:
 ```bash
-GITHUB_TOKEN=${{ secrets.DISCUSSION_GITHUB_TOKEN }}  # For GPT-5-nano API
-QWEN_API_URL=${{ secrets.QWEN_API_URL }}              # Existing model endpoints
+GH_MODELS_TOKEN=${{ secrets.GH_MODELS_TOKEN }}  # For GPT-5-nano API
+QWEN_API_URL=${{ secrets.QWEN_API_URL }}        # Existing model endpoints
 PHI_API_URL=${{ secrets.PHI_API_URL }}
 LLAMA_API_URL=${{ secrets.LLAMA_API_URL }}
 ```
@@ -231,7 +231,7 @@ def is_prime(n):
 ### Rate Limits
 GitHub Models API has rate limits. Check with:
 ```bash
-curl -H "Authorization: Bearer $GITHUB_TOKEN" \
+curl -H "Authorization: Bearer $GH_MODELS_TOKEN" \
   https://models.github.ai/inference/chat/completions \
   -X POST -d '{"model":"gpt-5-nano","messages":[{"role":"user","content":"ping"}],"max_tokens":1}'
 # Check x-ratelimit-* headers
@@ -241,7 +241,7 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" \
 
 ```bash
 # 1. Set environment variables
-export GITHUB_TOKEN="ghp_your_token_here"
+export GH_MODELS_TOKEN="ghp_your_token_here"
 export QWEN_API_URL="http://localhost:8001"
 export PHI_API_URL="http://localhost:8002"
 export LLAMA_API_URL="http://localhost:8003"
@@ -265,9 +265,9 @@ open http://localhost:8080/discussion
 
 ## Troubleshooting
 
-### Error: "GITHUB_TOKEN not configured"
-- Add `DISCUSSION_GITHUB_TOKEN` to GitHub Secrets
-- For local dev, set `export GITHUB_TOKEN=...`
+### Error: "GH_MODELS_TOKEN not configured"
+- Add `GH_MODELS_TOKEN` to GitHub Secrets
+- For local dev, set `export GH_MODELS_TOKEN=...`
 
 ### Error: "Rate limit exceeded"
 - GitHub Models API has rate limits
