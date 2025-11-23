@@ -1101,6 +1101,18 @@ CHAT_HTML = """
       }
     });
 
+    // Handle send button click (works on both desktop and mobile)
+    sendBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      sendMessage();
+    });
+
+    // Also handle touch events for better mobile responsiveness
+    sendBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      sendMessage();
+    });
+
     // Add user message
     function addUserMessage(content) {
       const messageDiv = document.createElement('div');
@@ -1248,6 +1260,19 @@ CHAT_HTML = """
     renderModelSelector();
     checkAllModels();
     setInterval(checkAllModels, 30000);
+
+    // Auto-focus the input field on page load
+    // Use a small delay to ensure the page is fully rendered
+    setTimeout(() => {
+      userInput.focus();
+    }, 100);
+
+    // Re-focus input when clicking anywhere in the chat area (for convenience)
+    chatHistory.addEventListener('click', () => {
+      if (!window.getSelection().toString()) {
+        userInput.focus();
+      }
+    });
   </script>
 </body>
 </html>
