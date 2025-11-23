@@ -60,32 +60,52 @@
       align-items: center;
       gap: 12px;
       color: white;
-      font-size: 20px;
-      font-weight: 600;
     }
 
-    .mode-badge {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 14px;
-    }
-
-    .nav-links {
+    .logo-icon {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      justify-content: center;
     }
 
-    .nav-links a {
-      color: white;
-      text-decoration: none;
-      padding: 8px 16px;
-      border-radius: 6px;
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-title {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .logo-subtitle {
+      font-size: 12px;
+      opacity: 0.9;
+      line-height: 1.2;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
       background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
       transition: background 0.2s;
     }
 
-    .nav-links a:hover {
+    .icon-btn:hover {
       background: rgba(255, 255, 255, 0.2);
     }
 
@@ -363,12 +383,25 @@
 <body>
   <header>
     <div class="logo">
-      <span>🤖</span>
-      <span>LLM Arena</span>
-      <span class="mode-badge">Discussion Mode</span>
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-title">LLM Arena</span>
+        <span class="logo-subtitle">Discussion Mode</span>
+      </div>
     </div>
-    <div class="nav-links">
-      <a href="/">← Arena Mode</a>
+    <div class="header-actions">
+      <a href="/" class="icon-btn" title="Arena Mode">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </a>
     </div>
   </header>
 
@@ -440,7 +473,7 @@
 
       discussionContent.innerHTML += `
         <div class="analysis-card">
-          <h3>🔍 Query Analysis</h3>
+          <h3>Query Analysis</h3>
           <p><strong>Lead Model:</strong> ${analysis.discussion_lead || 'Unknown'}</p>
           <p><strong>Expected Turns:</strong> ${analysis.expected_turns || 0}</p>
           <p><strong>Reasoning:</strong> ${analysis.reasoning || 'N/A'}</p>
@@ -506,7 +539,7 @@
     function showSynthesis(synthesis, finalResponse) {
       discussionContent.innerHTML += `
         <div class="synthesis-card">
-          <h3>✨ Final Synthesis</h3>
+          <h3>Final Synthesis</h3>
           <p style="margin-bottom: 16px; opacity: 0.9;">
             <strong>Strategy:</strong> ${synthesis.merge_strategy || 'Unknown'} |
             <strong>Primary Source:</strong> ${synthesis.primary_source_model || 'Unknown'} |

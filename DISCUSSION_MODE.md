@@ -1,4 +1,4 @@
-# Discussion Mode 🤖💬
+# Discussion Mode
 
 Multi-model collaborative discussions powered by GPT-5-nano orchestration.
 
@@ -131,9 +131,9 @@ LLAMA_API_URL=${{ secrets.LLAMA_API_URL }}
    - **Temperature**: 0.0-1.0 (default: 0.7)
 4. Click **Start Discussion**
 5. Watch models discuss in real-time:
-   - 🔍 **Analysis**: Orchestrator breaks down the query
-   - 💭 **Turns**: Each model contributes with evaluation badges
-   - ✨ **Synthesis**: Final weighted response
+   - **Analysis**: Orchestrator breaks down the query
+   - **Turns**: Each model contributes with evaluation badges
+   - **Synthesis**: Final weighted response
 
 ### Via API
 
@@ -291,7 +291,7 @@ open http://localhost:8080/discussion
 
 ## Roadmap
 
-**Phase 1** ✅ (Current)
+**Phase 1** (Current)
 - [x] Basic orchestrator with GPT-5-nano
 - [x] Turn-based discussion engine
 - [x] Streaming SSE events

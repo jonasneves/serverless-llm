@@ -160,7 +160,7 @@ Do not include any explanatory text outside the JSON object."""
                         "content": structured_prompt
                     }
                 ],
-                "max_tokens": self.max_tokens,
+                "max_completion_tokens": self.max_tokens,
                 "temperature": temperature,
                 "stream": False
             }
@@ -354,7 +354,7 @@ The synthesis should create a cohesive response that feels like one expert speak
             payload = {
                 "model": self.model_id,
                 "messages": [{"role": "user", "content": "ping"}],
-                "max_tokens": 1,
+                "max_completion_tokens": 1,
                 "stream": False
             }
 
