@@ -97,7 +97,7 @@ class GitHubModelsOrchestrator:
         github_token: Optional[str] = None,
         model_id: str = "gpt-5-nano",
         api_url: str = "https://models.github.ai/inference/chat/completions",
-        max_tokens: int = 1024
+        max_tokens: int = 4096
     ):
         """
         Initialize orchestrator with GitHub Models API credentials
