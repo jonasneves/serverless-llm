@@ -279,29 +279,173 @@
       color: var(--text-secondary);
     }
 
-    .turn-content {
+    .turn-content,
+    .final-response {
       line-height: 1.6;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .turn-content p,
+    .final-response p {
+      margin: 0 0 0.75em 0;
+    }
+
+    .turn-content p:last-child,
+    .final-response p:last-child {
+      margin-bottom: 0;
+    }
+
+    .turn-content h1,
+    .turn-content h2,
+    .final-response h1,
+    .final-response h2 {
+      font-size: 1.15em;
+      font-weight: 600;
+      margin: 1em 0 0.5em 0;
+      color: var(--text-primary);
+      padding-bottom: 0.25em;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .turn-content h3,
+    .final-response h3 {
+      font-size: 1.05em;
+      font-weight: 600;
+      margin: 0.9em 0 0.4em 0;
       color: var(--text-primary);
     }
 
-    .turn-content pre {
+    .turn-content h1:first-child,
+    .turn-content h2:first-child,
+    .turn-content h3:first-child,
+    .final-response h1:first-child,
+    .final-response h2:first-child,
+    .final-response h3:first-child {
+      margin-top: 0;
+    }
+
+    .turn-content pre,
+    .final-response pre {
       background: var(--bg-tertiary);
       padding: 12px;
       border-radius: 6px;
       overflow-x: auto;
-      margin: 8px 0;
+      margin: 0.75em 0;
+      border: 1px solid var(--border-color);
     }
 
-    .turn-content code {
+    .turn-content code,
+    .final-response code {
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
       background: var(--bg-tertiary);
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 13px;
+      padding: 0.2em 0.45em;
+      border-radius: 4px;
+      font-size: 0.875em;
+      border: 1px solid var(--border-color);
     }
 
-    .turn-content pre code {
+    .turn-content pre code,
+    .final-response pre code {
       background: none;
       padding: 0;
+      border: none;
+      font-size: 0.85em;
+    }
+
+    [data-theme="dark"] .turn-content code,
+    [data-theme="dark"] .final-response code {
+      color: #93c5fd;
+    }
+
+    [data-theme="dark"] .turn-content pre,
+    [data-theme="dark"] .final-response pre {
+      background-color: #0d1117;
+      border-color: #21262d;
+    }
+
+    .turn-content ul,
+    .turn-content ol,
+    .final-response ul,
+    .final-response ol {
+      margin: 0.5em 0;
+      padding-left: 1.5em;
+    }
+
+    .turn-content ul,
+    .final-response ul {
+      list-style-type: disc;
+    }
+
+    .turn-content ol,
+    .final-response ol {
+      list-style-type: decimal;
+    }
+
+    .turn-content li,
+    .final-response li {
+      margin: 0.25em 0;
+      line-height: 1.5;
+    }
+
+    .turn-content li::marker,
+    .final-response li::marker {
+      color: var(--accent-color);
+    }
+
+    .turn-content strong,
+    .final-response strong {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .turn-content a,
+    .final-response a {
+      color: var(--accent-color);
+      text-decoration: none;
+    }
+
+    .turn-content a:hover,
+    .final-response a:hover {
+      text-decoration: underline;
+    }
+
+    .turn-content blockquote,
+    .final-response blockquote {
+      margin: 0.75em 0;
+      padding: 0.5em 1em;
+      border-left: 3px solid var(--accent-color);
+      background: var(--bg-tertiary);
+      border-radius: 0 6px 6px 0;
+      color: var(--text-secondary);
+    }
+
+    .turn-content blockquote p,
+    .final-response blockquote p {
+      margin: 0;
+    }
+
+    .turn-content table,
+    .final-response table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0.75em 0;
+      font-size: 0.9em;
+    }
+
+    .turn-content th,
+    .turn-content td,
+    .final-response th,
+    .final-response td {
+      border: 1px solid var(--border-color);
+      padding: 0.5em 0.75em;
+      text-align: left;
+    }
+
+    .turn-content th,
+    .final-response th {
+      background: var(--bg-secondary);
+      font-weight: 600;
     }
 
     .evaluation-badge {
@@ -700,6 +844,22 @@
   </div>
 
   <script>
+    // Configure marked.js for proper markdown rendering
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false
+    });
+
+    // Custom renderer for better styling
+    const renderer = new marked.Renderer();
+    renderer.link = function(href, title, text) {
+      const titleAttr = title ? ` title="${title}"` : '';
+      return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+    };
+    marked.use({ renderer });
+
     const queryInput = document.getElementById('queryInput');
     const startBtn = document.getElementById('startBtn');
     const maxTokensInput = document.getElementById('maxTokens');
