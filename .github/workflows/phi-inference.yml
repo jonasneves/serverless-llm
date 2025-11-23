@@ -19,9 +19,13 @@ on:
 
 jobs:
   inference:
-    name: Phi-3 Mini Server
+    name: Phi-3 Mini Server #${{ matrix.instance }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    strategy:
+      matrix:
+        instance: [1, 2, 3]
+      fail-fast: false
 
     steps:
       - name: Checkout repository

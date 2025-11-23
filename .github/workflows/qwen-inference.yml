@@ -19,9 +19,13 @@ on:
 
 jobs:
   inference:
-    name: Qwen 2.5-7B Server
+    name: Qwen 2.5-7B Server #${{ matrix.instance }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    strategy:
+      matrix:
+        instance: [1, 2, 3]
+      fail-fast: false
 
     steps:
       - name: Checkout repository

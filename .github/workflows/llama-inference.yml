@@ -19,9 +19,13 @@ on:
 
 jobs:
   inference:
-    name: Llama 3.2-3B Server
+    name: Llama 3.2-3B Server #${{ matrix.instance }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    strategy:
+      matrix:
+        instance: [1, 2, 3]
+      fail-fast: false
 
     steps:
       - name: Checkout repository
