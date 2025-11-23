@@ -20,43 +20,33 @@ Compare responses from multiple AI models side-by-side with real-time streaming 
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph GHA["GitHub Actions"]
-        direction TB
-        Qwen["Qwen 2.5-7B"]
-        Phi["Phi-3 Mini"]
-        Llama["Llama 3.2-3B"]
-        Chat["Chat Interface"]
-    end
-
-    subgraph CF["Cloudflare"]
-        direction TB
-        T1["qwen.domain"]
-        T2["phi.domain"]
-        T3["llama.domain"]
-        T4["chat.domain"]
-    end
-
-    Qwen -.-> T1
-    Phi -.-> T2
-    Llama -.-> T3
-    Chat -.-> T4
-
-    T1 --> Chat
-    T2 --> Chat
-    T3 --> Chat
-
-    User(("User")) --> T4
-
-    style Qwen fill:#7c3aed,stroke:#333,color:#fff
-    style Phi fill:#0ea5e9,stroke:#333,color:#fff
-    style Llama fill:#f97316,stroke:#333,color:#fff
-    style Chat fill:#1e3a5f,stroke:#333,color:#fff
-    style User fill:#10b981,stroke:#333,color:#fff
-    style GHA fill:#f8f9fa,stroke:#2088ff,stroke-width:2px
-    style CF fill:#fff8f0,stroke:#f38020,stroke-width:2px
 ```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          GitHub Actions (Free Tier)                         │
+│                                                                             │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│   │ Qwen 2.5-7B │    │ Phi-3 Mini  │    │ Llama 3.2-3B│    │    Chat     │  │
+│   │   Server    │    │   Server    │    │   Server    │    │  Interface  │  │
+│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    └──────┬──────┘  │
+│          │                  │                  │                  │         │
+└──────────┼──────────────────┼──────────────────┼──────────────────┼─────────┘
+           │                  │                  │                  │
+           ▼                  ▼                  ▼                  ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            Cloudflare Tunnels                                │
+│    qwen.domain         phi.domain        llama.domain        chat.domain    │
+└──────────┬──────────────────┬──────────────────┬──────────────────┬─────────┘
+           │                  │                  │                  │
+           └──────────────────┴────────┬─────────┴──────────────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │      User       │
+                              │    (Browser)    │
+                              └─────────────────┘
+```
+
+**Flow:** User → Chat Interface → Model Servers (Qwen/Phi/Llama) → Streaming Response
 
 ## Features
 
