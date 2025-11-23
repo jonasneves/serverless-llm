@@ -120,19 +120,30 @@
     .discussion-area {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 24px;
     }
 
     .input-section {
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 20px;
+      padding: 24px;
     }
 
     .input-section h2 {
-      margin-bottom: 12px;
+      margin: 0 0 16px 0;
       font-size: 18px;
+      font-weight: 600;
+    }
+
+    #discussionContent {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #discussionContent > * {
+      scroll-margin-top: 80px;
     }
 
     .query-input {
@@ -150,8 +161,9 @@
 
     .controls {
       display: flex;
+      flex-wrap: wrap;
       gap: 12px;
-      margin-top: 12px;
+      margin-top: 16px;
       align-items: center;
     }
 
@@ -182,21 +194,23 @@
     .param-control {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .param-control label {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text-secondary);
+      white-space: nowrap;
     }
 
     .param-control input[type="number"] {
-      width: 80px;
-      padding: 6px;
+      width: 70px;
+      padding: 6px 8px;
       border: 1px solid var(--border-color);
-      border-radius: 4px;
+      border-radius: 6px;
       background: var(--bg-primary);
       color: var(--text-primary);
+      font-size: 13px;
     }
 
     .analysis-card {
@@ -205,7 +219,6 @@
       border-left: 4px solid var(--accent-color);
       border-radius: 8px;
       padding: 16px 20px;
-      margin-bottom: 16px;
     }
 
     .analysis-card h3 {
@@ -237,10 +250,9 @@
 
     .turn-card {
       background: var(--bg-secondary);
-      border: 2px solid var(--border-color);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 16px;
     }
 
     .turn-card.streaming {
@@ -275,8 +287,17 @@
     .model-badge.llama { background: var(--llama-color); color: white; }
 
     .expertise-score {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-secondary);
+    }
+
+    .turn-badge {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: var(--bg-tertiary);
+      padding: 4px 8px;
+      border-radius: 4px;
     }
 
     .turn-content,
@@ -468,7 +489,6 @@
       border-left: 4px solid var(--success-color);
       border-radius: 8px;
       padding: 16px 20px;
-      margin-top: 20px;
     }
 
     .synthesis-card h3 {
@@ -1002,7 +1022,7 @@
                 <div class="model-badge ${modelClass}">${turn.model_name || turn.model_id}</div>
                 <div class="expertise-score">Expertise: ${expertisePercent}%</div>
               </div>
-              <div>Turn ${turn.turn_number + 1}</div>
+              <div class="turn-badge">Round ${turn.turn_number + 1}</div>
             </div>
             <div class="turn-content">${marked.parse(turn.content || '')}</div>
           </div>
