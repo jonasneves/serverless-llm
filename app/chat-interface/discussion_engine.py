@@ -187,7 +187,7 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
         messages: List[Dict[str, str]],
         max_tokens: int = 512,
         temperature: float = 0.7
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Stream response from a model's API
 
@@ -198,7 +198,7 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
             temperature: Sampling temperature
 
         Yields:
-            Response chunks as they arrive
+            Dicts with type "chunk" (content) or "usage" (token counts)
         """
         import aiohttp
 
@@ -231,9 +231,20 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
 
                     try:
                         chunk = json.loads(data)
+
+                        # Check for usage data (usually in final chunk)
+                        if 'usage' in chunk:
+                            yield {
+                                "type": "usage",
+                                "prompt_tokens": chunk['usage'].get('prompt_tokens', 0),
+                                "completion_tokens": chunk['usage'].get('completion_tokens', 0),
+                                "total_tokens": chunk['usage'].get('total_tokens', 0)
+                            }
+
+                        # Check for content chunk
                         content = chunk.get('choices', [{}])[0].get('delta', {}).get('content')
                         if content:
-                            yield content
+                            yield {"type": "chunk", "content": content}
                     except json.JSONDecodeError:
                         continue
 
@@ -276,17 +287,25 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
 
         # Stream response
         full_response = ""
+        local_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         start_time = asyncio.get_event_loop().time()
 
         try:
             messages = [{"role": "user", "content": prompt}]
-            async for chunk in self._call_model_api(model_id, messages, max_tokens, temperature):
-                full_response += chunk
-                yield {
-                    "type": "turn_chunk",
-                    "model_id": model_id,
-                    "chunk": chunk
-                }
+            async for item in self._call_model_api(model_id, messages, max_tokens, temperature):
+                if item["type"] == "chunk":
+                    full_response += item["content"]
+                    yield {
+                        "type": "turn_chunk",
+                        "model_id": model_id,
+                        "chunk": item["content"]
+                    }
+                elif item["type"] == "usage":
+                    local_usage = {
+                        "prompt_tokens": item["prompt_tokens"],
+                        "completion_tokens": item["completion_tokens"],
+                        "total_tokens": item["total_tokens"]
+                    }
 
         except asyncio.TimeoutError:
             yield {
@@ -336,7 +355,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                     "prompt_tokens": eval_usage.prompt_tokens,
                     "completion_tokens": eval_usage.completion_tokens,
                     "total_tokens": eval_usage.total_tokens
-                }
+                },
+                "local_model_usage": local_usage
             }
 
         except Exception as e:
@@ -354,7 +374,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                 "type": "turn_complete",
                 "turn": asdict(turn),
                 "evaluation": None,
-                "evaluation_error": str(e)
+                "evaluation_error": str(e),
+                "local_model_usage": local_usage
             }
 
     async def run_discussion(
@@ -387,6 +408,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
         try:
             # Track orchestrator token usage
             orchestrator_tokens = {"prompt": 0, "completion": 0, "total": 0, "calls": 0}
+            # Track local model token usage
+            local_model_tokens = {"prompt": 0, "completion": 0, "total": 0}
 
             # Phase 1: Orchestrator analyzes query
             yield {"type": "analysis_start"}
@@ -444,6 +467,13 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                                 orchestrator_tokens["total"] += usage["total_tokens"]
                                 orchestrator_tokens["calls"] += 1
 
+                            # Accumulate local model usage
+                            if event.get("local_model_usage"):
+                                usage = event["local_model_usage"]
+                                local_model_tokens["prompt"] += usage["prompt_tokens"]
+                                local_model_tokens["completion"] += usage["completion_tokens"]
+                                local_model_tokens["total"] += usage["total_tokens"]
+
                             if event.get("evaluation"):
                                 evaluation = TurnEvaluation(**event["evaluation"])
                                 evaluations.append(evaluation)
@@ -486,10 +516,6 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                 synthesis=synthesis
             )
 
-            # Calculate local model token estimate (rough: 4 chars per token)
-            local_model_chars = sum(len(t.response) for t in completed_turns)
-            local_model_tokens_estimate = local_model_chars // 4
-
             yield {
                 "type": "discussion_complete",
                 "final_response": final_response,
@@ -501,7 +527,7 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                 },
                 "token_usage": {
                     "orchestrator": orchestrator_tokens,
-                    "local_models_estimate": local_model_tokens_estimate
+                    "local_models": local_model_tokens
                 }
             }
 
