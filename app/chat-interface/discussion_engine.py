@@ -147,11 +147,20 @@ As the discussion leader, provide your analysis and response. Show your work ste
 Be thorough and precise - {participants_list} will review and critique your response next."""
 
         else:
-            # Supporting models - respond with full context
-            previous_context = "\n\n".join([
-                f"**{turn.model_name}**:\n{turn.response}"
-                for turn in previous_turns
-            ])
+            # Supporting models - respond with full context including evaluations
+            previous_context_parts = []
+            for turn in previous_turns:
+                turn_text = f"**{turn.model_name}**:\n{turn.response}"
+                # Add evaluation scores if available
+                if turn.evaluation:
+                    eval_data = turn.evaluation
+                    quality = eval_data.get('quality_score', 0)
+                    relevance = eval_data.get('relevance_score', 0)
+                    confidence = eval_data.get('confidence_assessment', 'unknown')
+                    turn_text += f"\n[Evaluation: Quality {quality:.0%}, Relevance {relevance:.0%}, Confidence: {confidence}]"
+                previous_context_parts.append(turn_text)
+
+            previous_context = "\n\n".join(previous_context_parts)
 
             # Get names of models who have already spoken
             spoken_models = list(set(turn.model_name for turn in previous_turns))

@@ -269,11 +269,11 @@ Determine:
 2. How much weight each domain should have (must sum to 1.0)
 3. Expertise score for each model on THIS specific query (0-1 based on domain match)
 4. Which model should lead the discussion (highest expertise)
-5. How many discussion turns are needed (2-4):
-   - 2 turns: Simple to moderate query, lead model plus one supporting perspective
-   - 3 turns: Complex multi-domain query, need multiple perspectives
-   - 4 turns: Very complex, requires extensive collaboration
-   NOTE: Always use at least 2 turns to enable multi-model collaboration.
+5. How many discussion rounds are needed (2-4):
+   - 2 rounds: Simple to moderate query, lead model plus one supporting perspective
+   - 3 rounds: Complex multi-domain query, need multiple perspectives
+   - 4 rounds: Very complex, requires extensive collaboration
+   NOTE: Always use at least 2 rounds to enable multi-model collaboration.
 
 Provide brief reasoning for your analysis."""
 
@@ -294,7 +294,7 @@ Provide brief reasoning for your analysis."""
             model_id: ID of model being evaluated
             model_response: The model's response text
             query: Original user query
-            context: Previous discussion turns
+            context: Previous model responses in the discussion
             expertise_score: Model's expertise score for this query
 
         Returns:
@@ -304,7 +304,7 @@ Provide brief reasoning for your analysis."""
         context_summary = "\n\n".join([
             f"Turn {i+1} - {turn['model']}:\n{turn['response'][:500]}..."
             for i, turn in enumerate(context)
-        ]) if context else "No previous turns"
+        ]) if context else "No previous responses"
 
         prompt = f"""Evaluate this model's contribution to an ongoing discussion.
 

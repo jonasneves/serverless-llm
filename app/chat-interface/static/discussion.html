@@ -1053,7 +1053,7 @@
             <label>Orchestrator:</label>
             <select id="orchestratorModel">
               <optgroup label="API - High Rate Limit">
-                <option value="gpt-4.1">GPT-4.1</option>
+                <option value="gpt-4.1">GPT-4.1 (Recommended)</option>
                 <option value="gpt-4o" selected>GPT-4o</option>
                 <option value="deepseek-v3-0324">DeepSeek V3</option>
                 <option value="cohere-command-r-plus-08-2024">Cohere Command R+</option>
@@ -1075,8 +1075,8 @@
             <span id="orchestratorBadge" class="model-type-badge api">API</span>
           </div>
           <div class="param-control">
-            <label>Turns:</label>
-            <input type="number" id="discussionTurns" value="2" min="1" max="4" step="1" title="Discussion rounds (all models participate each round)">
+            <label>Rounds:</label>
+            <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds (all models participate each round)">
           </div>
           <div class="param-control">
             <label>Max Tokens:</label>
@@ -1335,7 +1335,7 @@
         <div class="analysis-card">
           <h3>Query Analysis</h3>
           <p style="margin-bottom: 8px; color: var(--text-primary);"><strong>Lead Model:</strong> ${analysis.discussion_lead || 'Unknown'}</p>
-          <p style="margin-bottom: 8px; color: var(--text-primary);"><strong>Expected Turns:</strong> ${analysis.expected_turns || 0}</p>
+          <p style="margin-bottom: 8px; color: var(--text-primary);"><strong>Expected Rounds:</strong> ${analysis.expected_turns || 0}</p>
           <p style="margin-bottom: 8px; color: var(--text-secondary); font-size: 13px;"><strong>Reasoning:</strong> ${analysis.reasoning || 'N/A'}</p>
           <div class="domain-weights">${domainBadges}</div>
         </div>
@@ -1465,7 +1465,7 @@
       const temperature = parseFloat(temperatureInput.value);
       const orchestrator = orchestratorModel.value;
       const userToken = githubToken.value.trim();
-      const turns = parseInt(document.getElementById('discussionTurns').value);
+      const turns = parseInt(document.getElementById('discussionRounds').value);
 
       // Reset UI
       discussionContent.innerHTML = '';
