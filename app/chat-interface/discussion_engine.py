@@ -166,9 +166,12 @@ Be thorough and precise - {participants_list} will review and critique your resp
             spoken_models = list(set(turn.model_name for turn in previous_turns))
             spoken_list = ", ".join(spoken_models)
 
+            # Get the lead model's display name
+            lead_model_name = MODEL_PROFILES.get(analysis.discussion_lead, {}).get("display_name", analysis.discussion_lead)
+
             return f"""You are {my_name}, participating in a Model Roundtable discussion.
 
-You are seated at a virtual roundtable with: {participants_list}. So far, {spoken_list} ha{"ve" if len(spoken_models) > 1 else "s"} shared their perspectives.
+You are seated at a virtual roundtable with: {participants_list}. The designated discussion lead is **{lead_model_name}** (selected for highest expertise on this query). So far, {spoken_list} ha{"ve" if len(spoken_models) > 1 else "s"} shared their perspectives.
 
 Your strengths: {strengths}
 Your expertise score for this query: {expertise_score:.2f} out of 1.0
