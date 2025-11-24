@@ -904,53 +904,51 @@
       background: var(--border-color);
     }
 
-    .participants-section {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .participants-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-primary);
-      margin-bottom: 10px;
-    }
-
-    .participants-grid {
+    .config-section {
+      margin-top: 20px;
       display: flex;
-      gap: 24px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .participant-group {
+    .config-row {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .config-group {
+      display: flex;
+      flex-direction: column;
       gap: 8px;
     }
 
-    .participant-group-label {
-      font-size: 11px;
+    .config-group-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--text-secondary);
-      font-weight: 600;
-      padding: 4px 8px;
-      background: var(--bg-tertiary);
-      border-radius: 4px;
+    }
+
+    .participants-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
     .participant-checkbox {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 10px;
+      padding: 8px 12px;
       background: var(--bg-tertiary);
       border: 1px solid var(--border-color);
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.15s;
+      font-size: 13px;
     }
 
     .participant-checkbox:hover {
@@ -966,14 +964,74 @@
       color: white;
     }
 
+    .participant-checkbox:has(input:checked) .participant-badge {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
     .participant-checkbox input {
       display: none;
     }
 
     .participant-name {
-      font-size: 13px;
       color: var(--text-primary);
       white-space: nowrap;
+    }
+
+    .participant-badge {
+      font-size: 9px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .participant-badge.local {
+      background: rgba(5, 150, 105, 0.15);
+      color: var(--success-color);
+    }
+
+    .participant-badge.api {
+      background: rgba(217, 119, 6, 0.15);
+      color: var(--warning-color);
+    }
+
+    .settings-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .settings-row .param-control {
+      flex-shrink: 0;
+    }
+
+    .action-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .action-row-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .participant-count {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .participant-count strong {
+      color: var(--text-primary);
     }
   </style>
 </head>
@@ -1030,71 +1088,111 @@
             <button class="example-chip" data-prompt="Write a sentence where every word starts with the letter 'A'.">All A's sentence</button>
           </div>
         </div>
-        <div class="participants-section">
-          <div class="participants-label">Participants:</div>
-          <div class="participants-grid">
-            <label class="participant-checkbox">
-              <input type="checkbox" name="participant" value="qwen2.5-7b" checked>
-              <span class="participant-name">Qwen 2.5-7B</span>
-            </label>
-            <label class="participant-checkbox">
-              <input type="checkbox" name="participant" value="phi-3-mini" checked>
-              <span class="participant-name">Phi-3 Mini</span>
-            </label>
-            <label class="participant-checkbox">
-              <input type="checkbox" name="participant" value="llama-3.2-3b" checked>
-              <span class="participant-name">Llama 3.2-3B</span>
-            </label>
+        <!-- Configuration Section -->
+        <div class="config-section">
+          <!-- Participants Row -->
+          <div class="config-row">
+            <div class="config-group" style="flex: 1;">
+              <div class="config-group-label">Participants</div>
+              <div class="participants-row">
+                <!-- Local Models -->
+                <label class="participant-checkbox" title="Local model - no API cost">
+                  <input type="checkbox" name="participant" value="qwen2.5-7b" data-type="local" checked>
+                  <span class="participant-name">Qwen 2.5-7B</span>
+                  <span class="participant-badge local">Local</span>
+                </label>
+                <label class="participant-checkbox" title="Local model - no API cost">
+                  <input type="checkbox" name="participant" value="phi-3-mini" data-type="local" checked>
+                  <span class="participant-name">Phi-3 Mini</span>
+                  <span class="participant-badge local">Local</span>
+                </label>
+                <label class="participant-checkbox" title="Local model - no API cost">
+                  <input type="checkbox" name="participant" value="llama-3.2-3b" data-type="local" checked>
+                  <span class="participant-name">Llama 3.2-3B</span>
+                  <span class="participant-badge local">Local</span>
+                </label>
+                <!-- API Models -->
+                <label class="participant-checkbox" title="API model - uses GitHub Models credits">
+                  <input type="checkbox" name="participant" value="gpt-4.1" data-type="api">
+                  <span class="participant-name">GPT-4.1</span>
+                  <span class="participant-badge api">API</span>
+                </label>
+                <label class="participant-checkbox" title="API model - uses GitHub Models credits">
+                  <input type="checkbox" name="participant" value="gpt-4o" data-type="api">
+                  <span class="participant-name">GPT-4o</span>
+                  <span class="participant-badge api">API</span>
+                </label>
+                <label class="participant-checkbox" title="API model - uses GitHub Models credits">
+                  <input type="checkbox" name="participant" value="deepseek-v3-0324" data-type="api">
+                  <span class="participant-name">DeepSeek V3</span>
+                  <span class="participant-badge api">API</span>
+                </label>
+                <label class="participant-checkbox" title="API model - uses GitHub Models credits">
+                  <input type="checkbox" name="participant" value="llama-3.3-70b-instruct" data-type="api">
+                  <span class="participant-name">Llama 3.3 70B</span>
+                  <span class="participant-badge api">API</span>
+                </label>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="controls">
-          <button id="startBtn" class="btn btn-primary">Start Discussion</button>
-          <div class="orchestrator-control">
-            <label>Orchestrator:</label>
-            <select id="orchestratorModel">
-              <optgroup label="API - High Rate Limit">
-                <option value="gpt-4.1">GPT-4.1 (Recommended)</option>
-                <option value="gpt-4o" selected>GPT-4o</option>
-                <option value="deepseek-v3-0324">DeepSeek V3</option>
-                <option value="cohere-command-r-plus-08-2024">Cohere Command R+</option>
-                <option value="llama-3.3-70b-instruct">Llama 3.3 70B</option>
-                <option value="llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
-                <option value="meta-llama-3.1-405b-instruct">Llama 3.1 405B</option>
-              </optgroup>
-              <optgroup label="API - GPT-5 (Custom Limits)">
-                <option value="gpt-5">GPT-5</option>
-                <option value="gpt-5-mini">GPT-5 Mini</option>
-                <option value="gpt-5-nano">GPT-5 Nano</option>
-              </optgroup>
-              <optgroup label="Local Models">
-                <option value="qwen2.5-7b">Qwen 2.5-7B</option>
-                <option value="phi-3-mini">Phi-3 Mini</option>
-                <option value="llama-3.2-3b">Llama 3.2-3B</option>
-              </optgroup>
-            </select>
-            <span id="orchestratorBadge" class="model-type-badge api">API</span>
+
+          <!-- Settings Row -->
+          <div class="settings-row">
+            <div class="orchestrator-control">
+              <label>Orchestrator:</label>
+              <select id="orchestratorModel">
+                <optgroup label="API - High Rate Limit">
+                  <option value="gpt-4.1">GPT-4.1 (Recommended)</option>
+                  <option value="gpt-4o" selected>GPT-4o</option>
+                  <option value="deepseek-v3-0324">DeepSeek V3</option>
+                  <option value="cohere-command-r-plus-08-2024">Cohere Command R+</option>
+                  <option value="llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                  <option value="llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
+                  <option value="meta-llama-3.1-405b-instruct">Llama 3.1 405B</option>
+                </optgroup>
+                <optgroup label="API - GPT-5 (Custom Limits)">
+                  <option value="gpt-5">GPT-5</option>
+                  <option value="gpt-5-mini">GPT-5 Mini</option>
+                  <option value="gpt-5-nano">GPT-5 Nano</option>
+                </optgroup>
+                <optgroup label="Local Models">
+                  <option value="qwen2.5-7b">Qwen 2.5-7B</option>
+                  <option value="phi-3-mini">Phi-3 Mini</option>
+                  <option value="llama-3.2-3b">Llama 3.2-3B</option>
+                </optgroup>
+              </select>
+              <span id="orchestratorBadge" class="model-type-badge api">API</span>
+            </div>
+            <div class="param-control">
+              <label>Rounds:</label>
+              <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds (all models participate each round)">
+            </div>
+            <div class="param-control">
+              <label>Max Tokens:</label>
+              <input type="number" id="maxTokens" value="1024" min="256" max="4096" step="256">
+            </div>
+            <div class="param-control">
+              <label>Temperature:</label>
+              <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
+            </div>
           </div>
-          <div class="param-control">
-            <label>Rounds:</label>
-            <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds (all models participate each round)">
+
+          <!-- Action Row -->
+          <div class="action-row">
+            <div class="action-row-left">
+              <span id="participantCount" class="participant-count"><strong>3</strong> participants selected</span>
+              <div id="apiWarning" class="api-warning">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span>API models use GitHub credits</span>
+              </div>
+              <div id="statusIndicator"></div>
+            </div>
+            <button id="startBtn" class="btn btn-primary">Start Discussion</button>
           </div>
-          <div class="param-control">
-            <label>Max Tokens:</label>
-            <input type="number" id="maxTokens" value="1024" min="256" max="4096" step="256">
-          </div>
-          <div class="param-control">
-            <label>Temperature:</label>
-            <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
-          </div>
-          <div id="statusIndicator"></div>
-        </div>
-        <div id="apiWarning" class="api-warning">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <span>API models consume GitHub Models credits</span>
         </div>
         <div id="tokenSection" class="token-section" style="display: none;">
           <button id="tokenToggle" class="token-toggle">
@@ -1205,6 +1303,7 @@
     const orchestratorModelName = document.getElementById('orchestratorModelName');
     const orchestratorAction = document.getElementById('orchestratorAction');
     const orchestratorActionText = document.getElementById('orchestratorActionText');
+    const participantCount = document.getElementById('participantCount');
 
     let currentDiscussion = null;
 
