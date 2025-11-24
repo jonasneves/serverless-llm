@@ -165,11 +165,119 @@ LLAMA_PROFILE = {
 }
 
 
+# API Model Profiles (GitHub Models API)
+
+GPT4_1_PROFILE = {
+    "model_id": "gpt-4.1",
+    "display_name": "GPT-4.1",
+    "creator": "OpenAI",
+    "size": "~1.76T parameters (estimated)",
+    "quantization": None,
+    "primary_strengths": ["reasoning", "coding", "instruction_following"],
+    "expertise_domains": {
+        "mathematics": 0.95,
+        "coding": 0.98,
+        "logical_reasoning": 0.95,
+        "scientific_knowledge": 0.92,
+        "problem_solving": 0.95,
+        "technical_writing": 0.90,
+        "creative_writing": 0.88,
+        "conversation": 0.92,
+        "summarization": 0.90,
+        "common_sense": 0.90,
+        "reasoning": 0.95,
+        "instruction_following": 0.95,
+    },
+    "context_length": 128000,
+    "description": "OpenAI's most capable model with excellent reasoning and coding abilities"
+}
+
+GPT4O_PROFILE = {
+    "model_id": "gpt-4o",
+    "display_name": "GPT-4o",
+    "creator": "OpenAI",
+    "size": "~200B parameters (estimated)",
+    "quantization": None,
+    "primary_strengths": ["speed", "coding", "conversation"],
+    "expertise_domains": {
+        "mathematics": 0.90,
+        "coding": 0.92,
+        "logical_reasoning": 0.88,
+        "scientific_knowledge": 0.85,
+        "problem_solving": 0.88,
+        "technical_writing": 0.85,
+        "creative_writing": 0.85,
+        "conversation": 0.90,
+        "summarization": 0.88,
+        "common_sense": 0.88,
+        "reasoning": 0.88,
+        "instruction_following": 0.90,
+    },
+    "context_length": 128000,
+    "description": "OpenAI's optimized multimodal model, fast and capable"
+}
+
+DEEPSEEK_V3_PROFILE = {
+    "model_id": "deepseek-v3-0324",
+    "display_name": "DeepSeek V3",
+    "creator": "DeepSeek",
+    "size": "671B parameters (MoE)",
+    "quantization": None,
+    "primary_strengths": ["coding", "mathematics", "reasoning"],
+    "expertise_domains": {
+        "mathematics": 0.95,
+        "coding": 0.95,
+        "logical_reasoning": 0.92,
+        "scientific_knowledge": 0.88,
+        "problem_solving": 0.90,
+        "technical_writing": 0.82,
+        "creative_writing": 0.75,
+        "conversation": 0.78,
+        "summarization": 0.80,
+        "common_sense": 0.82,
+        "reasoning": 0.92,
+        "instruction_following": 0.85,
+    },
+    "context_length": 128000,
+    "description": "DeepSeek's flagship MoE model, excels at technical tasks"
+}
+
+LLAMA_33_70B_PROFILE = {
+    "model_id": "llama-3.3-70b-instruct",
+    "display_name": "Llama 3.3 70B",
+    "creator": "Meta",
+    "size": "70B parameters",
+    "quantization": None,
+    "primary_strengths": ["reasoning", "conversation", "coding"],
+    "expertise_domains": {
+        "mathematics": 0.85,
+        "coding": 0.88,
+        "logical_reasoning": 0.88,
+        "scientific_knowledge": 0.85,
+        "problem_solving": 0.85,
+        "technical_writing": 0.82,
+        "creative_writing": 0.80,
+        "conversation": 0.90,
+        "summarization": 0.85,
+        "common_sense": 0.88,
+        "reasoning": 0.88,
+        "instruction_following": 0.85,
+    },
+    "context_length": 128000,
+    "description": "Meta's latest large-scale instruct model with strong general capabilities"
+}
+
 # Aggregate profiles for easy access
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
+    # Local models
     "qwen2.5-7b": QWEN_PROFILE,
     "phi-3-mini": PHI_PROFILE,
     "llama-3.2-3b": LLAMA_PROFILE,
+    # API models
+    "gpt-4.1": GPT4_1_PROFILE,
+    "gpt-4o": GPT4O_PROFILE,
+    "deepseek-v3-0324": DEEPSEEK_V3_PROFILE,
+    "llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
 }
 
 
@@ -273,9 +381,16 @@ def should_model_participate(
 # Export for convenience
 __all__ = [
     "MODEL_PROFILES",
+    # Local models
     "QWEN_PROFILE",
     "PHI_PROFILE",
     "LLAMA_PROFILE",
+    # API models
+    "GPT4_1_PROFILE",
+    "GPT4O_PROFILE",
+    "DEEPSEEK_V3_PROFILE",
+    "LLAMA_33_70B_PROFILE",
+    # Functions
     "get_model_profile",
     "get_domain_expert",
     "rank_models_for_query",

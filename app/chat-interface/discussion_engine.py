@@ -64,6 +64,13 @@ class DiscussionEngine:
     5. Synthesis: Orchestrator plans merge, engine generates final response
     """
 
+    # API models that use GitHub Models API
+    API_MODELS = {
+        'gpt-4.1', 'gpt-4o', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
+        'deepseek-v3-0324', 'cohere-command-r-plus-08-2024',
+        'llama-3.3-70b-instruct', 'llama-4-scout-17b-16e-instruct', 'meta-llama-3.1-405b-instruct'
+    }
+
     def __init__(
         self,
         orchestrator: GitHubModelsOrchestrator,
@@ -81,6 +88,10 @@ class DiscussionEngine:
         self.orchestrator = orchestrator
         self.model_endpoints = model_endpoints
         self.timeout_per_turn = timeout_per_turn
+
+    def is_api_model(self, model_id: str) -> bool:
+        """Check if a model is an API model (uses GitHub Models API)"""
+        return model_id in self.API_MODELS
 
     def _build_turn_prompt(
         self,
@@ -260,6 +271,79 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                     except json.JSONDecodeError:
                         continue
 
+    async def _call_github_models_api(
+        self,
+        model_id: str,
+        messages: List[Dict[str, str]],
+        max_tokens: int = 512,
+        temperature: float = 0.7
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Stream response from GitHub Models API for API model participants
+
+        Args:
+            model_id: Model identifier (e.g., 'gpt-4o', 'llama-3.3-70b-instruct')
+            messages: OpenAI-format messages
+            max_tokens: Max tokens to generate
+            temperature: Sampling temperature
+
+        Yields:
+            Dicts with type "chunk" (content) or "usage" (token counts)
+        """
+        import aiohttp
+
+        url = "https://models.github.ai/inference/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.orchestrator.github_token}",
+            "X-GitHub-Api-Version": "2022-11-28"
+        }
+        payload = {
+            "model": model_id,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": True
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=self.timeout_per_turn)) as response:
+                if response.status == 429:
+                    rate_limit_reset = response.headers.get("x-ratelimit-reset")
+                    raise Exception(f"Rate limit exceeded for {model_id}. Reset at: {rate_limit_reset}")
+
+                if not response.ok:
+                    error_text = await response.text()
+                    raise Exception(f"GitHub Models API error {response.status} for {model_id}: {error_text}")
+
+                async for line in response.content:
+                    line = line.decode('utf-8').strip()
+                    if not line or not line.startswith('data: '):
+                        continue
+
+                    data = line[6:]  # Remove 'data: ' prefix
+                    if data == '[DONE]':
+                        break
+
+                    try:
+                        chunk = json.loads(data)
+
+                        # Check for usage data (usually in final chunk)
+                        if 'usage' in chunk:
+                            yield {
+                                "type": "usage",
+                                "prompt_tokens": chunk['usage'].get('prompt_tokens', 0),
+                                "completion_tokens": chunk['usage'].get('completion_tokens', 0),
+                                "total_tokens": chunk['usage'].get('total_tokens', 0)
+                            }
+
+                        # Check for content chunk
+                        content = chunk.get('choices', [{}])[0].get('delta', {}).get('content')
+                        if content:
+                            yield {"type": "chunk", "content": content}
+                    except json.JSONDecodeError:
+                        continue
+
     async def _execute_turn(
         self,
         query: str,
@@ -304,7 +388,13 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
 
         try:
             messages = [{"role": "user", "content": prompt}]
-            async for item in self._call_model_api(model_id, messages, max_tokens, temperature):
+            # Choose API method based on model type
+            if self.is_api_model(model_id):
+                api_generator = self._call_github_models_api(model_id, messages, max_tokens, temperature)
+            else:
+                api_generator = self._call_model_api(model_id, messages, max_tokens, temperature)
+
+            async for item in api_generator:
                 if item["type"] == "chunk":
                     full_response += item["content"]
                     yield {
@@ -445,8 +535,11 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
             # Determine participating models
             if participants:
                 # Use user-selected participants, ordered by expertise
-                # Filter to only models with configured endpoints (local models)
-                available_participants = [p for p in participants if p in self.model_endpoints]
+                # Include both local models (with endpoints) and API models
+                available_participants = [
+                    p for p in participants
+                    if p in self.model_endpoints or self.is_api_model(p)
+                ]
                 ranked = rank_models_for_query(analysis.domain_weights)
                 ranked_ids = [model_id for model_id, score in ranked]
                 # Sort selected participants by their expertise ranking

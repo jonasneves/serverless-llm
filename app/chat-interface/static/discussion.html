@@ -239,14 +239,6 @@
       resize: vertical;
     }
 
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 16px;
-      align-items: center;
-    }
-
     .btn {
       padding: 10px 20px;
       border: none;
@@ -1347,13 +1339,38 @@
       orchestratorBar.classList.remove('visible');
     }
 
-    // Update badge and warning based on orchestrator selection
+    // Update participant count and API warning
+    function updateParticipantUI() {
+      const selectedParticipants = document.querySelectorAll('input[name="participant"]:checked');
+      const count = selectedParticipants.length;
+      const apiParticipantCount = Array.from(selectedParticipants).filter(cb => cb.dataset.type === 'api').length;
+
+      // Update count display
+      participantCount.innerHTML = `<strong>${count}</strong> participant${count !== 1 ? 's' : ''} selected`;
+
+      // Check if any API models are involved (orchestrator or participants)
+      const isApiOrchestrator = API_MODELS.includes(orchestratorModel.value);
+      const hasApiParticipants = apiParticipantCount > 0;
+      const needsToken = isApiOrchestrator || hasApiParticipants;
+
+      // Update orchestrator badge
+      orchestratorBadge.textContent = isApiOrchestrator ? 'API' : 'Local';
+      orchestratorBadge.className = `model-type-badge ${isApiOrchestrator ? 'api' : 'local'}`;
+
+      // Show API warning if any API models are used
+      apiWarning.classList.toggle('visible', needsToken);
+      tokenSection.style.display = needsToken ? 'block' : 'none';
+
+      // Update start button state
+      startBtn.disabled = count < 2;
+      if (count < 2) {
+        participantCount.innerHTML += ' <span style="color: var(--warning-color);">(min 2)</span>';
+      }
+    }
+
+    // Backwards compatibility alias
     function updateOrchestratorUI() {
-      const isApiModel = API_MODELS.includes(orchestratorModel.value);
-      orchestratorBadge.textContent = isApiModel ? 'API' : 'Local';
-      orchestratorBadge.className = `model-type-badge ${isApiModel ? 'api' : 'local'}`;
-      apiWarning.classList.toggle('visible', isApiModel);
-      tokenSection.style.display = isApiModel ? 'block' : 'none';
+      updateParticipantUI();
     }
 
     // Toggle token input visibility
@@ -1389,8 +1406,12 @@
       }
     });
 
-    orchestratorModel.addEventListener('change', updateOrchestratorUI);
-    updateOrchestratorUI(); // Initialize on load
+    // Listen for orchestrator and participant changes
+    orchestratorModel.addEventListener('change', updateParticipantUI);
+    document.querySelectorAll('input[name="participant"]').forEach(checkbox => {
+      checkbox.addEventListener('change', updateParticipantUI);
+    });
+    updateParticipantUI(); // Initialize on load
 
     // Theme toggle functionality
     const themeToggle = document.getElementById('themeToggle');
@@ -1692,8 +1713,8 @@
         showError(error.message);
         hideOrchestratorBar();
       } finally {
-        startBtn.disabled = false;
         queryInput.disabled = false;
+        updateParticipantUI(); // Re-enable based on participant count
       }
     }
 
