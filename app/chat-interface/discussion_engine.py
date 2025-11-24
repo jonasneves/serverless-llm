@@ -104,8 +104,18 @@ class DiscussionEngine:
             Prompt string with appropriate context
         """
         profile = MODEL_PROFILES[model_id]
+        my_name = profile["display_name"]
         expertise_score = analysis.model_expertise_scores[model_id]
         strengths = ", ".join(profile["primary_strengths"])
+
+        # Get all participant names for roundtable context
+        all_participants = [
+            MODEL_PROFILES[mid]["display_name"]
+            for mid in analysis.model_expertise_scores.keys()
+            if mid in MODEL_PROFILES
+        ]
+        other_participants = [name for name in all_participants if name != my_name]
+        participants_list = ", ".join(other_participants)
 
         if turn_number == 0:
             # Lead model - initial response with domain awareness
@@ -118,33 +128,38 @@ class DiscussionEngine:
                 )
             ])
 
-            return f"""You are participating in a collaborative discussion with other AI models.
+            return f"""You are {my_name}, participating in a Model Roundtable discussion.
 
-You have been selected to LEAD this discussion based on your expertise.
+You are seated at a virtual roundtable with other AI models: {participants_list}. You have been selected to LEAD this discussion and speak first based on your expertise in this topic.
 
 Your strengths: {strengths}
 Your expertise score for this query: {expertise_score:.2f} out of 1.0
-
 Query domains: {domain_context}
 
 User Query:
 {query}
 
-Provide your analysis and response. Show your work step by step, especially for:
+As the discussion leader, provide your analysis and response. Show your work step by step, especially for:
 - Counting tasks: list each item explicitly
 - Math problems: show each calculation
 - Logical reasoning: explain each step
 
-Be thorough and precise - other models will verify and critique your response."""
+Be thorough and precise - {participants_list} will review and critique your response next."""
 
         else:
             # Supporting models - respond with full context
             previous_context = "\n\n".join([
-                f"**Turn {turn.turn_number + 1} - {turn.model_name}**:\n{turn.response}"
+                f"**{turn.model_name}**:\n{turn.response}"
                 for turn in previous_turns
             ])
 
-            return f"""You are participating in a critical debate with other AI models.
+            # Get names of models who have already spoken
+            spoken_models = list(set(turn.model_name for turn in previous_turns))
+            spoken_list = ", ".join(spoken_models)
+
+            return f"""You are {my_name}, participating in a Model Roundtable discussion.
+
+You are seated at a virtual roundtable with: {participants_list}. So far, {spoken_list} ha{"ve" if len(spoken_models) > 1 else "s"} shared their perspectives.
 
 Your strengths: {strengths}
 Your expertise score for this query: {expertise_score:.2f} out of 1.0
@@ -157,14 +172,14 @@ Discussion so far:
 
 ---
 
-CRITICALLY EVALUATE the previous responses and add your perspective:
+Now it's your turn to contribute. CRITICALLY EVALUATE what others have said:
 
-1. **VERIFY**: Check the accuracy of claims, calculations, and reasoning. If you find errors, explicitly point them out.
-2. **CHALLENGE**: If you disagree with any conclusions, explain why with evidence.
-3. **IMPROVE**: Offer corrections, alternative approaches, or additional details.
-4. **CONFIRM**: If you agree the answer is correct, explain why you're confident.
+1. **VERIFY**: Check accuracy of claims and calculations. If {spoken_models[0] if spoken_models else "another model"} made an error, call it out by name.
+2. **CHALLENGE**: If you disagree with conclusions, explain why. Reference specific models (e.g., "I disagree with {spoken_models[0] if spoken_models else "the previous response"} because...").
+3. **IMPROVE**: Offer corrections or alternative approaches.
+4. **CONFIRM**: If you agree, explain why you're confident.
 
-Be direct and specific. Don't just agree - actively verify and critique. If counting letters, numbers, or items, do the count yourself step by step."""
+Be direct and specific. Refer to other models by name when agreeing or disagreeing. If counting items, do it yourself step by step."""
 
     async def _call_model_api(
         self,
