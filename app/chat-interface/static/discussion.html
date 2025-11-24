@@ -963,15 +963,19 @@
           <div class="orchestrator-control">
             <label>Orchestrator:</label>
             <select id="orchestratorModel">
-              <optgroup label="API Models - High Rate Limit">
+              <optgroup label="API - High Rate Limit">
                 <option value="gpt-4.1">GPT-4.1</option>
                 <option value="gpt-4o" selected>GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
                 <option value="deepseek-v3-0324">DeepSeek V3</option>
                 <option value="cohere-command-r-plus-08-2024">Cohere Command R+</option>
                 <option value="llama-3.3-70b-instruct">Llama 3.3 70B</option>
                 <option value="llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
                 <option value="meta-llama-3.1-405b-instruct">Llama 3.1 405B</option>
+              </optgroup>
+              <optgroup label="API - GPT-5 (Custom Limits)">
+                <option value="gpt-5">GPT-5</option>
+                <option value="gpt-5-mini">GPT-5 Mini</option>
+                <option value="gpt-5-nano">GPT-5 Nano</option>
               </optgroup>
               <optgroup label="Local Models">
                 <option value="qwen2.5-7b">Qwen 2.5-7B</option>
@@ -1117,7 +1121,7 @@
 
     // API models that consume GitHub Models credits
     const API_MODELS = [
-      'gpt-4.1', 'gpt-4o', 'gpt-4o-mini',
+      'gpt-4.1', 'gpt-4o', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
       'deepseek-v3-0324', 'cohere-command-r-plus-08-2024',
       'llama-3.3-70b-instruct', 'llama-4-scout-17b-16e-instruct', 'meta-llama-3.1-405b-instruct'
     ];
@@ -1126,7 +1130,9 @@
     const MODEL_NAMES = {
       'gpt-4.1': 'GPT-4.1',
       'gpt-4o': 'GPT-4o',
-      'gpt-4o-mini': 'GPT-4o Mini',
+      'gpt-5': 'GPT-5',
+      'gpt-5-mini': 'GPT-5 Mini',
+      'gpt-5-nano': 'GPT-5 Nano',
       'deepseek-v3-0324': 'DeepSeek V3',
       'cohere-command-r-plus-08-2024': 'Cohere Command R+',
       'llama-3.3-70b-instruct': 'Llama 3.3 70B',

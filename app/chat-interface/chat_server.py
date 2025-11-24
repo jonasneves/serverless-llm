@@ -2055,7 +2055,7 @@ async def stream_discussion_events(
     try:
         # Determine orchestrator model type
         api_models = [
-            'gpt-4.1', 'gpt-4o', 'gpt-4o-mini',
+            'gpt-4.1', 'gpt-4o', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
             'deepseek-v3-0324', 'cohere-command-r-plus-08-2024',
             'llama-3.3-70b-instruct', 'llama-4-scout-17b-16e-instruct', 'meta-llama-3.1-405b-instruct'
         ]
