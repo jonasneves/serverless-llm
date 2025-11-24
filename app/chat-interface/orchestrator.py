@@ -111,12 +111,12 @@ class GitHubModelsOrchestrator:
 
         Args:
             github_token: GitHub Personal Access Token (user_models:read permission)
-            model_id: Model to use (env: ORCHESTRATOR_MODEL, default: gpt-5-nano)
+            model_id: Model to use (env: ORCHESTRATOR_MODEL, default: gpt-4o)
             api_url: GitHub Models API endpoint
             max_tokens: Maximum tokens per response (includes reasoning tokens for GPT-5 models)
         """
         self.github_token = github_token or os.getenv("GH_MODELS_TOKEN")
-        self.model_id = model_id or os.getenv("ORCHESTRATOR_MODEL", "gpt-5-nano")
+        self.model_id = model_id or os.getenv("ORCHESTRATOR_MODEL", "gpt-4o")
         self.api_url = api_url
         self.max_tokens = max_tokens
 
