@@ -903,6 +903,78 @@
       height: 20px;
       background: var(--border-color);
     }
+
+    .participants-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .participants-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .participants-grid {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .participant-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .participant-group-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      padding: 4px 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    .participant-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .participant-checkbox:hover {
+      border-color: var(--accent-color);
+    }
+
+    .participant-checkbox:has(input:checked) {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .participant-checkbox:has(input:checked) .participant-name {
+      color: white;
+    }
+
+    .participant-checkbox input {
+      display: none;
+    }
+
+    .participant-name {
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -956,6 +1028,23 @@
             <button class="example-chip" data-prompt="Which number is bigger: 9.11 or 9.9?">9.11 vs 9.9</button>
             <button class="example-chip" data-prompt="I have 3 apples, eat 2, buy 5 more, and give away 3. How many do I have?">Apple math problem</button>
             <button class="example-chip" data-prompt="Write a sentence where every word starts with the letter 'A'.">All A's sentence</button>
+          </div>
+        </div>
+        <div class="participants-section">
+          <div class="participants-label">Participants:</div>
+          <div class="participants-grid">
+            <label class="participant-checkbox">
+              <input type="checkbox" name="participant" value="qwen2.5-7b" checked>
+              <span class="participant-name">Qwen 2.5-7B</span>
+            </label>
+            <label class="participant-checkbox">
+              <input type="checkbox" name="participant" value="phi-3-mini" checked>
+              <span class="participant-name">Phi-3 Mini</span>
+            </label>
+            <label class="participant-checkbox">
+              <input type="checkbox" name="participant" value="llama-3.2-3b" checked>
+              <span class="participant-name">Llama 3.2-3B</span>
+            </label>
           </div>
         </div>
         <div class="controls">
@@ -1362,6 +1451,16 @@
         return;
       }
 
+      // Get selected participants
+      const selectedParticipants = Array.from(
+        document.querySelectorAll('input[name="participant"]:checked')
+      ).map(cb => cb.value);
+
+      if (selectedParticipants.length < 2) {
+        alert('Please select at least 2 participants for a discussion');
+        return;
+      }
+
       const maxTokens = parseInt(maxTokensInput.value);
       const temperature = parseFloat(temperatureInput.value);
       const orchestrator = orchestratorModel.value;
@@ -1382,7 +1481,8 @@
           max_tokens: maxTokens,
           temperature,
           orchestrator_model: orchestrator,
-          turns: turns
+          turns: turns,
+          participants: selectedParticipants
         };
 
         // Include user token if provided

@@ -383,7 +383,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
         query: str,
         max_tokens: int = 512,
         temperature: float = 0.7,
-        turns: int = 2
+        turns: int = 2,
+        participants: Optional[List[str]] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Run complete discussion with streaming events
@@ -429,14 +430,26 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
             completed_turns = []
             evaluations = []
 
-            # Get all available local models, ranked by expertise
-            all_models = list(self.model_endpoints.keys())
-            ranked = rank_models_for_query(analysis.domain_weights)
-            # Order: lead model first, then others by expertise
-            participating_models = [analysis.discussion_lead] + [
-                model_id for model_id, score in ranked
-                if model_id != analysis.discussion_lead and model_id in all_models
-            ]
+            # Determine participating models
+            if participants:
+                # Use user-selected participants, ordered by expertise
+                # Filter to only models with configured endpoints (local models)
+                available_participants = [p for p in participants if p in self.model_endpoints]
+                ranked = rank_models_for_query(analysis.domain_weights)
+                ranked_ids = [model_id for model_id, score in ranked]
+                # Sort selected participants by their expertise ranking
+                participating_models = sorted(
+                    available_participants,
+                    key=lambda x: ranked_ids.index(x) if x in ranked_ids else 999
+                )
+            else:
+                # Default: all local models, ranked by expertise
+                all_models = list(self.model_endpoints.keys())
+                ranked = rank_models_for_query(analysis.domain_weights)
+                participating_models = [analysis.discussion_lead] + [
+                    model_id for model_id, score in ranked
+                    if model_id != analysis.discussion_lead and model_id in all_models
+                ]
 
             # Use user-specified turns, all models participate each turn
             for turn_num in range(turns):
