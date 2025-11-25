@@ -1,4 +1,4 @@
-name: Chat Interface
+name: Chat
 
 on:
   workflow_dispatch:
