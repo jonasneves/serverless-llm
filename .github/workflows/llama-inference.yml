@@ -1,5 +1,8 @@
 name: Llama 3.2-3B Inference Server
 
+# Fixed run name - won't change based on trigger type
+run-name: Llama 3.2-3B Inference Server
+
 on:
   workflow_dispatch:
     inputs:
