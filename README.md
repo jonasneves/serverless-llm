@@ -1,5 +1,12 @@
 # Serverless LLM Arena
 
+<!-- Service Status Badges -->
+[![Chat Interface](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml)
+[![Qwen Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml)
+[![Phi Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml)
+[![Llama Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml)
+
+<!-- Technology Badges -->
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://cloudflare.com/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
