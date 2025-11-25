@@ -1,10 +1,10 @@
 # Serverless LLM Arena
 
-[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://cloudflare.com/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://python.org/)
-[![llama.cpp](https://img.shields.io/badge/llama.cpp-000000?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz48L3N2Zz4=&logoColor=white)](https://github.com/ggerganov/llama.cpp)
+<!-- Service Status Badges -->
+[![Chat Interface](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml)
+[![Qwen Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml)
+[![Phi Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml)
+[![Llama Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml)
 
 **LLM inference servers on GitHub Actions free tier with public access via Cloudflare Tunnels.**
 
