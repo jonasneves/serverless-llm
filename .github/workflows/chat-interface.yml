@@ -105,7 +105,9 @@ jobs:
           GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
         run: |
           cd app/chat-interface
-          python chat_server.py &
+          python chat_server.py 2>&1 | tee /tmp/chat_server.log &
+          SERVER_PID=$!
+          echo "Chat Server PID: $SERVER_PID"
           echo "Waiting for server to start..."
           sleep 10
 
@@ -119,15 +121,24 @@ jobs:
             sleep 5
           done
 
+          # Verify health
+          curl -s http://localhost:8080/health || { echo "Server failed to start"; cat /tmp/chat_server.log; exit 1; }
+
       - name: Start Cloudflare Tunnel
         env:
           CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
         run: |
           if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
-            cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN" &
+            cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN" 2>&1 | tee /tmp/tunnel.log &
+            TUNNEL_PID=$!
+            echo "Tunnel PID: $TUNNEL_PID"
             echo "Cloudflare tunnel started"
             # Wait for tunnel to establish
             sleep 15
+
+            # Show tunnel status
+            echo "=== Tunnel Log (first 30 lines) ==="
+            head -30 /tmp/tunnel.log || true
           else
             echo "No tunnel token provided, server only accessible locally"
           fi
@@ -153,13 +164,24 @@ jobs:
           echo "Cancel API response body: $BODY"
 
           if [ "$HTTP_CODE" = "202" ]; then
-            echo "✓ Previous workflow cancellation accepted. Traffic will now be served by this instance."
+            echo ""
+            echo "=========================================="
+            echo "✓ Previous workflow cancellation accepted"
+            echo "=========================================="
+            echo ""
+            echo "Waiting 3 minutes for graceful handoff..."
+            echo "This ensures minimal downtime during transition."
+            # Wait for graceful handoff
+            for i in {1..18}; do
+              printf "  Handoff wait: %d/180 seconds...\r" "$((i * 10))"
+              sleep 10
+            done
+            echo ""
+            echo "Handoff complete. This instance is now primary."
           else
             echo "⚠ Cancel request returned code $HTTP_CODE - previous workflow may have already ended"
+            sleep 5
           fi
-
-          # Wait a moment for the cancellation to take effect
-          sleep 5
 
           # Verify the previous workflow is no longer running
           STATUS=$(curl -s \
@@ -178,18 +200,32 @@ jobs:
           PHI_API_URL: ${{ inputs.phi_api_url || secrets.PHI_API_URL }}
           LLAMA_API_URL: ${{ inputs.llama_api_url || secrets.LLAMA_API_URL }}
         run: |
+          set -e
+          # Handle cancellation gracefully
+          cleanup() {
+            echo ""
+            echo "=== Shutting down ==="
+            pkill -f cloudflared || true
+            pkill -f chat_server.py || true
+            exit 0
+          }
+          trap cleanup SIGTERM SIGINT
+
           # Convert hours to seconds (handle integer hours)
           DURATION_SECONDS=$((DURATION_HOURS * 3600))
-          RESTART_BUFFER=300  # 5 minutes before end
+          RESTART_BUFFER=360  # 6 minutes before end (3 min handoff + 3 min buffer)
 
-          END_TIME=$(($(date +%s) + DURATION_SECONDS))
+          START_TIME=$(date +%s)
+          END_TIME=$((START_TIME + DURATION_SECONDS))
           RESTART_TIME=$((END_TIME - RESTART_BUFFER))
 
+          echo ""
+          echo "=========================================="
           echo "=== Chat Interface Server ==="
           echo "Server running on port 8080"
           echo "Duration: ${DURATION_HOURS} hours"
           echo "Will run until: $(date -d @$END_TIME)"
-          echo "=============================="
+          echo "=========================================="
           echo ""
           echo "Model endpoints configured:"
           echo "  - Qwen: ${QWEN_API_URL:-not configured}"
@@ -198,39 +234,136 @@ jobs:
           echo ""
 
           RESTART_TRIGGERED=false
+          LOOP_COUNT=0
 
           while true; do
             CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            REMAINING=$((END_TIME - CURRENT_TIME))
+            LOOP_COUNT=$((LOOP_COUNT + 1))
+
+            # Health checks
+            SERVER_OK=$(curl -sf http://localhost:8080/health > /dev/null 2>&1 && echo "OK" || echo "DOWN")
+            TUNNEL_OK=$(pgrep -f cloudflared > /dev/null && echo "OK" || echo "DOWN")
+
+            printf "[%s] Chat Server: %s | Tunnel: %s | Elapsed: %dm | Remaining: %dm\n" \
+              "$(date '+%H:%M:%S')" "$SERVER_OK" "$TUNNEL_OK" "$((ELAPSED/60))" "$((REMAINING/60))"
+
+            # Show recent logs every 5 iterations
+            if [ $((LOOP_COUNT % 5)) -eq 0 ]; then
+              echo "--- Recent tunnel log ---"
+              tail -5 /tmp/tunnel.log 2>/dev/null || true
+              echo "--- Recent server log ---"
+              tail -5 /tmp/chat_server.log 2>/dev/null || true
+              echo "-------------------------"
+            fi
+
+            # Restart server if down
+            if [ "$SERVER_OK" = "DOWN" ]; then
+              echo "Restarting chat server..."
+              pkill -f chat_server.py || true
+              cd app/chat-interface
+              python chat_server.py 2>&1 | tee -a /tmp/chat_server.log &
+              sleep 10
+            fi
+
+            # Restart tunnel if down
+            if [ "$TUNNEL_OK" = "DOWN" ]; then
+              echo "Restarting Cloudflare tunnel..."
+              cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }} 2>&1 | tee -a /tmp/tunnel.log &
+              sleep 5
+            fi
 
             # Check if we need to trigger restart (only once)
             if [ "$AUTO_RESTART" = "true" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ $CURRENT_TIME -ge $RESTART_TIME ]; then
-              echo "Approaching timeout, triggering restart..."
-              curl -X POST \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Accept: application/vnd.github.v3+json" \
-                "https://api.github.com/repos/${{ github.repository }}/dispatches" \
-                -d '{"event_type":"restart-chat-interface"}'
-              RESTART_TRIGGERED=true
-              echo "Restart triggered. Continuing to serve traffic until new instance is ready..."
-              # Don't break - keep running until cancelled by new workflow or hard timeout
+              echo ""
+              echo "=========================================="
+              echo "Triggering restart workflow..."
+              echo "=========================================="
+
+              # Check if WORKFLOW_PAT is set
+              PAT_TOKEN="${{ secrets.WORKFLOW_PAT }}"
+              if [ -z "$PAT_TOKEN" ]; then
+                echo "ERROR: WORKFLOW_PAT secret is not set!"
+                echo ""
+                echo "To fix this:"
+                echo "1. Go to GitHub Settings > Developer settings > Personal access tokens"
+                echo "2. Create a new token (classic) with 'repo' scope"
+                echo "3. Go to your repository Settings > Secrets and variables > Actions"
+                echo "4. Add a new secret named WORKFLOW_PAT with the token value"
+                echo ""
+                echo "Runner will exit without auto-restart."
+                RESTART_TRIGGERED=true
+              else
+                # Use PAT token for triggering (GITHUB_TOKEN cannot trigger workflows)
+                echo "Sending repository_dispatch event..."
+                RESPONSE=$(curl -sX POST \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer $PAT_TOKEN" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  https://api.github.com/repos/${{ github.repository }}/dispatches \
+                  -d '{"event_type":"restart-chat-interface"}' \
+                  -w "\nHTTP_STATUS:%{http_code}" 2>&1)
+
+                HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+                BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
+
+                echo "HTTP Status: $HTTP_CODE"
+                if [ -n "$BODY" ]; then
+                  echo "Response body: $BODY"
+                fi
+
+                if [ "$HTTP_CODE" = "204" ]; then
+                  echo ""
+                  echo "SUCCESS: Restart triggered!"
+                  echo "New runner will start shortly..."
+                  echo ""
+                  echo "Waiting 3 minutes to allow new runner to initialize..."
+                  echo "This ensures graceful handoff with minimal downtime."
+                  # Wait for new runner to start
+                  for i in {1..18}; do
+                    printf "  Handoff wait: %d/180 seconds...\r" "$((i * 10))"
+                    sleep 10
+                  done
+                  echo ""
+                  echo "Handoff wait complete. New runner should be ready."
+                elif [ "$HTTP_CODE" = "401" ]; then
+                  echo ""
+                  echo "ERROR: Authentication failed (401)"
+                  echo "Your WORKFLOW_PAT token may be expired or invalid."
+                elif [ "$HTTP_CODE" = "403" ]; then
+                  echo ""
+                  echo "ERROR: Permission denied (403)"
+                  echo "Your WORKFLOW_PAT lacks required permissions."
+                  echo "Required: Personal Access Token with 'repo' scope"
+                elif [ "$HTTP_CODE" = "404" ]; then
+                  echo ""
+                  echo "ERROR: Repository not found (404)"
+                  echo "Your WORKFLOW_PAT may not have access to this repository."
+                else
+                  echo ""
+                  echo "ERROR: Failed to trigger restart (HTTP $HTTP_CODE)"
+                fi
+                RESTART_TRIGGERED=true
+              fi
             fi
 
-            # Check if hard timeout exceeded (only exit if restart was triggered and we've waited long enough)
+            # Check if hard timeout exceeded
             if [ $CURRENT_TIME -ge $END_TIME ]; then
               echo "Duration exceeded, shutting down..."
               break
             fi
 
-            # Health check
-            if curl -s http://localhost:8080/health | grep -q "healthy"; then
-              echo "[$(date)] Chat interface healthy"
-            else
-              echo "[$(date)] Chat interface unhealthy, attempting restart..."
-              pkill -f chat_server.py || true
-              cd app/chat-interface
-              python chat_server.py &
-              sleep 10
-            fi
-
             sleep 30
           done
+
+          cleanup
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Chat Server Log ==="
+          cat /tmp/chat_server.log 2>/dev/null || echo "No server log"
+          echo ""
+          echo "=== Tunnel Log ==="
+          cat /tmp/tunnel.log 2>/dev/null || echo "No tunnel log"
