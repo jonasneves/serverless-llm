@@ -31,12 +31,42 @@ jobs:
     name: Llama 3.2-3B Server #${{ matrix.instance }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    permissions:
+      actions: write
+      contents: read
     strategy:
       matrix:
         instance: ${{ fromJson(github.event.inputs.instances == '3' && '[1,2,3]' || github.event.inputs.instances == '2' && '[1,2]' || '[1]') }}
       fail-fast: false
 
     steps:
+      - name: Find previous running workflow
+        id: find_previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Current run ID: ${{ github.run_id }}"
+
+          # Find other running instances of this workflow (excluding current run)
+          API_RESPONSE=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/llama-inference.yml/runs?status=in_progress")
+
+          RUN_COUNT=$(echo "$API_RESPONSE" | jq '.total_count')
+          echo "Total in_progress runs found: $RUN_COUNT"
+
+          # Find the previous run (not current)
+          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
+
+          if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ] && [ "$PREVIOUS_RUN_ID" != "" ]; then
+            echo "Found previous running workflow: $PREVIOUS_RUN_ID"
+            echo "previous_run_id=$PREVIOUS_RUN_ID" >> $GITHUB_OUTPUT
+          else
+            echo "No previous running workflow found"
+            echo "previous_run_id=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -78,7 +108,7 @@ jobs:
           HF_HOME: /tmp/hf_cache
         run: |
           cd app/llama-inference
-          python inference_server.py &
+          python inference_server.py 2>&1 | tee /tmp/inference_server.log &
           SERVER_PID=$!
           echo "Server PID: $SERVER_PID"
           echo "Waiting for model to download and load..."
@@ -93,65 +123,239 @@ jobs:
             sleep 10
           done
 
+          # Verify health
+          curl -s http://localhost:8000/health || { echo "Server failed to start"; cat /tmp/inference_server.log; exit 1; }
+
       - name: Start Cloudflare Tunnel
         env:
           CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_LLAMA }}
         run: |
           if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
-            cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN" &
+            cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN" 2>&1 | tee /tmp/tunnel.log &
+            TUNNEL_PID=$!
+            echo "Tunnel PID: $TUNNEL_PID"
             echo "Cloudflare tunnel started"
+            sleep 15
+
+            # Show tunnel status
+            echo "=== Tunnel Log (first 30 lines) ==="
+            head -30 /tmp/tunnel.log || true
           else
             echo "No tunnel token provided, server only accessible locally"
           fi
+
+      - name: Cancel previous workflow (graceful handoff)
+        if: steps.find_previous.outputs.previous_run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIOUS_RUN_ID: ${{ steps.find_previous.outputs.previous_run_id }}
+        run: |
+          echo "New server is ready, cancelling previous workflow run: $PREVIOUS_RUN_ID"
+
+          # Cancel the previous workflow run
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "Cancel API response code: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" = "202" ]; then
+            echo ""
+            echo "=========================================="
+            echo "✓ Previous workflow cancellation accepted"
+            echo "=========================================="
+            echo ""
+            echo "Waiting 3 minutes for graceful handoff..."
+            echo "This ensures minimal downtime during transition."
+            # Wait for graceful handoff
+            for i in {1..18}; do
+              printf "  Handoff wait: %d/180 seconds...\r" "$((i * 10))"
+              sleep 10
+            done
+            echo ""
+            echo "Handoff complete. This instance is now primary."
+          else
+            echo "⚠ Cancel request returned code $HTTP_CODE - previous workflow may have already ended"
+            sleep 5
+          fi
+
+          # Verify the previous workflow is no longer running
+          STATUS=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID" \
+            | jq -r '.status')
+
+          echo "Previous workflow status after cancellation: $STATUS"
 
       - name: Health monitoring loop
         env:
           DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
           AUTO_RESTART: ${{ inputs.auto_restart }}
         run: |
+          set -e
+          # Handle cancellation gracefully
+          cleanup() {
+            echo ""
+            echo "=== Shutting down ==="
+            pkill -f cloudflared || true
+            pkill -f inference_server.py || true
+            exit 0
+          }
+          trap cleanup SIGTERM SIGINT
+
           # Convert hours to seconds (handle integer hours)
           DURATION_SECONDS=$((DURATION_HOURS * 3600))
-          RESTART_BUFFER=300  # 5 minutes before end
+          RESTART_BUFFER=360  # 6 minutes before end (3 min handoff + 3 min buffer)
 
-          END_TIME=$(($(date +%s) + DURATION_SECONDS))
+          START_TIME=$(date +%s)
+          END_TIME=$((START_TIME + DURATION_SECONDS))
           RESTART_TIME=$((END_TIME - RESTART_BUFFER))
 
+          echo ""
+          echo "=========================================="
           echo "=== Llama 3.2-3B Inference Server (GGUF) ==="
           echo "Server running on port 8000"
           echo "Duration: ${DURATION_HOURS} hours"
           echo "Will run until: $(date -d @$END_TIME)"
-          echo "============================================="
+          echo "=========================================="
+          echo ""
+
+          RESTART_TRIGGERED=false
+          LOOP_COUNT=0
 
           while true; do
             CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            REMAINING=$((END_TIME - CURRENT_TIME))
+            LOOP_COUNT=$((LOOP_COUNT + 1))
 
-            # Check if we need to restart
-            if [ "$AUTO_RESTART" = "true" ] && [ $CURRENT_TIME -ge $RESTART_TIME ]; then
-              echo "Approaching timeout, triggering restart..."
-              curl -X POST \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Accept: application/vnd.github.v3+json" \
-                "https://api.github.com/repos/${{ github.repository }}/dispatches" \
-                -d '{"event_type":"restart-llama-inference"}'
-              break
+            # Health checks
+            SERVER_OK=$(curl -sf http://localhost:8000/health > /dev/null 2>&1 && echo "OK" || echo "DOWN")
+            TUNNEL_OK=$(pgrep -f cloudflared > /dev/null && echo "OK" || echo "DOWN")
+
+            printf "[%s] Inference Server: %s | Tunnel: %s | Elapsed: %dm | Remaining: %dm\n" \
+              "$(date '+%H:%M:%S')" "$SERVER_OK" "$TUNNEL_OK" "$((ELAPSED/60))" "$((REMAINING/60))"
+
+            # Show recent logs every 5 iterations
+            if [ $((LOOP_COUNT % 5)) -eq 0 ]; then
+              echo "--- Recent tunnel log ---"
+              tail -5 /tmp/tunnel.log 2>/dev/null || true
+              echo "--- Recent server log ---"
+              tail -5 /tmp/inference_server.log 2>/dev/null || true
+              echo "-------------------------"
             fi
 
-            # Check if time exceeded
+            # Restart server if down
+            if [ "$SERVER_OK" = "DOWN" ]; then
+              echo "Restarting inference server..."
+              pkill -f inference_server.py || true
+              cd app/llama-inference
+              python inference_server.py 2>&1 | tee -a /tmp/inference_server.log &
+              sleep 60
+            fi
+
+            # Restart tunnel if down
+            if [ "$TUNNEL_OK" = "DOWN" ]; then
+              echo "Restarting Cloudflare tunnel..."
+              cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_LLAMA }} 2>&1 | tee -a /tmp/tunnel.log &
+              sleep 5
+            fi
+
+            # Check if we need to trigger restart (only once)
+            if [ "$AUTO_RESTART" = "true" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ $CURRENT_TIME -ge $RESTART_TIME ]; then
+              echo ""
+              echo "=========================================="
+              echo "Triggering restart workflow..."
+              echo "=========================================="
+
+              # Check if WORKFLOW_PAT is set
+              PAT_TOKEN="${{ secrets.WORKFLOW_PAT }}"
+              if [ -z "$PAT_TOKEN" ]; then
+                echo "ERROR: WORKFLOW_PAT secret is not set!"
+                echo ""
+                echo "To fix this:"
+                echo "1. Go to GitHub Settings > Developer settings > Personal access tokens"
+                echo "2. Create a new token (classic) with 'repo' scope"
+                echo "3. Go to your repository Settings > Secrets and variables > Actions"
+                echo "4. Add a new secret named WORKFLOW_PAT with the token value"
+                echo ""
+                echo "Runner will exit without auto-restart."
+                RESTART_TRIGGERED=true
+              else
+                # Use PAT token for triggering (GITHUB_TOKEN cannot trigger workflows)
+                echo "Sending repository_dispatch event..."
+                RESPONSE=$(curl -sX POST \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer $PAT_TOKEN" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  https://api.github.com/repos/${{ github.repository }}/dispatches \
+                  -d '{"event_type":"restart-llama-inference"}' \
+                  -w "\nHTTP_STATUS:%{http_code}" 2>&1)
+
+                HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+                BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
+
+                echo "HTTP Status: $HTTP_CODE"
+                if [ -n "$BODY" ]; then
+                  echo "Response body: $BODY"
+                fi
+
+                if [ "$HTTP_CODE" = "204" ]; then
+                  echo ""
+                  echo "SUCCESS: Restart triggered!"
+                  echo "New runner will start shortly..."
+                  echo ""
+                  echo "Waiting 3 minutes to allow new runner to initialize..."
+                  echo "This ensures graceful handoff with minimal downtime."
+                  # Wait for new runner to start
+                  for i in {1..18}; do
+                    printf "  Handoff wait: %d/180 seconds...\r" "$((i * 10))"
+                    sleep 10
+                  done
+                  echo ""
+                  echo "Handoff wait complete. New runner should be ready."
+                elif [ "$HTTP_CODE" = "401" ]; then
+                  echo ""
+                  echo "ERROR: Authentication failed (401)"
+                  echo "Your WORKFLOW_PAT token may be expired or invalid."
+                elif [ "$HTTP_CODE" = "403" ]; then
+                  echo ""
+                  echo "ERROR: Permission denied (403)"
+                  echo "Your WORKFLOW_PAT lacks required permissions."
+                  echo "Required: Personal Access Token with 'repo' scope"
+                elif [ "$HTTP_CODE" = "404" ]; then
+                  echo ""
+                  echo "ERROR: Repository not found (404)"
+                  echo "Your WORKFLOW_PAT may not have access to this repository."
+                else
+                  echo ""
+                  echo "ERROR: Failed to trigger restart (HTTP $HTTP_CODE)"
+                fi
+                RESTART_TRIGGERED=true
+              fi
+            fi
+
+            # Check if hard timeout exceeded
             if [ $CURRENT_TIME -ge $END_TIME ]; then
               echo "Duration exceeded, shutting down..."
               break
             fi
 
-            # Health check
-            if curl -s http://localhost:8000/health | grep -q "healthy"; then
-              echo "[$(date)] Server healthy - Model: $(curl -s http://localhost:8000/health | jq -r '.model')"
-            else
-              echo "[$(date)] Server unhealthy, attempting restart..."
-              pkill -f inference_server.py || true
-              cd app/llama-inference
-              python inference_server.py &
-              sleep 60
-            fi
-
             sleep 30
           done
+
+          cleanup
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Inference Server Log ==="
+          cat /tmp/inference_server.log 2>/dev/null || echo "No server log"
+          echo ""
+          echo "=== Tunnel Log ==="
+          cat /tmp/tunnel.log 2>/dev/null || echo "No tunnel log"
