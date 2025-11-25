@@ -1,4 +1,4 @@
-name: Qwen 2.5-7B Inference Server
+name: Qwen 2.5-7B
 
 on:
   workflow_dispatch:

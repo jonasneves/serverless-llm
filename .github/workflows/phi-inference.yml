@@ -1,4 +1,4 @@
-name: Phi-3 Mini Inference Server
+name: Phi-3 Mini
 
 on:
   workflow_dispatch:
