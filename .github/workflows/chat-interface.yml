@@ -1,6 +1,5 @@
 name: Chat Interface
 
-# Fixed run name - won't change based on trigger type
 run-name: Chat Interface
 
 on:

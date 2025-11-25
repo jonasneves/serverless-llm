@@ -1,6 +1,5 @@
 name: Qwen 2.5-7B Inference Server
 
-# Fixed run name - won't change based on trigger type
 run-name: Qwen 2.5-7B Inference Server
 
 on:
