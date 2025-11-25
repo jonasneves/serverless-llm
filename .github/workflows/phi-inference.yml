@@ -1,5 +1,7 @@
 name: Phi-3 Mini
 
+run-name: Phi-3 Mini Inference Server
+
 on:
   workflow_dispatch:
     inputs:

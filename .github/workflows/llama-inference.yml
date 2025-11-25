@@ -1,5 +1,7 @@
 name: Llama 3.2-3B
 
+run-name: Llama 3.2-3B Inference Server
+
 on:
   workflow_dispatch:
     inputs:

@@ -1,5 +1,7 @@
 name: Qwen 2.5-7B
 
+run-name: Qwen 2.5-7B Inference Server
+
 on:
   workflow_dispatch:
     inputs:
