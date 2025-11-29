@@ -10,6 +10,7 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.tools import AgentTool
 from autogen_agentchat.messages import ChatMessage, TextMessage
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_core import ModelCapabilities
 from typing import Annotated
 
 from tools.web_search import WebSearchTool
@@ -36,10 +37,18 @@ class AutoGenOrchestrator:
 
     def _create_model_client(self, base_url: str, model_name: str = "model") -> OpenAIChatCompletionClient:
         """Create an OpenAI-compatible client for our model endpoints"""
+        # Define model capabilities for non-OpenAI models
+        capabilities = ModelCapabilities(
+            vision=False,
+            function_calling=True,
+            json_output=True,
+        )
+        
         return OpenAIChatCompletionClient(
             model=model_name,
             api_key="dummy",  # Our endpoints don't need real keys
             base_url=f"{base_url}/v1",
+            model_capabilities=capabilities,
         )
 
     async def search_web(self, query: Annotated[str, "The search query"]) -> str:
