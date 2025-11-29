@@ -167,7 +167,6 @@ Available tools:
 Choose the most appropriate specialist or tool for each task. You can use multiple agents/tools if needed.""",
                 tools=[reasoning_tool, knowledge_tool, quick_tool, self.search_web, self.execute_python],
                 max_tool_iterations=max_turns,
-                max_consecutive_auto_reply=max_turns,
             )
 
             yield {
