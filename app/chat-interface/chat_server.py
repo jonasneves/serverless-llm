@@ -22,6 +22,9 @@ from orchestrator import GitHubModelsOrchestrator
 from discussion_engine import DiscussionEngine
 from model_profiles import MODEL_PROFILES
 
+# Orchestrator mode imports
+from orchestrator_engine import OrchestratorEngine
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -119,6 +122,12 @@ class DiscussionRequest(BaseModel):
     github_token: Optional[str] = None  # User-provided GitHub token for API models
     turns: int = 2  # Number of discussion rounds (all models participate each round)
     participants: Optional[List[str]] = None  # List of model IDs to participate (default: all local models)
+
+class OrchestratorRequest(BaseModel):
+    query: str
+    max_tokens: int = 512
+    temperature: float = 0.7
+    max_rounds: int = 5  # Maximum orchestration rounds
 
 # HTML Chat Interface
 CHAT_HTML = """
@@ -1766,6 +1775,16 @@ async def discussion_interface():
     else:
         raise HTTPException(status_code=404, detail="Discussion interface not found")
 
+@app.get("/orchestrator", response_class=HTMLResponse)
+async def orchestrator_interface():
+    """Serve orchestrator mode interface"""
+    import pathlib
+    orchestrator_html_path = pathlib.Path(__file__).parent / "static" / "orchestrator.html"
+    if orchestrator_html_path.exists():
+        return orchestrator_html_path.read_text()
+    else:
+        raise HTTPException(status_code=404, detail="Orchestrator interface not found")
+
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "chat-interface"}
@@ -2146,6 +2165,79 @@ async def discussion_stream(request: DiscussionRequest):
             request.github_token,
             request.turns,
             request.participants
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+# Orchestrator Mode Endpoint
+async def stream_orchestrator_events(
+    query: str,
+    max_tokens: int,
+    temperature: float,
+    max_rounds: int
+) -> AsyncGenerator[str, None]:
+    """
+    Stream ToolOrchestra-style multi-turn orchestration events
+
+    The orchestrator (Qwen) decides which tools/models to call across multiple rounds
+    """
+    try:
+        engine = OrchestratorEngine(max_rounds=max_rounds)
+
+        async for event in engine.run_orchestration(
+            query=query,
+            max_tokens=max_tokens,
+            temperature=temperature
+        ):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    except Exception as e:
+        logger.error(f"Orchestrator error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
+
+
+@app.post("/api/chat/orchestrator/stream")
+async def orchestrator_stream(request: OrchestratorRequest):
+    """
+    Stream ToolOrchestra-style intelligent orchestration using Server-Sent Events
+
+    The orchestrator (Qwen 2.5-7B) intelligently routes to specialized models and tools
+    across multiple rounds to efficiently solve complex tasks.
+
+    Request body:
+    - query: User's question or request
+    - max_tokens: Max tokens per model response (default: 512)
+    - temperature: Sampling temperature (default: 0.7)
+    - max_rounds: Maximum orchestration rounds (default: 5)
+
+    Stream events (all sent as SSE):
+    - start: Orchestration begins
+    - round_start: New round begins
+    - tool_call: Orchestrator calls a tool
+    - tool_result: Tool execution result
+    - orchestrator_thinking: Orchestrator reasoning
+    - final_answer: Final synthesized answer
+    - complete: Orchestration finished
+    - error: Error details
+
+    Tools available:
+    - enhance_reasoning: Call specialized reasoning models (Qwen/Phi/Llama)
+    - answer: Generate final answer with best model
+    - search: Web search for missing information
+    - code_interpreter: Execute Python code
+    """
+    return StreamingResponse(
+        stream_orchestrator_events(
+            request.query,
+            request.max_tokens,
+            request.temperature,
+            request.max_rounds
         ),
         media_type="text/event-stream",
         headers={

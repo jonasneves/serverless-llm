@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToolOrchestra Mode - Intelligent Model & Tool Orchestration</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #FAFAFA;
+      --bg-tertiary: #F3F4F6;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --border-color: #E5E7EB;
+      --accent-color: #1e3a5f;
+      --accent-hover: #2c4f7c;
+      --success-color: #059669;
+      --warning-color: #D97706;
+      --info-color: #0284C7;
+      --tool-reasoning: #8B5CF6;
+      --tool-answer: #EC4899;
+      --tool-search: #14B8A6;
+      --tool-code: #F59E0B;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+      color: white;
+    }
+
+    .header-content {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .logo-subtitle {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .modes {
+      display: flex;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .mode-link {
+      color: white;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      opacity: 0.8;
+      transition: all 0.2s;
+    }
+
+    .mode-link:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .mode-link.active {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.2);
+      font-weight: 500;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .input-section {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .input-section h2 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 100px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-group label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    input[type="number"], select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .orchestration-section {
+      flex: 1;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      overflow-y: auto;
+    }
+
+    .round {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--bg-primary);
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    .round-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent-color);
+    }
+
+    .tool-call {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      border-left: 3px solid var(--info-color);
+    }
+
+    .tool-call-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .tool-badge {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: white;
+    }
+
+    .tool-enhance_reasoning { background: var(--tool-reasoning); }
+    .tool-answer { background: var(--tool-answer); }
+    .tool-search { background: var(--tool-search); }
+    .tool-code_interpreter { background: var(--tool-code); }
+
+    .tool-arguments {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    .tool-result {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .tool-result-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--success-color);
+      margin-bottom: 8px;
+    }
+
+    .tool-result-content {
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .final-answer {
+      background: linear-gradient(135deg, var(--success-color) 0%, #047857 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 24px;
+    }
+
+    .final-answer-header {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .final-answer-content {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .summary {
+      background: var(--bg-tertiary);
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state-text {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .empty-state-subtext {
+      font-size: 13px;
+    }
+
+    code {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 13px;
+    }
+
+    pre {
+      background: var(--bg-tertiary);
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
+    .markdown-content ul, .markdown-content ol {
+      margin-left: 20px;
+      margin-bottom: 8px;
+    }
+
+    .markdown-content p {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div>
+        <div class="logo">🎯 ToolOrchestra Mode</div>
+        <div class="logo-subtitle">Intelligent Model & Tool Orchestration</div>
+      </div>
+      <div class="modes">
+        <a href="/" class="mode-link">Arena</a>
+        <a href="/discussion" class="mode-link">Discussion</a>
+        <a href="/orchestrator" class="mode-link active">Orchestrator</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="input-section">
+      <h2>Query</h2>
+      <div class="form-group">
+        <textarea id="query" placeholder="Enter your question... The orchestrator will intelligently route to the best tools and models."></textarea>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Max Rounds</label>
+          <input type="number" id="maxRounds" value="5" min="1" max="10">
+        </div>
+        <div class="control-group">
+          <label>Temperature</label>
+          <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
+        </div>
+        <div class="control-group">
+          <label>Max Tokens</label>
+          <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128">
+        </div>
+        <button class="btn btn-primary" id="startBtn" onclick="startOrchestration()">
+          <span id="btnText">Start Orchestration</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="orchestration-section" id="orchestrationSection">
+      <div class="empty-state">
+        <div class="empty-state-icon">🎯</div>
+        <div class="empty-state-text">ToolOrchestra-Style Orchestration</div>
+        <div class="empty-state-subtext">
+          The orchestrator (Qwen 2.5-7B) will intelligently choose which tools and models to call<br>
+          across multiple rounds to efficiently answer your question.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const queryInput = document.getElementById('query');
+    const maxRoundsInput = document.getElementById('maxRounds');
+    const temperatureInput = document.getElementById('temperature');
+    const maxTokensInput = document.getElementById('maxTokens');
+    const startBtn = document.getElementById('startBtn');
+    const btnText = document.getElementById('btnText');
+    const orchestrationSection = document.getElementById('orchestrationSection');
+
+    let isRunning = false;
+
+    async function startOrchestration() {
+      const query = queryInput.value.trim();
+      if (!query) {
+        alert('Please enter a question');
+        return;
+      }
+
+      if (isRunning) return;
+      isRunning = true;
+      startBtn.disabled = true;
+      btnText.innerHTML = '<span class="loading"></span> Orchestrating...';
+
+      // Clear previous results
+      orchestrationSection.innerHTML = '';
+
+      try {
+        const response = await fetch('/api/chat/orchestrator/stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: query,
+            max_rounds: parseInt(maxRoundsInput.value),
+            temperature: parseFloat(temperatureInput.value),
+            max_tokens: parseInt(maxTokensInput.value)
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        let currentRound = null;
+        let currentToolCall = null;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+
+            const jsonStr = line.slice(6);
+            if (!jsonStr.trim()) continue;
+
+            try {
+              const event = JSON.parse(jsonStr);
+
+              if (event.event === 'start') {
+                // Just started
+              } else if (event.event === 'round_start') {
+                // New round
+                currentRound = document.createElement('div');
+                currentRound.className = 'round';
+                currentRound.innerHTML = `<div class="round-header">🔄 Round ${event.round}</div>`;
+                orchestrationSection.appendChild(currentRound);
+              } else if (event.event === 'tool_call') {
+                // Tool being called
+                currentToolCall = document.createElement('div');
+                currentToolCall.className = 'tool-call';
+                currentToolCall.innerHTML = `
+                  <div class="tool-call-header">
+                    <span class="tool-badge tool-${event.tool}">${event.tool}</span>
+                  </div>
+                  <div class="tool-arguments">${JSON.stringify(event.arguments, null, 2)}</div>
+                  <div class="loading" style="margin-top: 12px;"></div>
+                `;
+                currentRound.appendChild(currentToolCall);
+              } else if (event.event === 'tool_result') {
+                // Tool result received
+                if (currentToolCall) {
+                  const loadingEl = currentToolCall.querySelector('.loading');
+                  if (loadingEl) loadingEl.remove();
+
+                  const resultDiv = document.createElement('div');
+                  resultDiv.className = 'tool-result';
+                  resultDiv.innerHTML = `
+                    <div class="tool-result-header">✓ Result</div>
+                    <div class="tool-result-content markdown-content"></div>
+                  `;
+
+                  const contentDiv = resultDiv.querySelector('.tool-result-content');
+                  if (event.result.content) {
+                    contentDiv.innerHTML = marked.parse(event.result.content);
+                  } else {
+                    contentDiv.textContent = JSON.stringify(event.result, null, 2);
+                  }
+
+                  currentToolCall.appendChild(resultDiv);
+                }
+              } else if (event.event === 'orchestrator_thinking') {
+                // Orchestrator reasoning
+                const thinkingDiv = document.createElement('div');
+                thinkingDiv.className = 'tool-result';
+                thinkingDiv.innerHTML = `
+                  <div class="tool-result-header">💭 Orchestrator Thinking</div>
+                  <div class="tool-result-content markdown-content"></div>
+                `;
+                thinkingDiv.querySelector('.tool-result-content').innerHTML = marked.parse(event.content);
+                currentRound.appendChild(thinkingDiv);
+              } else if (event.event === 'final_answer') {
+                // Final answer
+                const finalDiv = document.createElement('div');
+                finalDiv.className = 'final-answer';
+                finalDiv.innerHTML = `
+                  <div class="final-answer-header">✨ Final Answer</div>
+                  <div class="final-answer-content markdown-content"></div>
+                `;
+                finalDiv.querySelector('.final-answer-content').innerHTML = marked.parse(event.content);
+                orchestrationSection.appendChild(finalDiv);
+              } else if (event.event === 'complete') {
+                // Summary
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'summary';
+                summaryDiv.innerHTML = `
+                  <strong>Orchestration Summary</strong>
+                  <div class="summary-item"><span>Total Rounds:</span><span>${event.summary.total_rounds}</span></div>
+                  <div class="summary-item"><span>Tools Used:</span><span>${event.summary.tools_used.join(', ')}</span></div>
+                `;
+                orchestrationSection.appendChild(summaryDiv);
+              } else if (event.event === 'error') {
+                console.error('Orchestration error:', event.error);
+                const errorDiv = document.createElement('div');
+                errorDiv.style.color = 'var(--warning-color)';
+                errorDiv.style.padding = '16px';
+                errorDiv.style.marginTop = '16px';
+                errorDiv.textContent = `Error: ${event.error}`;
+                orchestrationSection.appendChild(errorDiv);
+              }
+
+              orchestrationSection.scrollTop = orchestrationSection.scrollHeight;
+            } catch (e) {
+              console.error('Failed to parse event:', e, jsonStr);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Orchestration failed:', error);
+        orchestrationSection.innerHTML = `
+          <div style="color: var(--warning-color); padding: 20px; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 12px;">⚠️</div>
+            <div style="font-size: 16px;">Orchestration failed</div>
+            <div style="font-size: 13px; margin-top: 8px;">${error.message}</div>
+          </div>
+        `;
+      } finally {
+        isRunning = false;
+        startBtn.disabled = false;
+        btnText.textContent = 'Start Orchestration';
+      }
+    }
+
+    // Allow Enter to submit (with Shift+Enter for newlines)
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        startOrchestration();
+      }
+    });
+  </script>
+</body>
+</html>
