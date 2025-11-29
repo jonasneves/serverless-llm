@@ -276,6 +276,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function createStreamingContainer(models) {
       const modelData = {};
 
+      const registerModelEntry = (modelId, modelName, element) => {
+        const entry = { id: modelId, name: modelName, element, content: '' };
+        modelData[modelId] = entry;
+        if (modelName !== modelId) {
+          modelData[modelName] = entry;
+        }
+      };
+
       if (models.length === 1) {
         const modelId = models[0];
         const modelName = MODELS[modelId]?.name || modelId;
@@ -286,20 +294,20 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="model-name">${modelName}</span>
             <span class="model-badge streaming-badge">Streaming...</span>
           </div>
-          <div class="message-content" data-model="${modelId}"><span class="cursor">▋</span></div>
-          <div class="message-footer" style="display: none;" data-footer="${modelId}">
+          <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>
+          <div class="message-footer" style="display: none;" data-footer-id="${modelId}">
             <div class="stat-item">
               <span class="stat-label">Tokens</span>
-              <span class="stat-value" data-tokens="${modelId}">-</span>
+              <span class="stat-value" data-tokens-id="${modelId}">-</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">Time</span>
-              <span class="stat-value" data-time="${modelId}">-</span>
+              <span class="stat-value" data-time-id="${modelId}">-</span>
             </div>
           </div>
         `;
         chatHistory.appendChild(messageDiv);
-        modelData[modelId] = { content: '', element: messageDiv, name: modelName };
+        registerModelEntry(modelId, modelName, messageDiv);
       } else {
         const container = document.createElement('div');
         container.className = 'model-responses';
@@ -313,20 +321,20 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="model-name">${modelName}</span>
               <span class="model-badge streaming-badge">Waiting...</span>
             </div>
-            <div class="message-content" data-model="${modelId}"><span class="cursor">▋</span></div>
-            <div class="message-footer" style="display: none;" data-footer="${modelId}">
+            <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>
+            <div class="message-footer" style="display: none;" data-footer-id="${modelId}">
               <div class="stat-item">
                 <span class="stat-label">Tokens</span>
-                <span class="stat-value" data-tokens="${modelId}">-</span>
+                <span class="stat-value" data-tokens-id="${modelId}">-</span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">Time</span>
-                <span class="stat-value" data-time="${modelId}">-</span>
+                <span class="stat-value" data-time-id="${modelId}">-</span>
               </div>
             </div>
           `;
           container.appendChild(responseDiv);
-          modelData[modelId] = { content: '', element: responseDiv, name: modelName };
+          registerModelEntry(modelId, modelName, responseDiv);
         }
         chatHistory.appendChild(container);
       }
@@ -337,24 +345,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update streaming content for a model
     function updateStreamingContent(modelData, modelId, content, isToken = true) {
-      if (!modelData[modelId]) return;
+      const entry = modelData[modelId];
+      if (!entry) return;
 
       if (isToken) {
-        modelData[modelId].content += content;
+        entry.content += content;
       }
 
-      const contentEl = modelData[modelId].element.querySelector(`[data-model="${modelId}"]`);
+      const contentEl = entry.element.querySelector(`[data-model-id="${entry.id}"]`);
       if (contentEl) {
-        contentEl.innerHTML = formatContent(modelData[modelId].content) + '<span class="cursor">▋</span>';
+        contentEl.innerHTML = formatContent(entry.content) + '<span class="cursor">▋</span>';
         chatHistory.scrollTop = chatHistory.scrollHeight;
       }
     }
 
     // Finalize streaming for a model
     function finalizeStreaming(modelData, modelId, time, tokenEstimate, error = false) {
-      if (!modelData[modelId]) return;
+      const entry = modelData[modelId];
+      if (!entry) return;
 
-      const el = modelData[modelId].element;
+      const el = entry.element;
 
       // Remove streaming badge
       const badge = el.querySelector('.streaming-badge');
@@ -369,18 +379,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Remove cursor
-      const contentEl = el.querySelector(`[data-model="${modelId}"]`);
+      const contentEl = el.querySelector(`[data-model-id="${entry.id}"]`);
       if (contentEl) {
-        contentEl.innerHTML = formatContent(modelData[modelId].content);
+        contentEl.innerHTML = formatContent(entry.content);
       }
 
       // Show footer with stats
       if (!error && time) {
-        const footer = el.querySelector(`[data-footer="${modelId}"]`);
+        const footer = el.querySelector(`[data-footer-id="${entry.id}"]`);
         if (footer) {
           footer.style.display = 'flex';
-          const timeEl = el.querySelector(`[data-time="${modelId}"]`);
-          const tokensEl = el.querySelector(`[data-tokens="${modelId}"]`);
+          const timeEl = el.querySelector(`[data-time-id="${entry.id}"]`);
+          const tokensEl = el.querySelector(`[data-tokens-id="${entry.id}"]`);
           if (timeEl) timeEl.textContent = time.toFixed(2) + 's';
           if (tokensEl) tokensEl.textContent = tokenEstimate || '-';
         }
