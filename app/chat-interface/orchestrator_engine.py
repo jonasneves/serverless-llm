@@ -73,91 +73,76 @@ class OrchestratorEngine:
             # Build context from previous rounds
             context_str = self._build_context(context)
 
-            # Ask orchestrator to choose a tool
-            messages = [
-                {
-                    "role": "system",
-                    "content": "You are an intelligent orchestrator. Choose the most appropriate tool to help answer the user's question efficiently."
-                },
-                {
-                    "role": "user",
-                    "content": f"Question: {query}\n\n{context_str}\n\nChoose an appropriate tool to help answer this question."
-                }
-            ]
+            # Determine which tool to call based on query and context
+            # Use a simpler approach: directly infer the tool from the query
+            if round_num == 0:
+                # First round - analyze what we need
+                if any(word in query.lower() for word in ["search", "online", "current", "latest", "recent", "find information"]):
+                    # Web search needed
+                    tool_name = "search"
+                    tool_args = {"query": query, "num_results": 3}
+                elif any(word in query.lower() for word in ["code", "python", "calculate", "compute", "program"]):
+                    # Might need code execution or reasoning
+                    tool_name = "enhance_reasoning"
+                    tool_args = {"model": "reasoner-1", "problem": query, "context": context_str}
+                else:
+                    # General reasoning
+                    tool_name = "enhance_reasoning"
+                    tool_args = {"model": "reasoner-1", "problem": query, "context": context_str}
 
-            # Call orchestrator with function calling
-            try:
-                tool_call_response = await self._call_orchestrator(
-                    messages=messages,
-                    tools=self.tools,
-                    temperature=temperature
-                )
-
-                # Check if orchestrator wants to use a tool
-                tool_calls = tool_call_response.get("tool_calls", [])
-
-                if not tool_calls:
-                    # No tool call - orchestrator might be providing final answer
-                    content = tool_call_response.get("content", "")
-                    if content:
-                        yield {
-                            "event": "orchestrator_thinking",
-                            "content": content
-                        }
-                        final_answer = content
-                        break
-                    else:
-                        # No tool call and no content - continue
-                        continue
-
-                # Process tool call
-                for tool_call in tool_calls:
-                    tool_name = tool_call.get("name")
-                    tool_args = tool_call.get("arguments", {})
-
-                    yield {
-                        "event": "tool_call",
-                        "tool": tool_name,
-                        "arguments": tool_args
-                    }
-
-                    # Execute tool
-                    tool_result = await self._execute_tool(tool_name, tool_args)
-
-                    yield {
-                        "event": "tool_result",
-                        "tool": tool_name,
-                        "result": tool_result
-                    }
-
-                    # Add to context
-                    context.append({
-                        "round": round_num + 1,
-                        "tool": tool_name,
-                        "arguments": tool_args,
-                        "result": tool_result
-                    })
-
-                    all_tool_calls.append({
-                        "tool": tool_name,
-                        "arguments": tool_args
-                    })
-
-                    # If this was an "answer" tool, we're done
-                    if tool_name == "answer":
-                        final_answer = tool_result.get("content", "")
-                        break
-
-                if final_answer:
-                    break
-
-            except Exception as e:
-                logger.error(f"Orchestration error in round {round_num + 1}: {e}")
                 yield {
-                    "event": "error",
-                    "round": round_num + 1,
-                    "error": str(e)
+                    "event": "tool_call",
+                    "tool": tool_name,
+                    "arguments": tool_args
                 }
+
+                # Execute tool
+                tool_result = await self._execute_tool(tool_name, tool_args)
+
+                yield {
+                    "event": "tool_result",
+                    "tool": tool_name,
+                    "result": tool_result
+                }
+
+                # Add to context
+                context.append({
+                    "round": round_num + 1,
+                    "tool": tool_name,
+                    "arguments": tool_args,
+                    "result": tool_result
+                })
+
+                all_tool_calls.append({
+                    "tool": tool_name,
+                    "arguments": tool_args
+                })
+
+            # After first round, generate final answer
+            if round_num > 0 or len(context) > 0:
+                # We have enough info, generate final answer
+                tool_name = "answer"
+                tool_args = {"model": "answer-1", "problem": query, "context": context_str}
+
+                yield {
+                    "event": "tool_call",
+                    "tool": tool_name,
+                    "arguments": tool_args
+                }
+
+                tool_result = await self._execute_tool(tool_name, tool_args)
+
+                yield {
+                    "event": "tool_result",
+                    "tool": tool_name,
+                    "result": tool_result
+                }
+
+                final_answer = tool_result.get("content", "")
+                all_tool_calls.append({
+                    "tool": tool_name,
+                    "arguments": tool_args
+                })
                 break
 
         # Provide final answer
