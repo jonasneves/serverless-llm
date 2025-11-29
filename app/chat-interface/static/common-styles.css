@@ -101,7 +101,7 @@ body {
 
 /* Header Styles */
 header {
-  padding: var(--spacing-md) 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
   background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
   display: flex;
@@ -122,7 +122,7 @@ header {
   height: 32px;
   background: rgba(255, 255, 255, 0.2);
   padding: 6px;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,14 +148,14 @@ header {
 /* Header Actions */
 .header-actions {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: 8px;
   align-items: center;
 }
 
 /* Navigation Modes */
 .modes {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: 8px;
   font-size: 13px;
 }
 
@@ -163,7 +163,7 @@ header {
   color: white;
   text-decoration: none;
   padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   opacity: 0.8;
   transition: all 0.2s;
 }
@@ -186,17 +186,16 @@ header {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: white;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-fast);
+  transition: all 0.15s ease;
 }
 
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
 }
 
 /* Main Container */
