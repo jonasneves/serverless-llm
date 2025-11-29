@@ -70,9 +70,12 @@ Response 2 (probability: Y%): [your response]
         
         try:
             # Call the model with verbalized sampling prompt
+            full_url = f"{self.model_endpoint}/v1/chat/completions"
+            logger.info(f"Verbalized Sampling calling {self.model_name} at {full_url}")
+            
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    f"{self.model_endpoint}/v1/chat/completions",
+                    full_url,
                     json={
                         "model": "model",
                         "messages": [
@@ -93,9 +96,11 @@ Response 2 (probability: Y%): [your response]
                 
                 if response.status_code != 200:
                     error_text = response.text
+                    error_msg = f"Model API error from {full_url}: Status {response.status_code}, {error_text[:200]}"
+                    logger.error(error_msg)
                     yield {
                         "event": "error",
-                        "error": f"Model API error: {error_text[:200]}"
+                        "error": error_msg
                     }
                     return
                 

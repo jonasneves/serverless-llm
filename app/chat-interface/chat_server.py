@@ -96,6 +96,13 @@ MODEL_DISPLAY_NAMES = {
     "llama-3.2-3b": "Llama 3.2-3B",
 }
 
+# Log configured endpoints at startup
+logger.info("=" * 60)
+logger.info("MODEL ENDPOINTS CONFIGURED:")
+for model_id, endpoint in MODEL_ENDPOINTS.items():
+    logger.info(f"  {model_id}: {endpoint}")
+logger.info("=" * 60)
+
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -1862,11 +1869,14 @@ async def chat(request: ChatRequest):
         )
 
     endpoint = MODEL_ENDPOINTS[request.model]
+    full_url = f"{endpoint}/v1/chat/completions"
+    
+    logger.info(f"Calling {request.model} at {full_url}")
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{endpoint}/v1/chat/completions",
+                full_url,
                 json={
                     "messages": [{"role": m.role, "content": m.content} for m in request.messages],
                     "max_tokens": request.max_tokens,
@@ -1875,20 +1885,27 @@ async def chat(request: ChatRequest):
             )
 
             if response.status_code != 200:
+                error_detail = f"Model {request.model} at {endpoint} returned {response.status_code}: {response.text[:200]}"
+                logger.error(error_detail)
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=f"Model API error: {response.text}"
+                    detail=error_detail
                 )
 
             return response.json()
 
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Model inference timeout")
-    except httpx.ConnectError:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Cannot connect to {request.model} at {endpoint}"
-        )
+    except httpx.TimeoutException as e:
+        error_msg = f"Timeout calling {request.model} at {endpoint}: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=504, detail=error_msg)
+    except httpx.ConnectError as e:
+        error_msg = f"Cannot connect to {request.model} at {endpoint}: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=503, detail=error_msg)
+    except Exception as e:
+        error_msg = f"Unexpected error calling {request.model} at {endpoint}: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, max_tokens: int, temperature: float):
     """Query a single model and return results with timing"""
