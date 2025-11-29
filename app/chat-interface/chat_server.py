@@ -2219,11 +2219,12 @@ async def stream_orchestrator_events(
             max_tokens=max_tokens,
             temperature=temperature
         ):
-            yield f"data: {json.dumps(event)}\n\n"
+            # Ensure proper JSON encoding with explicit settings
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
     except Exception as e:
         logger.error(f"Orchestrator error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
 @app.post("/api/chat/orchestrator/stream")

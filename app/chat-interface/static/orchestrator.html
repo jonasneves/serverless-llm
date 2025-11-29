@@ -541,22 +541,31 @@
 
         let currentRound = null;
         let currentToolCall = null;
+        let buffer = '';  // Buffer for incomplete SSE events
 
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+          buffer += chunk;
 
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
+          // Split by double newline (SSE event separator)
+          const events = buffer.split('\n\n');
 
-            const jsonStr = line.slice(6);
-            if (!jsonStr.trim()) continue;
+          // Keep the last incomplete event in the buffer
+          buffer = events.pop() || '';
 
-            try {
-              const event = JSON.parse(jsonStr);
+          for (const eventData of events) {
+            const lines = eventData.split('\n');
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+
+              const jsonStr = line.slice(6);
+              if (!jsonStr.trim()) continue;
+
+              try {
+                const event = JSON.parse(jsonStr);
 
               if (event.event === 'start') {
                 // Just started
@@ -643,6 +652,7 @@
               orchestrationSection.scrollTop = orchestrationSection.scrollHeight;
             } catch (e) {
               console.error('Failed to parse event:', e, jsonStr);
+            }
             }
           }
         }
