@@ -104,6 +104,8 @@ class AutoGenOrchestrator:
         - {"event": "complete", "summary": {...}}
         """
 
+        last_orchestrator_message = None
+
         try:
             yield {
                 "event": "start",
@@ -165,6 +167,7 @@ Available tools:
 Choose the most appropriate specialist or tool for each task. You can use multiple agents/tools if needed.""",
                 tools=[reasoning_tool, knowledge_tool, quick_tool, self.search_web, self.execute_python],
                 max_tool_iterations=max_turns,
+                max_consecutive_auto_reply=max_turns,
             )
 
             yield {
@@ -180,17 +183,29 @@ Choose the most appropriate specialist or tool for each task. You can use multip
             async for message in orchestrator.run_stream(task=query):
                 # Convert AutoGen messages to our event format
                 if isinstance(message, TextMessage):
+                    agent_name = message.source if hasattr(message, 'source') else "orchestrator"
+                    content = message.content
+
                     yield {
                         "event": "agent_message",
-                        "agent": message.source if hasattr(message, 'source') else "orchestrator",
-                        "content": message.content
+                        "agent": agent_name,
+                        "content": content
                     }
+
+                    if agent_name == "orchestrator":
+                        last_orchestrator_message = content
                 elif hasattr(message, 'content'):
                     # Handle other message types
                     yield {
                         "event": "message",
                         "content": str(message.content)
                     }
+
+            if last_orchestrator_message:
+                yield {
+                    "event": "final_answer",
+                    "content": last_orchestrator_message
+                }
 
             yield {
                 "event": "complete",
