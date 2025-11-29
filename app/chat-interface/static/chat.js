@@ -299,9 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `;
         chatHistory.appendChild(messageDiv);
-        const entry = { content: '', element: messageDiv, key: modelName };
-        modelData[modelName] = entry;
-        modelData[modelId] = entry;
+        modelData[modelName] = { content: '', element: messageDiv };
       } else {
         const container = document.createElement('div');
         container.className = 'model-responses';
@@ -328,9 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           `;
           container.appendChild(responseDiv);
-          const entry = { content: '', element: responseDiv, key: modelName };
-          modelData[modelName] = entry;
-          modelData[modelId] = entry;
+          modelData[modelName] = { content: '', element: responseDiv };
         }
         chatHistory.appendChild(container);
       }
@@ -341,26 +337,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update streaming content for a model
     function updateStreamingContent(modelData, modelName, content, isToken = true) {
-      const entry = modelData[modelName];
-      if (!entry) return;
+      if (!modelData[modelName]) return;
 
       if (isToken) {
-        entry.content += content;
+        modelData[modelName].content += content;
       }
 
-      const contentEl = entry.element.querySelector(`[data-model="${entry.key}"]`);
+      const contentEl = modelData[modelName].element.querySelector(`[data-model="${modelName}"]`);
       if (contentEl) {
-        contentEl.innerHTML = formatContent(entry.content) + '<span class="cursor">▋</span>';
+        contentEl.innerHTML = formatContent(modelData[modelName].content) + '<span class="cursor">▋</span>';
         chatHistory.scrollTop = chatHistory.scrollHeight;
       }
     }
 
     // Finalize streaming for a model
     function finalizeStreaming(modelData, modelName, time, tokenEstimate, error = false) {
-      const entry = modelData[modelName];
-      if (!entry) return;
+      if (!modelData[modelName]) return;
 
-      const el = entry.element;
+      const el = modelData[modelName].element;
 
       // Remove streaming badge
       const badge = el.querySelector('.streaming-badge');
@@ -375,18 +369,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Remove cursor
-      const contentEl = el.querySelector(`[data-model="${entry.key}"]`);
+      const contentEl = el.querySelector(`[data-model="${modelName}"]`);
       if (contentEl) {
-        contentEl.innerHTML = formatContent(entry.content);
+        contentEl.innerHTML = formatContent(modelData[modelName].content);
       }
 
       // Show footer with stats
       if (!error && time) {
-        const footer = el.querySelector(`[data-footer="${entry.key}"]`);
+        const footer = el.querySelector(`[data-footer="${modelName}"]`);
         if (footer) {
           footer.style.display = 'flex';
-          const timeEl = el.querySelector(`[data-time="${entry.key}"]`);
-          const tokensEl = el.querySelector(`[data-tokens="${entry.key}"]`);
+          const timeEl = el.querySelector(`[data-time="${modelName}"]`);
+          const tokensEl = el.querySelector(`[data-tokens="${modelName}"]`);
           if (timeEl) timeEl.textContent = time.toFixed(2) + 's';
           if (tokensEl) tokensEl.textContent = tokenEstimate || '-';
         }
@@ -443,31 +437,31 @@ document.addEventListener('DOMContentLoaded', () => {
                   continue;
                 }
 
-                const modelKey =
-                  (data.model && modelData[data.model]) ? data.model :
-                  (data.model_id && modelData[data.model_id]) ? data.model_id : null;
-                if (!modelKey) {
+                const modelName = data.model
+                  || (data.model_id && MODELS[data.model_id]?.name)
+                  || data.model_id;
+                if (!modelName || !modelData[modelName]) {
                   continue;
                 }
 
                 if (data.event === 'start') {
                   // Model started streaming
-                  const badge = modelData[modelKey]?.element.querySelector('.streaming-badge');
+                  const badge = modelData[modelName]?.element.querySelector('.streaming-badge');
                   if (badge) badge.textContent = 'Streaming...';
                 } else if (data.event === 'token' && data.content) {
                   // Received a token
-                  updateStreamingContent(modelData, modelKey, data.content);
+                  updateStreamingContent(modelData, modelName, data.content);
                 } else if (data.event === 'done') {
                   // Model finished
                   if (!firstContent && data.total_content) {
                     firstContent = data.total_content;
                   }
-                  finalizeStreaming(modelData, modelKey, data.time, data.token_estimate);
+                  finalizeStreaming(modelData, modelName, data.time, data.token_estimate);
                 } else if (data.error) {
                   // Error occurred
-                  modelData[modelKey].content = data.content || 'Error occurred';
-                  updateStreamingContent(modelData, modelKey, '', false);
-                  finalizeStreaming(modelData, modelKey, null, null, true);
+                  modelData[modelName].content = data.content || 'Error occurred';
+                  updateStreamingContent(modelData, modelName, '', false);
+                  finalizeStreaming(modelData, modelName, null, null, true);
                 }
               } catch (e) {
                 console.error('Parse error:', e);
@@ -483,15 +477,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } catch (error) {
         // Handle connection errors
-        const handled = new Set();
-        for (const key of Object.keys(modelData)) {
-          const entry = modelData[key];
-          if (!entry || handled.has(entry)) continue;
-          handled.add(entry);
-          const displayKey = entry.key;
-          entry.content = `Connection error: ${error.message}`;
-          updateStreamingContent(modelData, displayKey, '', false);
-          finalizeStreaming(modelData, displayKey, null, null, true);
+        for (const modelName of Object.keys(modelData)) {
+          modelData[modelName].content = `Connection error: ${error.message}`;
+          updateStreamingContent(modelData, modelName, '', false);
+          finalizeStreaming(modelData, modelName, null, null, true);
         }
       } finally {
         sendBtn.disabled = selectedModels.size === 0;
