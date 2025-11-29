@@ -1,8 +1,8 @@
-# ToolOrchestra Mode - Implementation Guide
+# AutoGen Mode - Multi-Agent Orchestration
 
-**Status:** ✅ Fully Implemented
+**Status:** ✅ Fully Implemented with Microsoft AutoGen
 
-ToolOrchestra-style intelligent orchestration has been successfully integrated into your serverless-llm project!
+Microsoft AutoGen framework has been successfully integrated for multi-agent orchestration in your serverless-llm project!
 
 ## What Was Built
 
