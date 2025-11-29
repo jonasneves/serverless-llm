@@ -35,11 +35,14 @@ class AutoGenOrchestrator:
 
     def _create_model_client(self, base_url: str, model_name: str = "model") -> OpenAIChatCompletionClient:
         """Create an OpenAI-compatible client for our model endpoints"""
-        # Provide model_info for non-OpenAI models
+        # Provide complete model_info for non-OpenAI models
+        # Required fields enforced starting v0.4.7
         model_info = {
+            "family": "unknown",  # Required field
             "vision": False,
             "function_calling": True,
             "json_output": True,
+            "context_window": 32768,  # Reasonable default
         }
         
         return OpenAIChatCompletionClient(
