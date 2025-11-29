@@ -1244,7 +1244,8 @@ CHAT_HTML = """
       <div class="modes">
         <a href="/" class="mode-link active">Arena</a>
         <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/orchestrator" class="mode-link">AutoGen</a>
+        <a href="/autogen" class="mode-link">AutoGen</a>
+        <a href="/studio" class="mode-link">Studio</a>
       </div>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1799,15 +1800,57 @@ async def discussion_interface():
     else:
         raise HTTPException(status_code=404, detail="Discussion interface not found")
 
-@app.get("/orchestrator", response_class=HTMLResponse)
-async def orchestrator_interface():
-    """Serve orchestrator mode interface"""
+@app.get("/autogen", response_class=HTMLResponse)
+async def autogen_interface():
+    """Serve AutoGen mode interface"""
     import pathlib
-    orchestrator_html_path = pathlib.Path(__file__).parent / "static" / "orchestrator.html"
-    if orchestrator_html_path.exists():
-        return orchestrator_html_path.read_text()
+    autogen_html_path = pathlib.Path(__file__).parent / "static" / "orchestrator.html"
+    if autogen_html_path.exists():
+        return autogen_html_path.read_text()
     else:
-        raise HTTPException(status_code=404, detail="Orchestrator interface not found")
+        raise HTTPException(status_code=404, detail="AutoGen interface not found")
+
+@app.api_route("/studio/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def proxy_to_studio(request: Request, path: str):
+    """Proxy requests to AutoGen Studio running on port 8081"""
+    studio_url = f"http://localhost:8081/{path}"
+    
+    # Forward query parameters
+    if request.url.query:
+        studio_url += f"?{request.url.query}"
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Forward the request to AutoGen Studio
+            if request.method == "GET":
+                response = await client.get(studio_url, headers=dict(request.headers))
+            elif request.method == "POST":
+                body = await request.body()
+                response = await client.post(studio_url, content=body, headers=dict(request.headers))
+            elif request.method == "PUT":
+                body = await request.body()
+                response = await client.put(studio_url, content=body, headers=dict(request.headers))
+            elif request.method == "DELETE":
+                response = await client.delete(studio_url, headers=dict(request.headers))
+            elif request.method == "PATCH":
+                body = await request.body()
+                response = await client.patch(studio_url, content=body, headers=dict(request.headers))
+            
+            # Return the proxied response
+            return StreamingResponse(
+                content=response.iter_bytes(),
+                status_code=response.status_code,
+                headers=dict(response.headers)
+            )
+    except Exception as e:
+        logger.error(f"Error proxying to AutoGen Studio: {e}")
+        raise HTTPException(status_code=502, detail="AutoGen Studio is not available")
+
+@app.get("/studio", response_class=HTMLResponse)
+async def studio_interface():
+    """Redirect to AutoGen Studio root"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/studio/")
 
 @app.get("/health")
 async def health():
