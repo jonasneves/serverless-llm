@@ -25,6 +25,9 @@ from model_profiles import MODEL_PROFILES
 # Orchestrator mode imports
 from autogen_orchestrator import AutoGenOrchestrator
 
+# Verbalized Sampling mode imports
+from verbalized_sampling_engine import VerbalizedSamplingEngine
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -128,6 +131,9 @@ class OrchestratorRequest(BaseModel):
     max_tokens: int = 512
     temperature: float = 0.7
     max_rounds: int = 5  # Maximum orchestration rounds
+
+class VerbalizedSamplingRequest(BaseModel):
+    query: str
 
 # HTML Chat Interface
 CHAT_HTML = """
@@ -1245,6 +1251,7 @@ CHAT_HTML = """
         <a href="/" class="mode-link active">Arena</a>
         <a href="/discussion" class="mode-link">Discussion</a>
         <a href="/autogen" class="mode-link">AutoGen</a>
+        <a href="/diversity" class="mode-link">Diversity</a>
       </div>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1809,6 +1816,16 @@ async def autogen_interface():
     else:
         raise HTTPException(status_code=404, detail="AutoGen interface not found")
 
+@app.get("/diversity", response_class=HTMLResponse)
+async def diversity_interface():
+    """Serve Verbalized Sampling interface"""
+    import pathlib
+    diversity_html_path = pathlib.Path(__file__).parent / "static" / "verbalized_sampling.html"
+    if diversity_html_path.exists():
+        return diversity_html_path.read_text()
+    else:
+        raise HTTPException(status_code=404, detail="Verbalized Sampling interface not found")
+
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "chat-interface"}
@@ -2262,6 +2279,92 @@ async def orchestrator_stream(request: OrchestratorRequest):
             request.max_tokens,
             request.temperature,
             request.max_rounds
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+# ===== VERBALIZED SAMPLING MODE =====
+async def stream_verbalized_sampling_events(
+    query: str,
+    model: str,
+    num_responses: int,
+    temperature: float,
+    max_tokens: int
+) -> AsyncGenerator[str, None]:
+    """
+    Stream Verbalized Sampling events
+    
+    Uses the Stanford research technique to unlock LLM diversity by asking for
+    a distribution of responses rather than a single response.
+    """
+    try:
+        # Get model endpoint
+        if model not in MODEL_ENDPOINTS:
+            yield f"data: {json.dumps({'event': 'error', 'error': f'Model {model} not found'}, ensure_ascii=False)}\n\n"
+            return
+        
+        model_endpoint = MODEL_ENDPOINTS[model]
+        model_name = MODEL_DISPLAY_NAMES.get(model, model)
+        
+        # Create engine and stream responses
+        engine = VerbalizedSamplingEngine(model_endpoint, model_name)
+        
+        async for event in engine.generate_diverse_responses(
+            query=query,
+            num_responses=num_responses,
+            temperature=temperature,
+            max_tokens=max_tokens
+        ):
+            # Ensure proper JSON encoding
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+    
+    except Exception as e:
+        logger.error(f"Verbalized Sampling error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+
+
+@app.post("/api/verbalized-sampling/stream")
+async def verbalized_sampling_stream(
+    request: VerbalizedSamplingRequest,
+    model: str = "qwen2.5-7b",
+    num_responses: int = 5,
+    temperature: float = 0.8,
+    max_tokens: int = 1024
+):
+    """
+    Stream Verbalized Sampling responses using Server-Sent Events
+    
+    Implements Stanford's Verbalized Sampling technique to mitigate mode collapse
+    and unlock LLM diversity by asking for a distribution of responses.
+    
+    Query parameters:
+    - model: Model to use (default: qwen2.5-7b)
+    - num_responses: Number of diverse responses (default: 5)
+    - temperature: Sampling temperature for diversity (default: 0.8)
+    - max_tokens: Max tokens per response (default: 1024)
+    
+    Request body:
+    - query: User's question or prompt
+    
+    Stream events:
+    - start: Generation begins
+    - chunk: Streaming content chunks
+    - complete: Generation finished with parsed responses and diversity score
+    - error: Error details
+    """
+    return StreamingResponse(
+        stream_verbalized_sampling_events(
+            request.query,
+            model,
+            num_responses,
+            temperature,
+            max_tokens
         ),
         media_type="text/event-stream",
         headers={
