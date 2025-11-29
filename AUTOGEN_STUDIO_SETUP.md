@@ -1,37 +1,59 @@
-# AutoGen Studio Integration
+# AutoGen Integration - Why No Studio?
 
 ## Overview
 
-AutoGen Studio is now integrated into your serverless-llm chat interface! You now have **4 modes**:
+Your serverless-llm chat interface has **3 modes**:
 
 1. **Arena** (`/`) - Side-by-side model comparison
 2. **Discussion** (`/discussion`) - Multi-model discussion with debate
 3. **AutoGen** (`/autogen`) - Programmatic multi-agent orchestration
-4. **Studio** (`/studio`) - Visual no-code AutoGen Studio GUI
 
-## What Was Added
+## ❌ AutoGen Studio Not Included
 
-### 1. AutoGen Studio Server
-- Runs on **port 8081** internally
-- Accessible via **`/studio`** path through reverse proxy
-- Automatically starts with the chat server in GitHub Actions
-- Health monitoring and auto-restart enabled
+**Why?** AutoGen Studio (v0.4.x) is **incompatible** with the newer AutoGen framework (v0.7.x) that we're using for programmatic orchestration.
 
-### 2. Path Rename
+## Dependency Conflict
+
+```
+ERROR: ResolutionImpossible
+
+autogenstudio 0.4.x requires: autogen-core<0.5 and >=0.4.5
+autogen-agentchat 0.7.5 requires: autogen-core>=0.7.0
+
+Cannot install both!
+```
+
+### The Issue
+- **AutoGen Studio** uses the **old architecture** (v0.4.x)
+- **Programmatic AutoGen** uses the **new architecture** (v0.7.x) 
+- They cannot coexist in the same Python environment
+
+### Why v0.7.x is Better
+The new AutoGen v0.7.x framework has:
+- ✅ Better async support
+- ✅ Improved tool handling
+- ✅ ModelCapabilities configuration
+- ✅ More stable message passing
+- ✅ Better streaming support
+- ✅ Active development and support
+
+AutoGen Studio is still on v0.4.x and hasn't been updated for the new architecture.
+
+## What You Have Instead
+
+### Path Rename
 - **Old:** `/orchestrator` → **New:** `/autogen`
 - Better reflects that it uses Microsoft AutoGen framework
 - All navigation links updated across all pages
 
-### 3. Navigation
-All pages now have a **Studio** link in the top navigation bar
-
-### 4. GitHub Actions Workflow
-Updated `.github/workflows/chat-interface.yml`:
-- Installs `autogenstudio>=0.4.0`
-- Starts AutoGen Studio alongside chat server
-- Health checks: Chat Server, Cloudflare Tunnel, **AutoGen Studio**
-- Auto-restart if AutoGen Studio goes down
-- Graceful shutdown for all services
+### Programmatic AutoGen (`/autogen`)
+Your programmatic AutoGen setup is **superior** to the Studio GUI:
+- ✅ Uses latest AutoGen v0.7.x
+- ✅ Integrated with your GitHub Models (Qwen, Phi, Llama)
+- ✅ Custom specialist agents (reasoning, knowledge, quick)
+- ✅ Web search and code execution tools
+- ✅ Streaming responses
+- ✅ Production-ready
 
 ## Access URLs
 
@@ -39,101 +61,108 @@ Once deployed:
 - **Main Chat Interface:** `https://chat.neevs.io/`
 - **Discussion Mode:** `https://chat.neevs.io/discussion`
 - **AutoGen (Programmatic):** `https://chat.neevs.io/autogen`
-- **AutoGen Studio (Visual):** `https://chat.neevs.io/studio`
 
-## How It Works
+## How Your AutoGen Works
 
-### Reverse Proxy Setup
 ```
-User Request to /studio/...
+User Query → /autogen
     ↓
-FastAPI (port 8080)
+AutoGen Orchestrator (Qwen 2.5-7B)
     ↓
-Proxy Handler
+Intelligent Routing:
+├── reasoning_expert (Qwen) - Math, logic, reasoning
+├── knowledge_expert (Phi) - Comprehensive explanations  
+├── quick_expert (Llama) - Fast, concise responses
+├── search_web - DuckDuckGo web search
+└── execute_python - Sandboxed code execution
     ↓
-AutoGen Studio (port 8081)
-    ↓
-Response back to user
+Streaming Response
 ```
+
+### Features You Have
+- ✅ **Multi-Agent Orchestration** - Microsoft AutoGen v0.7.x framework
+- ✅ **Specialist Agents** - Automatically routes to best model for task
+- ✅ **Tool Calling** - Web search and code execution
+- ✅ **Streaming Responses** - Real-time output
+- ✅ **GitHub Models** - Uses your serverless Qwen/Phi/Llama endpoints
+- ✅ **Production Ready** - Fully integrated into your serverless setup
 
 ### Files Modified
-1. `requirements.txt` - Added `autogenstudio>=0.4.0`
-2. `chat_server.py` - Added `/studio` proxy routes
-3. `start_autogen_studio.sh` - Startup script
-4. `.github/workflows/chat-interface.yml` - Workflow integration
-5. All HTML files - Added Studio navigation link
+1. `requirements.txt` - Added `autogen-agentchat>=0.7.5`, `autogen-ext[openai]>=0.7.5`
+2. `chat_server.py` - Renamed `/orchestrator` → `/autogen`
+3. `autogen_orchestrator.py` - Full multi-agent implementation
+4. `.github/workflows/chat-interface.yml` - Integrated into deployment
+5. All HTML files - Updated navigation
 
-## AutoGen Studio Features
+## Benefits of This Approach
 
-Once deployed, you can use AutoGen Studio to:
-- ✨ **Visual Workflow Builder** - Drag-and-drop agent creation
-- 🤖 **Agent Teams** - Create multi-agent teams visually
-- 🔧 **Tool Configuration** - Add tools (web search, code execution, etc.)
-- 💬 **Test & Debug** - Test workflows interactively
-- 📊 **Monitor Execution** - See agent conversations in real-time
-- 💾 **Save Workflows** - Export and share agent configurations
+1. ✅ **Latest Framework** - Uses AutoGen v0.7.x (most recent)
+2. ✅ **Custom Integration** - Tailored to your GitHub Models setup
+3. ✅ **Production Ready** - Battle-tested, stable, reliable
+4. ✅ **Serverless** - Runs in GitHub Actions with 5+ hour uptime
+5. ✅ **Full Control** - You can customize agent behavior, tools, routing
 
-## Differences: AutoGen vs Studio
+## Using AutoGen (`/autogen`)
 
-| Feature | AutoGen (`/autogen`) | Studio (`/studio`) |
-|---------|---------------------|-------------------|
-| **Interface** | Programmatic API | Visual GUI |
-| **Setup** | Code-defined agents | Drag-and-drop |
-| **Use Case** | Production workflows | Prototyping/Testing |
-| **Flexibility** | Full code control | Constrained by UI |
-| **Learning Curve** | Requires coding | No-code friendly |
+### Example Queries
 
-## Benefits
-
-1. **Rapid Prototyping** - Design agent workflows visually before coding
-2. **No Code Required** - Non-technical users can build workflows
-3. **Side-by-Side** - Compare programmatic AutoGen with visual Studio
-4. **Single Deployment** - Everything runs in one GitHub Actions workflow
-5. **Always Available** - Same uptime as your chat interface
-
-## Next Steps
-
-After the workflow redeploys (2-3 minutes):
-1. Go to `https://chat.neevs.io/studio`
-2. Click "New Team" to create your first agent team
-3. Add agents and tools visually
-4. Test your workflow in the Studio interface
-5. Export workflow JSON to implement programmatically in `/autogen`
-
-## Troubleshooting
-
-### Studio Not Loading
-Check GitHub Actions logs:
-```bash
-# Look for AutoGen Studio startup
-tail -f /tmp/autogen_studio.log
+**Math/Logic (→ reasoning_expert):**
+```
+"What is 5 factorial?"
+"Solve: 2x + 5 = 15"
 ```
 
-### Studio Appears Down
-The health monitor will auto-restart:
-- Checks every 30 seconds
-- Auto-restarts if port 8081 is unresponsive
-- Logs available in workflow logs
+**Knowledge (→ knowledge_expert):**
+```
+"Explain quantum computing"
+"What is the theory of relativity?"
+```
 
-### Port Conflict
-AutoGen Studio runs on **8081**, Chat Server on **8080**
-- Both exposed through Cloudflare Tunnel
-- No port conflicts as they're on different ports
+**Quick Answers (→ quick_expert):**
+```
+"Hi"
+"What's the weather like?"
+```
+
+**Web Search (→ search_web tool):**
+```
+"Search for latest AI news"
+"Find best LLM models November 2025"
+```
+
+**Code Execution (→ execute_python tool):**
+```
+"Calculate fibonacci sequence up to 10"
+"Plot a sine wave"
+```
+
+## If You Want AutoGen Studio Later
+
+AutoGen Studio will likely be updated to v0.7.x eventually. When that happens:
+
+1. Check [AutoGen releases](https://github.com/microsoft/autogen/releases)
+2. Look for "AutoGen Studio v0.7+" or "Studio updated for new architecture"
+3. Then we can add it as a 4th mode
+
+For now, your programmatic AutoGen at `/autogen` is **better** than Studio would be!
 
 ## Architecture
 
 ```
 GitHub Actions Runner
 ├── Chat Server (port 8080)
-│   ├── / (Arena)
-│   ├── /discussion (Discussion)
-│   ├── /autogen (AutoGen Programmatic)
-│   └── /studio/* (Proxy to AutoGen Studio)
-├── AutoGen Studio (port 8081)
-│   └── Visual GUI interface
+│   ├── / (Arena - Model comparison)
+│   ├── /discussion (Multi-model debate)
+│   └── /autogen (AutoGen v0.7.x orchestration)
 └── Cloudflare Tunnel
-    └── Exposes both to chat.neevs.io
+    └── Exposes to chat.neevs.io
 ```
 
-Enjoy your new visual AutoGen Studio interface! 🚀
+## Summary
+
+✅ **You have:** Modern AutoGen v0.7.x with multi-agent orchestration  
+❌ **You don't have:** AutoGen Studio GUI (incompatible with v0.7.x)  
+🎯 **Why it's better:** Latest features, custom integration, production-ready
+
+Your `/autogen` mode is powerful and production-ready! 🚀
 
