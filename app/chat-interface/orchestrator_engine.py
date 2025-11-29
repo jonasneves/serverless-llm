@@ -78,9 +78,15 @@ class OrchestratorEngine:
             if round_num == 0:
                 # First round - analyze what we need
                 if any(word in query.lower() for word in ["search", "online", "current", "latest", "recent", "find information"]):
-                    # Web search needed
+                    # Web search needed - clean up the query
+                    search_query = query.lower()
+                    # Remove common instruction phrases
+                    for phrase in ["search web for", "search for", "find information about", "look up", "search online for", "find online"]:
+                        search_query = search_query.replace(phrase, "")
+                    search_query = search_query.strip()
+
                     tool_name = "search"
-                    tool_args = {"query": query, "num_results": 3}
+                    tool_args = {"query": search_query, "num_results": 3}
                 elif any(word in query.lower() for word in ["code", "python", "calculate", "compute", "program"]):
                     # Might need code execution or reasoning
                     tool_name = "enhance_reasoning"
