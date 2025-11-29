@@ -23,7 +23,7 @@ from discussion_engine import DiscussionEngine
 from model_profiles import MODEL_PROFILES
 
 # Orchestrator mode imports
-from orchestrator_engine import OrchestratorEngine
+from autogen_orchestrator import AutoGenOrchestrator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1244,7 +1244,7 @@ CHAT_HTML = """
       <div class="modes">
         <a href="/" class="mode-link active">Arena</a>
         <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/orchestrator" class="mode-link">Orchestrator</a>
+        <a href="/orchestrator" class="mode-link">AutoGen</a>
       </div>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2207,17 +2207,16 @@ async def stream_orchestrator_events(
     max_rounds: int
 ) -> AsyncGenerator[str, None]:
     """
-    Stream ToolOrchestra-style multi-turn orchestration events
+    Stream AutoGen multi-agent orchestration events
 
-    The orchestrator (Qwen) decides which tools/models to call across multiple rounds
+    Uses Microsoft AutoGen framework with specialist agents
     """
     try:
-        engine = OrchestratorEngine(max_rounds=max_rounds)
+        engine = AutoGenOrchestrator()
 
         async for event in engine.run_orchestration(
             query=query,
-            max_tokens=max_tokens,
-            temperature=temperature
+            max_turns=max_rounds
         ):
             # Ensure proper JSON encoding with explicit settings
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"

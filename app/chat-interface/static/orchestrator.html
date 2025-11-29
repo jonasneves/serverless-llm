@@ -427,15 +427,15 @@
         </svg>
       </div>
       <div class="logo-text">
-        <span class="logo-title">ToolOrchestra</span>
-        <span class="logo-subtitle">Intelligent Orchestration</span>
+        <span class="logo-title">AutoGen</span>
+        <span class="logo-subtitle">Multi-Agent Orchestration</span>
       </div>
     </div>
     <div class="header-actions">
       <div class="modes">
         <a href="/" class="mode-link">Arena</a>
         <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/orchestrator" class="mode-link active">Orchestrator</a>
+        <a href="/orchestrator" class="mode-link active">AutoGen</a>
       </div>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -483,10 +483,10 @@
             <line x1="4" y1="4" x2="9" y2="9"></line>
           </svg>
         </div>
-        <div class="empty-state-text">ToolOrchestra-Style Orchestration</div>
+        <div class="empty-state-text">Microsoft AutoGen Multi-Agent System</div>
         <div class="empty-state-subtext">
-          The orchestrator (Qwen 2.5-7B) will intelligently choose which tools and models to call<br>
-          across multiple rounds to efficiently answer your question.
+          AutoGen orchestrates specialist agents (Qwen, Phi, Llama) and tools (web search, code execution)<br>
+          to collaboratively solve complex tasks using industry-standard multi-agent patterns.
         </div>
       </div>
     </div>
@@ -569,6 +569,38 @@
 
               if (event.event === 'start') {
                 // Just started
+              } else if (event.event === 'agents_ready') {
+                // Agents initialized
+                const agentsDiv = document.createElement('div');
+                agentsDiv.className = 'round';
+                agentsDiv.innerHTML = `
+                  <div class="round-header">AutoGen Agents Ready</div>
+                  <div class="tool-result-content">
+                    <strong>Agents:</strong> ${event.agents.join(', ')}<br>
+                    <strong>Tools:</strong> ${event.tools.join(', ')}
+                  </div>
+                `;
+                orchestrationSection.appendChild(agentsDiv);
+                currentRound = agentsDiv;
+              } else if (event.event === 'agent_message') {
+                // Agent sent a message
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'tool-call';
+                messageDiv.innerHTML = `
+                  <div class="tool-call-header">
+                    <span class="tool-badge tool-${event.agent}">${event.agent}</span>
+                  </div>
+                  <div class="tool-result-content markdown-content"></div>
+                `;
+                messageDiv.querySelector('.tool-result-content').innerHTML = marked.parse(event.content);
+                orchestrationSection.appendChild(messageDiv);
+              } else if (event.event === 'message') {
+                // Generic message
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'tool-result';
+                msgDiv.innerHTML = `<div class="tool-result-content markdown-content"></div>`;
+                msgDiv.querySelector('.tool-result-content').innerHTML = marked.parse(event.content);
+                orchestrationSection.appendChild(msgDiv);
               } else if (event.event === 'round_start') {
                 // New round
                 currentRound = document.createElement('div');
@@ -634,9 +666,11 @@
                 const summaryDiv = document.createElement('div');
                 summaryDiv.className = 'summary';
                 summaryDiv.innerHTML = `
-                  <strong>Orchestration Summary</strong>
-                  <div class="summary-item"><span>Total Rounds:</span><span>${event.summary.total_rounds}</span></div>
-                  <div class="summary-item"><span>Tools Used:</span><span>${event.summary.tools_used.join(', ')}</span></div>
+                  <strong>AutoGen Orchestration Complete</strong>
+                  <div class="summary-item"><span>Framework:</span><span>${event.summary.framework}</span></div>
+                  <div class="summary-item"><span>Status:</span><span>${event.summary.status}</span></div>
+                  ${event.summary.total_rounds ? `<div class="summary-item"><span>Rounds:</span><span>${event.summary.total_rounds}</span></div>` : ''}
+                  ${event.summary.agents_used ? `<div class="summary-item"><span>Agents:</span><span>${event.summary.agents_used.join(', ')}</span></div>` : ''}
                 `;
                 orchestrationSection.appendChild(summaryDiv);
               } else if (event.event === 'error') {
