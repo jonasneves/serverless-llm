@@ -126,23 +126,6 @@ jobs:
           # Verify health
           curl -s http://localhost:8080/health || { echo "Server failed to start"; cat /tmp/chat_server.log; exit 1; }
 
-      - name: Start AutoGen Studio
-        run: |
-          cd app/chat-interface
-          chmod +x start_autogen_studio.sh
-          ./start_autogen_studio.sh
-          
-          # Wait for AutoGen Studio to start
-          sleep 10
-          
-          # Check if AutoGen Studio is running
-          if curl -s http://localhost:8081/ > /dev/null; then
-            echo "AutoGen Studio is running on port 8081"
-          else
-            echo "Warning: AutoGen Studio may not be fully started yet"
-            cat /tmp/autogen_studio.log || true
-          fi
-
       - name: Start Cloudflare Tunnel
         env:
           CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
@@ -226,7 +209,6 @@ jobs:
             echo "=== Shutting down ==="
             pkill -f cloudflared || true
             pkill -f chat_server.py || true
-            pkill -f autogenstudio || true
             exit 0
           }
           trap cleanup SIGTERM SIGINT
