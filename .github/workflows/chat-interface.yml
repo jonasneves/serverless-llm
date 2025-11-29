@@ -247,10 +247,9 @@ jobs:
             # Health checks
             SERVER_OK=$(curl -sf http://localhost:8080/health > /dev/null 2>&1 && echo "OK" || echo "DOWN")
             TUNNEL_OK=$(pgrep -f cloudflared > /dev/null && echo "OK" || echo "DOWN")
-            STUDIO_OK=$(curl -sf http://localhost:8081/ > /dev/null 2>&1 && echo "OK" || echo "DOWN")
 
-            printf "[%s] Chat: %s | Tunnel: %s | Studio: %s | Elapsed: %dm | Remaining: %dm\n" \
-              "$(date '+%H:%M:%S')" "$SERVER_OK" "$TUNNEL_OK" "$STUDIO_OK" "$((ELAPSED/60))" "$((REMAINING/60))"
+            printf "[%s] Chat Server: %s | Tunnel: %s | Elapsed: %dm | Remaining: %dm\n" \
+              "$(date '+%H:%M:%S')" "$SERVER_OK" "$TUNNEL_OK" "$((ELAPSED/60))" "$((REMAINING/60))"
 
             # Show recent logs every 5 iterations
             if [ $((LOOP_COUNT % 5)) -eq 0 ]; then
@@ -258,8 +257,6 @@ jobs:
               tail -5 /tmp/tunnel.log 2>/dev/null || true
               echo "--- Recent server log ---"
               tail -5 /tmp/chat_server.log 2>/dev/null || true
-              echo "--- Recent studio log ---"
-              tail -5 /tmp/autogen_studio.log 2>/dev/null || true
               echo "-------------------------"
             fi
 
@@ -270,15 +267,6 @@ jobs:
               cd app/chat-interface
               python chat_server.py 2>&1 | tee -a /tmp/chat_server.log &
               sleep 10
-            fi
-
-            # Restart AutoGen Studio if down
-            if [ "$STUDIO_OK" = "DOWN" ]; then
-              echo "Restarting AutoGen Studio..."
-              pkill -f autogenstudio || true
-              cd app/chat-interface
-              ./start_autogen_studio.sh
-              sleep 5
             fi
 
             # Restart tunnel if down
