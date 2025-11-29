@@ -29,7 +29,7 @@ class OrchestratorEngine:
         self.code_executor = CodeExecutorTool()
 
         # Orchestrator model endpoint (use Qwen)
-        self.orchestrator_url = os.getenv("QWEN_API_URL", "http://localhost:8001")
+        self.orchestrator_url = os.getenv("QWEN_API_URL", "https://qwen.neevs.io")
 
         # Load tools configuration
         tools_config_path = os.path.join(os.path.dirname(__file__), "tools_config.json")

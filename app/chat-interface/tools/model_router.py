@@ -52,9 +52,15 @@ class ModelRouter:
 
     def __init__(self):
         self.model_urls = {}
-        # Load API URLs from environment
+        # Default URLs for GitHub workflow deployments
+        default_urls = {
+            "QWEN_API_URL": "https://qwen.neevs.io",
+            "PHI_API_URL": "https://phi.neevs.io",
+            "LLAMA_API_URL": "https://llama.neevs.io"
+        }
+        # Load API URLs from environment (with defaults)
         for model_id, config in self.MODEL_MAPPING.items():
-            url = os.getenv(config["url_env"])
+            url = os.getenv(config["url_env"], default_urls.get(config["url_env"]))
             if url:
                 self.model_urls[model_id] = url
             else:
