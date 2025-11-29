@@ -193,11 +193,19 @@ Choose the most appropriate specialist or tool for each task. You can use multip
 
                     if agent_name == "orchestrator":
                         last_orchestrator_message = content
-                elif hasattr(message, 'content'):
-                    # Handle other message types
+                else:
+                    # Surface non-text messages so we can inspect tool call metadata in the UI/logs
+                    details = {
+                        "type": type(message).__name__,
+                    }
+                    # Try to capture useful attributes for debugging/tool handling
+                    for attr in ["content", "tool_name", "name", "arguments", "kwargs", "data"]:
+                        if hasattr(message, attr):
+                            details[attr] = getattr(message, attr)
+
                     yield {
                         "event": "message",
-                        "content": str(message.content)
+                        "content": str(details)
                     }
 
             if last_orchestrator_message:
