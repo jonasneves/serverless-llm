@@ -50,7 +50,10 @@ class WebSearchTool:
                     if not response.ok:
                         raise Exception(f"Search API error: {response.status}")
 
-                    data = await response.json()
+                    # DuckDuckGo returns application/x-javascript, so read as text first
+                    text = await response.text()
+                    import json
+                    data = json.loads(text)
 
                     # Extract results
                     results = []
