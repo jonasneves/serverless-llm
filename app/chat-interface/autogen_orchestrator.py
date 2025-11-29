@@ -7,9 +7,10 @@ import os
 import logging
 from typing import AsyncGenerator, Dict, Any, List
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.tools import AgentTool, FunctionTool
+from autogen_agentchat.tools import AgentTool
 from autogen_agentchat.messages import ChatMessage, TextMessage
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from typing import Annotated
 
 from tools.web_search import WebSearchTool
 from tools.code_executor import CodeExecutorTool
@@ -41,49 +42,41 @@ class AutoGenOrchestrator:
             base_url=f"{base_url}/v1",
         )
 
-    async def _create_web_search_tool(self) -> FunctionTool:
-        """Create web search tool for AutoGen"""
-        async def search_web(query: str) -> str:
-            """Search the web for information using DuckDuckGo"""
-            result = await self.web_search.search(query, num_results=3)
-            if "error" in result:
-                return f"Search failed: {result['error']}"
+    async def search_web(self, query: Annotated[str, "The search query"]) -> str:
+        """Search the web for information using DuckDuckGo"""
+        result = await self.web_search.search(query, num_results=3)
+        if "error" in result:
+            return f"Search failed: {result['error']}"
 
-            # Format results as text
-            formatted = f"Search results for '{query}':\n\n"
-            for i, res in enumerate(result["results"], 1):
-                formatted += f"{i}. {res['title']}\n"
-                formatted += f"   {res['snippet']}\n"
-                if res.get('url'):
-                    formatted += f"   URL: {res['url']}\n"
-                formatted += "\n"
-            return formatted
+        # Format results as text
+        formatted = f"Search results for '{query}':\n\n"
+        for i, res in enumerate(result["results"], 1):
+            formatted += f"{i}. {res['title']}\n"
+            formatted += f"   {res['snippet']}\n"
+            if res.get('url'):
+                formatted += f"   URL: {res['url']}\n"
+            formatted += "\n"
+        return formatted
 
-        return FunctionTool(search_web, description="Search the web for current information")
+    async def execute_python(self, code: Annotated[str, "Python code to execute"]) -> str:
+        """Execute Python code and return the output"""
+        result = await self.code_executor.execute(code, timeout=10)
+        if "error" in result:
+            return f"Execution failed: {result['error']}"
 
-    async def _create_code_executor_tool(self) -> FunctionTool:
-        """Create code execution tool for AutoGen"""
-        async def execute_python(code: str) -> str:
-            """Execute Python code and return the output"""
-            result = await self.code_executor.execute(code, timeout=10)
-            if "error" in result:
-                return f"Execution failed: {result['error']}"
+        output = result.get("stdout", "")
+        stderr = result.get("stderr", "")
+        return_code = result.get("return_code", 0)
 
-            output = result.get("stdout", "")
-            stderr = result.get("stderr", "")
-            return_code = result.get("return_code", 0)
+        response = ""
+        if output:
+            response += f"Output:\n{output}\n"
+        if stderr:
+            response += f"Errors:\n{stderr}\n"
+        if return_code != 0:
+            response += f"Exit code: {return_code}"
 
-            response = ""
-            if output:
-                response += f"Output:\n{output}\n"
-            if stderr:
-                response += f"Errors:\n{stderr}\n"
-            if return_code != 0:
-                response += f"Exit code: {return_code}"
-
-            return response or "Code executed successfully with no output"
-
-        return FunctionTool(execute_python, description="Execute Python code to solve problems")
+        return response or "Code executed successfully with no output"
 
     async def run_orchestration(
         self,
@@ -138,10 +131,6 @@ class AutoGenOrchestrator:
                 description="Expert for quick, concise responses",
             )
 
-            # Create tools
-            web_search_tool = await self._create_web_search_tool()
-            code_tool = await self._create_code_executor_tool()
-
             # Wrap specialist agents as tools for the orchestrator
             reasoning_tool = AgentTool(reasoning_agent, return_value_as_last_message=True)
             knowledge_tool = AgentTool(knowledge_agent, return_value_as_last_message=True)
@@ -164,7 +153,7 @@ Available tools:
 - execute_python: Run Python code for calculations or data processing
 
 Choose the most appropriate specialist or tool for each task. You can use multiple agents/tools if needed.""",
-                tools=[reasoning_tool, knowledge_tool, quick_tool, web_search_tool, code_tool],
+                tools=[reasoning_tool, knowledge_tool, quick_tool, self.search_web, self.execute_python],
                 max_tool_iterations=max_turns,
             )
 
