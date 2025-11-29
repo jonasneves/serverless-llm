@@ -13,9 +13,11 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional, AsyncGenerator
 import uvicorn
+import pathlib
 
 # Discussion mode imports
 from orchestrator import GitHubModelsOrchestrator
@@ -82,6 +84,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files directory
+static_dir = pathlib.Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Model endpoints configuration
 MODEL_ENDPOINTS = {
