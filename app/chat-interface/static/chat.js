@@ -277,7 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const modelData = {};
 
       if (models.length === 1) {
-        const modelName = MODELS[models[0]]?.name || models[0];
+        const modelId = models[0];
+        const modelName = MODELS[modelId]?.name || modelId;
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
         messageDiv.innerHTML = `
@@ -285,20 +286,20 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="model-name">${modelName}</span>
             <span class="model-badge streaming-badge">Streaming...</span>
           </div>
-          <div class="message-content" data-model="${modelName}"><span class="cursor">▋</span></div>
-          <div class="message-footer" style="display: none;" data-footer="${modelName}">
+          <div class="message-content" data-model="${modelId}"><span class="cursor">▋</span></div>
+          <div class="message-footer" style="display: none;" data-footer="${modelId}">
             <div class="stat-item">
               <span class="stat-label">Tokens</span>
-              <span class="stat-value" data-tokens="${modelName}">-</span>
+              <span class="stat-value" data-tokens="${modelId}">-</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">Time</span>
-              <span class="stat-value" data-time="${modelName}">-</span>
+              <span class="stat-value" data-time="${modelId}">-</span>
             </div>
           </div>
         `;
         chatHistory.appendChild(messageDiv);
-        modelData[modelName] = { content: '', element: messageDiv };
+        modelData[modelId] = { content: '', element: messageDiv, name: modelName };
       } else {
         const container = document.createElement('div');
         container.className = 'model-responses';
@@ -312,20 +313,20 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="model-name">${modelName}</span>
               <span class="model-badge streaming-badge">Waiting...</span>
             </div>
-            <div class="message-content" data-model="${modelName}"><span class="cursor">▋</span></div>
-            <div class="message-footer" style="display: none;" data-footer="${modelName}">
+            <div class="message-content" data-model="${modelId}"><span class="cursor">▋</span></div>
+            <div class="message-footer" style="display: none;" data-footer="${modelId}">
               <div class="stat-item">
                 <span class="stat-label">Tokens</span>
-                <span class="stat-value" data-tokens="${modelName}">-</span>
+                <span class="stat-value" data-tokens="${modelId}">-</span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">Time</span>
-                <span class="stat-value" data-time="${modelName}">-</span>
+                <span class="stat-value" data-time="${modelId}">-</span>
               </div>
             </div>
           `;
           container.appendChild(responseDiv);
-          modelData[modelName] = { content: '', element: responseDiv };
+          modelData[modelId] = { content: '', element: responseDiv, name: modelName };
         }
         chatHistory.appendChild(container);
       }
@@ -335,25 +336,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Update streaming content for a model
-    function updateStreamingContent(modelData, modelName, content, isToken = true) {
-      if (!modelData[modelName]) return;
+    function updateStreamingContent(modelData, modelId, content, isToken = true) {
+      if (!modelData[modelId]) return;
 
       if (isToken) {
-        modelData[modelName].content += content;
+        modelData[modelId].content += content;
       }
 
-      const contentEl = modelData[modelName].element.querySelector(`[data-model="${modelName}"]`);
+      const contentEl = modelData[modelId].element.querySelector(`[data-model="${modelId}"]`);
       if (contentEl) {
-        contentEl.innerHTML = formatContent(modelData[modelName].content) + '<span class="cursor">▋</span>';
+        contentEl.innerHTML = formatContent(modelData[modelId].content) + '<span class="cursor">▋</span>';
         chatHistory.scrollTop = chatHistory.scrollHeight;
       }
     }
 
     // Finalize streaming for a model
-    function finalizeStreaming(modelData, modelName, time, tokenEstimate, error = false) {
-      if (!modelData[modelName]) return;
+    function finalizeStreaming(modelData, modelId, time, tokenEstimate, error = false) {
+      if (!modelData[modelId]) return;
 
-      const el = modelData[modelName].element;
+      const el = modelData[modelId].element;
 
       // Remove streaming badge
       const badge = el.querySelector('.streaming-badge');
@@ -368,18 +369,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Remove cursor
-      const contentEl = el.querySelector(`[data-model="${modelName}"]`);
+      const contentEl = el.querySelector(`[data-model="${modelId}"]`);
       if (contentEl) {
-        contentEl.innerHTML = formatContent(modelData[modelName].content);
+        contentEl.innerHTML = formatContent(modelData[modelId].content);
       }
 
       // Show footer with stats
       if (!error && time) {
-        const footer = el.querySelector(`[data-footer="${modelName}"]`);
+        const footer = el.querySelector(`[data-footer="${modelId}"]`);
         if (footer) {
           footer.style.display = 'flex';
-          const timeEl = el.querySelector(`[data-time="${modelName}"]`);
-          const tokensEl = el.querySelector(`[data-tokens="${modelName}"]`);
+          const timeEl = el.querySelector(`[data-time="${modelId}"]`);
+          const tokensEl = el.querySelector(`[data-tokens="${modelId}"]`);
           if (timeEl) timeEl.textContent = time.toFixed(2) + 's';
           if (tokensEl) tokensEl.textContent = tokenEstimate || '-';
         }
@@ -431,27 +432,34 @@ document.addEventListener('DOMContentLoaded', () => {
               try {
                 const data = JSON.parse(line.slice(6));
 
+                if (data.event === 'all_done') {
+                  typingIndicator.classList.remove('active');
+                  continue;
+                }
+
+                const modelId = data.model_id || data.model;
+                if (!modelId || !modelData[modelId]) {
+                  continue;
+                }
+
                 if (data.event === 'start') {
                   // Model started streaming
-                  const badge = modelData[data.model]?.element.querySelector('.streaming-badge');
+                  const badge = modelData[modelId]?.element.querySelector('.streaming-badge');
                   if (badge) badge.textContent = 'Streaming...';
                 } else if (data.event === 'token' && data.content) {
                   // Received a token
-                  updateStreamingContent(modelData, data.model, data.content);
+                  updateStreamingContent(modelData, modelId, data.content);
                 } else if (data.event === 'done') {
                   // Model finished
                   if (!firstContent && data.total_content) {
                     firstContent = data.total_content;
                   }
-                  finalizeStreaming(modelData, data.model, data.time, data.token_estimate);
+                  finalizeStreaming(modelData, modelId, data.time, data.token_estimate);
                 } else if (data.error) {
                   // Error occurred
-                  modelData[data.model].content = data.content || 'Error occurred';
-                  updateStreamingContent(modelData, data.model, '', false);
-                  finalizeStreaming(modelData, data.model, null, null, true);
-                } else if (data.event === 'all_done') {
-                  // All models finished
-                  typingIndicator.classList.remove('active');
+                  modelData[modelId].content = data.content || 'Error occurred';
+                  updateStreamingContent(modelData, modelId, '', false);
+                  finalizeStreaming(modelData, modelId, null, null, true);
                 }
               } catch (e) {
                 console.error('Parse error:', e);

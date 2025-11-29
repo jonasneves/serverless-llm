@@ -407,11 +407,11 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                 if response.status_code != 200:
                     error_text = await response.aread()
                     error_msg = sanitize_error_message(error_text.decode(), endpoint)
-                    yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': error_msg})}\n\n"
+                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
                     return
 
                 # Send initial event
-                yield f"data: {json.dumps({'model': display_name, 'event': 'start'})}\n\n"
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
 
                 async for line in response.aiter_lines():
                     if line.startswith("data: "):
@@ -425,24 +425,24 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                                 content = delta.get("content", "")
                                 if content:
                                     total_content += content
-                                    yield f"data: {json.dumps({'model': display_name, 'content': content, 'event': 'token'})}\n\n"
+                                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
                         except json.JSONDecodeError:
                             pass
 
                 # Send completion event with stats
                 elapsed = time.time() - start_time
                 token_count = len(total_content.split())  # Rough estimate
-                yield f"data: {json.dumps({'model': display_name, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
 
     except httpx.TimeoutException:
         logger.error(f"Timeout connecting to {endpoint}")
-        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'Request timed out. Please try again.'})}\n\n"
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Request timed out. Please try again.'})}\n\n"
     except httpx.ConnectError as e:
         logger.error(f"Connection error to {endpoint}: {e}")
-        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'Cannot connect to model server. Please try again later.'})}\n\n"
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Cannot connect to model server. Please try again later.'})}\n\n"
     except Exception as e:
         logger.exception(f"Unexpected error streaming from {endpoint}")
-        yield f"data: {json.dumps({'model': display_name, 'error': True, 'content': 'An unexpected error occurred. Please try again.'})}\n\n"
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'An unexpected error occurred. Please try again.'})}\n\n"
 
 
 async def stream_multiple_models(models: list, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
