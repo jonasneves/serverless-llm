@@ -245,4 +245,16 @@ document.addEventListener('DOMContentLoaded', () => {
       html.setAttribute('data-theme', newTheme);
       localStorage.setItem('theme', newTheme);
     });
+
+    // Handle example prompt clicks
+    document.querySelectorAll('.example-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        const prompt = chip.getAttribute('data-prompt');
+        if (prompt) {
+          queryInput.value = prompt;
+          queryInput.focus();
+        }
+      });
+    });
 });

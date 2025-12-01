@@ -167,4 +167,16 @@ document.addEventListener('DOMContentLoaded', () => {
         verbalizedResponsesContainer.innerHTML = `<div class="empty-state"><p style="color: var(--direct-color);">Error: ${error.message}</p></div>`;
       }
     }
+
+    // Handle example prompt clicks
+    document.querySelectorAll('.example-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        const prompt = chip.getAttribute('data-prompt');
+        if (prompt) {
+          queryInput.value = prompt;
+          queryInput.focus();
+        }
+      });
+    });
 });

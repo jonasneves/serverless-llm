@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#1e3a5f">
   <title>LLM Arena</title>
   <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=1">
+  <link rel="stylesheet" href="/static/common.css?v=2">
   <link rel="stylesheet" href="/static/chat.css?v=1">
   <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script defer src="/static/chat.js?v=1"></script>
+  <script defer src="/static/chat.js?v=2"></script>
 </head>
 <body>
   <header>
@@ -80,6 +80,16 @@
             <input type="number" id="maxTokens" value="512" min="1" max="4096" style="width: 70px;">
           </div>
           <button id="clearBtn" class="clear-btn" type="button">Clear</button>
+        </div>
+      </div>
+
+      <div class="example-prompts">
+        <div class="example-prompts-label">Try an example:</div>
+        <div class="example-chips">
+          <button class="example-chip" data-prompt="Explain quantum entanglement in simple terms">Quantum physics</button>
+          <button class="example-chip" data-prompt="Write a haiku about programming">Programming haiku</button>
+          <button class="example-chip" data-prompt="What are the pros and cons of remote work?">Remote work debate</button>
+          <button class="example-chip" data-prompt="Explain the difference between machine learning and deep learning">ML vs DL</button>
         </div>
       </div>
 

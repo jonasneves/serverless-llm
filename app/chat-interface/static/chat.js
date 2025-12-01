@@ -536,4 +536,16 @@ document.addEventListener('DOMContentLoaded', () => {
         userInput.focus();
       }
     });
+
+    // Handle example prompt clicks
+    document.querySelectorAll('.example-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        const prompt = chip.getAttribute('data-prompt');
+        if (prompt) {
+          userInput.value = prompt;
+          userInput.focus();
+        }
+      });
+    });
 });

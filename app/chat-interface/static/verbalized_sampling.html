@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>Verbalized Sampling - Unlock LLM Diversity</title>
   <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=2">
+  <link rel="stylesheet" href="/static/common.css?v=3">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     /* Page-specific styles for Diversity mode */
@@ -344,10 +344,20 @@
     <div class="input-section">
       <div class="input-group">
         <label for="query">Your Query</label>
-        <textarea 
-          id="query" 
+        <textarea
+          id="query"
           placeholder="Example: Tell me a joke about coffee"
         ></textarea>
+      </div>
+
+      <div class="example-prompts">
+        <div class="example-prompts-label">Try an example:</div>
+        <div class="example-chips">
+          <button class="example-chip" data-prompt="Tell me a joke about programming">Programming joke</button>
+          <button class="example-chip" data-prompt="Write a creative opening line for a sci-fi novel">Sci-fi opening</button>
+          <button class="example-chip" data-prompt="Suggest unique pizza topping combinations">Creative pizza</button>
+          <button class="example-chip" data-prompt="Generate creative team names for a hackathon">Team names</button>
+        </div>
       </div>
 
       <div class="controls">
@@ -426,7 +436,7 @@
     </div>
   </main>
 
-  <script defer src="/static/verbalized_sampling.js"></script>
+  <script defer src="/static/verbalized_sampling.js?v=2"></script>
 
 </body>
 </html>

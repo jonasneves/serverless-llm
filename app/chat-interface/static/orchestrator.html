@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>AutoGen Mode - Multi-Agent Orchestration</title>
   <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=2">
+  <link rel="stylesheet" href="/static/common.css?v=3">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     /* Page-specific styles for AutoGen mode */
@@ -330,6 +330,16 @@
         <textarea id="query" placeholder="Enter your question... The orchestrator will intelligently route to the best tools and models."></textarea>
       </div>
 
+      <div class="example-prompts">
+        <div class="example-prompts-label">Try an example:</div>
+        <div class="example-chips">
+          <button class="example-chip" data-prompt="Search for the latest AI breakthroughs and summarize them">Latest AI news</button>
+          <button class="example-chip" data-prompt="Write Python code to calculate Fibonacci sequence recursively">Fibonacci code</button>
+          <button class="example-chip" data-prompt="Explain how transformers work, then write sample code">Transformers explained</button>
+          <button class="example-chip" data-prompt="Research quantum computing applications and create a summary">Quantum research</button>
+        </div>
+      </div>
+
       <div class="controls">
         <div class="control-group">
           <label>Max Rounds</label>
@@ -369,7 +379,7 @@
     </div>
   </main>
 
-  <script defer src="/static/orchestrator.js"></script>
+  <script defer src="/static/orchestrator.js?v=2"></script>
 
 </body>
 </html>
