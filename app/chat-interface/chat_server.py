@@ -240,9 +240,185 @@ async def diversity_interface():
     else:
         raise HTTPException(status_code=404, detail="Verbalized Sampling interface not found")
 
+@app.get("/status", response_class=HTMLResponse)
+async def status_page():
+    """Serve health status dashboard"""
+    import pathlib
+    status_html_path = pathlib.Path(__file__).parent / "static" / "status.html"
+    if status_html_path.exists():
+        return status_html_path.read_text()
+    else:
+        raise HTTPException(status_code=404, detail="Status page not found")
+
 @app.get("/health")
 async def health():
+    """Basic health check for the chat interface"""
     return {"status": "healthy", "service": "chat-interface"}
+
+@app.get("/api/health/detailed")
+async def detailed_health():
+    """
+    Comprehensive health check for all services
+    Tests actual endpoints to verify they're working
+    """
+    results = {
+        "chat_interface": {
+            "status": "healthy",
+            "timestamp": time.time()
+        },
+        "models": {}
+    }
+
+    # Check each model endpoint
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for model_id, endpoint in MODEL_ENDPOINTS.items():
+            try:
+                # Test health endpoint
+                health_response = await client.get(f"{endpoint}/health")
+
+                if health_response.status_code == 200:
+                    health_data = health_response.json()
+
+                    # Additionally test a simple completion to verify model works
+                    try:
+                        test_response = await client.post(
+                            f"{endpoint}/v1/chat/completions",
+                            json={
+                                "messages": [{"role": "user", "content": "Hi"}],
+                                "max_tokens": 5,
+                                "temperature": 0.1
+                            },
+                            timeout=30.0
+                        )
+
+                        results["models"][model_id] = {
+                            "status": "online",
+                            "endpoint": endpoint,
+                            "health": health_data,
+                            "inference_test": "passed" if test_response.status_code == 200 else "failed",
+                            "response_time_ms": int((time.time() - results["chat_interface"]["timestamp"]) * 1000)
+                        }
+                    except Exception as e:
+                        # Health passed but inference failed
+                        results["models"][model_id] = {
+                            "status": "degraded",
+                            "endpoint": endpoint,
+                            "health": health_data,
+                            "inference_test": "failed",
+                            "error": str(e)
+                        }
+                else:
+                    results["models"][model_id] = {
+                        "status": "unhealthy",
+                        "endpoint": endpoint,
+                        "error": f"Health check returned {health_response.status_code}"
+                    }
+
+            except httpx.TimeoutException:
+                results["models"][model_id] = {
+                    "status": "offline",
+                    "endpoint": endpoint,
+                    "error": "Connection timeout"
+                }
+            except Exception as e:
+                results["models"][model_id] = {
+                    "status": "offline",
+                    "endpoint": endpoint,
+                    "error": str(e)
+                }
+
+    # Calculate overall status
+    model_statuses = [m["status"] for m in results["models"].values()]
+    if all(s == "online" for s in model_statuses):
+        results["overall_status"] = "healthy"
+    elif any(s == "online" for s in model_statuses):
+        results["overall_status"] = "degraded"
+    else:
+        results["overall_status"] = "unhealthy"
+
+    return results
+
+@app.get("/api/badge/system")
+async def system_badge():
+    """
+    Shields.io-compatible badge endpoint for overall system health
+    Returns: https://img.shields.io/endpoint?url=<this-endpoint>
+    """
+    try:
+        health_data = await detailed_health()
+        overall = health_data["overall_status"]
+
+        # Count online models
+        online_count = sum(1 for m in health_data["models"].values() if m["status"] == "online")
+        total_count = len(health_data["models"])
+
+        if overall == "healthy":
+            color = "brightgreen"
+            message = f"{online_count}/{total_count} online"
+        elif overall == "degraded":
+            color = "yellow"
+            message = f"{online_count}/{total_count} online"
+        else:
+            color = "red"
+            message = "offline"
+
+        return {
+            "schemaVersion": 1,
+            "label": "API Status",
+            "message": message,
+            "color": color
+        }
+    except Exception as e:
+        return {
+            "schemaVersion": 1,
+            "label": "API Status",
+            "message": "error",
+            "color": "red"
+        }
+
+@app.get("/api/badge/model/{model_id}")
+async def model_badge(model_id: str):
+    """
+    Shields.io-compatible badge endpoint for individual model health
+    Usage: https://img.shields.io/endpoint?url=<this-endpoint>&label=Qwen
+    """
+    if model_id not in MODEL_ENDPOINTS:
+        return {
+            "schemaVersion": 1,
+            "label": model_id,
+            "message": "unknown",
+            "color": "lightgrey"
+        }
+
+    endpoint = MODEL_ENDPOINTS[model_id]
+    display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # Quick health check
+            response = await client.get(f"{endpoint}/health")
+
+            if response.status_code == 200:
+                return {
+                    "schemaVersion": 1,
+                    "label": display_name,
+                    "message": "online",
+                    "color": "brightgreen"
+                }
+            else:
+                return {
+                    "schemaVersion": 1,
+                    "label": display_name,
+                    "message": "unhealthy",
+                    "color": "orange"
+                }
+    except Exception:
+        return {
+            "schemaVersion": 1,
+            "label": display_name,
+            "message": "offline",
+            "color": "red"
+        }
 
 @app.get("/api/models")
 async def list_models():

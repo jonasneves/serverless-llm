@@ -1,10 +1,23 @@
 # Serverless LLM Arena
 
-<!-- Service Status Badges -->
+<!-- Live API Health Status -->
+[![API Status](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/system&style=for-the-badge)](https://YOUR_CHAT_DOMAIN/status)
+[![Qwen API](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/model/qwen2.5-7b&style=flat-square)](https://YOUR_QWEN_DOMAIN/health)
+[![Phi API](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/model/phi-3-mini&style=flat-square)](https://YOUR_PHI_DOMAIN/health)
+[![Llama API](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/model/llama-3.2-3b&style=flat-square)](https://YOUR_LLAMA_DOMAIN/health)
+
+**[📊 Live Status Dashboard](https://YOUR_CHAT_DOMAIN/status)** | **[💬 Chat Interface](https://YOUR_CHAT_DOMAIN)**
+
+<!-- GitHub Actions Workflow Status -->
+<details>
+<summary>Deployment Status (GitHub Actions)</summary>
+
 [![Chat Interface](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml)
 [![Qwen Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml)
 [![Phi Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml)
 [![Llama Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml)
+
+</details>
 
 **LLM inference servers on GitHub Actions free tier with public access via Cloudflare Tunnels.**
 
