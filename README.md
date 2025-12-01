@@ -1,12 +1,12 @@
 # Serverless LLM Arena
 
 <!-- Live API Health Status -->
-[![API Status](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/system&style=for-the-badge)](https://YOUR_CHAT_DOMAIN/status)
-[![Qwen API](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/model/qwen2.5-7b&style=flat-square)](https://YOUR_QWEN_DOMAIN/health)
-[![Phi API](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/model/phi-3-mini&style=flat-square)](https://YOUR_PHI_DOMAIN/health)
-[![Llama API](https://img.shields.io/endpoint?url=https://YOUR_CHAT_DOMAIN/api/badge/model/llama-3.2-3b&style=flat-square)](https://YOUR_LLAMA_DOMAIN/health)
+[![API Status](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/system&style=for-the-badge)](https://chat.neevs.io/status)
+[![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-7b&style=flat-square)](https://qwen.neevs.io/health)
+[![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini&style=flat-square)](https://phi.neevs.io/health)
+[![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b&style=flat-square)](https://llama.neevs.io/health)
 
-**[📊 Live Status Dashboard](https://YOUR_CHAT_DOMAIN/status)** | **[💬 Chat Interface](https://YOUR_CHAT_DOMAIN)**
+**[📊 Live Status Dashboard](https://chat.neevs.io/status)** | **[💬 Chat Interface](https://chat.neevs.io)**
 
 <!-- GitHub Actions Workflow Status -->
 <details>
