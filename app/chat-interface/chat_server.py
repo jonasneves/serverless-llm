@@ -128,11 +128,19 @@ DEFAULT_MODEL_ID = next(
     MODEL_CONFIG[0]["id"] if MODEL_CONFIG else None,
 )
 
+# Request queueing: limit concurrent requests per model to prevent overload
+# GitHub Actions runners have limited CPU (2 cores), so we limit to 1 concurrent request per model
+MODEL_SEMAPHORES = {
+    model_id: asyncio.Semaphore(1)
+    for model_id in MODEL_ENDPOINTS.keys()
+}
+
 # Log configured endpoints at startup
 logger.info("=" * 60)
 logger.info("MODEL ENDPOINTS CONFIGURED:")
 for model_id, endpoint in MODEL_ENDPOINTS.items():
     logger.info(f"  {model_id}: {endpoint}")
+logger.info("Request queueing enabled: 1 concurrent request per model")
 logger.info("=" * 60)
 
 class ChatMessage(BaseModel):
