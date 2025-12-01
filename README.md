@@ -73,7 +73,7 @@ Each model server exposes standard endpoints:
 | `/v1/chat/completions` | POST | Chat completion (streaming supported) |
 
 ```bash
-curl -X POST https://qwen.your.domain/v1/chat/completions \
+curl -X POST https://qwen.neevs.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [{"role": "user", "content": "Explain quantum computing"}],
@@ -96,7 +96,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | `CLOUDFLARE_TUNNEL_TOKEN_PHI` | Tunnel token for Phi server |
 | `CLOUDFLARE_TUNNEL_TOKEN_LLAMA` | Tunnel token for Llama server |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for chat interface |
-| `QWEN_API_URL` | Public URL (e.g., `https://qwen.domain`) |
+| `QWEN_API_URL` | Public URL (e.g., `https://qwen.neevs.io`) |
 | `PHI_API_URL` | Public URL for Phi |
 | `LLAMA_API_URL` | Public URL for Llama |
 | `GH_MODELS_TOKEN` | GitHub token for Discussion Mode (optional, [user_models:read](https://github.com/settings/personal-access-tokens/new)) |
