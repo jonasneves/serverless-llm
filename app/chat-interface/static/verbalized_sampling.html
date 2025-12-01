@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <title>Verbalized Sampling - Unlock LLM Diversity</title>
+  <title>Variations - Explore Diverse Outputs</title>
   <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=4">
+  <link rel="stylesheet" href="/static/common.css?v=5">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     /* Page-specific styles for Diversity mode */
@@ -292,16 +292,16 @@
         </svg>
       </div>
       <div class="logo-text">
-        <span class="logo-title">Verbalized Sampling</span>
-        <span class="logo-subtitle">Unlock LLM Diversity</span>
+        <span class="logo-title">Variations</span>
+        <span class="logo-subtitle">Explore Diverse Outputs</span>
       </div>
     </div>
     <div class="header-actions">
       <div class="modes">
         <a href="/" class="mode-link">Arena</a>
         <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/autogen" class="mode-link">AutoGen</a>
-        <a href="/diversity" class="mode-link active">Diversity</a>
+        <a href="/autogen" class="mode-link">Agents</a>
+        <a href="/diversity" class="mode-link active">Variations</a>
       </div>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -318,14 +318,14 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
-        Verbalized Sampling: Mitigate Mode Collapse
+        Variations: Mitigate Mode Collapse
       </h2>
       <p>
         <strong>The Problem:</strong> Post-training alignment (RLHF) causes LLMs to suffer from "mode collapse" - 
         they give the same predictable response every time due to typicality bias.
       </p>
       <p>
-        <strong>The Solution:</strong> Instead of asking for <em>one response</em>, ask for <em>a distribution of responses</em>. 
+        <strong>The Solution:</strong> Verbalized Sampling asks for <em>a distribution of responses</em> instead of <em>one response</em>.
         This forces the model to tap into its diverse pre-trained knowledge rather than the narrow post-aligned mode.
       </p>
       <p style="margin-bottom: 0;">
@@ -415,7 +415,7 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
-            Verbalized Sampling
+            Variations (Verbalized Sampling)
           </h3>
           <span class="badge solution">Diverse Outputs</span>
         </div>
@@ -439,7 +439,7 @@
     </div>
   </main>
 
-  <script defer src="/static/verbalized_sampling.js?v=3"></script>
+  <script defer src="/static/verbalized_sampling.js?v=4"></script>
 
 </body>
 </html>

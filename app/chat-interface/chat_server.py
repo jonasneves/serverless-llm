@@ -497,35 +497,39 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=error_msg)
 
 async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, max_tokens: int, temperature: float):
-    """Query a single model and return results with timing"""
+    """Query a single model and return results with timing (with request queueing)"""
     endpoint = MODEL_ENDPOINTS[model_id]
     display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
 
+    # Use semaphore to limit concurrent requests per model
+    semaphore = MODEL_SEMAPHORES.get(model_id)
+
     start_time = time.time()
     try:
-        response = await client.post(
-            f"{endpoint}/v1/chat/completions",
-            json=build_completion_payload(messages, max_tokens, temperature)
-        )
-        elapsed = time.time() - start_time
+        async with semaphore:
+            response = await client.post(
+                f"{endpoint}/v1/chat/completions",
+                json=build_completion_payload(messages, max_tokens, temperature)
+            )
+            elapsed = time.time() - start_time
 
-        if response.status_code != 200:
-            error_msg = sanitize_error_message(response.text, endpoint)
+            if response.status_code != 200:
+                error_msg = sanitize_error_message(response.text, endpoint)
+                return {
+                    "model": display_name,
+                    "content": error_msg,
+                    "error": True,
+                    "time": elapsed
+                }
+
+            data = response.json()
             return {
                 "model": display_name,
-                "content": error_msg,
-                "error": True,
-                "time": elapsed
+                "content": data["choices"][0]["message"]["content"],
+                "usage": data.get("usage", {}),
+                "time": elapsed,
+                "error": False
             }
-
-        data = response.json()
-        return {
-            "model": display_name,
-            "content": data["choices"][0]["message"]["content"],
-            "usage": data.get("usage", {}),
-            "time": elapsed,
-            "error": False
-        }
 
     except httpx.TimeoutException:
         logger.error(f"Timeout querying {endpoint}")
@@ -570,53 +574,57 @@ async def chat_multi(request: MultiChatRequest):
 
 
 async def stream_model_response(model_id: str, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
-    """Stream response from a single model using SSE format"""
+    """Stream response from a single model using SSE format (with request queueing)"""
     endpoint = MODEL_ENDPOINTS[model_id]
     display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
     start_time = time.time()
     total_content = ""
 
+    # Use semaphore to limit concurrent requests per model
+    semaphore = MODEL_SEMAPHORES.get(model_id)
+
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            async with client.stream(
-                "POST",
-                f"{endpoint}/v1/chat/completions",
-                json=build_completion_payload(
-                    messages,
-                    max_tokens,
-                    temperature,
-                    stream=True,
-                )
-            ) as response:
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    error_msg = sanitize_error_message(error_text.decode(), endpoint)
-                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
-                    return
+        async with semaphore:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{endpoint}/v1/chat/completions",
+                    json=build_completion_payload(
+                        messages,
+                        max_tokens,
+                        temperature,
+                        stream=True,
+                    )
+                ) as response:
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        error_msg = sanitize_error_message(error_text.decode(), endpoint)
+                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
+                        return
 
-                # Send initial event
-                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
+                    # Send initial event
+                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str.strip() == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            if "choices" in data and len(data["choices"]) > 0:
-                                delta = data["choices"][0].get("delta", {})
-                                content = delta.get("content", "")
-                                if content:
-                                    total_content += content
-                                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
-                        except json.JSONDecodeError:
-                            pass
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str.strip() == "[DONE]":
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                if "choices" in data and len(data["choices"]) > 0:
+                                    delta = data["choices"][0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        total_content += content
+                                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
+                            except json.JSONDecodeError:
+                                pass
 
-                # Send completion event with stats
-                elapsed = time.time() - start_time
-                token_count = len(total_content.split())  # Rough estimate
-                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
+                    # Send completion event with stats
+                    elapsed = time.time() - start_time
+                    token_count = len(total_content.split())  # Rough estimate
+                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
 
     except httpx.TimeoutException:
         logger.error(f"Timeout connecting to {endpoint}")
