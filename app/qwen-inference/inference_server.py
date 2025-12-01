@@ -68,17 +68,33 @@ def load_model():
     global llm
 
     model_path = download_model()
-    n_ctx = int(os.getenv("N_CTX", "4096"))
-    n_threads = int(os.getenv("N_THREADS", "4"))
+    n_ctx = int(os.getenv("N_CTX", "2048"))
+    n_threads = int(os.getenv("N_THREADS", "2"))
 
     print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}")
     llm = Llama(
         model_path=model_path,
         n_ctx=n_ctx,
         n_threads=n_threads,
+        use_mlock=True,      # Lock model in RAM to prevent swapping
+        use_mmap=True,       # Memory-map model file for faster loading
+        n_batch=256,         # Optimize batch processing for prompt evaluation
+        last_n_tokens_size=64,  # Limit repeat penalty context for speed
         verbose=True
     )
     print("Model loaded successfully!")
+
+    # Warm up the model with a quick inference
+    print("Warming up model...")
+    try:
+        llm.create_chat_completion(
+            messages=[{"role": "user", "content": "Hi"}],
+            max_tokens=1,
+            temperature=0.1
+        )
+        print("Model warm-up complete!")
+    except Exception as e:
+        print(f"Warm-up warning: {e}")
 
 # Load model on startup
 @app.on_event("startup")

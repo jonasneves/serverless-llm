@@ -16,8 +16,8 @@
   --error-color: #DC2626;
   --error-bg: #FEE2E2;
   --success-bg: #D1FAE5;
-  --direct-color: #DC2626;
-  --vs-color: #059669;
+  --direct-color: #C84E00;
+  --vs-color: #1D6363;
   --prob-badge: #0284C7;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -38,8 +38,8 @@
   --error-color: #EF4444;
   --error-bg: #450a0a;
   --success-bg: #064e3b;
-  --direct-color: #EF4444;
-  --vs-color: #10B981;
+  --direct-color: #FF6B1A;
+  --vs-color: #3DB3B3;
   --prob-badge: #3B82F6;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);

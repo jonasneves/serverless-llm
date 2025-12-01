@@ -103,8 +103,8 @@ jobs:
         env:
           MODEL_REPO: microsoft/Phi-3-mini-4k-instruct-gguf
           MODEL_FILE: Phi-3-mini-4k-instruct-q4.gguf
-          N_CTX: "4096"
-          N_THREADS: "4"
+          N_CTX: "2048"
+          N_THREADS: "2"
           PORT: "8000"
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_HOME: /tmp/hf_cache
