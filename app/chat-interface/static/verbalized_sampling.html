@@ -5,33 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>Verbalized Sampling - Unlock LLM Diversity</title>
   <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=1">
+  <link rel="stylesheet" href="/static/common.css?v=2">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     /* Page-specific styles for Diversity mode */
 
     .technique-explainer {
-      background: linear-gradient(135deg, #EEF2FF 0%, #DBEAFE 100%);
-      border: 2px solid #3B82F6;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 24px;
     }
 
     .technique-explainer h2 {
-      font-size: 20px;
+      font-size: 18px;
       margin-bottom: 12px;
-      color: #1E40AF;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .technique-explainer p {
-      color: #1E3A8A;
+      color: var(--text-secondary);
       line-height: 1.6;
       margin-bottom: 8px;
+      font-size: 14px;
     }
 
     .technique-explainer .paper-link {
-      color: #2563EB;
+      color: var(--accent-color);
       text-decoration: none;
       font-weight: 600;
     }
@@ -134,12 +138,12 @@
 
     .comparison-side.direct {
       border-color: var(--direct-color);
-      background: linear-gradient(to bottom, #FEF2F2 0%, white 100%);
+      background: var(--bg-primary);
     }
 
     .comparison-side.verbalized {
       border-color: var(--vs-color);
-      background: linear-gradient(to bottom, #F0FDF4 0%, white 100%);
+      background: var(--bg-primary);
     }
 
     .side-header {
@@ -169,13 +173,13 @@
     }
 
     .badge.problem {
-      background: #FEE2E2;
-      color: #991B1B;
+      background: var(--error-bg);
+      color: var(--error-color);
     }
 
     .badge.solution {
-      background: #D1FAE5;
-      color: #065F46;
+      background: var(--success-bg);
+      color: var(--success-color);
     }
 
     .responses-container {
@@ -184,7 +188,7 @@
     }
 
     .response-item {
-      background: white;
+      background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 16px;
@@ -221,8 +225,8 @@
     .diversity-score {
       margin-top: 16px;
       padding: 16px;
-      background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
-      border: 2px solid var(--vs-color);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       text-align: center;
     }
@@ -230,7 +234,7 @@
     .diversity-score-label {
       font-size: 13px;
       font-weight: 600;
-      color: #065F46;
+      color: var(--text-secondary);
       margin-bottom: 8px;
     }
 
@@ -310,7 +314,12 @@
 
   <main>
     <div class="technique-explainer">
-      <h2>🎯 Verbalized Sampling: Mitigate Mode Collapse</h2>
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        Verbalized Sampling: Mitigate Mode Collapse
+      </h2>
       <p>
         <strong>The Problem:</strong> Post-training alignment (RLHF) causes LLMs to suffer from "mode collapse" - 
         they give the same predictable response every time due to typicality bias.
@@ -320,8 +329,15 @@
         This forces the model to tap into its diverse pre-trained knowledge rather than the narrow post-aligned mode.
       </p>
       <p style="margin-bottom: 0;">
-        📄 <a href="https://arxiv.org/abs/2411.16641" target="_blank" class="paper-link">Stanford Research Paper</a> · 
-        Boosts creativity 1.6-2x · Increases diversity 25.7% · Zero training required!
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: text-bottom;">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <a href="https://arxiv.org/abs/2411.16641" target="_blank" class="paper-link">Stanford Research Paper</a> ·
+        Boosts creativity 1.6-2x · Increases diversity 25.7% · Zero training required
       </p>
     </div>
 
