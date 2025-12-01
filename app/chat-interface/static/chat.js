@@ -436,13 +436,17 @@ document.addEventListener('DOMContentLoaded', () => {
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
+          console.log('Buffer:', buffer);
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
+          console.log('Lines:', lines);
 
           for (const line of lines) {
+            console.log('Processing line:', line);
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
+                console.log('Parsed data:', data);
 
                 if (data.event === 'all_done') {
                   typingIndicator.classList.remove('active');
@@ -452,18 +456,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 const mappedEntry =
                   (data.model_id && modelData[data.model_id]) ? modelData[data.model_id] :
                   (data.model && modelData[data.model]) ? modelData[data.model] : null;
+                console.log('Model data keys:', Object.keys(modelData));
+                console.log('Looking for:', data.model_id, 'or', data.model);
+                console.log('Mapped entry:', mappedEntry);
                 if (!mappedEntry) {
+                  console.warn('No mapped entry found for', data);
                   continue;
                 }
 
                 const entryKey = mappedEntry.id;
+                console.log('Entry key:', entryKey);
 
                 if (data.event === 'start') {
                   // Model started streaming
+                  console.log('Start event for', entryKey);
                   const badge = mappedEntry.element.querySelector('.streaming-badge');
                   if (badge) badge.textContent = 'Streaming...';
                 } else if (data.event === 'token' && data.content) {
                   // Received a token
+                  console.log('Token event:', data.content, 'for', entryKey);
                   updateStreamingContent(modelData, entryKey, data.content);
                 } else if (data.event === 'done') {
                   // Model finished
