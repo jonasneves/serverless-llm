@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>Variations - Explore Diverse Outputs</title>
   <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=5">
+  <link rel="stylesheet" href="/static/common.css?v=6">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     /* Page-specific styles for Diversity mode */
@@ -350,16 +350,6 @@
         ></textarea>
       </div>
 
-      <div class="example-prompts">
-        <div class="example-prompts-label">Try an example:</div>
-        <div class="example-chips">
-          <button class="example-chip" data-prompt="Tell me a joke about programming">Programming joke</button>
-          <button class="example-chip" data-prompt="Write a creative opening line for a sci-fi novel">Sci-fi opening</button>
-          <button class="example-chip" data-prompt="Suggest unique pizza topping combinations">Creative pizza</button>
-          <button class="example-chip" data-prompt="Generate creative team names for a hackathon">Team names</button>
-        </div>
-      </div>
-
       <div class="controls">
         <div class="control-item">
           <label>Model</label>
@@ -404,6 +394,15 @@
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
             <p>Standard prompting - same response multiple times</p>
+            <div class="example-prompts" style="margin-top: 20px;">
+              <div class="example-prompts-label">Try an example:</div>
+              <div class="example-chips">
+                <button class="example-chip" data-prompt="Tell me a joke about programming">Programming joke</button>
+                <button class="example-chip" data-prompt="Write a creative opening line for a sci-fi novel">Sci-fi opening</button>
+                <button class="example-chip" data-prompt="Suggest unique pizza topping combinations">Creative pizza</button>
+                <button class="example-chip" data-prompt="Generate creative team names for a hackathon">Team names</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -439,7 +438,7 @@
     </div>
   </main>
 
-  <script defer src="/static/verbalized_sampling.js?v=4"></script>
+  <script defer src="/static/verbalized_sampling.js?v=5"></script>
 
 </body>
 </html>

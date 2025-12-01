@@ -516,8 +516,29 @@ document.addEventListener('DOMContentLoaded', () => {
             Select one or multiple models to compare their responses side-by-side.
             Each response includes metrics like tokens and response time.
           </div>
+          <div class="example-prompts" style="margin-top: 20px;">
+            <div class="example-prompts-label">Try an example:</div>
+            <div class="example-chips">
+              <button class="example-chip" data-prompt="Explain quantum entanglement in simple terms">Quantum physics</button>
+              <button class="example-chip" data-prompt="Write a haiku about programming">Programming haiku</button>
+              <button class="example-chip" data-prompt="What are the pros and cons of remote work?">Remote work debate</button>
+              <button class="example-chip" data-prompt="Explain the difference between machine learning and deep learning">ML vs DL</button>
+            </div>
+          </div>
         </div>
       `;
+
+      // Re-attach event listeners to example chips
+      document.querySelectorAll('.example-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
+          const prompt = chip.getAttribute('data-prompt');
+          if (prompt) {
+            userInput.value = prompt;
+            userInput.focus();
+          }
+        });
+      });
     }
 
     // Initialize
