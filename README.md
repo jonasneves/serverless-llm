@@ -6,8 +6,6 @@
 [![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
 [![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
 
-**[📊 Live Status Dashboard](https://chat.neevs.io/status)** | **[💬 Chat Interface](https://chat.neevs.io)**
-
 <!-- GitHub Actions Workflow Status -->
 <details>
 <summary>Deployment Status (GitHub Actions)</summary>
