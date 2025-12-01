@@ -73,30 +73,34 @@ Response 2 (probability: Y%): [your response]
             full_url = f"{self.model_endpoint}/v1/chat/completions"
             logger.info(f"Verbalized Sampling calling {self.model_name} at {full_url}")
             
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    full_url,
-                    json={
-                        "model": "model",
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": "You are a creative AI assistant that can generate diverse, high-quality responses. When asked for multiple responses, you provide genuinely different perspectives rather than minor variations."
-                            },
-                            {
-                                "role": "user",
-                                "content": vs_prompt
-                            }
-                        ],
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                        "stream": True
-                    }
-                )
+            from http_client import HTTPClient
+            client = HTTPClient.get_client()
+            
+            async with client.stream(
+                "POST",
+                full_url,
+                json={
+                    "model": "model",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a creative AI assistant that can generate diverse, high-quality responses. When asked for multiple responses, you provide genuinely different perspectives rather than minor variations."
+                        },
+                        {
+                            "role": "user",
+                            "content": vs_prompt
+                        }
+                    ],
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "stream": True
+                },
+                timeout=60.0
+            ) as response:
                 
                 if response.status_code != 200:
-                    error_text = response.text
-                    error_msg = f"Model API error from {full_url}: Status {response.status_code}, {error_text[:200]}"
+                    error_text = await response.aread()
+                    error_msg = f"Model API error from {full_url}: Status {response.status_code}, {error_text.decode('utf-8')[:200]}"
                     logger.error(error_msg)
                     yield {
                         "event": "error",

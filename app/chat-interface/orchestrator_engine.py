@@ -6,8 +6,9 @@ Uses Qwen 2.5-7B as orchestrator with function calling
 import os
 import json
 import logging
-import aiohttp
+import httpx
 from typing import List, Dict, Any, Optional, AsyncGenerator
+from http_client import HTTPClient
 
 from tools.model_router import ModelRouter
 from tools.web_search import WebSearchTool
@@ -204,39 +205,41 @@ class OrchestratorEngine:
         temperature: float = 0.7
     ) -> Dict[str, Any]:
         """Call the orchestrator model with function calling"""
-        async with aiohttp.ClientSession() as session:
-            payload = {
-                "messages": messages,
-                "tools": tools,
-                "max_tokens": 1024,
-                "temperature": temperature
-            }
+        client = HTTPClient.get_client()
+        payload = {
+            "messages": messages,
+            "tools": tools,
+            "max_tokens": 1024,
+            "temperature": temperature
+        }
 
-            async with session.post(
+        try:
+            response = await client.post(
                 f"{self.orchestrator_url}/v1/chat/completions",
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=60)
-            ) as response:
-                if not response.ok:
-                    error_text = await response.text()
-                    raise Exception(f"Orchestrator API error: {response.status} - {error_text}")
+                json=payload
+            )
+            if response.status_code != 200:
+                error_text = response.text
+                raise Exception(f"Orchestrator API error: {response.status_code} - {error_text}")
 
-                data = await response.json()
-                message = data["choices"][0]["message"]
+            data = response.json()
+            message = data["choices"][0]["message"]
 
-                # Extract tool calls
-                tool_calls = []
-                if message.get("tool_calls"):
-                    for tc in message["tool_calls"]:
-                        tool_calls.append({
-                            "name": tc["function"]["name"],
-                            "arguments": json.loads(tc["function"]["arguments"])
-                        })
+            # Extract tool calls
+            tool_calls = []
+            if message.get("tool_calls"):
+                for tc in message["tool_calls"]:
+                    tool_calls.append({
+                        "name": tc["function"]["name"],
+                        "arguments": json.loads(tc["function"]["arguments"])
+                    })
 
-                return {
-                    "content": message.get("content", ""),
-                    "tool_calls": tool_calls
-                }
+            return {
+                "content": message.get("content", ""),
+                "tool_calls": tool_calls
+            }
+        except httpx.HTTPError as e:
+            raise Exception(f"Orchestrator network error: {str(e)}")
 
     async def _execute_tool(
         self,
@@ -292,20 +295,22 @@ class OrchestratorEngine:
             }
         ]
 
-        async with aiohttp.ClientSession() as session:
-            payload = {
-                "messages": messages,
-                "max_tokens": 2048,
-                "temperature": 0.7
-            }
+        client = HTTPClient.get_client()
+        payload = {
+            "messages": messages,
+            "max_tokens": 2048,
+            "temperature": 0.7
+        }
 
-            async with session.post(
+        try:
+            response = await client.post(
                 f"{self.orchestrator_url}/v1/chat/completions",
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=60)
-            ) as response:
-                if not response.ok:
-                    return "Unable to generate final answer."
+                json=payload
+            )
+            if response.status_code != 200:
+                return "Unable to generate final answer."
 
-                data = await response.json()
-                return data["choices"][0]["message"]["content"]
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+        except httpx.HTTPError:
+            return "Unable to generate final answer (network error)."

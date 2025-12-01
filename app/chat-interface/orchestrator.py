@@ -146,6 +146,9 @@ class GitHubModelsOrchestrator:
         Returns:
             Tuple of (Validated Pydantic model instance, TokenUsage)
         """
+        from http_client import HTTPClient
+        import httpx
+        
         # Add JSON schema instruction to prompt
         schema = response_format.schema()
 
@@ -168,77 +171,83 @@ Example format (fill in actual values based on your analysis):
 
 Respond with ONLY the JSON object. Do not include the schema definition, explanations, or any text outside the JSON."""
 
-        async with aiohttp.ClientSession() as session:
-            payload = {
-                "model": self.model_id,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a precise analytical assistant. Always respond with valid JSON only."
-                    },
-                    {
-                        "role": "user",
-                        "content": structured_prompt
-                    }
-                ],
-                "max_completion_tokens": self.max_tokens,
-                "stream": False
-            }
+        client = HTTPClient.get_client()
+        
+        payload = {
+            "model": self.model_id,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a precise analytical assistant. Always respond with valid JSON only."
+                },
+                {
+                    "role": "user",
+                    "content": structured_prompt
+                }
+            ],
+            "max_completion_tokens": self.max_tokens,
+            "stream": False
+        }
 
-            async with session.post(
+        try:
+            response = await client.post(
                 self.api_url,
                 headers=self._get_headers(),
                 json=payload
-            ) as response:
-                if response.status == 429:
-                    rate_limit_reset = response.headers.get("x-ratelimit-reset")
-                    raise Exception(f"Rate limit exceeded. Reset at: {rate_limit_reset}")
+            )
+            
+            if response.status_code == 429:
+                rate_limit_reset = response.headers.get("x-ratelimit-reset")
+                raise Exception(f"Rate limit exceeded. Reset at: {rate_limit_reset}")
 
-                if not response.ok:
-                    error_text = await response.text()
-                    raise Exception(f"GitHub Models API error {response.status}: {error_text}")
+            if response.status_code != 200:
+                error_text = response.text
+                raise Exception(f"GitHub Models API error {response.status_code}: {error_text}")
 
-                data = await response.json()
+            data = response.json()
 
-                # Log the full response for debugging
-                logger.info(f"Orchestrator API response: {json.dumps(data, indent=2)}")
+            # Log the full response for debugging
+            logger.info(f"Orchestrator API response: {json.dumps(data, indent=2)}")
 
-                # Extract token usage
-                usage_data = data.get("usage", {})
-                token_usage = TokenUsage(
-                    prompt_tokens=usage_data.get("prompt_tokens", 0),
-                    completion_tokens=usage_data.get("completion_tokens", 0),
-                    total_tokens=usage_data.get("total_tokens", 0)
-                )
+            # Extract token usage
+            usage_data = data.get("usage", {})
+            token_usage = TokenUsage(
+                prompt_tokens=usage_data.get("prompt_tokens", 0),
+                completion_tokens=usage_data.get("completion_tokens", 0),
+                total_tokens=usage_data.get("total_tokens", 0)
+            )
 
-                # Extract content from response
-                if "choices" not in data or not data["choices"]:
-                    raise Exception(f"No choices in API response. Full response: {json.dumps(data)}")
+            # Extract content from response
+            if "choices" not in data or not data["choices"]:
+                raise Exception(f"No choices in API response. Full response: {json.dumps(data)}")
 
-                if "message" not in data["choices"][0]:
-                    raise Exception(f"No message in choice. Full response: {json.dumps(data)}")
+            if "message" not in data["choices"][0]:
+                raise Exception(f"No message in choice. Full response: {json.dumps(data)}")
 
-                if "content" not in data["choices"][0]["message"]:
-                    raise Exception(f"No content in message. Full response: {json.dumps(data)}")
+            if "content" not in data["choices"][0]["message"]:
+                raise Exception(f"No content in message. Full response: {json.dumps(data)}")
 
-                content = data["choices"][0]["message"]["content"]
+            content = data["choices"][0]["message"]["content"]
 
-                if not content or content.strip() == "":
-                    raise Exception(f"Empty content from API. Full response: {json.dumps(data)}")
+            if not content or content.strip() == "":
+                raise Exception(f"Empty content from API. Full response: {json.dumps(data)}")
 
-                # Parse JSON response
-                try:
-                    # Handle potential markdown code blocks
-                    if "```json" in content:
-                        content = content.split("```json")[1].split("```")[0].strip()
-                    elif "```" in content:
-                        content = content.split("```")[1].split("```")[0].strip()
+            # Parse JSON response
+            try:
+                # Handle potential markdown code blocks
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
 
-                    json_data = json.loads(content)
-                    return response_format.parse_obj(json_data), token_usage
-                except (json.JSONDecodeError, ValueError) as e:
-                    logger.error(f"Failed to parse JSON. Content: {content[:500]}")
-                    raise Exception(f"Failed to parse structured output: {e}\nContent preview: {content[:500]}")
+                json_data = json.loads(content)
+                return response_format.parse_obj(json_data), token_usage
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.error(f"Failed to parse JSON. Content: {content[:500]}")
+                raise Exception(f"Failed to parse structured output: {e}\nContent preview: {content[:500]}")
+                
+        except httpx.HTTPError as e:
+            raise Exception(f"Connection error to GitHub Models API: {str(e)}")
 
     async def analyze_query(self, query: str, model_profiles: Dict[str, Dict]) -> tuple[QueryAnalysis, TokenUsage]:
         """
@@ -392,23 +401,30 @@ IMPORTANT: Use actual model IDs from the discussion (e.g., "phi-3-mini", "qwen2.
         Returns:
             Dict with limit, remaining, and reset information
         """
-        async with aiohttp.ClientSession() as session:
-            # Make minimal request to check headers
-            payload = {
-                "model": self.model_id,
-                "messages": [{"role": "user", "content": "ping"}],
-                "max_completion_tokens": 1,
-                "stream": False
-            }
+        from http_client import HTTPClient
+        import httpx
+        
+        client = HTTPClient.get_client()
+        
+        # Make minimal request to check headers
+        payload = {
+            "model": self.model_id,
+            "messages": [{"role": "user", "content": "ping"}],
+            "max_completion_tokens": 1,
+            "stream": False
+        }
 
-            async with session.post(
+        try:
+            response = await client.post(
                 self.api_url,
                 headers=self._get_headers(),
                 json=payload
-            ) as response:
-                return {
-                    "limit": response.headers.get("x-ratelimit-limit"),
-                    "remaining": response.headers.get("x-ratelimit-remaining"),
-                    "reset": response.headers.get("x-ratelimit-reset"),
-                    "status": "ok" if response.ok else f"error_{response.status}"
-                }
+            )
+            return {
+                "limit": response.headers.get("x-ratelimit-limit"),
+                "remaining": response.headers.get("x-ratelimit-remaining"),
+                "reset": response.headers.get("x-ratelimit-reset"),
+                "status": "ok" if response.is_success else f"error_{response.status_code}"
+            }
+        except Exception as e:
+             return {"status": "error", "details": str(e)}

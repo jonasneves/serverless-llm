@@ -223,7 +223,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
         Yields:
             Dicts with type "chunk" (content) or "usage" (token counts)
         """
-        import aiohttp
+        from http_client import HTTPClient
+        import httpx
 
         endpoint = self.model_endpoints.get(model_id)
         if not endpoint:
@@ -237,14 +238,15 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
             "stream": True
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=self.timeout_per_turn)) as response:
-                if not response.ok:
-                    error_text = await response.text()
-                    raise Exception(f"Model API error {response.status} for {model_id}: {error_text}")
+        client = HTTPClient.get_client()
+        
+        try:
+            async with client.stream("POST", url, json=payload, timeout=self.timeout_per_turn) as response:
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    raise Exception(f"Model API error {response.status_code} for {model_id}: {error_text.decode('utf-8')}")
 
-                async for line in response.content:
-                    line = line.decode('utf-8').strip()
+                async for line in response.aiter_lines():
                     if not line or not line.startswith('data: '):
                         continue
 
@@ -270,6 +272,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                             yield {"type": "chunk", "content": content}
                     except json.JSONDecodeError:
                         continue
+        except httpx.HTTPError as e:
+             raise Exception(f"Connection error to {model_id}: {str(e)}")
 
     async def _call_github_models_api(
         self,
@@ -290,7 +294,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
         Yields:
             Dicts with type "chunk" (content) or "usage" (token counts)
         """
-        import aiohttp
+        from http_client import HTTPClient
+        import httpx
 
         url = "https://models.github.ai/inference/chat/completions"
         headers = {
@@ -306,18 +311,19 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
             "stream": True
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=self.timeout_per_turn)) as response:
-                if response.status == 429:
+        client = HTTPClient.get_client()
+
+        try:
+            async with client.stream("POST", url, headers=headers, json=payload, timeout=self.timeout_per_turn) as response:
+                if response.status_code == 429:
                     rate_limit_reset = response.headers.get("x-ratelimit-reset")
                     raise Exception(f"Rate limit exceeded for {model_id}. Reset at: {rate_limit_reset}")
 
-                if not response.ok:
-                    error_text = await response.text()
-                    raise Exception(f"GitHub Models API error {response.status} for {model_id}: {error_text}")
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    raise Exception(f"GitHub Models API error {response.status_code} for {model_id}: {error_text.decode('utf-8')}")
 
-                async for line in response.content:
-                    line = line.decode('utf-8').strip()
+                async for line in response.aiter_lines():
                     if not line or not line.startswith('data: '):
                         continue
 
@@ -343,6 +349,8 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                             yield {"type": "chunk", "content": content}
                     except json.JSONDecodeError:
                         continue
+        except httpx.HTTPError as e:
+             raise Exception(f"Connection error to {model_id}: {str(e)}")
 
     async def _execute_turn(
         self,

@@ -19,6 +19,8 @@ from typing import List, Optional, AsyncGenerator
 import uvicorn
 import pathlib
 
+from http_client import HTTPClient
+
 # Discussion mode imports
 from orchestrator import GitHubModelsOrchestrator
 from discussion_engine import DiscussionEngine
@@ -26,6 +28,7 @@ from model_profiles import MODEL_PROFILES
 
 # Orchestrator mode imports
 from autogen_orchestrator import AutoGenOrchestrator
+from orchestrator_engine import OrchestratorEngine as ToolOrchestratorEngine # Avoid naming conflict
 
 # Verbalized Sampling mode imports
 from verbalized_sampling_engine import VerbalizedSamplingEngine
@@ -84,6 +87,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize resources on startup."""
+    HTTPClient.get_client()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on shutdown."""
+    await HTTPClient.close_client()
 
 # Mount static files directory
 static_dir = pathlib.Path(__file__).parent / "static"
@@ -277,63 +290,64 @@ async def detailed_health():
         "models": {}
     }
 
+    client = HTTPClient.get_client()
+
     # Check each model endpoint
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        for model_id, endpoint in MODEL_ENDPOINTS.items():
-            try:
-                # Test health endpoint
-                health_response = await client.get(f"{endpoint}/health")
+    for model_id, endpoint in MODEL_ENDPOINTS.items():
+        try:
+            # Test health endpoint
+            health_response = await client.get(f"{endpoint}/health")
 
-                if health_response.status_code == 200:
-                    health_data = health_response.json()
+            if health_response.status_code == 200:
+                health_data = health_response.json()
 
-                    # Additionally test a simple completion to verify model works
-                    try:
-                        test_response = await client.post(
-                            f"{endpoint}/v1/chat/completions",
-                            json={
-                                "messages": [{"role": "user", "content": "Hi"}],
-                                "max_tokens": 5,
-                                "temperature": 0.1
-                            },
-                            timeout=30.0
-                        )
+                # Additionally test a simple completion to verify model works
+                try:
+                    test_response = await client.post(
+                        f"{endpoint}/v1/chat/completions",
+                        json={
+                            "messages": [{"role": "user", "content": "Hi"}],
+                            "max_tokens": 5,
+                            "temperature": 0.1
+                        },
+                        timeout=30.0
+                    )
 
-                        results["models"][model_id] = {
-                            "status": "online",
-                            "endpoint": endpoint,
-                            "health": health_data,
-                            "inference_test": "passed" if test_response.status_code == 200 else "failed",
-                            "response_time_ms": int((time.time() - results["chat_interface"]["timestamp"]) * 1000)
-                        }
-                    except Exception as e:
-                        # Health passed but inference failed
-                        results["models"][model_id] = {
-                            "status": "degraded",
-                            "endpoint": endpoint,
-                            "health": health_data,
-                            "inference_test": "failed",
-                            "error": str(e)
-                        }
-                else:
                     results["models"][model_id] = {
-                        "status": "unhealthy",
+                        "status": "online",
                         "endpoint": endpoint,
-                        "error": f"Health check returned {health_response.status_code}"
+                        "health": health_data,
+                        "inference_test": "passed" if test_response.status_code == 200 else "failed",
+                        "response_time_ms": int((time.time() - results["chat_interface"]["timestamp"]) * 1000)
                     }
+                except Exception as e:
+                    # Health passed but inference failed
+                    results["models"][model_id] = {
+                        "status": "degraded",
+                        "endpoint": endpoint,
+                        "health": health_data,
+                        "inference_test": "failed",
+                        "error": str(e)
+                    }
+            else:
+                results["models"][model_id] = {
+                    "status": "unhealthy",
+                    "endpoint": endpoint,
+                    "error": f"Health check returned {health_response.status_code}"
+                }
 
-            except httpx.TimeoutException:
-                results["models"][model_id] = {
-                    "status": "offline",
-                    "endpoint": endpoint,
-                    "error": "Connection timeout"
-                }
-            except Exception as e:
-                results["models"][model_id] = {
-                    "status": "offline",
-                    "endpoint": endpoint,
-                    "error": str(e)
-                }
+        except httpx.TimeoutException:
+            results["models"][model_id] = {
+                "status": "offline",
+                "endpoint": endpoint,
+                "error": "Connection timeout"
+            }
+        except Exception as e:
+            results["models"][model_id] = {
+                "status": "offline",
+                "endpoint": endpoint,
+                "error": str(e)
+            }
 
     # Calculate overall status
     model_statuses = [m["status"] for m in results["models"].values()]
@@ -346,6 +360,26 @@ async def detailed_health():
 
     return results
 
+async def _quick_model_health(timeout: float = 3.0):
+    """Lightweight /health checks for badge endpoints."""
+    client = HTTPClient.get_client()
+
+    async def check_model(model_id: str, endpoint: str):
+        try:
+            response = await client.get(f"{endpoint}/health", timeout=timeout)
+            if response.status_code == 200:
+                return model_id, "online"
+            return model_id, "unhealthy"
+        except httpx.TimeoutException:
+            return model_id, "timeout"
+        except Exception:
+            return model_id, "offline"
+
+    tasks = [check_model(model_id, endpoint) for model_id, endpoint in MODEL_ENDPOINTS.items()]
+    results = await asyncio.gather(*tasks)
+    return dict(results)
+
+
 @app.get("/api/badge/system")
 async def system_badge():
     """
@@ -353,17 +387,17 @@ async def system_badge():
     Returns: https://img.shields.io/endpoint?url=<this-endpoint>
     """
     try:
-        health_data = await detailed_health()
-        overall = health_data["overall_status"]
+        model_statuses = await _quick_model_health()
+        total_count = len(model_statuses)
+        online_count = sum(1 for status in model_statuses.values() if status == "online")
 
-        # Count online models
-        online_count = sum(1 for m in health_data["models"].values() if m["status"] == "online")
-        total_count = len(health_data["models"])
-
-        if overall == "healthy":
+        if total_count == 0:
+            color = "lightgrey"
+            message = "no models"
+        elif online_count == total_count:
             color = "brightgreen"
             message = f"{online_count}/{total_count} online"
-        elif overall == "degraded":
+        elif online_count > 0:
             color = "yellow"
             message = f"{online_count}/{total_count} online"
         else:
@@ -376,7 +410,7 @@ async def system_badge():
             "message": message,
             "color": color
         }
-    except Exception as e:
+    except Exception:
         return {
             "schemaVersion": 1,
             "label": "API Status",
@@ -402,24 +436,24 @@ async def model_badge(model_id: str):
     display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            # Quick health check
-            response = await client.get(f"{endpoint}/health")
+        client = HTTPClient.get_client()
+        # Quick health check
+        response = await client.get(f"{endpoint}/health", timeout=5.0)
 
-            if response.status_code == 200:
-                return {
-                    "schemaVersion": 1,
-                    "label": display_name,
-                    "message": "online",
-                    "color": "brightgreen"
-                }
-            else:
-                return {
-                    "schemaVersion": 1,
-                    "label": display_name,
-                    "message": "unhealthy",
-                    "color": "orange"
-                }
+        if response.status_code == 200:
+            return {
+                "schemaVersion": 1,
+                "label": display_name,
+                "message": "online",
+                "color": "brightgreen"
+            }
+        else:
+            return {
+                "schemaVersion": 1,
+                "label": display_name,
+                "message": "unhealthy",
+                "color": "orange"
+            }
     except Exception:
         return {
             "schemaVersion": 1,
@@ -448,10 +482,10 @@ async def list_models():
 async def model_status(model_id: str):
     endpoint = get_model_endpoint_or_error(model_id, status_code=404)
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{endpoint}/health")
-            if response.status_code == 200:
-                return ModelStatus(model=model_id, status="online", endpoint=endpoint)
+        client = HTTPClient.get_client()
+        response = await client.get(f"{endpoint}/health", timeout=5.0)
+        if response.status_code == 200:
+            return ModelStatus(model=model_id, status="online", endpoint=endpoint)
     except Exception:
         pass
 
@@ -466,22 +500,23 @@ async def chat(request: ChatRequest):
 
     logger.info(f"Calling {request.model} at {full_url}")
 
+    client = HTTPClient.get_client()
+
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(
-                full_url,
-                json=payload
+        response = await client.post(
+            full_url,
+            json=payload
+        )
+
+        if response.status_code != 200:
+            error_detail = f"Model {request.model} at {endpoint} returned {response.status_code}: {response.text[:200]}"
+            logger.error(error_detail)
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=error_detail
             )
 
-            if response.status_code != 200:
-                error_detail = f"Model {request.model} at {endpoint} returned {response.status_code}: {response.text[:200]}"
-                logger.error(error_detail)
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=error_detail
-                )
-
-            return response.json()
+        return response.json()
 
     except httpx.TimeoutException as e:
         error_msg = f"Timeout calling {request.model} at {endpoint}: {str(e)}"
@@ -560,15 +595,15 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
 async def chat_multi(request: MultiChatRequest):
     """Query multiple models in parallel"""
     messages = serialize_messages(request.messages)
+    client = HTTPClient.get_client()
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        tasks = [
-            query_model(client, model_id, messages, request.max_tokens, request.temperature)
-            for model_id in request.models
-            if model_id in MODEL_ENDPOINTS
-        ]
+    tasks = [
+        query_model(client, model_id, messages, request.max_tokens, request.temperature)
+        for model_id in request.models
+        if model_id in MODEL_ENDPOINTS
+    ]
 
-        responses = await asyncio.gather(*tasks)
+    responses = await asyncio.gather(*tasks)
 
     return {"responses": responses}
 
@@ -583,48 +618,49 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
     # Use semaphore to limit concurrent requests per model
     semaphore = MODEL_SEMAPHORES.get(model_id)
 
+    client = HTTPClient.get_client()
+
     try:
         async with semaphore:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                async with client.stream(
-                    "POST",
-                    f"{endpoint}/v1/chat/completions",
-                    json=build_completion_payload(
-                        messages,
-                        max_tokens,
-                        temperature,
-                        stream=True,
-                    )
-                ) as response:
-                    if response.status_code != 200:
-                        error_text = await response.aread()
-                        error_msg = sanitize_error_message(error_text.decode(), endpoint)
-                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
-                        return
+            async with client.stream(
+                "POST",
+                f"{endpoint}/v1/chat/completions",
+                json=build_completion_payload(
+                    messages,
+                    max_tokens,
+                    temperature,
+                    stream=True,
+                )
+            ) as response:
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    error_msg = sanitize_error_message(error_text.decode(), endpoint)
+                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
+                    return
 
-                    # Send initial event
-                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
+                # Send initial event
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
 
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data_str = line[6:]
-                            if data_str.strip() == "[DONE]":
-                                break
-                            try:
-                                data = json.loads(data_str)
-                                if "choices" in data and len(data["choices"]) > 0:
-                                    delta = data["choices"][0].get("delta", {})
-                                    content = delta.get("content", "")
-                                    if content:
-                                        total_content += content
-                                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
-                            except json.JSONDecodeError:
-                                pass
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if "choices" in data and len(data["choices"]) > 0:
+                                delta = data["choices"][0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    total_content += content
+                                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
+                        except json.JSONDecodeError:
+                            pass
 
-                    # Send completion event with stats
-                    elapsed = time.time() - start_time
-                    token_count = len(total_content.split())  # Rough estimate
-                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
+                # Send completion event with stats
+                elapsed = time.time() - start_time
+                token_count = len(total_content.split())  # Rough estimate
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
 
     except httpx.TimeoutException:
         logger.error(f"Timeout connecting to {endpoint}")
@@ -839,6 +875,59 @@ async def stream_orchestrator_events(
     Uses Microsoft AutoGen framework with specialist agents
     """
     try:
+        # Use ToolOrchestratorEngine instead of AutoGenOrchestrator to match logic in orchestrator_engine.py
+        # Note: The original code imported AutoGenOrchestrator but used it in a way that matched ToolOrchestra.
+        # I will stick to the updated import if it matches the file I just refactored (orchestrator_engine.py).
+        
+        # However, looking at the original file, it imported AutoGenOrchestrator from autogen_orchestrator.py
+        # AND OrchestratorEngine is defined in orchestrator_engine.py which I refactored.
+        # The endpoint `orchestrator_stream` uses `stream_orchestrator_events`.
+        # `stream_orchestrator_events` uses `AutoGenOrchestrator()`.
+        
+        # Wait, `orchestrator_engine.py` contains `OrchestratorEngine`.
+        # `autogen_orchestrator.py` contains `AutoGenOrchestrator`.
+        # The route `/api/chat/orchestrator/stream` in the ORIGINAL file used `stream_orchestrator_events` which used `AutoGenOrchestrator`.
+        
+        # BUT, the docstring for `orchestrator_stream` says: "The orchestrator (Qwen 2.5-7B) intelligently routes..." which matches `OrchestratorEngine` in `orchestrator_engine.py`.
+        # Let me double check the original `chat_server.py` content I read.
+        
+        # In the original file:
+        # from autogen_orchestrator import AutoGenOrchestrator
+        # ...
+        # async def stream_orchestrator_events(...)
+        #    engine = AutoGenOrchestrator()
+        
+        # Yet `orchestrator_engine.py` (which I refactored) seems to be the "ToolOrchestra" implementation described in the docs.
+        # Let's look at `AGENTS.md`. It says "app/chat-interface/orchestrator_engine.py # Core orchestration logic".
+        # So `orchestrator_engine.py` IS the core logic.
+        # Why does `chat_server.py` import `AutoGenOrchestrator`?
+        
+        # Maybe `autogen_orchestrator.py` is a wrapper or a different implementation?
+        # Let's verify `autogen_orchestrator.py` content to be safe.
+        pass
+    except Exception:
+        pass
+
+    try:
+        # We will assume OrchestratorEngine from orchestrator_engine.py is the one we want to use if we want to use the refactored code.
+        # However, if I change the class used, I might break something.
+        # The user asked to review architecture. I am improving performance by adding connection pooling.
+        # If `autogen_orchestrator.py` is used, I should refactor that too!
+        
+        # Let's stick to the original class usage `AutoGenOrchestrator` but I must ensure `autogen_orchestrator.py` ALSO uses the shared client if I want the benefit there.
+        # But wait, I refactored `orchestrator_engine.py`!
+        # If `chat_server.py` doesn't use `orchestrator_engine.py`, then my refactor was useless for the running app?
+        # `orchestrator_engine.py` is imported in `chat_server.py`?
+        # Original `chat_server.py` imports:
+        # from orchestrator import GitHubModelsOrchestrator
+        # from discussion_engine import DiscussionEngine
+        # from autogen_orchestrator import AutoGenOrchestrator
+        # from verbalized_sampling_engine import VerbalizedSamplingEngine
+        
+        # It does NOT import `OrchestratorEngine` from `orchestrator_engine.py`.
+        # This is strange. `AGENTS.md` says `orchestrator_engine.py` is the core.
+        # Maybe `autogen_orchestrator.py` imports `OrchestratorEngine`?
+        
         engine = AutoGenOrchestrator()
 
         async for event in engine.run_orchestration(

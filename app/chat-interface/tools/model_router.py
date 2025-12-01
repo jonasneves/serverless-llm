@@ -5,8 +5,9 @@ Maps ToolOrchestra's model naming to your existing Qwen/Phi/Llama servers
 
 import os
 import logging
-import aiohttp
+import httpx
 from typing import Dict, Any, Optional
+from http_client import HTTPClient
 
 logger = logging.getLogger(__name__)
 
@@ -100,36 +101,35 @@ class ModelRouter:
         messages.append({"role": "user", "content": prompt})
 
         # Call the model via OpenAI-compatible API
-        async with aiohttp.ClientSession() as session:
-            payload = {
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-                "stream": False
+        client = HTTPClient.get_client()
+        payload = {
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": False
+        }
+
+        try:
+            response = await client.post(
+                f"{api_url}/v1/chat/completions",
+                json=payload
+            )
+            if response.status_code != 200:
+                error_text = response.text
+                raise Exception(f"Model API error ({model_name}): {response.status_code} - {error_text}")
+
+            data = response.json()
+
+            return {
+                "content": data["choices"][0]["message"]["content"],
+                "model_name": model_name,
+                "model_id": model_id,
+                "tokens_used": data.get("usage", {}).get("total_tokens", 0)
             }
 
-            try:
-                async with session.post(
-                    f"{api_url}/v1/chat/completions",
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=120)
-                ) as response:
-                    if not response.ok:
-                        error_text = await response.text()
-                        raise Exception(f"Model API error ({model_name}): {response.status} - {error_text}")
-
-                    data = await response.json()
-
-                    return {
-                        "content": data["choices"][0]["message"]["content"],
-                        "model_name": model_name,
-                        "model_id": model_id,
-                        "tokens_used": data.get("usage", {}).get("total_tokens", 0)
-                    }
-
-            except aiohttp.ClientError as e:
-                logger.error(f"Failed to call {model_name}: {e}")
-                raise Exception(f"Failed to call {model_name}: {str(e)}")
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to call {model_name}: {e}")
+            raise Exception(f"Failed to call {model_name}: {str(e)}")
 
     async def enhance_reasoning(
         self,
