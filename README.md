@@ -29,6 +29,10 @@ Experiment with multiple AI interaction patterns: side-by-side comparison, colla
 - **Public Access**: Cloudflare Tunnels for external connectivity
 - **Auto-Restart**: Maintains availability across GitHub's 6-hour limit
 
+## Architecture
+
+![Architecture](architecture.png)
+
 ## Modes
 
 ### Arena
@@ -42,10 +46,6 @@ Multi-agent orchestration with tool calling (web search, code execution). [→ D
 
 ### Variations
 Compare direct prompting vs. verbalized sampling to explore output diversity. [→ Docs](VARIATIONS.md)
-
-## Architecture
-
-![Architecture](architecture.png)
 
 ## Quick Start
 
