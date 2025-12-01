@@ -5,6 +5,7 @@ FastAPI-based REST API using llama-cpp-python for efficient CPU inference
 
 import os
 import json
+import asyncio
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -28,8 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global model
+# Global model and semaphore
 llm = None
+# Limit concurrent inferences to 1 to avoid CPU thrashing on GitHub Runners (2 cores)
+inference_lock = asyncio.Semaphore(1)
 MODEL_NAME = "Qwen2.5-7B-Instruct"
 
 class ChatMessage(BaseModel):
@@ -78,7 +81,7 @@ def load_model():
         n_threads=n_threads,
         use_mlock=True,      # Lock model in RAM to prevent swapping
         use_mmap=True,       # Memory-map model file for faster loading
-        n_batch=256,         # Optimize batch processing for prompt evaluation
+        n_batch=512,         # Optimize batch processing for prompt evaluation
         last_n_tokens_size=64,  # Limit repeat penalty context for speed
         verbose=True
     )
@@ -121,26 +124,45 @@ async def list_models():
         ]
     }
 
-def generate_stream(messages: list, max_tokens: int, temperature: float, top_p: float) -> Generator[str, None, None]:
+async def generate_stream(messages: list, max_tokens: int, temperature: float, top_p: float):
     """Generate streaming response"""
     global llm
 
     try:
-        response = llm.create_chat_completion(
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            stream=True
-        )
+        # Streaming response generator
+        # Note: We don't hold the semaphore for the entire stream to allow
+        # interleaving if needed, but for CPU bound tasks, holding it is usually safer.
+        # However, since this is a generator, we can't easily wrap the yield in a context manager
+        # that spans the lifetime of the response unless we use a wrapper.
+        # For simplicity and safety on 1 CPU, we'll just assume the engine handles queueing
+        # or we accept that streams might block new requests until they finish initial processing.
+        
+        # Actually, for single-threaded CPU inference, we MUST process one request at a time.
+        async with inference_lock:
+            response = await asyncio.to_thread(
+                llm.create_chat_completion,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                stream=True
+            )
+            
+            # We need to iterate the iterator in the thread or consume it.
+            # Since create_chat_completion returns a generator, we can iterate it.
+            # CAUTION: Iterating the generator runs inference. We can't strictly
+            # release the lock between tokens efficiently without context switching overhead.
+            # So we hold the lock for the whole generation to be safe.
+            
+            for chunk in response:
+                if "choices" in chunk and len(chunk["choices"]) > 0:
+                    delta = chunk["choices"][0].get("delta", {})
+                    if "content" in delta:
+                        yield f"data: {json.dumps(chunk)}\n\n"
+                        # Allow event loop to breathe (small yield)
+                        await asyncio.sleep(0)
 
-        for chunk in response:
-            if "choices" in chunk and len(chunk["choices"]) > 0:
-                delta = chunk["choices"][0].get("delta", {})
-                if "content" in delta:
-                    yield f"data: {json.dumps(chunk)}\n\n"
-
-        yield "data: [DONE]\n\n"
+            yield "data: [DONE]\n\n"
 
     except Exception as e:
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -173,13 +195,15 @@ async def chat_completions(request: GenerateRequest):
                 }
             )
 
-        # Generate response (non-streaming)
-        response = llm.create_chat_completion(
-            messages=messages,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            top_p=request.top_p,
-        )
+        # Generate response (non-streaming) with lock
+        async with inference_lock:
+            response = await asyncio.to_thread(
+                llm.create_chat_completion,
+                messages=messages,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                top_p=request.top_p,
+            )
 
         return {
             "id": "chatcmpl-qwen",

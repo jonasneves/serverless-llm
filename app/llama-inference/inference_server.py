@@ -5,6 +5,7 @@ FastAPI-based REST API using llama-cpp-python for efficient CPU inference
 
 import os
 import json
+import asyncio
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -28,8 +29,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global model
+# Global model and semaphore
 llm = None
+inference_lock = asyncio.Semaphore(1)
 MODEL_NAME = "Llama-3.2-3B-Instruct"
 
 class ChatMessage(BaseModel):
@@ -121,26 +123,29 @@ async def list_models():
         ]
     }
 
-def generate_stream(messages: list, max_tokens: int, temperature: float, top_p: float) -> Generator[str, None, None]:
+async def generate_stream(messages: list, max_tokens: int, temperature: float, top_p: float):
     """Generate streaming response"""
     global llm
 
     try:
-        response = llm.create_chat_completion(
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            stream=True
-        )
+        async with inference_lock:
+            response = await asyncio.to_thread(
+                llm.create_chat_completion,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                stream=True
+            )
 
-        for chunk in response:
-            if "choices" in chunk and len(chunk["choices"]) > 0:
-                delta = chunk["choices"][0].get("delta", {})
-                if "content" in delta:
-                    yield f"data: {json.dumps(chunk)}\n\n"
+            for chunk in response:
+                if "choices" in chunk and len(chunk["choices"]) > 0:
+                    delta = chunk["choices"][0].get("delta", {})
+                    if "content" in delta:
+                        yield f"data: {json.dumps(chunk)}\n\n"
+                        await asyncio.sleep(0)
 
-        yield "data: [DONE]\n\n"
+            yield "data: [DONE]\n\n"
 
     except Exception as e:
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -174,12 +179,14 @@ async def chat_completions(request: GenerateRequest):
             )
 
         # Generate response (non-streaming)
-        response = llm.create_chat_completion(
-            messages=messages,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            top_p=request.top_p,
-        )
+        async with inference_lock:
+            response = await asyncio.to_thread(
+                llm.create_chat_completion,
+                messages=messages,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                top_p=request.top_p,
+            )
 
         return {
             "id": "chatcmpl-llama",

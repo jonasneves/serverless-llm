@@ -1,23 +1,25 @@
-FROM nvidia/cuda:12.1-runtime-ubuntu22.04
+FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
+# Install build dependencies for llama-cpp-python
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
+    build-essential \
+    cmake \
     git \
+    libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install with OpenBLAS support for CPU acceleration
+RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install --no-cache-dir -r requirements.txt
 
 COPY inference_server.py .
 
-ENV MODEL_NAME=meta-llama/Llama-3.2-8B-Instruct
-ENV USE_4BIT=true
+ENV MODEL_NAME=llama-3.2-3b
 ENV PORT=8000
 
 EXPOSE 8000
