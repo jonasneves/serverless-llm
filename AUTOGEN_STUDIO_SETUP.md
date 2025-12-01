@@ -8,7 +8,7 @@ Your serverless-llm chat interface has **3 modes**:
 2. **Discussion** (`/discussion`) - Multi-model discussion with debate
 3. **AutoGen** (`/autogen`) - Programmatic multi-agent orchestration
 
-## ❌ AutoGen Studio Not Included
+## AutoGen Studio Not Included
 
 **Why?** AutoGen Studio (v0.4.x) is **incompatible** with the newer AutoGen framework (v0.7.x) that we're using for programmatic orchestration.
 
@@ -30,12 +30,12 @@ Cannot install both!
 
 ### Why v0.7.x is Better
 The new AutoGen v0.7.x framework has:
-- ✅ Better async support
-- ✅ Improved tool handling
-- ✅ ModelCapabilities configuration
-- ✅ More stable message passing
-- ✅ Better streaming support
-- ✅ Active development and support
+- Better async support
+- Improved tool handling
+- ModelCapabilities configuration
+- More stable message passing
+- Better streaming support
+- Active development and support
 
 AutoGen Studio is still on v0.4.x and hasn't been updated for the new architecture.
 
@@ -47,13 +47,13 @@ AutoGen Studio is still on v0.4.x and hasn't been updated for the new architectu
 - All navigation links updated across all pages
 
 ### Programmatic AutoGen (`/autogen`)
-Your programmatic AutoGen setup is **superior** to the Studio GUI:
-- ✅ Uses latest AutoGen v0.7.x
-- ✅ Integrated with your GitHub Models (Qwen, Phi, Llama)
-- ✅ Custom specialist agents (reasoning, knowledge, quick)
-- ✅ Web search and code execution tools
-- ✅ Streaming responses
-- ✅ Production-ready
+Programmatic AutoGen setup features:
+- Uses latest AutoGen v0.7.x
+- Integrated with GitHub Models (Qwen, Phi, Llama)
+- Custom specialist agents (reasoning, knowledge, quick)
+- Web search and code execution tools
+- Streaming responses
+- Production-ready
 
 ## Access URLs
 
@@ -79,13 +79,13 @@ Intelligent Routing:
 Streaming Response
 ```
 
-### Features You Have
-- ✅ **Multi-Agent Orchestration** - Microsoft AutoGen v0.7.x framework
-- ✅ **Specialist Agents** - Automatically routes to best model for task
-- ✅ **Tool Calling** - Web search and code execution
-- ✅ **Streaming Responses** - Real-time output
-- ✅ **GitHub Models** - Uses your serverless Qwen/Phi/Llama endpoints
-- ✅ **Production Ready** - Fully integrated into your serverless setup
+### Features
+- **Multi-Agent Orchestration** - Microsoft AutoGen v0.7.x framework
+- **Specialist Agents** - Automatically routes to best model for task
+- **Tool Calling** - Web search and code execution
+- **Streaming Responses** - Real-time output
+- **GitHub Models** - Uses serverless Qwen/Phi/Llama endpoints
+- **Production Ready** - Fully integrated into serverless setup
 
 ### Files Modified
 1. `requirements.txt` - Added `autogen-agentchat>=0.7.5`, `autogen-ext[openai]>=0.7.5`
@@ -96,11 +96,11 @@ Streaming Response
 
 ## Benefits of This Approach
 
-1. ✅ **Latest Framework** - Uses AutoGen v0.7.x (most recent)
-2. ✅ **Custom Integration** - Tailored to your GitHub Models setup
-3. ✅ **Production Ready** - Battle-tested, stable, reliable
-4. ✅ **Serverless** - Runs in GitHub Actions with 5+ hour uptime
-5. ✅ **Full Control** - You can customize agent behavior, tools, routing
+1. **Latest Framework** - Uses AutoGen v0.7.x (most recent)
+2. **Custom Integration** - Tailored to GitHub Models setup
+3. **Production Ready** - Battle-tested, stable, reliable
+4. **Serverless** - Runs in GitHub Actions with 5+ hour uptime
+5. **Full Control** - Customize agent behavior, tools, routing
 
 ## Using AutoGen (`/autogen`)
 
@@ -160,9 +160,9 @@ GitHub Actions Runner
 
 ## Summary
 
-✅ **You have:** Modern AutoGen v0.7.x with multi-agent orchestration  
-❌ **You don't have:** AutoGen Studio GUI (incompatible with v0.7.x)  
-🎯 **Why it's better:** Latest features, custom integration, production-ready
+**Available:** Modern AutoGen v0.7.x with multi-agent orchestration
+**Not available:** AutoGen Studio GUI (incompatible with v0.7.x)
+**Advantages:** Latest features, custom integration, production-ready
 
-Your `/autogen` mode is powerful and production-ready! 🚀
+The `/autogen` mode is powerful and production-ready.
 

@@ -1,8 +1,8 @@
 # AutoGen Mode - Multi-Agent Orchestration
 
-**Status:** ✅ Fully Implemented with Microsoft AutoGen
+**Status:** Fully Implemented with Microsoft AutoGen
 
-Microsoft AutoGen framework has been successfully integrated for multi-agent orchestration in your serverless-llm project!
+Microsoft AutoGen framework has been integrated for multi-agent orchestration in the serverless-llm project.
 
 ## What Was Built
 
@@ -312,4 +312,4 @@ python -c "import json; json.load(open('tools_config.json')); print('✓ Tools c
 
 ---
 
-**🎉 Orchestrator Mode is ready to use!** Start your model servers and try it out at `http://localhost:8080/orchestrator`
+Orchestrator Mode is ready to use. Start your model servers and access at `http://localhost:8080/orchestrator`

@@ -1,16 +1,16 @@
 # Verbalized Sampling Mode
 
-## 🎯 Unlock LLM Diversity & Creativity
+## Unlock LLM Diversity & Creativity
 
-Verbalized Sampling is a **training-free prompting technique** from Stanford Research that mitigates mode collapse and unlocks your LLM's creative potential.
+Verbalized Sampling is a training-free prompting technique from Stanford Research that mitigates mode collapse and unlocks LLM creative potential.
 
 **Results:**
-- ✅ **1.6-2x more creativity**
-- ✅ **25.7% higher diversity** (human-rated)
-- ✅ **Beats fine-tuned models** without retraining
-- ✅ **Restores 66.8%** of lost creativity after alignment
+- 1.6-2x more creativity
+- 25.7% higher diversity (human-rated)
+- Beats fine-tuned models without retraining
+- Restores 66.8% of lost creativity after alignment
 
-📄 **Paper:** [Verbalized Sampling: How to Mitigate Mode Collapse and Unlock LLM Diversity](https://arxiv.org/abs/2411.16641)
+**Paper:** [Verbalized Sampling: How to Mitigate Mode Collapse and Unlock LLM Diversity](https://arxiv.org/abs/2411.16641)
 
 ## The Problem: Mode Collapse
 
@@ -31,14 +31,14 @@ Post-training alignment methods (RLHF, DPO) make LLMs helpful and safe, but they
 ```
 Prompt: "Tell me a joke about coffee" (x5 times)
 
-Response 1: Why did the coffee file a police report? Because it got mugged! 😂
-Response 2: Why did the coffee file a police report? Because it got mugged! 😂
-Response 3: Why did the coffee file a police report? Because it got mugged! 😂
-Response 4: Why did the coffee file a police report? Because it got mugged! 😂
-Response 5: Why did the coffee file a police report? Because it got mugged! 😂
+Response 1: Why did the coffee file a police report? Because it got mugged!
+Response 2: Why did the coffee file a police report? Because it got mugged!
+Response 3: Why did the coffee file a police report? Because it got mugged!
+Response 4: Why did the coffee file a police report? Because it got mugged!
+Response 5: Why did the coffee file a police report? Because it got mugged!
 ```
 
-**Same joke every time = Mode Collapse!**
+**Same joke every time = Mode Collapse**
 
 ## The Solution: Verbalized Sampling
 
@@ -77,7 +77,7 @@ Response 4 (Prob: 7%): Cold brew is just coffee that took a gap year to find its
 Response 5 (Prob: 6%): Coffee: because anger management is too expensive.
 ```
 
-**5 genuinely different jokes = Diversity unlocked! 🎉**
+**5 genuinely different jokes = Diversity unlocked**
 
 ## Using the Diversity Mode
 
@@ -128,10 +128,10 @@ Side-by-side comparison showing:
 - **User Experience:** Keep responses fresh and interesting
 
 ### Zero Cost
-- ✅ **No retraining** required
-- ✅ **No fine-tuning** needed
-- ✅ **Just prompt engineering**
-- ✅ **Works with any LLM**
+- No retraining required
+- No fine-tuning needed
+- Just prompt engineering
+- Works with any LLM
 
 ## Technical Details
 
@@ -260,21 +260,21 @@ Display side-by-side with Direct Prompting
 
 ## Benefits Summary
 
-✅ **1.6-2x more creative** responses  
-✅ **25.7% higher diversity** (human-rated)  
-✅ **Zero training required** - just prompting  
-✅ **Works with any LLM** - model-agnostic  
-✅ **Production-ready** - integrated into your platform  
-✅ **Side-by-side comparison** - see the difference  
-✅ **Real-time streaming** - instant feedback  
-✅ **Customizable** - control response count and temperature  
+- 1.6-2x more creative responses
+- 25.7% higher diversity (human-rated)
+- Zero training required - just prompting
+- Works with any LLM - model-agnostic
+- Production-ready - integrated into platform
+- Side-by-side comparison - see the difference
+- Real-time streaming - instant feedback
+- Customizable - control response count and temperature  
 
 ## What's Next?
 
 ### Try It Out
 1. Deploy the updated code
 2. Go to `https://chat.neevs.io/diversity`
-3. Try different prompts and see the diversity unlock!
+3. Try different prompts and see the diversity unlock
 
 ### Experiment With
 - Different models (Qwen vs Phi vs Llama)
@@ -288,6 +288,4 @@ Display side-by-side with Direct Prompting
 - Compare diversity across different models
 - Add Chain-of-Thought verbalized sampling
 - Implement Multi-variant verbalized sampling
-
-Unlock your LLM's creative potential! 🚀
 
