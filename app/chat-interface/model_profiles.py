@@ -267,12 +267,162 @@ LLAMA_33_70B_PROFILE = {
     "description": "Meta's latest large-scale instruct model with strong general capabilities"
 }
 
+# New Local Model Profiles
+
+MISTRAL_7B_PROFILE = {
+    "model_id": "mistral-7b-instruct-v0.3",
+    "display_name": "Mistral 7B v0.3",
+    "creator": "Mistral AI",
+    "size": "7B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["instruction_following", "structured_output", "reasoning"],
+
+    "benchmark_scores": {
+        "MMLU": 70.6,           # General knowledge
+        "HellaSwag": 81.3,      # Common sense reasoning
+        "ARC-Challenge": 79.2,  # Scientific reasoning
+        "TruthfulQA": 73.5,     # Factual accuracy
+        "GSM8K": 52.2,          # Math word problems
+        "HumanEval": 40.2,      # Code generation
+    },
+
+    "expertise_domains": {
+        "instruction_following": 0.92,  # Exceptional - Mistral's core strength
+        "structured_output": 0.90,      # Exceptional - JSON, function calling
+        "reasoning": 0.82,              # Strong - good logical flow
+        "logical_reasoning": 0.80,      # Strong
+        "common_sense": 0.78,           # Good - HellaSwag score
+        "conversation": 0.75,           # Good - natural dialogue
+        "technical_writing": 0.72,      # Good
+        "problem_solving": 0.70,        # Good
+        "summarization": 0.68,          # Moderate
+        "scientific_knowledge": 0.65,   # Moderate
+        "mathematics": 0.60,            # Moderate - not specialized
+        "coding": 0.58,                 # Moderate - basic ability
+        "creative_writing": 0.70,       # Good
+    },
+
+    "use_as_lead_for": [
+        "function calling",
+        "structured data extraction",
+        "JSON generation",
+        "instruction clarification",
+        "task decomposition",
+        "agent coordination",
+        "tool use planning",
+    ],
+
+    "context_length": 32768,
+    "description": "Efficient 7B model excelling at instruction following and structured outputs"
+}
+
+QWEN_14B_PROFILE = {
+    "model_id": "qwen2.5-14b-instruct",
+    "display_name": "Qwen 2.5 14B",
+    "creator": "Alibaba Cloud",
+    "size": "14B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["mathematics", "coding", "logical_reasoning"],
+
+    "benchmark_scores": {
+        "MMLU": 79.9,           # Massive Multitask Language Understanding
+        "HumanEval": 87.3,      # Code generation benchmark
+        "MATH": 80.7,           # Mathematical problem solving
+        "GSM8K": 88.5,          # Grade school math word problems
+        "BigBench-Hard": 74.2,  # Complex reasoning tasks
+        "GPQA": 48.1,           # Graduate-level science questions
+    },
+
+    "expertise_domains": {
+        "mathematics": 0.98,           # Exceptional - top-tier MATH scores
+        "coding": 0.95,                # Exceptional - 87.3 HumanEval
+        "logical_reasoning": 0.90,     # Exceptional - strong BBH
+        "scientific_knowledge": 0.85,  # Strong - good GPQA
+        "problem_solving": 0.90,       # Exceptional
+        "technical_writing": 0.82,     # Strong
+        "instruction_following": 0.85, # Strong
+        "reasoning": 0.88,             # Strong
+        "creative_writing": 0.65,      # Moderate
+        "conversation": 0.70,          # Good
+        "summarization": 0.75,         # Good
+        "common_sense": 0.75,          # Good
+    },
+
+    "use_as_lead_for": [
+        "complex math problems",
+        "advanced code generation",
+        "algorithm optimization",
+        "data structures design",
+        "scientific computing",
+        "technical documentation",
+        "mathematical proofs",
+        "competitive programming",
+    ],
+
+    "context_length": 32768,
+    "description": "Advanced technical expert with exceptional mathematics and coding abilities"
+}
+
+GEMMA2_9B_PROFILE = {
+    "model_id": "gemma-2-9b-instruct",
+    "display_name": "Gemma 2 9B",
+    "creator": "Google",
+    "size": "9B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["reasoning", "instruction_following", "safety"],
+
+    "benchmark_scores": {
+        "MMLU": 71.3,           # General knowledge
+        "HumanEval": 51.8,      # Code generation
+        "GSM8K": 68.6,          # Math word problems
+        "HellaSwag": 80.9,      # Common sense
+        "MMLU-Pro": 42.8,       # Advanced reasoning
+        "TruthfulQA": 76.2,     # Factual accuracy (strong!)
+    },
+
+    "expertise_domains": {
+        "reasoning": 0.85,              # Strong - good MMLU-Pro
+        "instruction_following": 0.85,  # Strong - well-tuned
+        "safety": 0.90,                 # Exceptional - Google's focus
+        "factual_accuracy": 0.82,       # Strong - TruthfulQA
+        "common_sense": 0.80,           # Strong - HellaSwag
+        "logical_reasoning": 0.78,      # Good
+        "conversation": 0.75,           # Good
+        "problem_solving": 0.72,        # Good
+        "mathematics": 0.70,            # Good - 68.6 GSM8K
+        "coding": 0.65,                 # Moderate - 51.8 HumanEval
+        "scientific_knowledge": 0.68,   # Moderate
+        "technical_writing": 0.70,      # Good
+        "creative_writing": 0.72,       # Good
+        "summarization": 0.75,          # Good
+    },
+
+    "use_as_lead_for": [
+        "safe content generation",
+        "fact-checking",
+        "educational content",
+        "general reasoning tasks",
+        "balanced perspectives",
+        "ethical considerations",
+        "policy-compliant responses",
+    ],
+
+    "context_length": 8192,
+    "description": "Well-rounded 9B model with strong reasoning and safety guarantees"
+}
+
 # Aggregate profiles for easy access
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models
     "qwen2.5-7b": QWEN_PROFILE,
     "phi-3-mini": PHI_PROFILE,
     "llama-3.2-3b": LLAMA_PROFILE,
+    "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
+    "qwen2.5-14b-instruct": QWEN_14B_PROFILE,
+    "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
     # API models
     "gpt-4.1": GPT4_1_PROFILE,
     "gpt-4o": GPT4O_PROFILE,
@@ -385,6 +535,9 @@ __all__ = [
     "QWEN_PROFILE",
     "PHI_PROFILE",
     "LLAMA_PROFILE",
+    "MISTRAL_7B_PROFILE",
+    "QWEN_14B_PROFILE",
+    "GEMMA2_9B_PROFILE",
     # API models
     "GPT4_1_PROFILE",
     "GPT4O_PROFILE",
