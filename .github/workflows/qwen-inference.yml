@@ -100,7 +100,7 @@ jobs:
       - name: Start inference server
         env:
           MODEL_REPO: bartowski/Qwen2.5-7B-Instruct-GGUF
-          MODEL_FILE: Qwen2.5-7B-Instruct-Q4_0.gguf
+          MODEL_FILE: Qwen2.5-7B-Instruct-Q4_K_M.gguf
           N_CTX: "2048"
           N_THREADS: "2"
           PORT: "8000"

@@ -101,8 +101,8 @@ jobs:
 
       - name: Start inference server
         env:
-          MODEL_REPO: microsoft/Phi-3-mini-4k-instruct-gguf
-          MODEL_FILE: Phi-3-mini-4k-instruct-q4.gguf
+          MODEL_REPO: bartowski/Phi-3-mini-4k-instruct-GGUF
+          MODEL_FILE: Phi-3-mini-4k-instruct-Q4_K_M.gguf
           N_CTX: "2048"
           N_THREADS: "2"
           PORT: "8000"
