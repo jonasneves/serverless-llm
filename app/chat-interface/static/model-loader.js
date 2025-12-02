@@ -19,7 +19,7 @@ class ModelLoader {
     if (this.loaded) return this;
 
     try {
-      const response = await fetch('/api/config');
+      const response = await fetch('/api/models');
       const data = await response.json();
 
       this.models = data.models || [];
