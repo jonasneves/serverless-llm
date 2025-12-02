@@ -1,4 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load models dynamically
+    await modelLoader.load();
+    modelLoader.buildModelSelector('#model');
+
     const generateBtn = document.getElementById('generateBtn');
     const queryInput = document.getElementById('query');
     const modelSelect = document.getElementById('model');

@@ -1,4 +1,9 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load models dynamically
+    await modelLoader.load();
+    modelLoader.buildParticipantCheckboxes('#participantsContainer');
+    modelLoader.buildOrchestratorDropdown('#orchestratorModel');
+
     // Configure marked.js for proper markdown rendering
     marked.setOptions({
       breaks: true,

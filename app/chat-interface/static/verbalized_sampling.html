@@ -354,9 +354,8 @@
         <div class="control-item">
           <label>Model</label>
           <select id="model">
-            <option value="qwen2.5-7b">Qwen 2.5-7B</option>
-            <option value="phi-3-mini">Phi-3 Mini</option>
-            <option value="llama-3.2-3b">Llama 3.2-3B</option>
+            <!-- Dynamically populated by model-loader.js -->
+            <option>Loading...</option>
           </select>
         </div>
 
@@ -438,6 +437,7 @@
     </div>
   </main>
 
+  <script src="/static/model-loader.js"></script>
   <script defer src="/static/verbalized_sampling.js?v=5"></script>
 
 </body>
