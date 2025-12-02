@@ -30,6 +30,21 @@ on:
         required: false
         default: ''
         type: string
+      mistral_api_url:
+        description: 'Mistral API URL (Cloudflare tunnel URL)'
+        required: false
+        default: ''
+        type: string
+      qwen14b_api_url:
+        description: 'Qwen 14B API URL (Cloudflare tunnel URL)'
+        required: false
+        default: ''
+        type: string
+      gemma_api_url:
+        description: 'Gemma API URL (Cloudflare tunnel URL)'
+        required: false
+        default: ''
+        type: string
 
   repository_dispatch:
     types: [restart-chat-interface]
@@ -104,6 +119,9 @@ jobs:
           QWEN_API_URL: ${{ inputs.qwen_api_url || secrets.QWEN_API_URL }}
           PHI_API_URL: ${{ inputs.phi_api_url || secrets.PHI_API_URL }}
           LLAMA_API_URL: ${{ inputs.llama_api_url || secrets.LLAMA_API_URL }}
+          MISTRAL_API_URL: ${{ inputs.mistral_api_url || secrets.MISTRAL_API_URL }}
+          QWEN14B_API_URL: ${{ inputs.qwen14b_api_url || secrets.QWEN14B_API_URL }}
+          GEMMA_API_URL: ${{ inputs.gemma_api_url || secrets.GEMMA_API_URL }}
           GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
         run: |
           cd app/chat-interface
@@ -201,6 +219,9 @@ jobs:
           QWEN_API_URL: ${{ inputs.qwen_api_url || secrets.QWEN_API_URL }}
           PHI_API_URL: ${{ inputs.phi_api_url || secrets.PHI_API_URL }}
           LLAMA_API_URL: ${{ inputs.llama_api_url || secrets.LLAMA_API_URL }}
+          MISTRAL_API_URL: ${{ inputs.mistral_api_url || secrets.MISTRAL_API_URL }}
+          QWEN14B_API_URL: ${{ inputs.qwen14b_api_url || secrets.QWEN14B_API_URL }}
+          GEMMA_API_URL: ${{ inputs.gemma_api_url || secrets.GEMMA_API_URL }}
         run: |
           set -e
           # Handle cancellation gracefully
@@ -230,9 +251,12 @@ jobs:
           echo "=========================================="
           echo ""
           echo "Model endpoints configured:"
-          echo "  - Qwen: ${QWEN_API_URL:-not configured}"
+          echo "  - Qwen 7B: ${QWEN_API_URL:-not configured}"
+          echo "  - Qwen 14B: ${QWEN14B_API_URL:-not configured}"
           echo "  - Phi: ${PHI_API_URL:-not configured}"
           echo "  - Llama: ${LLAMA_API_URL:-not configured}"
+          echo "  - Mistral: ${MISTRAL_API_URL:-not configured}"
+          echo "  - Gemma: ${GEMMA_API_URL:-not configured}"
           echo ""
 
           RESTART_TRIGGERED=false
