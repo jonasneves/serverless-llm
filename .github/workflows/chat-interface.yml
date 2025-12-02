@@ -234,6 +234,11 @@ jobs:
           }
           trap cleanup SIGTERM SIGINT
 
+          # Handle auto_restart input - default to true if not set
+          if [ -z "$AUTO_RESTART" ]; then
+            AUTO_RESTART="true"
+          fi
+
           # Convert hours to seconds (handle integer hours)
           DURATION_SECONDS=$((DURATION_HOURS * 3600))
           RESTART_BUFFER=360  # 6 minutes before end (3 min handoff + 3 min buffer)
