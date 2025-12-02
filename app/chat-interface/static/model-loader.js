@@ -1,6 +1,6 @@
 /**
  * Dynamic Model Loader
- * Single source of truth for available models - fetches from /api/config
+ * Single source of truth for available models - fetches from /api/models
  * All frontend pages should use this instead of hardcoding model lists
  */
 
