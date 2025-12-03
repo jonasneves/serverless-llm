@@ -44,7 +44,7 @@
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 20px;
+      padding: 24px;
       margin-bottom: 24px;
     }
 
@@ -68,6 +68,15 @@
       font-size: 14px;
       resize: vertical;
       min-height: 80px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: border-color 0.2s;
+    }
+
+    .input-group textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
     }
 
     .controls {
@@ -95,24 +104,36 @@
       border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 14px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: border-color 0.2s;
+    }
+
+    .control-item input:focus,
+    .control-item select:focus {
+      outline: none;
+      border-color: var(--accent-color);
     }
 
     .generate-btn {
-      padding: 12px 32px;
-      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+      padding: 10px 24px;
+      background: var(--accent-color);
       color: white;
       border: none;
       border-radius: 8px;
       font-weight: 600;
       font-size: 14px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s;
       margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .generate-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
+      background: var(--accent-hover);
+      box-shadow: 0 4px 12px rgba(30, 58, 95, 0.2);
     }
 
     .generate-btn:disabled {
@@ -134,6 +155,7 @@
       display: flex;
       flex-direction: column;
       min-height: 500px;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     .comparison-side.direct {
@@ -141,9 +163,17 @@
       background: var(--bg-primary);
     }
 
+    .comparison-side.direct:hover {
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+
     .comparison-side.verbalized {
       border-color: var(--vs-color);
       background: var(--bg-primary);
+    }
+
+    .comparison-side.verbalized:hover {
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
     }
 
     .side-header {
@@ -193,6 +223,11 @@
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 12px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .response-item:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
     .response-header {
@@ -260,6 +295,12 @@
       height: 64px;
       margin-bottom: 16px;
       opacity: 0.3;
+      color: var(--text-tertiary);
+    }
+
+    .empty-state p {
+      color: var(--text-secondary);
+      font-size: 14px;
     }
 
     .loading-spinner {
