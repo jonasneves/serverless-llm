@@ -24,36 +24,6 @@ on:
           - '1'
           - '2'
           - '3'
-      qwen_api_url:
-        description: 'Qwen API URL (Cloudflare tunnel URL)'
-        required: false
-        default: ''
-        type: string
-      phi_api_url:
-        description: 'Phi API URL (Cloudflare tunnel URL)'
-        required: false
-        default: ''
-        type: string
-      llama_api_url:
-        description: 'Llama API URL (Cloudflare tunnel URL)'
-        required: false
-        default: ''
-        type: string
-      mistral_api_url:
-        description: 'Mistral API URL (Cloudflare tunnel URL)'
-        required: false
-        default: ''
-        type: string
-      qwen14b_api_url:
-        description: 'Qwen 14B API URL (Cloudflare tunnel URL)'
-        required: false
-        default: ''
-        type: string
-      gemma_api_url:
-        description: 'Gemma API URL (Cloudflare tunnel URL)'
-        required: false
-        default: ''
-        type: string
 
   repository_dispatch:
     types: [restart-chat-interface]
