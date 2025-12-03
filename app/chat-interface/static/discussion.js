@@ -30,8 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const orchestratorBadge = document.getElementById('orchestratorBadge');
     const apiWarning = document.getElementById('apiWarning');
     const tokenSection = document.getElementById('tokenSection');
-    const tokenToggle = document.getElementById('tokenToggle');
-    const tokenInputWrapper = document.getElementById('tokenInputWrapper');
     const githubToken = document.getElementById('githubToken');
     const tokenVisibilityBtn = document.getElementById('tokenVisibilityBtn');
     const eyeIcon = document.getElementById('eyeIcon');
@@ -40,8 +38,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     const orchestratorAction = document.getElementById('orchestratorAction');
     const orchestratorActionText = document.getElementById('orchestratorActionText');
     const participantCount = document.getElementById('participantCount');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettings = document.getElementById('closeSettings');
+    const apiSettingsBtn = document.getElementById('apiSettingsBtn');
 
     let currentDiscussion = null;
+
+    function openSettingsModal() {
+      if (!settingsModal) return;
+      settingsModal.classList.add('open');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeSettingsModal() {
+      if (!settingsModal) return;
+      settingsModal.classList.remove('open');
+      document.body.classList.remove('modal-open');
+    }
+
+    settingsBtn?.addEventListener('click', openSettingsModal);
+    apiSettingsBtn?.addEventListener('click', openSettingsModal);
+    closeSettings?.addEventListener('click', closeSettingsModal);
+
+    settingsModal?.addEventListener('click', (event) => {
+      if (event.target === settingsModal) {
+        closeSettingsModal();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && settingsModal?.classList.contains('open')) {
+        closeSettingsModal();
+      }
+    });
 
     // API models that consume GitHub Models credits
     const API_MODELS = [
@@ -103,7 +133,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Show API warning if any API models are used
       apiWarning.classList.toggle('visible', needsToken);
-      tokenSection.style.display = needsToken ? 'block' : 'none';
+      const hasToken = githubToken.value.trim().length > 0;
+      tokenSection?.classList.toggle('highlight', needsToken);
+      settingsBtn?.classList.toggle('needs-attention', needsToken && !hasToken);
 
       // Update start button state
       startBtn.disabled = count < 2;
@@ -116,13 +148,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateOrchestratorUI() {
       updateParticipantUI();
     }
-
-    // Toggle token input visibility
-    tokenToggle.addEventListener('click', () => {
-      tokenInputWrapper.classList.toggle('visible');
-      const svg = tokenToggle.querySelector('svg');
-      svg.style.transform = tokenInputWrapper.classList.contains('visible') ? 'rotate(180deg)' : '';
-    });
 
     // Toggle token show/hide
     tokenVisibilityBtn.addEventListener('click', () => {
@@ -148,6 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         localStorage.removeItem('github_models_token');
       }
+      updateParticipantUI();
     });
 
     // Listen for orchestrator and participant changes

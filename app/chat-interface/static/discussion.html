@@ -15,10 +15,137 @@
       --llama-color: #14B8A6;
     }
 
+    @keyframes slideUp {
+      from {
+        transform: translateY(16px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
     .discussion-area {
       display: flex;
       flex-direction: column;
       gap: 24px;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    .settings-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 1000;
+    }
+
+    .settings-modal.open {
+      display: flex;
+    }
+
+    .settings-modal-content {
+      width: min(480px, 100%);
+      background: var(--bg-primary);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      animation: slideUp 0.2s ease;
+    }
+
+    .settings-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .settings-modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-primary);
+    }
+
+    .settings-modal-body {
+      padding: 20px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .settings-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .settings-section.highlight {
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--accent-color);
+      background: rgba(139, 92, 246, 0.08);
+    }
+
+    [data-theme="dark"] .settings-section.highlight {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .settings-description {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .close-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    #settingsBtn.needs-attention::after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      background: var(--warning-color);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(9, 9, 9, 0.35);
+    }
+
+    .settings-link-btn {
+      background: none;
+      border: none;
+      color: var(--accent-color);
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+
+    .settings-link-btn:hover {
+      text-decoration: underline;
     }
 
     .input-section {
@@ -576,31 +703,6 @@
       border-top: 1px solid var(--border-color);
     }
 
-    .token-toggle {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 0;
-    }
-
-    .token-toggle:hover {
-      color: var(--text-primary);
-    }
-
-    .token-input-wrapper {
-      display: none;
-      margin-top: 8px;
-    }
-
-    .token-input-wrapper.visible {
-      display: block;
-    }
-
     .token-input-row {
       display: flex;
       gap: 8px;
@@ -1109,7 +1211,8 @@
                   <line x1="12" y1="8" x2="12" y2="12.5"></line>
                   <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
                 </svg>
-                <span>Leverage GitHub-hosted models (many include free quota)</span>
+                <span>API models use GitHub Models credits. Add your token in Settings.</span>
+                <button id="apiSettingsBtn" type="button" class="settings-link-btn">Open settings</button>
               </div>
               <div id="statusIndicator"></div>
             </div>
