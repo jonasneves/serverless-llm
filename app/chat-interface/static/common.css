@@ -156,6 +156,17 @@ header {
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  margin-left: 16px;
+  position: relative;
+}
+
+.icon-btn::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  height: 24px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .icon-btn:hover {
