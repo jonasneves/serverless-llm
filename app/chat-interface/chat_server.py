@@ -151,6 +151,12 @@ def get_static_versions() -> dict:
 
 MODEL_CONFIG = (
     {
+        "id": "qwen2.5-14b-instruct",
+        "name": "Qwen 2.5-14B",
+        "env": "QWEN14B_API_URL",
+        "default_url": "http://localhost:8004",
+    },
+    {
         "id": "qwen2.5-7b",
         "name": "Qwen 2.5-7B",
         "env": "QWEN_API_URL",
@@ -158,10 +164,16 @@ MODEL_CONFIG = (
         "default": True,
     },
     {
-        "id": "qwen2.5-14b-instruct",
-        "name": "Qwen 2.5-14B",
-        "env": "QWEN14B_API_URL",
-        "default_url": "http://localhost:8004",
+        "id": "gemma-2-9b-instruct",
+        "name": "Gemma 2 9B",
+        "env": "GEMMA_API_URL",
+        "default_url": "http://localhost:8006",
+    },
+    {
+        "id": "mistral-7b-instruct-v0.3",
+        "name": "Mistral 7B v0.3",
+        "env": "MISTRAL_API_URL",
+        "default_url": "http://localhost:8005",
     },
     {
         "id": "phi-3-mini",
@@ -174,18 +186,6 @@ MODEL_CONFIG = (
         "name": "Llama 3.2-3B",
         "env": "LLAMA_API_URL",
         "default_url": "http://localhost:8003",
-    },
-    {
-        "id": "mistral-7b-instruct-v0.3",
-        "name": "Mistral 7B v0.3",
-        "env": "MISTRAL_API_URL",
-        "default_url": "http://localhost:8005",
-    },
-    {
-        "id": "gemma-2-9b-instruct",
-        "name": "Gemma 2 9B",
-        "env": "GEMMA_API_URL",
-        "default_url": "http://localhost:8006",
     },
 )
 
