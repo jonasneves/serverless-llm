@@ -215,7 +215,7 @@ jobs:
       - name: Health monitoring loop
         env:
           DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
-          AUTO_RESTART: ${{ inputs.auto_restart }}
+          AUTO_RESTART: ${{ inputs.auto_restart == false && 'false' || 'true' }}
           QWEN_API_URL: ${{ inputs.qwen_api_url || secrets.QWEN_API_URL }}
           PHI_API_URL: ${{ inputs.phi_api_url || secrets.PHI_API_URL }}
           LLAMA_API_URL: ${{ inputs.llama_api_url || secrets.LLAMA_API_URL }}

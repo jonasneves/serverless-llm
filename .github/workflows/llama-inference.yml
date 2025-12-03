@@ -197,7 +197,7 @@ jobs:
       - name: Health monitoring loop
         env:
           DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
-          AUTO_RESTART: ${{ inputs.auto_restart }}
+          AUTO_RESTART: ${{ inputs.auto_restart == false && 'false' || 'true' }}
         run: |
           set -e
           # Handle cancellation gracefully
