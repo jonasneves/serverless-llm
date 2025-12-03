@@ -412,17 +412,19 @@ main {
 
     .input-wrapper {
       position: relative;
-      background: white;
+      background: var(--bg-primary);
       border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border-color);
+      box-shadow: none;
       padding: 10px 60px 10px 20px;
-      transition: box-shadow 0.2s;
+      transition: border-color 0.2s;
       display: flex;
       align-items: center;
     }
 
     .input-wrapper:focus-within {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-color: var(--accent-color);
+      box-shadow: none;
     }
 
     textarea {
