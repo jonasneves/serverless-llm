@@ -504,7 +504,10 @@
                 <div class="service-indicator ${status}"></div>
                 <div class="service-info">
                     <div class="service-name">${modelName}</div>
-                    <div class="service-endpoint">${data.endpoint || 'N/A'}</div>
+                    <div class="service-endpoint">
+                        ${data.endpoint || 'N/A'}
+                        <a href="/api/models/${modelId}/status?detailed=true" target="_blank" title="View raw status JSON" style="color: #6366f1; text-decoration: none; margin-left: 8px; font-size: 11px;">(JSON)</a>
+                    </div>
                     ${data.error ? `<div class="error-details">${data.error}</div>` : ''}
                 </div>
             `;
