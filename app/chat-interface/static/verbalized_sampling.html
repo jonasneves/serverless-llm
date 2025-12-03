@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>Variations - Explore Diverse Outputs</title>
-  <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=6">
+  <!-- Auto-generated cache-busting versions based on file content hash -->
+  <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    /* Page-specific styles for Diversity mode */
+    /* Page-specific styles for Variations mode */
 
     .technique-explainer {
       background: var(--bg-secondary);
@@ -301,7 +301,7 @@
         <a href="/" class="mode-link">Arena</a>
         <a href="/discussion" class="mode-link">Discussion</a>
         <a href="/autogen" class="mode-link">Agents</a>
-        <a href="/diversity" class="mode-link active">Variations</a>
+        <a href="/variations" class="mode-link active">Variations</a>
       </div>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -437,8 +437,8 @@
     </div>
   </main>
 
-  <script src="/static/model-loader.js?v=2"></script>
-  <script defer src="/static/verbalized_sampling.js?v=6"></script>
+  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
+  <script defer src="/static/verbalized_sampling.js?v={{ verbalized_sampling_js }}"></script>
 
 </body>
 </html>

@@ -8,11 +8,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#1e3a5f">
   <title>LLM Arena</title>
-  <!-- Increment version when updating static files to bypass cache -->
-  <link rel="stylesheet" href="/static/common.css?v=6">
-  <link rel="stylesheet" href="/static/chat.css?v=1">
+  <!-- Auto-generated cache-busting versions based on file content hash -->
+  <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
+  <link rel="stylesheet" href="/static/chat.css?v={{ chat_css }}">
   <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script defer src="/static/chat.js?v=3"></script>
+  <script defer src="/static/chat.js?v={{ chat_js }}"></script>
 </head>
 <body>
   <header>
@@ -34,7 +34,7 @@
         <a href="/" class="mode-link active">Arena</a>
         <a href="/discussion" class="mode-link">Discussion</a>
         <a href="/autogen" class="mode-link">Agents</a>
-        <a href="/diversity" class="mode-link">Variations</a>
+        <a href="/variations" class="mode-link">Variations</a>
       </div>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

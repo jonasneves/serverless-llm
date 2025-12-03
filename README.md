@@ -15,7 +15,7 @@ Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma — pow
 
 LLM inference on GitHub Actions free tier with public access via Cloudflare Tunnels.
 
-Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and sampling diversity.
+Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
 ## Overview Features
 

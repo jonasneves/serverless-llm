@@ -10,10 +10,12 @@ import asyncio
 import json
 import logging
 import httpx
+import hashlib
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List, Optional, AsyncGenerator
 import uvicorn
@@ -101,7 +103,48 @@ async def shutdown_event():
 # Mount static files directory
 static_dir = pathlib.Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-CHAT_HTML_PATH = static_dir / "chat.html"
+templates = Jinja2Templates(directory=str(static_dir))
+
+# Cache file versions based on content hash for automatic cache busting
+FILE_VERSIONS = {}
+
+def get_file_version(filename: str) -> str:
+    """
+    Generate a cache-busting version string for a file based on its content hash.
+    Automatically updates when file content changes - no manual version incrementing needed!
+    """
+    file_path = static_dir / filename
+
+    # Return cached version if file hasn't changed
+    if filename in FILE_VERSIONS:
+        cached_mtime, cached_version = FILE_VERSIONS[filename]
+        try:
+            current_mtime = file_path.stat().st_mtime
+            if current_mtime == cached_mtime:
+                return cached_version
+        except FileNotFoundError:
+            return "1"
+
+    # Calculate new version from file content hash
+    try:
+        content = file_path.read_bytes()
+        file_hash = hashlib.md5(content).hexdigest()[:8]  # First 8 chars of hash
+        FILE_VERSIONS[filename] = (file_path.stat().st_mtime, file_hash)
+        return file_hash
+    except FileNotFoundError:
+        return "1"
+
+def get_static_versions() -> dict:
+    """Get all static file versions for template injection"""
+    return {
+        "common_css": get_file_version("common.css"),
+        "chat_css": get_file_version("chat.css"),
+        "chat_js": get_file_version("chat.js"),
+        "discussion_js": get_file_version("discussion.js"),
+        "orchestrator_js": get_file_version("orchestrator.js"),
+        "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
+        "model_loader_js": get_file_version("model-loader.js"),
+    }
 
 
 MODEL_CONFIG = (
@@ -244,50 +287,44 @@ def get_model_endpoint_or_error(model_id: str, *, status_code: int = 400) -> str
 
 
 @app.get("/")
-async def chat_interface():
-    if CHAT_HTML_PATH.exists():
-        return FileResponse(CHAT_HTML_PATH, media_type="text/html")
-    raise HTTPException(status_code=404, detail="Chat interface not found")
+async def chat_interface(request: Request):
+    """Serve chat interface with automatic cache busting"""
+    return templates.TemplateResponse(
+        "chat.html",
+        {"request": request, **get_static_versions()}
+    )
 
-@app.get("/discussion", response_class=HTMLResponse)
-async def discussion_interface():
-    """Serve discussion mode interface"""
-    import pathlib
-    discussion_html_path = pathlib.Path(__file__).parent / "static" / "discussion.html"
-    if discussion_html_path.exists():
-        return discussion_html_path.read_text()
-    else:
-        raise HTTPException(status_code=404, detail="Discussion interface not found")
+@app.get("/discussion")
+async def discussion_interface(request: Request):
+    """Serve discussion mode interface with automatic cache busting"""
+    return templates.TemplateResponse(
+        "discussion.html",
+        {"request": request, **get_static_versions()}
+    )
 
-@app.get("/autogen", response_class=HTMLResponse)
-async def autogen_interface():
-    """Serve AutoGen mode interface"""
-    import pathlib
-    autogen_html_path = pathlib.Path(__file__).parent / "static" / "orchestrator.html"
-    if autogen_html_path.exists():
-        return autogen_html_path.read_text()
-    else:
-        raise HTTPException(status_code=404, detail="AutoGen interface not found")
+@app.get("/autogen")
+async def autogen_interface(request: Request):
+    """Serve AutoGen mode interface with automatic cache busting"""
+    return templates.TemplateResponse(
+        "orchestrator.html",
+        {"request": request, **get_static_versions()}
+    )
 
-@app.get("/diversity", response_class=HTMLResponse)
-async def diversity_interface():
-    """Serve Verbalized Sampling interface"""
-    import pathlib
-    diversity_html_path = pathlib.Path(__file__).parent / "static" / "verbalized_sampling.html"
-    if diversity_html_path.exists():
-        return diversity_html_path.read_text()
-    else:
-        raise HTTPException(status_code=404, detail="Verbalized Sampling interface not found")
+@app.get("/variations")
+async def variations_interface(request: Request):
+    """Serve Verbalized Sampling (Variations) interface with automatic cache busting"""
+    return templates.TemplateResponse(
+        "verbalized_sampling.html",
+        {"request": request, **get_static_versions()}
+    )
 
-@app.get("/status", response_class=HTMLResponse)
-async def status_page():
-    """Serve health status dashboard"""
-    import pathlib
-    status_html_path = pathlib.Path(__file__).parent / "static" / "status.html"
-    if status_html_path.exists():
-        return status_html_path.read_text()
-    else:
-        raise HTTPException(status_code=404, detail="Status page not found")
+@app.get("/status")
+async def status_page(request: Request):
+    """Serve health status dashboard with automatic cache busting"""
+    return templates.TemplateResponse(
+        "status.html",
+        {"request": request, **get_static_versions()}
+    )
 
 @app.get("/health")
 async def health():
