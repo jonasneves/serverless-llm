@@ -217,8 +217,10 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
 
 /* Mode overview cards get margin instead of padding */
 .mode-overview-card {
-  margin: 1rem;
+  margin-top: 1rem;
   margin-bottom: 0;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .mode-input-container,
@@ -262,7 +264,9 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  max-width: 100%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .mode-overview-title,
@@ -410,8 +414,10 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   }
 
   .mode-overview-card {
-    margin: 0.75rem;
+    margin-top: 0.75rem;
     margin-bottom: 0;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
@@ -459,7 +465,10 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   }
 
   .mode-overview-card {
-    margin: 0.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
