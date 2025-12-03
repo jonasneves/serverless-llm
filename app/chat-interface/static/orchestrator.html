@@ -288,6 +288,99 @@
     .markdown-content p {
       margin-bottom: 8px;
     }
+
+    /* Tools Info Card */
+    .tools-info-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 20px auto;
+      max-width: 500px;
+      text-align: left;
+    }
+
+    .tools-info-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .tools-info-header svg {
+      flex-shrink: 0;
+      color: var(--info-color);
+    }
+
+    .tools-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 12px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tools-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .tool-bullet {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .tool-bullet-reasoning { background: var(--tool-reasoning); }
+    .tool-bullet-answer { background: var(--tool-answer); }
+    .tool-bullet-search { background: var(--tool-search); }
+    .tool-bullet-code { background: var(--tool-code); }
+
+    .tool-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .tool-item strong {
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tool-desc {
+      color: var(--text-secondary);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .tools-footer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-color);
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .tools-footer svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .tools-footer strong {
+      color: var(--text-secondary);
+    }
   </style>
 </head>
 <body>
@@ -366,39 +459,51 @@
           using Microsoft's AutoGen framework for intelligent multi-agent coordination.
         </div>
         
-        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin: 20px 0; text-align: left;">
-          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="tools-info-card">
+          <div class="tools-info-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="16" x2="12" y2="12"></line>
               <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
-            Available Tools
+            <span>Available Tools</span>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 12px; color: var(--text-secondary);">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="color: var(--tool-reasoning); font-weight: 600;">•</span>
-              <span><strong>enhance_reasoning</strong> - Route to specialized reasoning models</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="color: var(--tool-answer); font-weight: 600;">•</span>
-              <span><strong>answer</strong> - Generate final answers using best-fit model</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="color: var(--tool-search); font-weight: 600;">•</span>
-              <span><strong>search</strong> - Web search via DuckDuckGo API</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="color: var(--tool-code); font-weight: 600;">•</span>
-              <span><strong>code_interpreter</strong> - Execute Python code in sandboxed environment</span>
-            </div>
-          </div>
-          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-tertiary);">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: text-bottom; margin-right: 4px;">
+          <ul class="tools-list">
+            <li>
+              <span class="tool-bullet tool-bullet-reasoning"></span>
+              <div class="tool-item">
+                <strong>enhance_reasoning</strong>
+                <span class="tool-desc">Route to specialized reasoning models</span>
+              </div>
+            </li>
+            <li>
+              <span class="tool-bullet tool-bullet-answer"></span>
+              <div class="tool-item">
+                <strong>answer</strong>
+                <span class="tool-desc">Generate final answers using best-fit model</span>
+              </div>
+            </li>
+            <li>
+              <span class="tool-bullet tool-bullet-search"></span>
+              <div class="tool-item">
+                <strong>search</strong>
+                <span class="tool-desc">Web search via DuckDuckGo API</span>
+              </div>
+            </li>
+            <li>
+              <span class="tool-bullet tool-bullet-code"></span>
+              <div class="tool-item">
+                <strong>code_interpreter</strong>
+                <span class="tool-desc">Execute Python code in sandboxed environment</span>
+              </div>
+            </li>
+          </ul>
+          <div class="tools-footer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
             </svg>
-            Powered by <strong style="color: var(--text-secondary);">Microsoft AutoGen</strong> framework for multi-agent orchestration
+            <span>Powered by <strong>Microsoft AutoGen</strong> framework</span>
           </div>
         </div>
 
