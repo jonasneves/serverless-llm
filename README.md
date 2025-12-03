@@ -28,7 +28,7 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 
 ## Architecture
 
-![Architecture](architecture.png)
+![User Access Flow](diagram-user-access.png)
 
 ## Modes
 
