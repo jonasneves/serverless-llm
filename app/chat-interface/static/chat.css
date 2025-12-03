@@ -509,26 +509,6 @@ main {
       40% { transform: scale(1); opacity: 1; }
     }
 
-    .welcome-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-    }
-
-    .welcome-title {
-      font-weight: 600;
-      font-size: 15px;
-      margin-bottom: 8px;
-    }
-
-    .welcome-subtitle {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
@@ -611,18 +591,6 @@ main {
       .chat-history {
         padding: 0.75rem;
         gap: 1rem;
-      }
-
-      .welcome-card {
-        padding: 16px;
-      }
-
-      .welcome-title {
-        font-size: 14px;
-      }
-
-      .welcome-subtitle {
-        font-size: 12px;
       }
 
       .message {
@@ -771,10 +739,6 @@ main {
         padding: 0.5rem;
       }
 
-      .welcome-card {
-        padding: 14px;
-      }
-
       .controls-row {
         flex-direction: column;
         align-items: stretch;
@@ -896,10 +860,6 @@ main {
       .chat-history {
         padding: 0.5rem;
         gap: 0.75rem;
-      }
-
-      .welcome-card {
-        padding: 12px;
       }
 
       textarea {

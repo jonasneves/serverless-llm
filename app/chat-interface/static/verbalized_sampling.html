@@ -349,22 +349,22 @@
   </header>
 
   <main>
-    <div class="technique-explainer">
-      <h2>
+    <div class="technique-explainer mode-overview-card">
+      <h2 class="mode-overview-title">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
         Variations: Mitigate Mode Collapse
       </h2>
-      <p>
+      <p class="mode-overview-subtitle">
         <strong>The Problem:</strong> Post-training alignment (RLHF) causes LLMs to suffer from "mode collapse" - 
         they give the same predictable response every time due to typicality bias.
       </p>
-      <p>
+      <p class="mode-overview-subtitle">
         <strong>The Solution:</strong> Verbalized Sampling asks for <em>a distribution of responses</em> instead of <em>one response</em>.
         This forces the model to tap into its diverse pre-trained knowledge rather than the narrow post-aligned mode.
       </p>
-      <p style="margin-bottom: 0;">
+      <p class="mode-overview-subtitle" style="margin-bottom: 0;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: text-bottom;">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>

@@ -7,21 +7,6 @@
     <link rel="stylesheet" href="/static/common.css">
     <style>
         /* Status-specific styles */
-        .header-content {
-            margin-bottom: 32px;
-        }
-        
-        .header-content h1 {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-        }
-        
-        .header-content p {
-            color: var(--text-secondary);
-        }
-
         /* Overall Status Banner */
         .overall-status {
             background: var(--bg-primary);
@@ -224,9 +209,17 @@
     </header>
 
     <main class="container">
-        <div class="header-content">
-            <h1>System Health</h1>
-            <p>Current operational status of all model endpoints</p>
+        <div class="mode-overview-card">
+            <div class="mode-overview-title">Monitor every serverless endpoint</div>
+            <p class="mode-overview-subtitle">
+                Check live health for each self-hosted model plus the chat interface. Results refresh on demand
+                so you always know which endpoints are ready for users.
+            </p>
+            <ul class="mode-overview-list">
+                <li>Fetches status from every `/health` endpoint and runs a mini completion test.</li>
+                <li>Summarizes overall uptime and individual service details.</li>
+                <li>Shows last refresh timestamp so you can coordinate restarts.</li>
+            </ul>
         </div>
 
         <div id="overall-status" class="overall-status loading">
