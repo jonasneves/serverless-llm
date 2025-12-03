@@ -218,13 +218,7 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
 /* Mode overview cards get margin instead of padding */
 .mode-overview-card {
   margin: 1rem;
-  margin-bottom: 1rem;
-}
-
-/* Content gap */
-main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
-.container > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
-  margin-top: 1.5rem;
+  margin-bottom: 0;
 }
 
 .mode-input-container,
@@ -267,7 +261,6 @@ main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indica
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 16px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -417,11 +410,7 @@ main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indica
 
   .mode-overview-card {
     margin: 0.75rem;
-  }
-
-  main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
-  .container > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
-    margin-top: 1rem;
+    margin-bottom: 0;
   }
 }
 
