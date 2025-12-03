@@ -15,137 +15,10 @@
       --llama-color: #14B8A6;
     }
 
-    @keyframes slideUp {
-      from {
-        transform: translateY(16px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
     .discussion-area {
       display: flex;
       flex-direction: column;
       gap: 24px;
-    }
-
-    body.modal-open {
-      overflow: hidden;
-    }
-
-    .settings-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      z-index: 1000;
-    }
-
-    .settings-modal.open {
-      display: flex;
-    }
-
-    .settings-modal-content {
-      width: min(480px, 100%);
-      background: var(--bg-primary);
-      border-radius: 16px;
-      border: 1px solid var(--border-color);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-      overflow: hidden;
-      animation: slideUp 0.2s ease;
-    }
-
-    .settings-modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .settings-modal-header h2 {
-      margin: 0;
-      font-size: 18px;
-      color: var(--text-primary);
-    }
-
-    .settings-modal-body {
-      padding: 20px 24px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .settings-section {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .settings-section.highlight {
-      padding: 16px;
-      border-radius: 12px;
-      border: 1px solid var(--accent-color);
-      background: rgba(139, 92, 246, 0.08);
-    }
-
-    [data-theme="dark"] .settings-section.highlight {
-      background: rgba(139, 92, 246, 0.15);
-    }
-
-    .settings-description {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      cursor: pointer;
-      padding: 6px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .close-btn:hover {
-      color: var(--text-primary);
-      background: var(--bg-secondary);
-    }
-
-    #settingsBtn.needs-attention::after {
-      content: '';
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 8px;
-      height: 8px;
-      background: var(--warning-color);
-      border-radius: 50%;
-      box-shadow: 0 0 0 2px rgba(9, 9, 9, 0.35);
-    }
-
-    .settings-link-btn {
-      background: none;
-      border: none;
-      color: var(--accent-color);
-      cursor: pointer;
-      font-weight: 600;
-      padding: 0;
-      font-size: 11px;
-      margin-left: 4px;
-    }
-
-    .settings-link-btn:hover {
-      text-decoration: underline;
     }
 
     .input-section {
@@ -697,71 +570,6 @@
       flex-shrink: 0;
     }
 
-    .settings-section.token-section {
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .settings-section.token-section.highlight {
-      border-top: none;
-      margin-top: 0;
-      padding-top: 0;
-    }
-
-    .token-input-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .token-input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 12px;
-      font-family: monospace;
-    }
-
-    .token-visibility-btn {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 8px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .token-visibility-btn:hover {
-      color: var(--text-primary);
-      background: var(--bg-secondary);
-    }
-
-    .token-input::placeholder {
-      color: var(--text-tertiary);
-    }
-
-    .token-hint {
-      font-size: 11px;
-      color: var(--text-tertiary);
-      margin-top: 4px;
-    }
-
-    .token-hint a {
-      color: var(--info-color);
-      text-decoration: none;
-    }
-
-    .token-hint a:hover {
-      text-decoration: underline;
-    }
-
     .example-prompts {
       margin-top: 12px;
     }
@@ -1035,62 +843,20 @@
         <a href="/variations" class="mode-link">Variations</a>
         <a href="/confessions" class="mode-link">Confessions</a>
       </div>
-      <button id="settingsBtn" class="icon-btn" title="Settings">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v6m0 6v10M3.93 3.93l4.24 4.24m8.49 8.49l4.24 4.24M1 12h6m6 0h10M3.93 20.07l4.24-4.24m8.49-8.49l4.24-4.24"></path>
-        </svg>
-      </button>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="4"></circle>
           <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
         </svg>
       </button>
+      <button id="settingsBtn" class="icon-btn" title="Settings" data-settings-trigger>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V10a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+        </svg>
+      </button>
     </div>
   </header>
-
-  <!-- Settings Modal -->
-  <div id="settingsModal" class="settings-modal">
-    <div class="settings-modal-content">
-      <div class="settings-modal-header">
-        <h2>Settings</h2>
-        <button id="closeSettings" class="close-btn" aria-label="Close settings">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="settings-modal-body">
-        <div class="settings-section token-section" id="tokenSection">
-          <h3>GitHub Models API Token</h3>
-          <p class="settings-description">Use your own GitHub token for API models. Leave empty to use server default.</p>
-          <div class="token-input-row">
-            <input
-              type="password"
-              id="githubToken"
-              class="token-input"
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              autocomplete="off"
-            >
-            <button type="button" id="tokenVisibilityBtn" class="token-visibility-btn" title="Show/hide token">
-              <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            </button>
-          </div>
-          <div class="token-hint">
-            <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Arena&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled, opens in new tab)
-          </div>
-          <div class="token-hint" style="margin-top: 8px; opacity: 0.7;">
-            🔒 Token is saved in your browser only, never sent to our servers for storage.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="container">
     <div class="mode-overview-card">
@@ -1218,7 +984,7 @@
                   <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
                 </svg>
                 <span>API models use GitHub Models credits. Add your token in Settings.</span>
-                <button id="apiSettingsBtn" type="button" class="settings-link-btn">Open settings</button>
+                <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
               </div>
               <div id="statusIndicator"></div>
             </div>

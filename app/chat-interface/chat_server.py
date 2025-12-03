@@ -139,6 +139,7 @@ def get_static_versions() -> dict:
     """Get all static file versions for template injection"""
     return {
         "common_css": get_file_version("common.css"),
+        "settings_js": get_file_version("settings.js"),
         "chat_css": get_file_version("chat.css"),
         "chat_js": get_file_version("chat.js"),
         "discussion_js": get_file_version("discussion.js"),
