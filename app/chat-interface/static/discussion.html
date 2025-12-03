@@ -22,16 +22,6 @@
       gap: 24px;
     }
 
-    .input-section {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
     #discussionContent {
       display: flex;
       flex-direction: column;
@@ -139,28 +129,6 @@
     .btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-
-    .param-control {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .param-control label {
-      font-size: 13px;
-      color: var(--text-secondary);
-      white-space: nowrap;
-    }
-
-    .param-control input[type="number"] {
-      width: 70px;
-      padding: 6px 8px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 13px;
     }
 
     .analysis-card {
@@ -781,33 +749,43 @@
       color: var(--warning-color);
     }
 
-    .settings-row {
+    .discussion-setup-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
       display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: flex-end;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
+      flex-direction: column;
+      gap: 20px;
     }
 
-    .settings-row .param-control {
-      flex-shrink: 0;
-    }
-
-    .action-row {
+    .setup-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       gap: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      align-items: flex-start;
     }
 
-    .action-row-left {
+    .setup-header h3 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-primary);
+    }
+
+    .setup-header p {
+      margin: 4px 0 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .setup-summary {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+      min-width: 220px;
     }
 
     .participant-count {
@@ -817,6 +795,84 @@
 
     .participant-count strong {
       color: var(--text-primary);
+    }
+
+    .setup-body {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .setup-column {
+      flex: 1 1 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .orchestrator-column {
+      max-width: 320px;
+      flex: 0 0 320px;
+      border-left: 1px solid var(--border-color);
+      padding-left: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .orchestrator-column {
+        flex: 1 1 100%;
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid var(--border-color);
+        padding-top: 16px;
+      }
+    }
+
+    .orchestrator-column .config-group-label {
+      margin-bottom: 8px;
+    }
+
+    .setup-status {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .discussion-input {
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      padding: 16px 24px 24px;
+    }
+
+    .discussion-input .controls-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .discussion-input .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 140px;
+    }
+
+    .discussion-input .control-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .discussion-input .control-group input[type="number"] {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 14px;
     }
   </style>
 </head>
@@ -888,6 +944,51 @@
       </div>
     </div>
 
+    <div class="discussion-setup-card">
+      <div class="setup-header">
+        <div>
+          <h3>Configure the roundtable</h3>
+          <p>Choose which models will participate and who orchestrates the debate.</p>
+        </div>
+        <div class="setup-summary">
+          <span id="participantCount" class="participant-count"><strong>0</strong> participants selected</span>
+          <div id="apiWarning" class="api-warning">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12.5"></line>
+              <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
+            </svg>
+            <span>API models use GitHub Models credits. Add your token in Settings.</span>
+            <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
+          </div>
+        </div>
+      </div>
+      <div class="setup-body">
+        <div class="setup-column">
+          <div class="config-group">
+            <div class="config-group-label">Local Models</div>
+            <div class="participants-row" id="localParticipantsContainer">
+              <div style="color: #888; padding: 12px;">Loading models...</div>
+            </div>
+          </div>
+          <div class="config-group">
+            <div class="config-group-label">API Models</div>
+            <div class="participants-row" id="apiParticipantsContainer"></div>
+          </div>
+        </div>
+        <div class="setup-column orchestrator-column">
+          <label class="config-group-label">Orchestrator</label>
+          <div class="orchestrator-control">
+            <select id="orchestratorModel">
+              <option>Loading...</option>
+            </select>
+            <span id="orchestratorBadge" class="model-type-badge api">API</span>
+          </div>
+          <div class="setup-status" id="statusIndicator"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="discussion-area">
       <!-- Input Section -->
       <!-- Orchestrator Status Bar -->
@@ -932,80 +1033,30 @@
     </div>
   </div>
 
-  <div class="mode-input-container">
-<div class="input-section">
-        <!-- Configuration Section -->
-        <div class="config-section">
-          <!-- Participants Row -->
-          <div class="config-row">
-            <div class="config-group" style="flex: 1;">
-              <div class="config-group-label">Participants</div>
-              <div class="config-group-label" style="font-size: 11px; margin-top: 8px; margin-bottom: 4px;">Local Models</div>
-              <div class="participants-row" id="localParticipantsContainer">
-                <!-- Dynamically populated by model-loader.js -->
-                <div style="color: #888; padding: 12px;">Loading models...</div>
-              </div>
-              <div class="config-group-label" style="font-size: 11px; margin-top: 12px; margin-bottom: 4px;">API Models</div>
-              <div class="participants-row" id="apiParticipantsContainer">
-                <!-- Dynamically populated by model-loader.js -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Settings Row -->
-          <div class="settings-row">
-            <div class="orchestrator-control">
-              <label>Orchestrator:</label>
-              <select id="orchestratorModel">
-                <!-- Dynamically populated by model-loader.js -->
-                <option>Loading...</option>
-              </select>
-              <span id="orchestratorBadge" class="model-type-badge api">API</span>
-            </div>
-            <div class="param-control">
-              <label>Rounds:</label>
-              <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds (all models participate each round)">
-            </div>
-            <div class="param-control">
-              <label>Max Tokens:</label>
-              <input type="number" id="maxTokens" value="1024" min="256" max="4096" step="256">
-            </div>
-            <div class="param-control">
-              <label>Temperature:</label>
-              <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
-            </div>
-          </div>
-
-          <!-- Action Row -->
-          <div class="action-row">
-            <div class="action-row-left">
-              <span id="participantCount" class="participant-count"><strong>3</strong> participants selected</span>
-              <div id="apiWarning" class="api-warning">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12.5"></line>
-                  <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
-                </svg>
-                <span>API models use GitHub Models credits. Add your token in Settings.</span>
-                <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
-              </div>
-              <div id="statusIndicator"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Input Wrapper -->
-        <div class="input-wrapper">
-          <textarea id="queryInput" placeholder="Enter your question... Models will discuss together before responding." rows="1"></textarea>
-          <button id="startBtn" class="send-btn" aria-label="Start discussion">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-            </svg>
-          </button>
-        </div>
+  <div class="discussion-input input-container">
+    <div class="controls-row">
+      <div class="control-group">
+        <label>Rounds</label>
+        <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds (all models participate each round)">
       </div>
-
-        </div>
+      <div class="control-group">
+        <label>Max Tokens</label>
+        <input type="number" id="maxTokens" value="1024" min="256" max="4096" step="256">
+      </div>
+      <div class="control-group">
+        <label>Temperature</label>
+        <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
+      </div>
+    </div>
+    <div class="input-wrapper">
+      <textarea id="queryInput" placeholder="Enter your question... Models will discuss together before responding." rows="1"></textarea>
+      <button id="startBtn" class="send-btn" aria-label="Start discussion">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </button>
+    </div>
+  </div>
 
   <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
   <script defer src="/static/discussion.js?v={{ discussion_js }}"></script>
