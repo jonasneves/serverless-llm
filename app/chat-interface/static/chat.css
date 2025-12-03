@@ -412,18 +412,17 @@ main {
 
     .input-wrapper {
       position: relative;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      background-color: var(--bg-secondary);
-      transition: border-color 0.2s, box-shadow 0.2s;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 10px 60px 10px 20px;
+      transition: box-shadow 0.2s;
       display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow-sm);
+      align-items: center;
     }
 
     .input-wrapper:focus-within {
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     textarea {
@@ -431,51 +430,72 @@ main {
       background: transparent;
       border: none;
       color: var(--text-primary);
-      padding: 12px 16px;
+      padding: 6px 0;
       font-family: inherit;
-      font-size: 14px;
+      font-size: 16px;
       line-height: 1.5;
       resize: none;
-      min-height: 60px;
-      max-height: 150px;
+      min-height: 24px;
+      max-height: 200px;
       outline: none;
     }
 
     textarea::placeholder {
-      color: var(--text-tertiary);
+      color: #999;
     }
 
     .input-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-      border-top: 1px solid var(--border-color);
+      display: none;
     }
 
     .send-btn {
-      background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
-      color: white;
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: #1e3a5f;
       border: none;
-      border-radius: 8px;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
+      border-radius: 50%;
       cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      transition: all 0.2s;
+      padding: 0;
     }
 
     .send-btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
+      background: #2c5282;
+      transform: translateY(-50%) scale(1.05);
+    }
+
+    .send-btn:active:not(:disabled) {
+      transform: translateY(-50%) scale(0.95);
     }
 
     .send-btn:disabled {
-      opacity: 0.5;
+      background: #e5e7eb;
       cursor: not-allowed;
+    }
+
+    .send-btn:disabled:hover {
+      background: #e5e7eb;
+      transform: translateY(-50%);
+    }
+
+    .send-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .send-btn svg path {
+      stroke: white;
+    }
+
+    .send-btn:disabled svg path {
+      stroke: #9ca3af;
     }
 
     .typing-indicator {
@@ -683,18 +703,18 @@ main {
 
       textarea {
         font-size: 16px; /* Prevents zoom on iOS */
-        padding: 10px 14px;
-        min-height: 50px;
+        padding: 6px 0;
+        min-height: 24px;
       }
 
       .input-footer {
-        padding: 6px 10px;
+        display: none;
       }
 
       .send-btn {
-        padding: 10px 14px;
-        font-size: 12px;
-        min-height: 40px;
+        width: 36px;
+        height: 36px;
+        padding: 0;
       }
 
       .typing-indicator {
@@ -783,20 +803,18 @@ main {
       }
 
       textarea {
-        padding: 10px 12px;
+        padding: 6px 0;
       }
 
       .send-btn {
-        padding: 8px 12px;
-      }
-
-      .send-btn span {
-        display: none;
+        width: 36px;
+        height: 36px;
+        padding: 0;
       }
 
       .send-btn svg {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
       }
 
       .message.user {
@@ -885,6 +903,9 @@ main {
       }
 
       .send-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
         min-height: 44px;
       }
 

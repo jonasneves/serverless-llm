@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tempValue = document.getElementById('tempValue');
     const maxTokens = document.getElementById('maxTokens');
     const typingIndicator = document.getElementById('typingIndicator');
-    const selectedCount = document.getElementById('selectedCount');
     const themeToggle = document.getElementById('themeToggle');
 
     // Theme toggle
@@ -69,8 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSelectedCount() {
       const count = selectedModels.size;
-      selectedCount.textContent = `${count} model${count !== 1 ? 's' : ''} selected`;
-      sendBtn.disabled = count === 0;
+      const hasContent = userInput.value.trim().length > 0;
+      sendBtn.disabled = count === 0 || !hasContent;
     }
 
     // Temperature slider
@@ -125,11 +124,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // Auto-resize textarea and enable/disable send button
+    userInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+
+      // Enable/disable send button based on content and model selection
+      const hasContent = this.value.trim().length > 0;
+      const hasModels = selectedModels.size > 0;
+      sendBtn.disabled = !hasContent || !hasModels;
+    });
+
     // Handle Enter key
     userInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage();
+        if (userInput.value.trim() && selectedModels.size > 0) {
+          sendMessage();
+        }
       }
     });
 
@@ -401,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addUserMessage(message);
       conversationHistory.push({ role: 'user', content: message });
       userInput.value = '';
+      userInput.style.height = 'auto';
 
       sendBtn.disabled = true;
       userInput.disabled = true;
