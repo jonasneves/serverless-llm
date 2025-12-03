@@ -44,6 +44,9 @@ Multi-agent orchestration with tool calling (web search, code execution). [→ D
 ### Variations
 Compare direct prompting vs. verbalized sampling to explore output diversity. [→ Docs](VARIATIONS.md)
 
+### Confessions
+Stream a structured honesty report after every answer to surface hidden instruction breaks. [→ Docs](CONFESSIONS.md)
+
 ## Quick Start
 
 **Setup overview**: Fork this repo, configure GitHub secrets and Cloudflare Tunnels, then trigger the workflows.

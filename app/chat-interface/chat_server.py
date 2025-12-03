@@ -34,6 +34,7 @@ from orchestrator_engine import OrchestratorEngine as ToolOrchestratorEngine # A
 
 # Verbalized Sampling mode imports
 from verbalized_sampling_engine import VerbalizedSamplingEngine
+from confession_engine import ConfessionEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -143,6 +144,7 @@ def get_static_versions() -> dict:
         "discussion_js": get_file_version("discussion.js"),
         "orchestrator_js": get_file_version("orchestrator.js"),
         "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
+        "confessions_js": get_file_version("confessions.js"),
         "model_loader_js": get_file_version("model-loader.js"),
     }
 
@@ -255,6 +257,10 @@ class VerbalizedSamplingRequest(BaseModel):
     query: str
 
 
+class ConfessionRequest(BaseModel):
+    query: str
+
+
 def serialize_messages(messages: List[ChatMessage]) -> List[dict]:
     return [{"role": msg.role, "content": msg.content} for msg in messages]
 
@@ -315,6 +321,15 @@ async def variations_interface(request: Request):
     """Serve Verbalized Sampling (Variations) interface with automatic cache busting"""
     return templates.TemplateResponse(
         "verbalized_sampling.html",
+        {"request": request, **get_static_versions()}
+    )
+
+
+@app.get("/confessions")
+async def confessions_interface(request: Request):
+    """Serve Confessions mode interface"""
+    return templates.TemplateResponse(
+        "confessions.html",
         {"request": request, **get_static_versions()}
     )
 
@@ -1144,6 +1159,58 @@ async def verbalized_sampling_stream(
             request.query,
             model,
             num_responses,
+            temperature,
+            max_tokens
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+# ===== CONFESSIONS MODE =====
+async def stream_confession_events(
+    query: str,
+    model: str,
+    temperature: float,
+    max_tokens: int
+) -> AsyncGenerator[str, None]:
+    try:
+        if model not in MODEL_ENDPOINTS:
+            yield f"data: {json.dumps({'event': 'error', 'error': f'Model {model} not found'}, ensure_ascii=False)}\n\n"
+            return
+
+        endpoint = MODEL_ENDPOINTS[model]
+        model_name = MODEL_DISPLAY_NAMES.get(model, model)
+        engine = ConfessionEngine(endpoint, model_name)
+
+        async for event in engine.generate_with_confession(
+            query=query,
+            temperature=temperature,
+            max_tokens=max_tokens
+        ):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        logger.error(f"Confessions mode error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+
+
+@app.post("/api/confessions/stream")
+async def confessions_stream(
+    request: ConfessionRequest,
+    model: str = "qwen2.5-7b",
+    temperature: float = 0.7,
+    max_tokens: int = 512
+):
+    """Stream answer + confession events."""
+    return StreamingResponse(
+        stream_confession_events(
+            request.query,
+            model,
             temperature,
             max_tokens
         ),
