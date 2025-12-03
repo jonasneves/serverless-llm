@@ -919,79 +919,76 @@
   </header>
 
   <div class="container">
-    <div class="overview-grid">
-      <div class="mode-overview-card">
-        <div class="mode-overview-title">Let models debate before answering</div>
-        <p class="mode-overview-subtitle">
-          Pick any mix of local or API models and have Qwen 2.5 orchestrate a structured, turn-based
-          discussion before returning the final takeaways.
-        </p>
-        <ul class="mode-overview-list">
-          <li>Select participants, orchestrator model, and number of rounds.</li>
-          <li>Watch each turn stream in real time with reasoning from every model.</li>
-          <li>Use debates to stress-test tricky problems or compare reasoning styles.</li>
-        </ul>
-        <div class="mode-overview-actions">
-          <span class="mode-overview-chip">Turn-based facilitation</span>
-          <span class="mode-overview-chip">Model diversity</span>
-        </div>
-        <div class="example-prompts">
-          <div class="example-prompts-label">Try an example:</div>
-          <div class="example-chips">
-            <button class="example-chip" data-prompt="How many R's are in the word 'strawberry'?">Count R's in strawberry</button>
-            <button class="example-chip" data-prompt="Which number is bigger: 9.11 or 9.9?">9.11 vs 9.9</button>
-            <button class="example-chip" data-prompt="I have 3 apples, eat 2, buy 5 more, and give away 3. How many do I have?">Apple math problem</button>
-            <button class="example-chip" data-prompt="Write a sentence where every word starts with the letter 'A'.">All A's sentence</button>
-          </div>
+        <div class="mode-overview-card">
+      <div class="mode-overview-title">Let models debate before answering</div>
+      <p class="mode-overview-subtitle">
+        Pick any mix of local or API models and have Qwen 2.5 orchestrate a structured, turn-based
+        discussion before returning the final takeaways.
+      </p>
+      <ul class="mode-overview-list">
+        <li>Select participants, orchestrator model, and number of rounds.</li>
+        <li>Watch each turn stream in real time with reasoning from every model.</li>
+        <li>Use debates to stress-test tricky problems or compare reasoning styles.</li>
+      </ul>
+      <div class="mode-overview-actions">
+        <span class="mode-overview-chip">Turn-based facilitation</span>
+        <span class="mode-overview-chip">Model diversity</span>
+      </div>
+      <div class="example-prompts">
+        <div class="example-prompts-label">Try an example:</div>
+        <div class="example-chips">
+          <button class="example-chip" data-prompt="How many R's are in the word 'strawberry'?">Count R's in strawberry</button>
+          <button class="example-chip" data-prompt="Which number is bigger: 9.11 or 9.9?">9.11 vs 9.9</button>
+          <button class="example-chip" data-prompt="I have 3 apples, eat 2, buy 5 more, and give away 3. How many do I have?">Apple math problem</button>
+          <button class="example-chip" data-prompt="Write a sentence where every word starts with the letter 'A'.">All A's sentence</button>
         </div>
       </div>
 
-      <div class="mode-overview-card discussion-setup-card">
+      <div class="discussion-config">
         <div class="setup-header">
           <div>
             <h3>Configure the roundtable</h3>
-          <p>Choose which models will participate and who orchestrates the debate.</p>
-        </div>
-        <div class="setup-summary">
-          <span id="participantCount" class="participant-count"><strong>0</strong> participants selected</span>
-          <div id="apiWarning" class="api-warning">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12.5"></line>
-              <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
-            </svg>
-            <span>API models use GitHub Models credits. Add your token in Settings.</span>
-            <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
+            <p>Choose which models will participate and who orchestrates the debate.</p>
           </div>
-        </div>
-      </div>
-    </div>
-      <div class="setup-body">
-        <div class="setup-column">
-          <div class="config-group">
-            <div class="config-group-label">Local Models</div>
-            <div class="participants-row" id="localParticipantsContainer">
-              <div style="color: #888; padding: 12px;">Loading models...</div>
+          <div class="setup-summary">
+            <span id="participantCount" class="participant-count"><strong>0</strong> participants selected</span>
+            <div id="apiWarning" class="api-warning">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12.5"></line>
+                <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
+              </svg>
+              <span>API models use GitHub Models credits. Add your token in Settings.</span>
+              <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
             </div>
           </div>
-          <div class="config-group">
-            <div class="config-group-label">API Models</div>
-            <div class="participants-row" id="apiParticipantsContainer"></div>
-          </div>
         </div>
-        <div class="setup-column orchestrator-column">
-          <label class="config-group-label">Orchestrator</label>
-          <div class="orchestrator-control">
-            <select id="orchestratorModel">
-              <option>Loading...</option>
-            </select>
-            <span id="orchestratorBadge" class="model-type-badge api">API</span>
+        <div class="setup-body">
+          <div class="setup-column">
+            <div class="config-group">
+              <div class="config-group-label">Local Models</div>
+              <div class="participants-row" id="localParticipantsContainer">
+                <div style="color: #888; padding: 12px;">Loading models...</div>
+              </div>
+            </div>
+            <div class="config-group">
+              <div class="config-group-label">API Models</div>
+              <div class="participants-row" id="apiParticipantsContainer"></div>
+            </div>
           </div>
-          <div class="setup-status" id="statusIndicator"></div>
+          <div class="setup-column orchestrator-column">
+            <label class="config-group-label">Orchestrator</label>
+            <div class="orchestrator-control">
+              <select id="orchestratorModel">
+                <option>Loading...</option>
+              </select>
+              <span id="orchestratorBadge" class="model-type-badge api">API</span>
+            </div>
+            <div class="setup-status" id="statusIndicator"></div>
+          </div>
         </div>
       </div>
     </div>
-
     <div class="discussion-area">
       <!-- Input Section -->
       <!-- Orchestrator Status Bar -->
