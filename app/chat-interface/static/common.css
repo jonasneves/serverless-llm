@@ -67,12 +67,13 @@ body {
 }
 
 header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-  background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+  padding: 16px 24px;
+  background: var(--accent-color);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }
 
@@ -84,81 +85,81 @@ header {
 }
 
 .logo-icon {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 6px;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
 }
 
 .logo-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .logo-title {
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -0.02em;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .logo-subtitle {
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0.85;
 }
 
 .header-actions {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 16px;
 }
 
 .modes {
   display: flex;
   gap: 8px;
-  font-size: 13px;
 }
 
 .mode-link {
-  color: white;
-  text-decoration: none;
-  padding: 6px 12px;
+  padding: 8px 16px;
   border-radius: 6px;
-  opacity: 0.85;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
   transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  background: none;
 }
 
 .mode-link:hover {
-  opacity: 1;
   background: rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
 .mode-link.active {
-  opacity: 1;
   background: rgba(255, 255, 255, 0.2);
-  font-weight: 500;
+  color: white;
 }
 
 .icon-btn {
   width: 36px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   color: white;
-  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: background 0.2s;
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 main,
