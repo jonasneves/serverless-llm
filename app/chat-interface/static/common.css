@@ -199,10 +199,10 @@ main:not(:has(.chat-history)),
   -webkit-overflow-scrolling: touch;
 }
 
-/* Add padding to main content, but not to input containers */
-main > :not(.mode-input-container):not(.input-container),
-.container > :not(.mode-input-container):not(.input-container) {
-  padding: 1rem;
+/* Add padding to main content, but not to input containers or overview cards */
+main > :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+.container > :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
+  padding: 0 1rem;
 }
 
 main > :not(.mode-input-container):not(.input-container):first-child,
@@ -213,6 +213,12 @@ main > :not(.mode-input-container):not(.input-container):first-child,
 main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator),
 .container > :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator) {
   padding-bottom: 1rem;
+}
+
+/* Mode overview cards get margin instead of padding */
+.mode-overview-card {
+  margin: 1rem;
+  margin-bottom: 1rem;
 }
 
 /* Content gap */
@@ -404,9 +410,13 @@ main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indica
     font-size: 13px;
   }
 
-  main > :not(.mode-input-container):not(.input-container),
-  .container > :not(.mode-input-container):not(.input-container) {
-    padding: 0.75rem;
+  main > :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+  .container > :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
+    padding: 0 0.75rem;
+  }
+
+  .mode-overview-card {
+    margin: 0.75rem;
   }
 
   main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
@@ -453,9 +463,13 @@ main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indica
     font-size: 12px;
   }
 
-  main > :not(.mode-input-container):not(.input-container),
-  .container > :not(.mode-input-container):not(.input-container) {
-    padding: 0.5rem;
+  main > :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+  .container > :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
+    padding: 0 0.5rem;
+  }
+
+  .mode-overview-card {
+    margin: 0.5rem;
   }
 }
 
