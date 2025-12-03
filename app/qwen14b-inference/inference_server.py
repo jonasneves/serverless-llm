@@ -136,7 +136,8 @@ async def generate_stream(messages: list, max_tokens: int, temperature: float, t
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_p=top_p,
-                stream=True
+                stream=True,
+                stream_options={"include_usage": True}
             )
 
             usage_data = None
