@@ -67,43 +67,83 @@ class ModelLoader {
 
   /**
    * Build participant checkboxes for Discussion mode
+   * Supports both single container (legacy) and separate containers for local/API
    */
   buildParticipantCheckboxes(containerSelector) {
-    const container = document.querySelector(containerSelector);
-    if (!container) {
-      console.error('[ModelLoader] Container not found:', containerSelector);
-      return;
+    // Check if separate containers exist
+    const localContainer = document.querySelector('#localParticipantsContainer');
+    const apiContainer = document.querySelector('#apiParticipantsContainer');
+    
+    if (localContainer && apiContainer) {
+      // New format: separate containers
+      localContainer.innerHTML = '';
+      apiContainer.innerHTML = '';
+
+      // Add local models
+      const localModels = this.getLocalModels();
+      localModels.forEach(model => {
+        const label = this.createParticipantCheckbox(
+          model.id,
+          model.name,
+          'local',
+          true // checked by default
+        );
+        localContainer.appendChild(label);
+      });
+
+      // Add API models
+      const apiModels = this.getAPIModels();
+      apiModels.forEach(modelId => {
+        const displayName = this.getDisplayName(modelId);
+        const label = this.createParticipantCheckbox(
+          modelId,
+          displayName,
+          'api',
+          false // not checked by default
+        );
+        apiContainer.appendChild(label);
+      });
+
+      console.log('[ModelLoader] Built participant checkboxes (separate):',
+        `${localModels.length} local, ${apiModels.length} API`);
+    } else {
+      // Legacy format: single container
+      const container = document.querySelector(containerSelector);
+      if (!container) {
+        console.error('[ModelLoader] Container not found:', containerSelector);
+        return;
+      }
+
+      container.innerHTML = '';
+
+      // Add local models
+      const localModels = this.getLocalModels();
+      localModels.forEach(model => {
+        const label = this.createParticipantCheckbox(
+          model.id,
+          model.name,
+          'local',
+          true // checked by default
+        );
+        container.appendChild(label);
+      });
+
+      // Add API models
+      const apiModels = this.getAPIModels();
+      apiModels.forEach(modelId => {
+        const displayName = this.getDisplayName(modelId);
+        const label = this.createParticipantCheckbox(
+          modelId,
+          displayName,
+          'api',
+          false // not checked by default
+        );
+        container.appendChild(label);
+      });
+
+      console.log('[ModelLoader] Built participant checkboxes (single):',
+        `${localModels.length} local, ${apiModels.length} API`);
     }
-
-    container.innerHTML = '';
-
-    // Add local models
-    const localModels = this.getLocalModels();
-    localModels.forEach(model => {
-      const label = this.createParticipantCheckbox(
-        model.id,
-        model.name,
-        'local',
-        true // checked by default
-      );
-      container.appendChild(label);
-    });
-
-    // Add API models
-    const apiModels = this.getAPIModels();
-    apiModels.forEach(modelId => {
-      const displayName = this.getDisplayName(modelId);
-      const label = this.createParticipantCheckbox(
-        modelId,
-        displayName,
-        'api',
-        false // not checked by default
-      );
-      container.appendChild(label);
-    });
-
-    console.log('[ModelLoader] Built participant checkboxes:',
-      `${localModels.length} local, ${apiModels.length} API`);
   }
 
   /**

@@ -362,9 +362,46 @@
         </div>
         <div class="empty-state-text">Multi-Agent Orchestration System</div>
         <div class="empty-state-subtext">
-          Specialist agents (Qwen, Phi, Llama) collaborate with tools (web search, code execution)<br>
-          to solve complex tasks using industry-standard multi-agent patterns.
+          Specialist agents (Qwen, Phi, Llama) collaborate with tools to solve complex tasks<br>
+          using Microsoft's AutoGen framework for intelligent multi-agent coordination.
         </div>
+        
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin: 20px 0; text-align: left;">
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Available Tools
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 12px; color: var(--text-secondary);">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="color: var(--tool-reasoning); font-weight: 600;">•</span>
+              <span><strong>enhance_reasoning</strong> - Route to specialized reasoning models</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="color: var(--tool-answer); font-weight: 600;">•</span>
+              <span><strong>answer</strong> - Generate final answers using best-fit model</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="color: var(--tool-search); font-weight: 600;">•</span>
+              <span><strong>search</strong> - Web search via DuckDuckGo API</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="color: var(--tool-code); font-weight: 600;">•</span>
+              <span><strong>code_interpreter</strong> - Execute Python code in sandboxed environment</span>
+            </div>
+          </div>
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-tertiary);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: text-bottom; margin-right: 4px;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Powered by <strong style="color: var(--text-secondary);">Microsoft AutoGen</strong> framework for multi-agent orchestration
+          </div>
+        </div>
+
         <div class="example-prompts" style="margin-top: 24px;">
           <div class="example-prompts-label">Try an example:</div>
           <div class="example-chips">

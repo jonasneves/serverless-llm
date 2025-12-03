@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // Load models dynamically
     await modelLoader.load();
-    modelLoader.buildParticipantCheckboxes('#participantsContainer');
+    modelLoader.buildParticipantCheckboxes('#participantsContainer'); // Will detect separate containers automatically
     modelLoader.buildOrchestratorDropdown('#orchestratorModel');
 
     // Configure marked.js for proper markdown rendering
