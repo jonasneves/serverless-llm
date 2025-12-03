@@ -135,30 +135,36 @@ async def generate_stream(messages: list, max_tokens: int, temperature: float, t
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_p=top_p,
-                stream=True,
-                stream_options={"include_usage": True}
+                stream=True
             )
 
-            usage_data = None
+            generated_text = ""
             for chunk in response:
-                # Capture usage data if present
-                if "usage" in chunk:
-                    usage_data = chunk["usage"]
-
                 # Stream content chunks
                 if "choices" in chunk and len(chunk["choices"]) > 0:
                     delta = chunk["choices"][0].get("delta", {})
                     if "content" in delta:
+                        content = delta["content"]
+                        generated_text += content
                         yield f"data: {json.dumps(chunk)}\n\n"
                         await asyncio.sleep(0)
 
-            # Send usage data before [DONE] if available
-            if usage_data:
-                usage_chunk = {
-                    "choices": [{"delta": {}, "finish_reason": "stop"}],
-                    "usage": usage_data
+            # Calculate actual token counts using the model's tokenizer
+            prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+            prompt_tokens = len(llm.tokenize(prompt_text.encode()))
+            completion_tokens = len(llm.tokenize(generated_text.encode()))
+            total_tokens = prompt_tokens + completion_tokens
+
+            # Send usage data with real token counts
+            usage_chunk = {
+                "choices": [{"delta": {}, "finish_reason": "stop"}],
+                "usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens
                 }
-                yield f"data: {json.dumps(usage_chunk)}\n\n"
+            }
+            yield f"data: {json.dumps(usage_chunk)}\n\n"
 
             yield "data: [DONE]\n\n"
 
