@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  runBtn.addEventListener('click', async () => {
+  const handleRun = async () => {
     const query = promptInput.value.trim();
     if (!query) {
       alert('Please provide scenario instructions.');
@@ -99,6 +99,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       runBtn.disabled = false;
       runBtn.innerHTML = '<span>Run Confession Audit</span>';
+    }
+  };
+
+  runBtn.addEventListener('click', handleRun);
+
+  // Handle Enter key
+  promptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!runBtn.disabled && promptInput.value.trim()) {
+        handleRun();
+      }
     }
   });
 });

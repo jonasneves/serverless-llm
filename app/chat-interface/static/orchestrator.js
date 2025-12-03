@@ -231,6 +231,16 @@ document.addEventListener('DOMContentLoaded', () => {
       startOrchestration();
     });
 
+    // Handle Enter key
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!startBtn.disabled && queryInput.value.trim()) {
+          startOrchestration();
+        }
+      }
+    });
+
     // Theme toggle
     const themeToggle = document.getElementById('themeToggle');
     const html = document.documentElement;
