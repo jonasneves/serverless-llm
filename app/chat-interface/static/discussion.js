@@ -31,47 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const apiWarning = document.getElementById('apiWarning');
     const tokenSection = document.getElementById('tokenSection');
     const githubToken = document.getElementById('githubToken');
-    const tokenVisibilityBtn = document.getElementById('tokenVisibilityBtn');
-    const eyeIcon = document.getElementById('eyeIcon');
     const orchestratorBar = document.getElementById('orchestratorBar');
     const orchestratorModelName = document.getElementById('orchestratorModelName');
     const orchestratorAction = document.getElementById('orchestratorAction');
     const orchestratorActionText = document.getElementById('orchestratorActionText');
     const participantCount = document.getElementById('participantCount');
     const settingsBtn = document.getElementById('settingsBtn');
-    const settingsModal = document.getElementById('settingsModal');
-    const closeSettings = document.getElementById('closeSettings');
-    const apiSettingsBtn = document.getElementById('apiSettingsBtn');
 
     let currentDiscussion = null;
-
-    function openSettingsModal() {
-      if (!settingsModal) return;
-      settingsModal.classList.add('open');
-      document.body.classList.add('modal-open');
-    }
-
-    function closeSettingsModal() {
-      if (!settingsModal) return;
-      settingsModal.classList.remove('open');
-      document.body.classList.remove('modal-open');
-    }
-
-    settingsBtn?.addEventListener('click', openSettingsModal);
-    apiSettingsBtn?.addEventListener('click', openSettingsModal);
-    closeSettings?.addEventListener('click', closeSettingsModal);
-
-    settingsModal?.addEventListener('click', (event) => {
-      if (event.target === settingsModal) {
-        closeSettingsModal();
-      }
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && settingsModal?.classList.contains('open')) {
-        closeSettingsModal();
-      }
-    });
 
     // API models that consume GitHub Models credits
     const API_MODELS = [
@@ -133,7 +100,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Show API warning if any API models are used
       apiWarning.classList.toggle('visible', needsToken);
-      const hasToken = githubToken.value.trim().length > 0;
+      const tokenValue = (githubToken?.value || '').trim();
+      const hasToken = tokenValue.length > 0;
       tokenSection?.classList.toggle('highlight', needsToken);
       settingsBtn?.classList.toggle('needs-attention', needsToken && !hasToken);
 
@@ -149,32 +117,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateParticipantUI();
     }
 
-    // Toggle token show/hide
-    tokenVisibilityBtn.addEventListener('click', () => {
-      const isPassword = githubToken.type === 'password';
-      githubToken.type = isPassword ? 'text' : 'password';
-      // Update icon: eye-open for hidden, eye-off for visible
-      eyeIcon.innerHTML = isPassword
-        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>'
-        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
-    });
-
-    // Load saved token from localStorage
-    const savedToken = localStorage.getItem('github_models_token');
-    if (savedToken) {
-      githubToken.value = savedToken;
-    }
-
-    // Save token to localStorage when changed
-    githubToken.addEventListener('input', () => {
-      const token = githubToken.value.trim();
-      if (token) {
-        localStorage.setItem('github_models_token', token);
-      } else {
-        localStorage.removeItem('github_models_token');
-      }
-      updateParticipantUI();
-    });
+    githubToken?.addEventListener('input', updateParticipantUI);
+    window.addEventListener('github-token-change', updateParticipantUI);
 
     // Listen for orchestrator and participant changes
     orchestratorModel.addEventListener('change', updateParticipantUI);
@@ -182,17 +126,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       checkbox.addEventListener('change', updateParticipantUI);
     });
     updateParticipantUI(); // Initialize on load
-
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('themeToggle');
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    document.body.setAttribute('data-theme', currentTheme);
-
-    themeToggle.addEventListener('click', () => {
-      const theme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.body.setAttribute('data-theme', theme);
-      localStorage.setItem('theme', theme);
-    });
 
     function setStatus(status, text) {
       statusIndicator.innerHTML = `
@@ -354,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const maxTokens = parseInt(maxTokensInput.value);
       const temperature = parseFloat(temperatureInput.value);
       const orchestrator = orchestratorModel.value;
-      const userToken = githubToken.value.trim();
+      const userToken = (githubToken?.value || '').trim();
       const turns = parseInt(document.getElementById('discussionRounds').value);
 
       // Reset UI

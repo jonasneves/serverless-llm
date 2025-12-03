@@ -31,18 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tempValue = document.getElementById('tempValue');
     const maxTokens = document.getElementById('maxTokens');
     const typingIndicator = document.getElementById('typingIndicator');
-    const themeToggle = document.getElementById('themeToggle');
-
-    // Theme toggle
-    themeToggle.addEventListener('click', () => {
-      const isDark = document.body.getAttribute('data-theme') === 'dark';
-      document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      localStorage.setItem('theme', isDark ? 'light' : 'dark');
-    });
-
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.body.setAttribute('data-theme', savedTheme);
 
     // Initialize model selector
     function renderModelSelector() {

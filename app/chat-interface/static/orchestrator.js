@@ -241,21 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Theme toggle
-    const themeToggle = document.getElementById('themeToggle');
-    const html = document.documentElement;
-
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    html.setAttribute('data-theme', savedTheme);
-
-    themeToggle.addEventListener('click', () => {
-      const currentTheme = html.getAttribute('data-theme');
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-    });
-
     // Handle example prompt clicks
     document.querySelectorAll('.example-chip').forEach(chip => {
       chip.addEventListener('click', (e) => {
