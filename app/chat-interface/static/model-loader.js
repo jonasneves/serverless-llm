@@ -108,41 +108,41 @@ class ModelLoader {
         `${localModels.length} local, ${apiModels.length} API`);
     } else {
       // Legacy format: single container
-      const container = document.querySelector(containerSelector);
-      if (!container) {
-        console.error('[ModelLoader] Container not found:', containerSelector);
-        return;
-      }
+    const container = document.querySelector(containerSelector);
+    if (!container) {
+      console.error('[ModelLoader] Container not found:', containerSelector);
+      return;
+    }
 
-      container.innerHTML = '';
+    container.innerHTML = '';
 
-      // Add local models
-      const localModels = this.getLocalModels();
-      localModels.forEach(model => {
-        const label = this.createParticipantCheckbox(
-          model.id,
-          model.name,
-          'local',
-          true // checked by default
-        );
-        container.appendChild(label);
-      });
+    // Add local models
+    const localModels = this.getLocalModels();
+    localModels.forEach(model => {
+      const label = this.createParticipantCheckbox(
+        model.id,
+        model.name,
+        'local',
+        true // checked by default
+      );
+      container.appendChild(label);
+    });
 
-      // Add API models
-      const apiModels = this.getAPIModels();
-      apiModels.forEach(modelId => {
-        const displayName = this.getDisplayName(modelId);
-        const label = this.createParticipantCheckbox(
-          modelId,
-          displayName,
-          'api',
-          false // not checked by default
-        );
-        container.appendChild(label);
-      });
+    // Add API models
+    const apiModels = this.getAPIModels();
+    apiModels.forEach(modelId => {
+      const displayName = this.getDisplayName(modelId);
+      const label = this.createParticipantCheckbox(
+        modelId,
+        displayName,
+        'api',
+        false // not checked by default
+      );
+      container.appendChild(label);
+    });
 
       console.log('[ModelLoader] Built participant checkboxes (single):',
-        `${localModels.length} local, ${apiModels.length} API`);
+      `${localModels.length} local, ${apiModels.length} API`);
     }
   }
 

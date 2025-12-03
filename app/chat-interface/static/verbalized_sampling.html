@@ -163,17 +163,9 @@
       background: var(--bg-primary);
     }
 
-    .comparison-side.direct:hover {
-      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
-    }
-
     .comparison-side.verbalized {
       border-color: var(--vs-color);
       background: var(--bg-primary);
-    }
-
-    .comparison-side.verbalized:hover {
-      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
     }
 
     .side-header {
@@ -192,8 +184,8 @@
       gap: 8px;
     }
 
-    .side-header.direct { color: var(--direct-color); }
-    .side-header.verbalized { color: var(--vs-color); }
+    .side-header.direct { color: var(--text-primary); }
+    .side-header.verbalized { color: var(--text-primary); }
 
     .badge {
       padding: 4px 10px;
@@ -203,13 +195,15 @@
     }
 
     .badge.problem {
-      background: rgba(249, 115, 22, 0.1);
-      color: var(--direct-color);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
     }
 
     .badge.solution {
-      background: rgba(139, 92, 246, 0.1);
-      color: var(--vs-color);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
     }
 
     .responses-container {
@@ -276,7 +270,7 @@
     .diversity-score-value {
       font-size: 32px;
       font-weight: 700;
-      color: var(--vs-color);
+      color: var(--text-primary);
     }
 
     .empty-state {
