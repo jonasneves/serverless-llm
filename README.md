@@ -46,19 +46,9 @@ Add to **Settings > Secrets and variables > Actions**:
 | Secret | Description |
 |--------|-------------|
 | `HF_TOKEN` | Hugging Face token for gated models |
-| `CLOUDFLARE_TUNNEL_TOKEN_QWEN` | Tunnel token for Qwen 7B server |
-| `CLOUDFLARE_TUNNEL_TOKEN_PHI` | Tunnel token for Phi server |
-| `CLOUDFLARE_TUNNEL_TOKEN_LLAMA` | Tunnel token for Llama server |
-| `CLOUDFLARE_TUNNEL_TOKEN_MISTRAL` | Tunnel token for Mistral server |
-| `CLOUDFLARE_TUNNEL_TOKEN_QWEN14B` | Tunnel token for Qwen 14B server |
-| `CLOUDFLARE_TUNNEL_TOKEN_GEMMA` | Tunnel token for Gemma server |
+| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, QWEN14B, GEMMA) |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for web interface |
-| `QWEN_API_URL` | Public URL (e.g., `https://qwen.neevs.io`) |
-| `PHI_API_URL` | Public URL for Phi |
-| `LLAMA_API_URL` | Public URL for Llama |
-| `MISTRAL_API_URL` | Public URL for Mistral |
-| `QWEN14B_API_URL` | Public URL for Qwen 14B |
-| `GEMMA_API_URL` | Public URL for Gemma |
+| `{MODEL}_API_URL` | Public URL for each model (e.g., `https://qwen.neevs.io`) |
 | `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents modes ([create token](https://github.com/settings/personal-access-tokens/new)) |
 
 ### 2. Create Cloudflare Tunnels
@@ -71,12 +61,10 @@ Add to **Settings > Secrets and variables > Actions**:
 ### 3. Run Workflows
 
 ```bash
-gh workflow run qwen-inference.yml
-gh workflow run phi-inference.yml
-gh workflow run llama-inference.yml
-gh workflow run mistral-inference.yml
-gh workflow run qwen14b-inference.yml
-gh workflow run gemma-inference.yml
+# Start each model server
+gh workflow run {model}-inference.yml  # qwen, phi, llama, mistral, qwen14b, gemma
+
+# Start web interface
 gh workflow run chat-interface.yml
 ```
 
