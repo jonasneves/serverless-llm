@@ -117,7 +117,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateParticipantUI();
     }
 
-    githubToken?.addEventListener('input', updateParticipantUI);
     window.addEventListener('github-token-change', updateParticipantUI);
 
     // Listen for orchestrator and participant changes
