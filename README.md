@@ -1,7 +1,7 @@
 # Serverless LLM Arena
 Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
 
-**https://chat.neevs.io**
+https://chat.neevs.io
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
