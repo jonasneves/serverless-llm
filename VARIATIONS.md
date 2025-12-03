@@ -6,12 +6,19 @@ Explore output diversity through verbalized sampling.
 
 Compare direct prompting (mode collapse) vs. verbalized sampling (diverse outputs) to unlock LLM creative potential.
 
-**Results from Stanford Research:**
+Results from Stanford Research:
 - 1.6-2x more creativity
 - 25.7% higher diversity
 - No training required
 
 [Paper: arXiv:2411.16641](https://arxiv.org/abs/2411.16641)
+
+### This Implementation vs. Research
+*   **Core Alignment:** We use the exact "verbalize distribution" prompting technique to extract multiple samples in a single pass, just as proposed.
+*   **Architecture:** Implemented via `VerbalizedSamplingEngine` which transforms user queries into multi-response prompts.
+*   **Enhancements:**
+    *   **Real-time Scoring:** We added a Jaccard-based diversity metric (not just offline analysis).
+    *   **Live Comparison:** Users see the "Mode Collapse" (direct) vs. "Verbalized" (diverse) outputs side-by-side.
 
 ## The Problem: Mode Collapse
 
