@@ -129,15 +129,6 @@ async def generate_stream(messages: list, max_tokens: int, temperature: float, t
     global llm
 
     try:
-        # Streaming response generator
-        # Note: We don't hold the semaphore for the entire stream to allow
-        # interleaving if needed, but for CPU bound tasks, holding it is usually safer.
-        # However, since this is a generator, we can't easily wrap the yield in a context manager
-        # that spans the lifetime of the response unless we use a wrapper.
-        # For simplicity and safety on 1 CPU, we'll just assume the engine handles queueing
-        # or we accept that streams might block new requests until they finish initial processing.
-        
-        # Actually, for single-threaded CPU inference, we MUST process one request at a time.
         async with inference_lock:
             response = await asyncio.to_thread(
                 llm.create_chat_completion,
@@ -147,20 +138,27 @@ async def generate_stream(messages: list, max_tokens: int, temperature: float, t
                 top_p=top_p,
                 stream=True
             )
-            
-            # We need to iterate the iterator in the thread or consume it.
-            # Since create_chat_completion returns a generator, we can iterate it.
-            # CAUTION: Iterating the generator runs inference. We can't strictly
-            # release the lock between tokens efficiently without context switching overhead.
-            # So we hold the lock for the whole generation to be safe.
-            
+
+            usage_data = None
             for chunk in response:
+                # Capture usage data if present
+                if "usage" in chunk:
+                    usage_data = chunk["usage"]
+
+                # Stream content chunks
                 if "choices" in chunk and len(chunk["choices"]) > 0:
                     delta = chunk["choices"][0].get("delta", {})
                     if "content" in delta:
                         yield f"data: {json.dumps(chunk)}\n\n"
-                        # Allow event loop to breathe (small yield)
                         await asyncio.sleep(0)
+
+            # Send usage data before [DONE] if available
+            if usage_data:
+                usage_chunk = {
+                    "choices": [{"delta": {}, "finish_reason": "stop"}],
+                    "usage": usage_data
+                }
+                yield f"data: {json.dumps(usage_chunk)}\n\n"
 
             yield "data: [DONE]\n\n"
 

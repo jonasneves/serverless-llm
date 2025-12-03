@@ -210,11 +210,19 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
             logger.info(f"Orchestrator API response: {json.dumps(data, indent=2)}")
 
             # Extract token usage
-            usage_data = data.get("usage", {})
+            if "usage" not in data:
+                raise Exception("No usage data in API response")
+
+            usage_data = data["usage"]
+            required_fields = ["prompt_tokens", "completion_tokens", "total_tokens"]
+            missing_fields = [f for f in required_fields if f not in usage_data]
+            if missing_fields:
+                raise Exception(f"Missing usage fields in API response: {missing_fields}")
+
             token_usage = TokenUsage(
-                prompt_tokens=usage_data.get("prompt_tokens", 0),
-                completion_tokens=usage_data.get("completion_tokens", 0),
-                total_tokens=usage_data.get("total_tokens", 0)
+                prompt_tokens=usage_data["prompt_tokens"],
+                completion_tokens=usage_data["completion_tokens"],
+                total_tokens=usage_data["total_tokens"]
             )
 
             # Extract content from response

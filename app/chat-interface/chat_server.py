@@ -655,10 +655,15 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
                 }
 
             data = response.json()
+
+            # Ensure usage data is present
+            if "usage" not in data:
+                raise ValueError(f"Usage data not received from model {model_id}")
+
             return {
                 "model": display_name,
                 "content": data["choices"][0]["message"]["content"],
-                "usage": data.get("usage", {}),
+                "usage": data["usage"],
                 "time": elapsed,
                 "error": False
             }
@@ -738,6 +743,7 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                 # Send initial event
                 yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
 
+                usage_data = None
                 async for line in response.aiter_lines():
                     if line.startswith("data: "):
                         data_str = line[6:]
@@ -745,6 +751,10 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                             break
                         try:
                             data = json.loads(data_str)
+                            # Capture usage data if present
+                            if "usage" in data:
+                                usage_data = data["usage"]
+
                             if "choices" in data and len(data["choices"]) > 0:
                                 delta = data["choices"][0].get("delta", {})
                                 content = delta.get("content", "")
@@ -756,8 +766,14 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
 
                 # Send completion event with stats
                 elapsed = time.time() - start_time
-                token_count = len(total_content.split())  # Rough estimate
-                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count})}\n\n"
+
+                # Use real token count from usage data if available
+                if usage_data and "total_tokens" in usage_data:
+                    token_count = usage_data["total_tokens"]
+                else:
+                    raise ValueError(f"Token usage data not received from model {model_id}")
+
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count, 'usage': usage_data})}\n\n"
 
     except httpx.TimeoutException:
         logger.error(f"Timeout connecting to {endpoint}")

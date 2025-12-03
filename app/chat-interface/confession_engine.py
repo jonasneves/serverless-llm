@@ -165,13 +165,9 @@ class ConfessionEngine:
             return
 
         confession_data = confession_response.json()
-        choices = confession_data.get("choices") or []
-        if not choices:
-            yield {
-                "event": "error",
-                "error": "Model response missing choices for confession request."
-            }
-            return
+        if "choices" not in confession_data or not confession_data["choices"]:
+            raise ValueError("Model response missing choices for confession request")
+        choices = confession_data["choices"]
 
         confession_text = choices[0]["message"].get("content", "")
 

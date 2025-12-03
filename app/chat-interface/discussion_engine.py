@@ -259,11 +259,14 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
 
                         # Check for usage data (usually in final chunk)
                         if 'usage' in chunk:
+                            usage = chunk['usage']
+                            if 'prompt_tokens' not in usage or 'completion_tokens' not in usage or 'total_tokens' not in usage:
+                                raise ValueError("Incomplete usage data received from model")
                             yield {
                                 "type": "usage",
-                                "prompt_tokens": chunk['usage'].get('prompt_tokens', 0),
-                                "completion_tokens": chunk['usage'].get('completion_tokens', 0),
-                                "total_tokens": chunk['usage'].get('total_tokens', 0)
+                                "prompt_tokens": usage['prompt_tokens'],
+                                "completion_tokens": usage['completion_tokens'],
+                                "total_tokens": usage['total_tokens']
                             }
 
                         # Check for content chunk
@@ -336,11 +339,14 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
 
                         # Check for usage data (usually in final chunk)
                         if 'usage' in chunk:
+                            usage = chunk['usage']
+                            if 'prompt_tokens' not in usage or 'completion_tokens' not in usage or 'total_tokens' not in usage:
+                                raise ValueError("Incomplete usage data received from model")
                             yield {
                                 "type": "usage",
-                                "prompt_tokens": chunk['usage'].get('prompt_tokens', 0),
-                                "completion_tokens": chunk['usage'].get('completion_tokens', 0),
-                                "total_tokens": chunk['usage'].get('total_tokens', 0)
+                                "prompt_tokens": usage['prompt_tokens'],
+                                "completion_tokens": usage['completion_tokens'],
+                                "total_tokens": usage['total_tokens']
                             }
 
                         # Check for content chunk
@@ -588,6 +594,10 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                             # Accumulate orchestrator usage from evaluation
                             if event.get("orchestrator_usage"):
                                 usage = event["orchestrator_usage"]
+                                required_fields = ["prompt_tokens", "completion_tokens", "total_tokens"]
+                                missing_fields = [f for f in required_fields if f not in usage]
+                                if missing_fields:
+                                    raise ValueError(f"Missing orchestrator usage fields: {missing_fields}")
                                 orchestrator_tokens["prompt"] += usage["prompt_tokens"]
                                 orchestrator_tokens["completion"] += usage["completion_tokens"]
                                 orchestrator_tokens["total"] += usage["total_tokens"]
@@ -596,6 +606,10 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
                             # Accumulate local model usage
                             if event.get("local_model_usage"):
                                 usage = event["local_model_usage"]
+                                required_fields = ["prompt_tokens", "completion_tokens", "total_tokens"]
+                                missing_fields = [f for f in required_fields if f not in usage]
+                                if missing_fields:
+                                    raise ValueError(f"Missing local model usage fields: {missing_fields}")
                                 local_model_tokens["prompt"] += usage["prompt_tokens"]
                                 local_model_tokens["completion"] += usage["completion_tokens"]
                                 local_model_tokens["total"] += usage["total_tokens"]

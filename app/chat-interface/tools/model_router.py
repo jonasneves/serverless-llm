@@ -120,11 +120,14 @@ class ModelRouter:
 
             data = response.json()
 
+            if "usage" not in data or "total_tokens" not in data["usage"]:
+                raise Exception(f"Missing usage data from {model_name}")
+
             return {
                 "content": data["choices"][0]["message"]["content"],
                 "model_name": model_name,
                 "model_id": model_id,
-                "tokens_used": data.get("usage", {}).get("total_tokens", 0)
+                "tokens_used": data["usage"]["total_tokens"]
             }
 
         except httpx.HTTPError as e:

@@ -139,12 +139,26 @@ async def generate_stream(messages: list, max_tokens: int, temperature: float, t
                 stream=True
             )
 
+            usage_data = None
             for chunk in response:
+                # Capture usage data if present
+                if "usage" in chunk:
+                    usage_data = chunk["usage"]
+
+                # Stream content chunks
                 if "choices" in chunk and len(chunk["choices"]) > 0:
                     delta = chunk["choices"][0].get("delta", {})
                     if "content" in delta:
                         yield f"data: {json.dumps(chunk)}\n\n"
                         await asyncio.sleep(0)
+
+            # Send usage data before [DONE] if available
+            if usage_data:
+                usage_chunk = {
+                    "choices": [{"delta": {}, "finish_reason": "stop"}],
+                    "usage": usage_data
+                }
+                yield f"data: {json.dumps(usage_chunk)}\n\n"
 
             yield "data: [DONE]\n\n"
 
