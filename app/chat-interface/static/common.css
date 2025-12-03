@@ -166,29 +166,20 @@ header {
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
-  margin-left: 16px;
   position: relative;
-}
-
-.icon-btn::before {
-  content: '';
-  position: absolute;
-  left: -8px;
-  height: 24px;
-  width: 1px;
-  background: rgba(255, 255, 255, 0.3);
 }
 
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.25);
 }
 
-.header-actions .icon-btn + .icon-btn {
-  margin-left: 8px;
-}
-
-.header-actions .icon-btn + .icon-btn::before {
-  content: none;
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 #settingsBtn.needs-attention::after {
