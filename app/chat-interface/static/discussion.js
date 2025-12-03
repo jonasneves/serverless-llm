@@ -464,8 +464,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     startBtn.addEventListener('click', startDiscussion);
     queryInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) {
-        startDiscussion();
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!startBtn.disabled && queryInput.value.trim()) {
+          startDiscussion();
+        }
       }
     });
 
