@@ -26,12 +26,9 @@
       border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 24px;
-    }
-
-    .input-section h2 {
-      margin: 0 0 16px 0;
-      font-size: 18px;
-      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     #discussionContent {
@@ -117,19 +114,6 @@
       border-top-color: var(--accent-color);
       border-radius: 50%;
       animation: spin 1s linear infinite;
-    }
-
-    .query-input {
-      width: 100%;
-      min-height: 100px;
-      padding: 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 15px;
-      font-family: inherit;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      resize: vertical;
     }
 
     .btn {
@@ -790,7 +774,6 @@
     }
 
     .config-section {
-      margin-top: 20px;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -1026,12 +1009,6 @@
 
   <div class="mode-input-container">
 <div class="input-section">
-        <h2>Ask a Question</h2>
-        <textarea
-          id="queryInput"
-          class="query-input"
-          placeholder="Enter your question... Models will discuss together before responding."
-        ></textarea>
         <!-- Configuration Section -->
         <div class="config-section">
           <!-- Participants Row -->
@@ -1088,9 +1065,19 @@
               </div>
               <div id="statusIndicator"></div>
             </div>
-            <button id="startBtn" class="btn btn-primary">Start Discussion</button>
           </div>
         </div>
+
+        <!-- Input Wrapper -->
+        <div class="input-wrapper">
+          <textarea id="queryInput" placeholder="Enter your question... Models will discuss together before responding." rows="1"></textarea>
+          <button id="startBtn" class="send-btn" aria-label="Start discussion">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+          </button>
+        </div>
+
         <div id="tokenSection" class="token-section" style="display: none;">
           <button id="tokenToggle" class="token-toggle">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

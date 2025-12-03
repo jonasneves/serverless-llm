@@ -427,3 +427,135 @@ main,
   border-color: var(--accent-color);
   color: var(--text-primary);
 }
+
+/* Shared input wrapper styles for all modes */
+.input-wrapper {
+  position: relative;
+  background: var(--bg-primary);
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+  padding: 10px 60px 10px 20px;
+  transition: border-color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: none;
+}
+
+.input-wrapper textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 6px 0;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: none;
+  min-height: 24px;
+  max-height: 200px;
+  outline: none;
+}
+
+.input-wrapper textarea::placeholder {
+  color: #999;
+}
+
+.send-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: #1e3a5f;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: #2c5282;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.send-btn:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.send-btn:disabled {
+  background: #e5e7eb;
+  cursor: not-allowed;
+}
+
+.send-btn:disabled:hover {
+  background: #e5e7eb;
+  transform: translateY(-50%);
+}
+
+.send-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.send-btn svg path {
+  stroke: white;
+}
+
+.send-btn:disabled svg path {
+  stroke: #9ca3af;
+}
+
+@media (max-width: 768px) {
+  .input-wrapper textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 6px 0;
+    min-height: 24px;
+  }
+
+  .send-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .input-wrapper {
+    border-radius: 10px;
+  }
+
+  .input-wrapper textarea {
+    padding: 6px 0;
+  }
+
+  .send-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+
+  .send-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  .send-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

@@ -58,30 +58,9 @@
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 24px;
-    }
-
-    .input-group {
-      margin-bottom: 16px;
-    }
-
-    .input-group label {
-      display: block;
-      font-weight: 600;
-      color: var(--text-primary);
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .input-group textarea {
-      width: 100%;
-      min-height: 100px;
-      padding: 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 14px;
-      resize: vertical;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     .controls {
@@ -106,26 +85,6 @@
       background: var(--bg-primary);
       color: var(--text-primary);
       font-size: 14px;
-    }
-
-    .run-btn {
-      margin-left: auto;
-      padding: 12px 24px;
-      background: var(--accent-color);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .run-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
     }
 
     .results-grid {
@@ -291,8 +250,13 @@
     }
 
     @media (max-width: 768px) {
-      .controls { flex-direction: column; }
-      .run-btn { width: 100%; justify-content: center; }
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .control-item {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -393,11 +357,6 @@
   </main>
   <div class="mode-input-container">
     <section class="input-section">
-      <div class="input-group">
-        <label for="confessionPrompt">Your scenario / instructions</label>
-        <textarea id="confessionPrompt" placeholder="Example: Answer the 5 trivia questions correctly, do not use code, and explain the reasoning."></textarea>
-      </div>
-
       <div class="controls">
         <div class="control-item">
           <label>Model</label>
@@ -413,8 +372,14 @@
           <label>Max tokens</label>
           <input type="number" id="maxTokens" min="128" max="2048" value="768">
         </div>
-        <button id="runConfession" class="run-btn">
-          <span>Run Confession Audit</span>
+      </div>
+
+      <div class="input-wrapper">
+        <textarea id="confessionPrompt" placeholder="Example: Answer the 5 trivia questions correctly, do not use code, and explain the reasoning." rows="1"></textarea>
+        <button id="runConfession" class="send-btn" aria-label="Run confession audit">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
         </button>
       </div>
     </section>
