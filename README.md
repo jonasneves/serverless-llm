@@ -21,8 +21,9 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
 - **Multi-Model Support**: Qwen 2.5 (7B/14B), Phi-3, Llama 3.2, Mistral 7B, Gemma 2 9B
+- **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
-- **Continuous Availability**: Auto-restart with graceful handoff maintains ~99% uptime
+- **Continuous Availability**: Auto-restart with graceful handoff
 - **Public Access**: External connectivity via Cloudflare Tunnels
 
 ## Architecture
@@ -69,8 +70,11 @@ Add to **Settings > Secrets and variables > Actions**:
 ### 3. Run Workflows
 
 ```bash
-# Start each model server
+# Start each model server (single instance)
 gh workflow run {model}-inference.yml  # qwen, phi, llama, mistral, qwen14b, gemma
+
+# Or start with multiple instances for high availability
+gh workflow run qwen-inference.yml -f instances=3
 
 # Start web interface
 gh workflow run chat-interface.yml
@@ -138,19 +142,25 @@ serverless-llm/
 
 ## Configuration
 
+**High Availability**: Run multiple parallel instances per model:
+- Each workflow supports 1-3 concurrent instances
+- Cloudflare Tunnels load-balance across active instances
+- Zero-downtime during restarts with multiple instances
+
 **Auto-Restart**: Workflows restart before GitHub's 6-hour limit:
 - Default runtime: 5.5 hours
 - Auto-restart triggers new workflow via repository dispatch
-- ~3-5 minutes downtime during transition
+- New instance starts before old one stops (graceful handoff)
 
 **Workflow Inputs**:
+- `instances`: Number of parallel instances (1-3, default: 1)
 - `duration_hours`: Runtime before auto-restart (default: 5.5)
 - `auto_restart`: Enable auto-restart (default: true)
 
 ## Limitations
 
 - **CPU Inference**: No GPU on GitHub-hosted runners (slower generation)
-- **Brief Downtime**: ~3-5 minutes during auto-restart transitions every 5.5 hours
+- **Brief Downtime**: ~3-5 minutes during auto-restart (only with single instance; eliminated with 2+ instances)
 - **First Run**: Initial model download (~2-5 min), subsequent runs use cached models
 
 ## Local Development
