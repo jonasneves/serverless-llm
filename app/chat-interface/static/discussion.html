@@ -982,7 +982,50 @@
 
     <div class="discussion-area">
       <!-- Input Section -->
-      <div class="input-section">
+      <!-- Orchestrator Status Bar -->
+      <div id="orchestratorBar" class="orchestrator-bar">
+        <div class="orchestrator-bar-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+        </div>
+        <div class="orchestrator-bar-content">
+          <div class="orchestrator-bar-label">Orchestrator</div>
+          <div class="orchestrator-bar-status">
+            <span class="orchestrator-bar-model" id="orchestratorModelName">Loading...</span>
+            <span class="orchestrator-bar-action" id="orchestratorAction">
+              <span class="orchestrator-bar-spinner"></span>
+              <span id="orchestratorActionText">Initializing...</span>
+            </span>
+          </div>
+        </div>
+        <button class="orchestrator-info-btn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <div class="orchestrator-tooltip">
+            <strong>What does the orchestrator do?</strong>
+            <p style="margin: 8px 0 6px 0;">Coordinates discussion via small API calls (~300 tokens each):</p>
+            <ul style="margin: 0; padding-left: 16px;">
+              <li><strong>Analyzes</strong> your query and scores model expertise</li>
+              <li><strong>Evaluates</strong> each response for quality</li>
+              <li><strong>Synthesizes</strong> the final answer</li>
+            </ul>
+            <p style="margin: 8px 0 0 0;">It doesn't generate content—just directs traffic between local models.</p>
+          </div>
+        </button>
+      </div>
+
+      <!-- Discussion Content -->
+      <div id="discussionContent"></div>
+    </div>
+  </div>
+
+  <div class="mode-input-container">
+<div class="input-section">
         <h2>Ask a Question</h2>
         <textarea
           id="queryInput"
@@ -1081,47 +1124,7 @@
         </div>
       </div>
 
-      <!-- Orchestrator Status Bar -->
-      <div id="orchestratorBar" class="orchestrator-bar">
-        <div class="orchestrator-bar-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-          </svg>
         </div>
-        <div class="orchestrator-bar-content">
-          <div class="orchestrator-bar-label">Orchestrator</div>
-          <div class="orchestrator-bar-status">
-            <span class="orchestrator-bar-model" id="orchestratorModelName">Loading...</span>
-            <span class="orchestrator-bar-action" id="orchestratorAction">
-              <span class="orchestrator-bar-spinner"></span>
-              <span id="orchestratorActionText">Initializing...</span>
-            </span>
-          </div>
-        </div>
-        <button class="orchestrator-info-btn" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          <div class="orchestrator-tooltip">
-            <strong>What does the orchestrator do?</strong>
-            <p style="margin: 8px 0 6px 0;">Coordinates discussion via small API calls (~300 tokens each):</p>
-            <ul style="margin: 0; padding-left: 16px;">
-              <li><strong>Analyzes</strong> your query and scores model expertise</li>
-              <li><strong>Evaluates</strong> each response for quality</li>
-              <li><strong>Synthesizes</strong> the final answer</li>
-            </ul>
-            <p style="margin: 8px 0 0 0;">It doesn't generate content—just directs traffic between local models.</p>
-          </div>
-        </button>
-      </div>
-
-      <!-- Discussion Content -->
-      <div id="discussionContent"></div>
-    </div>
-  </div>
 
   <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
   <script defer src="/static/discussion.js?v={{ discussion_js }}"></script>

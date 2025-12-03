@@ -447,31 +447,6 @@
       </div>
     </div>
 
-    <div class="input-section">
-      <h2>Query</h2>
-      <div class="form-group">
-        <textarea id="query" placeholder="Enter your question... The orchestrator will intelligently route to the best tools and models."></textarea>
-      </div>
-
-      <div class="controls">
-        <div class="control-group">
-          <label>Max Rounds</label>
-          <input type="number" id="maxRounds" value="5" min="1" max="10">
-        </div>
-        <div class="control-group">
-          <label>Temperature</label>
-          <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
-        </div>
-        <div class="control-group">
-          <label>Max Tokens</label>
-          <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128">
-        </div>
-        <button class="btn btn-primary" id="startBtn">
-          <span id="btnText">Start Orchestration</span>
-        </button>
-      </div>
-    </div>
-
     <div class="orchestration-section" id="orchestrationSection">
       <div class="empty-state">
         <div class="empty-state-icon">
@@ -539,6 +514,34 @@
       </div>
     </div>
   </main>
+  <div class="mode-input-container">
+    <div class="input-section">
+      <h2>Query</h2>
+      <div class="form-group">
+        <textarea id="query" placeholder="Enter your question... The orchestrator will intelligently route to the best tools and models."></textarea>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Max Rounds</label>
+          <input type="number" id="maxRounds" value="5" min="1" max="10">
+        </div>
+        <div class="control-group">
+          <label>Temperature</label>
+          <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
+        </div>
+        <div class="control-group">
+          <label>Max Tokens</label>
+          <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128">
+        </div>
+        <button class="btn btn-primary" id="startBtn">
+          <span id="btnText">Start Orchestration</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
 
   <script defer src="/static/orchestrator.js?v={{ orchestrator_js }}"></script>
 
