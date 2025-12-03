@@ -193,8 +193,8 @@ main,
   background: var(--bg-primary);
 }
 
-main > *:not(.mode-input-container),
-.container > *:not(.mode-input-container) {
+main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
+.container > *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
   flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
@@ -205,7 +205,12 @@ main > *:not(.mode-input-container),
   gap: 1.5rem;
 }
 
-.mode-input-container {
+.mode-input-container,
+.input-container {
+  flex-shrink: 0;
+}
+
+.typing-indicator {
   flex-shrink: 0;
 }
 
@@ -383,8 +388,8 @@ main > *:not(.mode-input-container),
     font-size: 13px;
   }
 
-  main > *:not(.mode-input-container),
-  .container > *:not(.mode-input-container) {
+  main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
+  .container > *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
     padding: 0.75rem;
     gap: 1rem;
   }
@@ -428,8 +433,8 @@ main > *:not(.mode-input-container),
     font-size: 12px;
   }
 
-  main > *:not(.mode-input-container),
-  .container > *:not(.mode-input-container) {
+  main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
+  .container > *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
     padding: 0.5rem;
   }
 }
