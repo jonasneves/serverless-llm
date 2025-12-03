@@ -1063,6 +1063,39 @@
                 </svg>
                 <span>Leverage GitHub-hosted models (many include free quota)</span>
               </div>
+
+              <div id="tokenSection" class="token-section" style="display: none;">
+                <button id="tokenToggle" class="token-toggle">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                  <span>Use your own GitHub token</span>
+                </button>
+                <div id="tokenInputWrapper" class="token-input-wrapper">
+                  <div class="token-input-row">
+                    <input
+                      type="password"
+                      id="githubToken"
+                      class="token-input"
+                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                      autocomplete="off"
+                    >
+                    <button type="button" id="tokenVisibilityBtn" class="token-visibility-btn" title="Show/hide token">
+                      <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="token-hint">
+                    <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Arena&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled). Leave empty to use server default.
+                  </div>
+                  <div class="token-hint" style="margin-top: 2px; opacity: 0.7;">
+                    🔒 Token is saved in your browser only, never sent to our servers for storage.
+                  </div>
+                </div>
+              </div>
+
               <div id="statusIndicator"></div>
             </div>
           </div>
@@ -1076,38 +1109,6 @@
               <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
             </svg>
           </button>
-        </div>
-
-        <div id="tokenSection" class="token-section" style="display: none;">
-          <button id="tokenToggle" class="token-toggle">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-            <span>Use your own GitHub token</span>
-          </button>
-          <div id="tokenInputWrapper" class="token-input-wrapper">
-            <div class="token-input-row">
-              <input
-                type="password"
-                id="githubToken"
-                class="token-input"
-                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                autocomplete="off"
-              >
-              <button type="button" id="tokenVisibilityBtn" class="token-visibility-btn" title="Show/hide token">
-                <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
-            </div>
-            <div class="token-hint">
-              <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Arena&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled). Leave empty to use server default.
-            </div>
-            <div class="token-hint" style="margin-top: 2px; opacity: 0.7;">
-              🔒 Token is saved in your browser only, never sent to our servers for storage.
-            </div>
-          </div>
         </div>
       </div>
 
