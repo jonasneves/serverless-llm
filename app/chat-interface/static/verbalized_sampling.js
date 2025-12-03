@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const verbalizedResponsesContainer = document.getElementById('verbalizedResponses');
     const diversityScoreContainer = document.getElementById('diversityScore');
 
-    generateBtn.addEventListener('click', async () => {
+    const handleGenerate = async () => {
       const query = queryInput.value.trim();
       if (!query) {
         alert('Please enter a query');
@@ -43,6 +43,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       } finally {
         generateBtn.disabled = false;
         generateBtn.innerHTML = 'Compare Methods';
+      }
+    };
+
+    generateBtn.addEventListener('click', handleGenerate);
+
+    // Handle Enter key
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!generateBtn.disabled && queryInput.value.trim()) {
+          handleGenerate();
+        }
       }
     });
 
