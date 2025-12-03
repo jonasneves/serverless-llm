@@ -17,13 +17,6 @@ LLM inference on GitHub Actions free tier with public access via Cloudflare Tunn
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and sampling diversity.
 
-## Overview
-
-- **Zero Infrastructure Cost**: Runs on GitHub Actions free tier
-- **Multi-Model Support**: Qwen 2.5 (7B/14B), Phi-3, Llama 3.2, Mistral 7B, Gemma 2 9B
-- **Public Access**: External connectivity via Cloudflare Tunnels
-- **Auto-Restart**: Maintains availability across GitHub's 6-hour limit
-
 ## Architecture
 
 ![Architecture](architecture.png)
