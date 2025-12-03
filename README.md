@@ -1,4 +1,7 @@
 # Serverless LLM Arena
+Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
+
+**https://chat.neevs.io**
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
@@ -10,20 +13,6 @@
 [![Qwen 14B API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-14b-instruct)](https://qwen14b.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
 
-<!-- GitHub Actions Workflow Status -->
-<details>
-<summary>Deployment Status (GitHub Actions)</summary>
-
-[![Chat Interface](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/chat-interface.yml)
-[![Qwen Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen-inference.yml)
-[![Phi Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/phi-inference.yml)
-[![Llama Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/llama-inference.yml)
-[![Mistral Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/mistral-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/mistral-inference.yml)
-[![Qwen 14B Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen14b-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/qwen14b-inference.yml)
-[![Gemma Inference](https://github.com/jonasneves/serverless-llm/actions/workflows/gemma-inference.yml/badge.svg)](https://github.com/jonasneves/serverless-llm/actions/workflows/gemma-inference.yml)
-
-</details>
-
 **LLM inference on GitHub Actions free tier with public access via Cloudflare Tunnels.**
 
 Experiment with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and sampling diversity.
@@ -32,8 +21,7 @@ Experiment with multiple AI interaction patterns: side-by-side comparison, colla
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier
 - **Multi-Model Support**: Qwen 2.5 (7B/14B), Phi-3, Llama 3.2, Mistral 7B, Gemma 2 9B
-- **Real-Time Streaming**: Server-Sent Events for live responses
-- **Public Access**: Cloudflare Tunnels for external connectivity
+- **Public Access**: External connectivity via Cloudflare Tunnels
 - **Auto-Restart**: Maintains availability across GitHub's 6-hour limit
 
 ## Architecture
@@ -43,7 +31,7 @@ Experiment with multiple AI interaction patterns: side-by-side comparison, colla
 ## Modes
 
 ### Arena
-Compare model responses side-by-side with performance metrics.
+Compare model responses side-by-side with performance metrics (default mode).
 
 ### Discussion
 Models collaborate through orchestrated turn-based discussions. [→ Docs](DISCUSSION_MODE.md)
@@ -55,6 +43,8 @@ Multi-agent orchestration with tool calling (web search, code execution). [→ D
 Compare direct prompting vs. verbalized sampling to explore output diversity. [→ Docs](VARIATIONS.md)
 
 ## Quick Start
+
+**Setup overview**: Fork this repo, configure GitHub secrets and Cloudflare Tunnels, then trigger the workflows.
 
 ### 1. Configure GitHub Secrets
 
@@ -102,7 +92,7 @@ gh workflow run chat-interface.yml
 Each model exposes standard endpoints:
 
 ```bash
-curl -X POST https://qwen.neevs.io/v1/chat/completions \
+curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [{"role": "user", "content": "Explain quantum computing"}],
@@ -122,12 +112,12 @@ curl -X POST https://qwen.neevs.io/v1/chat/completions \
 
 | Model | Parameters | Quantization | Strengths |
 |-------|------------|--------------|-----------|
-| Qwen 2.5 | 7B | Q4_K_M | General purpose, coding |
-| Qwen 2.5 | 14B | Q4_K_M | Advanced math, complex coding |
-| Phi-3 Mini | 3.8B | Q4_K_M | Reasoning, instruction following |
-| Llama 3.2 | 3B | Q4_K_M | Chat, creative writing |
-| Mistral 7B v0.3 | 7B | Q4_K_M | Instruction following, structured output |
-| Gemma 2 | 9B | Q4_K_M | Reasoning, safety, fact-checking |
+| Qwen 2.5 | 7B | Q4_K_M | Code generation, multilingual tasks |
+| Qwen 2.5 | 14B | Q4_K_M | Complex coding, mathematical reasoning |
+| Phi-3 Mini | 3.8B | Q4_K_M | Efficient reasoning, instruction following |
+| Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |
+| Mistral 7B v0.3 | 7B | Q4_K_M | Structured output, function calling |
+| Gemma 2 | 9B | Q4_K_M | Fact-checking, safety-aligned responses |
 
 ## Project Structure
 
