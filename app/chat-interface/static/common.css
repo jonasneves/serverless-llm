@@ -189,20 +189,36 @@ main,
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background: var(--bg-primary);
 }
 
-main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
-.container > *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
-  flex: 1 1 0;
-  min-height: 0;
+/* Scrollable content wrapper - everything except input containers */
+main:not(:has(.chat-history)),
+.container:not(:has(.chat-history)) {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Add padding to main content, but not to input containers */
+main > :not(.mode-input-container):not(.input-container),
+.container > :not(.mode-input-container):not(.input-container) {
   padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+}
+
+main > :not(.mode-input-container):not(.input-container):first-child,
+.container > :not(.mode-input-container):not(.input-container):first-child {
+  padding-top: 1rem;
+}
+
+main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator),
+.container > :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator) {
+  padding-bottom: 1rem;
+}
+
+/* Content gap */
+main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
+.container > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
+  margin-top: 1.5rem;
 }
 
 .mode-input-container,
@@ -388,10 +404,14 @@ main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator)
     font-size: 13px;
   }
 
-  main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
-  .container > *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
+  main > :not(.mode-input-container):not(.input-container),
+  .container > :not(.mode-input-container):not(.input-container) {
     padding: 0.75rem;
-    gap: 1rem;
+  }
+
+  main > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
+  .container > * + *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
+    margin-top: 1rem;
   }
 }
 
@@ -433,8 +453,8 @@ main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator)
     font-size: 12px;
   }
 
-  main > *:not(.mode-input-container):not(.input-container):not(.typing-indicator),
-  .container > *:not(.mode-input-container):not(.input-container):not(.typing-indicator) {
+  main > :not(.mode-input-container):not(.input-container),
+  .container > :not(.mode-input-container):not(.input-container) {
     padding: 0.5rem;
   }
 }
