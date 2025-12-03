@@ -564,12 +564,13 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
 }
 
 .send-btn:disabled {
-  background: #e5e7eb;
+  background: #1e3a5f;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .send-btn:disabled:hover {
-  background: #e5e7eb;
+  background: #1e3a5f;
   transform: translateY(-50%);
 }
 
@@ -580,10 +581,6 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
 
 .send-btn svg path {
   stroke: white;
-}
-
-.send-btn:disabled svg path {
-  stroke: #9ca3af;
 }
 
 @media (max-width: 768px) {

@@ -478,12 +478,13 @@ main {
     }
 
     .send-btn:disabled {
-      background: #e5e7eb;
+      background: #1e3a5f;
       cursor: not-allowed;
+      opacity: 0.5;
     }
 
     .send-btn:disabled:hover {
-      background: #e5e7eb;
+      background: #1e3a5f;
       transform: translateY(-50%);
     }
 
@@ -494,10 +495,6 @@ main {
 
     .send-btn svg path {
       stroke: white;
-    }
-
-    .send-btn:disabled svg path {
-      stroke: #9ca3af;
     }
 
     .typing-indicator {
