@@ -17,6 +17,14 @@ LLM inference on GitHub Actions free tier with public access via Cloudflare Tunn
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and sampling diversity.
 
+## Overview Features
+
+- **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
+- **Multi-Model Support**: Qwen 2.5 (7B/14B), Phi-3, Llama 3.2, Mistral 7B, Gemma 2 9B
+- **Model Caching**: GGUF models cached between runs for fast restarts
+- **Continuous Availability**: Auto-restart with graceful handoff maintains ~99% uptime
+- **Public Access**: External connectivity via Cloudflare Tunnels
+
 ## Architecture
 
 ![Architecture](architecture.png)
@@ -125,6 +133,7 @@ serverless-llm/
 | API Framework | FastAPI |
 | Streaming | Server-Sent Events |
 | Tunneling | Cloudflare Zero Trust |
+| Caching | GitHub Actions Cache (models) |
 | Frontend | Vanilla JS + marked.js |
 
 ## Configuration
@@ -141,9 +150,8 @@ serverless-llm/
 ## Limitations
 
 - **CPU Inference**: No GPU on GitHub-hosted runners (slower generation)
-- **6-Hour Limit**: Maximum job duration
-- **Cold Start**: Model download on each run (~2-5 min)
-- **Rate Limits**: GitHub Actions usage limits apply
+- **Brief Downtime**: ~3-5 minutes during auto-restart transitions every 5.5 hours
+- **First Run**: Initial model download (~2-5 min), subsequent runs use cached models
 
 ## Local Development
 
