@@ -331,6 +331,72 @@ async def health():
     """Basic health check for the chat interface"""
     return {"status": "healthy", "service": "chat-interface"}
 
+async def check_model_health(model_id: str, endpoint: str) -> dict:
+    """
+    Perform a detailed health check on a single model, including inference test.
+    """
+    client = HTTPClient.get_client()
+    start_time = time.time()
+    
+    try:
+        # Test health endpoint
+        health_response = await client.get(f"{endpoint}/health")
+
+        if health_response.status_code == 200:
+            health_data = health_response.json()
+
+            # Additionally test a simple completion to verify model works
+            try:
+                test_response = await client.post(
+                    f"{endpoint}/v1/chat/completions",
+                    json={
+                        "messages": [{"role": "user", "content": "Hi"}],
+                        "max_tokens": 5,
+                        "temperature": 0.1
+                    },
+                    timeout=30.0
+                )
+
+                return {
+                    "status": "online",
+                    "endpoint": endpoint,
+                    "health": health_data,
+                    "inference_test": "passed" if test_response.status_code == 200 else "failed",
+                    "response_time_ms": int((time.time() - start_time) * 1000)
+                }
+            except Exception as e:
+                # Health passed but inference failed
+                return {
+                    "status": "degraded",
+                    "endpoint": endpoint,
+                    "health": health_data,
+                    "inference_test": "failed",
+                    "error": str(e),
+                    "response_time_ms": int((time.time() - start_time) * 1000)
+                }
+        else:
+            return {
+                "status": "unhealthy",
+                "endpoint": endpoint,
+                "error": f"Health check returned {health_response.status_code}",
+                "response_time_ms": int((time.time() - start_time) * 1000)
+            }
+
+    except httpx.TimeoutException:
+        return {
+            "status": "offline",
+            "endpoint": endpoint,
+            "error": "Connection timeout",
+            "response_time_ms": int((time.time() - start_time) * 1000)
+        }
+    except Exception as e:
+        return {
+            "status": "offline",
+            "endpoint": endpoint,
+            "error": str(e),
+            "response_time_ms": int((time.time() - start_time) * 1000)
+        }
+
 @app.get("/api/health/detailed")
 async def detailed_health():
     """
@@ -345,68 +411,23 @@ async def detailed_health():
         "models": {}
     }
 
-    client = HTTPClient.get_client()
-
     # Check each model endpoint
-    for model_id, endpoint in MODEL_ENDPOINTS.items():
-        try:
-            # Test health endpoint
-            health_response = await client.get(f"{endpoint}/health")
-
-            if health_response.status_code == 200:
-                health_data = health_response.json()
-
-                # Additionally test a simple completion to verify model works
-                try:
-                    test_response = await client.post(
-                        f"{endpoint}/v1/chat/completions",
-                        json={
-                            "messages": [{"role": "user", "content": "Hi"}],
-                            "max_tokens": 5,
-                            "temperature": 0.1
-                        },
-                        timeout=30.0
-                    )
-
-                    results["models"][model_id] = {
-                        "status": "online",
-                        "endpoint": endpoint,
-                        "health": health_data,
-                        "inference_test": "passed" if test_response.status_code == 200 else "failed",
-                        "response_time_ms": int((time.time() - results["chat_interface"]["timestamp"]) * 1000)
-                    }
-                except Exception as e:
-                    # Health passed but inference failed
-                    results["models"][model_id] = {
-                        "status": "degraded",
-                        "endpoint": endpoint,
-                        "health": health_data,
-                        "inference_test": "failed",
-                        "error": str(e)
-                    }
-            else:
-                results["models"][model_id] = {
-                    "status": "unhealthy",
-                    "endpoint": endpoint,
-                    "error": f"Health check returned {health_response.status_code}"
-                }
-
-        except httpx.TimeoutException:
-            results["models"][model_id] = {
-                "status": "offline",
-                "endpoint": endpoint,
-                "error": "Connection timeout"
-            }
-        except Exception as e:
-            results["models"][model_id] = {
-                "status": "offline",
-                "endpoint": endpoint,
-                "error": str(e)
-            }
+    # We can run these in parallel for faster results
+    tasks = [
+        check_model_health(model_id, endpoint)
+        for model_id, endpoint in MODEL_ENDPOINTS.items()
+    ]
+    
+    model_results = await asyncio.gather(*tasks)
+    
+    for model_id, result in zip(MODEL_ENDPOINTS.keys(), model_results):
+        results["models"][model_id] = result
 
     # Calculate overall status
     model_statuses = [m["status"] for m in results["models"].values()]
-    if all(s == "online" for s in model_statuses):
+    if not model_statuses:
+        results["overall_status"] = "healthy" # No models configured
+    elif all(s == "online" for s in model_statuses):
         results["overall_status"] = "healthy"
     elif any(s == "online" for s in model_statuses):
         results["overall_status"] = "degraded"
@@ -534,8 +555,14 @@ async def list_models():
     }
 
 @app.get("/api/models/{model_id}/status")
-async def model_status(model_id: str):
+async def model_status(model_id: str, detailed: bool = False):
     endpoint = get_model_endpoint_or_error(model_id, status_code=404)
+    
+    if detailed:
+        result = await check_model_health(model_id, endpoint)
+        return result
+
+    # Simple check for non-detailed requests
     try:
         client = HTTPClient.get_client()
         response = await client.get(f"{endpoint}/health", timeout=5.0)

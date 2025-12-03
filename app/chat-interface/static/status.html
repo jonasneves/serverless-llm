@@ -172,6 +172,11 @@
             background: #ef4444;
         }
 
+        .service-indicator.loading {
+            background: #6366f1;
+            animation: pulse 1.5s infinite;
+        }
+
         .service-info {
             flex: 1;
             min-width: 0;
@@ -248,6 +253,11 @@
         .status-label.offline {
             background: #fee2e2;
             color: #991b1b;
+        }
+
+        .status-label.loading {
+            background: #e0e7ff;
+            color: #3730a3;
         }
 
         /* Error Details */
@@ -352,76 +362,129 @@
 
             const overallStatus = document.getElementById('overall-status');
             const servicesList = document.getElementById('services-list');
+            
+            isRefreshing = true;
 
             try {
-                // Show loading state
-                isRefreshing = true;
-
-                const response = await fetch('/api/health/detailed');
+                // 1. Fetch list of models
+                const response = await fetch('/api/models');
                 const data = await response.json();
+                const models = data.models;
 
-                // Update overall status
-                const overall = data.overall_status;
-                const onlineCount = Object.values(data.models).filter(m => m.status === 'online').length;
-                const totalCount = Object.keys(data.models).length;
-
-                const statusConfig = {
-                    'healthy': {
-                        title: 'All Systems Operational',
-                        description: `All ${totalCount} services are running normally`
-                    },
-                    'degraded': {
-                        title: 'Partial System Degradation',
-                        description: `${onlineCount} of ${totalCount} services operational`
-                    },
-                    'unhealthy': {
-                        title: 'System Offline',
-                        description: 'All services are currently unavailable'
-                    }
-                };
-
-                const config = statusConfig[overall] || statusConfig['unhealthy'];
-
-                overallStatus.className = `overall-status ${overall}`;
+                // Reset overall status to loading
+                overallStatus.className = 'overall-status loading';
                 overallStatus.innerHTML = `
-                    <div class="status-icon ${overall}"></div>
+                    <div class="status-icon loading"></div>
                     <div class="status-text">
-                        <h2>${config.title}</h2>
-                        <p>${config.description}</p>
+                        <h2>Checking system status...</h2>
+                        <p>Verifying ${models.length} services</p>
                     </div>
                 `;
 
-                // Update services list
+                // 2. Initialize list with loading states (if empty or full refresh needed)
+                // We clear it to force a clean render of rows
                 servicesList.innerHTML = '';
-                for (const [modelId, modelData] of Object.entries(data.models)) {
-                    const serviceItem = createServiceItem(modelId, modelData);
-                    servicesList.appendChild(serviceItem);
-                }
+                
+                const statusPromises = models.map(async (model) => {
+                    // Create initial loading item
+                    const loadingItem = createServiceItem(model.id, { 
+                        status: 'loading', 
+                        endpoint: model.endpoint 
+                    });
+                    loadingItem.id = `model-${model.id}`;
+                    servicesList.appendChild(loadingItem);
 
-                // Update last updated time
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
+                    try {
+                        // Fetch detailed status for this model
+                        // Add a random delay to avoid hammering the server all at exact same ms if locally serving
+                        // await new Promise(r => setTimeout(r, Math.random() * 100));
+                        
+                        const statusResponse = await fetch(`/api/models/${model.id}/status?detailed=true`);
+                        const statusData = await statusResponse.json();
+                        
+                        // Update the item
+                        const newItem = createServiceItem(model.id, statusData);
+                        newItem.id = `model-${model.id}`;
+                        
+                        const currentItem = document.getElementById(`model-${model.id}`);
+                        if (currentItem) {
+                            currentItem.replaceWith(newItem);
+                        }
+                        
+                        return statusData;
+                    } catch (e) {
+                        console.error(`Failed to check ${model.id}`, e);
+                        const errorData = { status: 'offline', endpoint: model.endpoint, error: 'Check failed' };
+                        
+                        const newItem = createServiceItem(model.id, errorData);
+                        newItem.id = `model-${model.id}`;
+                        const currentItem = document.getElementById(`model-${model.id}`);
+                        if (currentItem) {
+                            currentItem.replaceWith(newItem);
+                        }
+                        
+                        return errorData;
+                    }
                 });
-                document.getElementById('last-updated').textContent =
-                    `Last checked at ${timeStr}`;
+
+                // 3. Update overall status when all are done
+                const results = await Promise.all(statusPromises);
+                updateOverallStatusDisplay(results);
 
             } catch (error) {
+                console.error('Failed to load models:', error);
                 overallStatus.className = 'overall-status unhealthy';
                 overallStatus.innerHTML = `
                     <div class="status-icon unhealthy"></div>
                     <div class="status-text">
                         <h2>Unable to Load Status</h2>
-                        <p>Error connecting to the health check service</p>
+                        <p>Error connecting to the server</p>
                     </div>
                 `;
-                console.error('Failed to load health status:', error);
             } finally {
-                // Reset loading state
                 isRefreshing = false;
+                
+                // Update time
+                const now = new Date();
+                document.getElementById('last-updated').textContent = 
+                    `Last checked at ${now.toLocaleTimeString()}`;
             }
+        }
+        
+        function updateOverallStatusDisplay(results) {
+            const overallStatus = document.getElementById('overall-status');
+            const totalCount = results.length;
+            const onlineCount = results.filter(r => r.status === 'online').length;
+            
+            let overall = 'unhealthy';
+            if (onlineCount === totalCount) overall = 'healthy';
+            else if (onlineCount > 0) overall = 'degraded';
+            
+            const statusConfig = {
+                'healthy': {
+                    title: 'All Systems Operational',
+                    description: `All ${totalCount} services are running normally`
+                },
+                'degraded': {
+                    title: 'Partial System Degradation',
+                    description: `${onlineCount} of ${totalCount} services operational`
+                },
+                'unhealthy': {
+                    title: 'System Offline',
+                    description: 'All services are currently unavailable'
+                }
+            };
+
+            const config = statusConfig[overall];
+
+            overallStatus.className = `overall-status ${overall}`;
+            overallStatus.innerHTML = `
+                <div class="status-icon ${overall}"></div>
+                <div class="status-text">
+                    <h2>${config.title}</h2>
+                    <p>${config.description}</p>
+                </div>
+            `;
         }
 
         function createServiceItem(modelId, data) {
@@ -447,10 +510,10 @@
             `;
 
             // Add metrics if available
-            if (data.status === 'online' || data.status === 'degraded') {
+            if (status === 'online' || status === 'degraded') {
                 html += `
                     <div class="service-metrics">
-                        ${data.response_time_ms ? `
+                        ${data.response_time_ms !== undefined ? `
                             <div class="metric">
                                 <div class="metric-label">Response</div>
                                 <div class="metric-value">${data.response_time_ms}ms</div>
@@ -464,6 +527,15 @@
                                 </div>
                             </div>
                         ` : ''}
+                    </div>
+                `;
+            } else if (status === 'loading') {
+                 html += `
+                    <div class="service-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Status</div>
+                            <div class="metric-value">Checking...</div>
+                        </div>
                     </div>
                 `;
             }
