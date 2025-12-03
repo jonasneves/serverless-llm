@@ -13,9 +13,9 @@ Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma — pow
 [![Qwen 14B API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-14b-instruct)](https://qwen14b.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
 
-**LLM inference on GitHub Actions free tier with public access via Cloudflare Tunnels.**
+LLM inference on GitHub Actions free tier with public access via Cloudflare Tunnels.
 
-Experiment with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and sampling diversity.
+Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and sampling diversity.
 
 ## Overview
 
