@@ -108,14 +108,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         data.models.forEach((model) => {
           MODELS[model.id] = { name: model.name, status: 'checking' };
+          // Select all models by default in arena mode
+          selectedModels.add(model.id);
         });
-
-        const defaultModelId = (data.default_model && MODELS[data.default_model])
-          ? data.default_model
-          : Object.keys(MODELS)[0];
-        if (defaultModelId) {
-          selectedModels.add(defaultModelId);
-        }
 
         renderModelSelector();
         if (Object.keys(MODELS).length) {
