@@ -204,7 +204,7 @@ MODEL_DISPLAY_NAMES = {
 }
 
 # VibeVoice configuration
-VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", "http://localhost:8007")
+VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", "http://localhost:8000")
 
 DEFAULT_MODEL_ID = next(
     (config["id"] for config in MODEL_CONFIG if config.get("default")),
