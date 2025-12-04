@@ -105,13 +105,15 @@ Best for:
 ### 16x Compression
 - Balanced compression and quality
 - Recommended for most use cases
-- Model: `apple/CLaRa-7B-Instruct/compression-16`
+- Model: `apple/CLaRa-7B-Instruct` (compression-16 subfolder)
 
 ### 128x Compression
 - Extreme compression for very long documents
 - Trade-off: slightly lower quality
-- Model: `apple/CLaRa-7B-Instruct/compression-128`
+- Model: `apple/CLaRa-7B-Instruct` (compression-128 subfolder)
 - Set `COMPRESSION_LEVEL=128` environment variable
+
+**Note**: The model repo contains both compression variants as subfolders. The server automatically downloads the full repo and loads the specified compression level.
 
 ## Integration with Orchestrator
 
