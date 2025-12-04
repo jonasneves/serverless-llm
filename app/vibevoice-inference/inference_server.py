@@ -10,12 +10,16 @@ import io
 import torch
 import scipy.io.wavfile
 import numpy as np
+import soundfile as sf
+import librosa
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 import logging
-from transformers import AutoModelForCausalLM, AutoProcessor
+from vibevoice.modular.modeling_vibevoice_inference import VibeVoiceForConditionalGenerationInference
+from vibevoice.processor.vibevoice_processor import VibeVoiceProcessor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,29 +46,84 @@ logger.info(f"Running on device: {device}")
 # Global model variables
 processor = None
 model = None
+default_voices: Dict[str, np.ndarray] = {}
 
 class SpeechRequest(BaseModel):
     text: str
-    speakers: List[str]
-    format: str = "mp3" # 'mp3' or 'wav'
+    speaker: str = "Alice"  # Default speaker
+    format: str = "wav"  # 'wav' only for now
+
+def read_audio(audio_path: str, target_sr: int = 24000) -> np.ndarray:
+    """Read and preprocess audio file for VibeVoice."""
+    wav, sr = sf.read(audio_path)
+    # Convert to mono if stereo
+    if len(wav.shape) > 1:
+        wav = np.mean(wav, axis=1)
+    # Resample if needed
+    if sr != target_sr:
+        wav = librosa.resample(wav, orig_sr=sr, target_sr=target_sr)
+    return wav
+
+def load_default_voices():
+    """Load default voice samples from the VibeVoice package."""
+    global default_voices
+
+    # Try to find voices directory in the vibevoice package
+    import vibevoice
+    vibevoice_path = Path(vibevoice.__file__).parent
+    voices_dir = vibevoice_path / "demo" / "voices"
+
+    if not voices_dir.exists():
+        logger.warning(f"Default voices directory not found at {voices_dir}")
+        logger.warning("Voice cloning will not be available. Using zero-shot mode.")
+        return
+
+    # Load all available voice files
+    voice_files = list(voices_dir.glob("*.wav"))
+    for voice_file in voice_files:
+        # Extract speaker name (e.g., "en-Alice_woman" from "en-Alice_woman.wav")
+        speaker_name = voice_file.stem.replace("en-", "").replace("in-", "").replace("zh-", "")
+        # Also create a simplified name (e.g., "Alice" from "Alice_woman")
+        simple_name = speaker_name.split("_")[0]
+
+        try:
+            audio_data = read_audio(str(voice_file))
+            default_voices[speaker_name] = audio_data
+            default_voices[simple_name] = audio_data
+            logger.info(f"Loaded voice: {speaker_name} (alias: {simple_name})")
+        except Exception as e:
+            logger.error(f"Failed to load voice {voice_file}: {e}")
+
+    logger.info(f"Loaded {len(set(default_voices.values()))} unique default voices")
 
 @app.on_event("startup")
 async def load_model():
     global processor, model
     logger.info(f"Loading model: {MODEL_ID}...")
     try:
-        dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
-        model = AutoModelForCausalLM.from_pretrained(
+        # Load processor
+        processor = VibeVoiceProcessor.from_pretrained(MODEL_ID)
+
+        # Device-specific configuration
+        if device == "cuda":
+            dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float32
+            attn_impl = "flash_attention_2"
+        else:
+            dtype = torch.float32
+            attn_impl = "sdpa"
+
+        # Load model
+        model = VibeVoiceForConditionalGenerationInference.from_pretrained(
             MODEL_ID,
+            torch_dtype=dtype,
             device_map=device,
-            trust_remote_code=True,
-            torch_dtype=dtype
+            attn_implementation=attn_impl
         )
-        processor = AutoProcessor.from_pretrained(
-            MODEL_ID,
-            trust_remote_code=True
-        )
-        logger.info("Model loaded successfully.")
+        logger.info(f"Model loaded successfully on {device} with dtype {dtype}")
+
+        # Load default voices
+        load_default_voices()
+
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
         raise RuntimeError(f"Could not load model {MODEL_ID}: {e}")
@@ -74,34 +133,71 @@ async def health():
     """Health check endpoint."""
     if model is None or processor is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    return {"status": "healthy", "service": "VibeVoice Inference", "device": device}
+    return {
+        "status": "healthy",
+        "service": "VibeVoice Inference",
+        "device": device,
+        "available_voices": list(set(default_voices.keys()))
+    }
 
 @app.post("/v1/audio/speech")
 async def generate_speech(request: SpeechRequest):
     """
     Generates speech from text using VibeVoice.
+
+    Text format: Either plain text (single speaker) or multi-speaker format:
+    "Speaker 1: Hello there!\\nSpeaker 2: Hi, how are you?"
     """
     if model is None or processor is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    logger.info(f"Generating speech for: '{request.text[:50]}...' with speakers: {request.speakers}")
+    logger.info(f"Generating speech for: '{request.text[:50]}...' with speaker: {request.speaker}")
 
     try:
-        # Prepare inputs using the processor
-        inputs = processor(request.text, return_tensors="pt").to(model.device)
-
-        # Generate audio using the model
-        with torch.no_grad():
-            output = model.generate(**inputs, max_new_tokens=None)
-
-        # Extract audio waveform from speech_outputs
-        if hasattr(output, "speech_outputs"):
-            audio_data = output.speech_outputs[0].cpu().numpy()
-        elif isinstance(output, torch.Tensor):
-            audio_data = output.cpu().numpy()
+        # Format text for VibeVoice
+        # If text doesn't have speaker labels, add them
+        if ":" not in request.text or not any(line.strip().startswith(("Speaker", request.speaker)) for line in request.text.split("\n")):
+            formatted_text = f"Speaker 1: {request.text}"
         else:
-            # Fallback
-            audio_data = output[0].cpu().numpy()
+            formatted_text = request.text
+
+        # Prepare voice samples
+        voice_samples = []
+        if request.speaker in default_voices:
+            voice_samples = [default_voices[request.speaker]]
+            logger.info(f"Using voice sample for: {request.speaker}")
+        else:
+            logger.warning(f"Speaker '{request.speaker}' not found. Available: {list(set(default_voices.keys()))}")
+            logger.warning("Generating without voice cloning (lower quality)")
+
+        # Prepare inputs
+        inputs = processor(
+            text=[formatted_text],
+            voice_samples=[voice_samples] if voice_samples else None,
+            padding=True,
+            return_tensors="pt",
+            return_attention_mask=True,
+        )
+
+        # Move tensors to device
+        for k, v in inputs.items():
+            if torch.is_tensor(v):
+                inputs[k] = v.to(device)
+
+        # Generate audio
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=None,
+                cfg_scale=1.3,
+                tokenizer=processor.tokenizer,
+                generation_config={'do_sample': False},
+                verbose=False,
+                is_prefill=bool(voice_samples),
+            )
+
+        # Extract audio waveform
+        audio_data = outputs.speech_outputs[0].cpu().numpy()
 
         # Ensure audio_data is 1D
         if audio_data.ndim > 1:
@@ -132,6 +228,8 @@ async def generate_speech(request: SpeechRequest):
 
     except Exception as e:
         logger.error(f"Generation failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
