@@ -99,6 +99,8 @@ jobs:
       - name: Start chat interface server
         env:
           PORT: "8080"
+          BASE_DOMAIN: ${{ secrets.BASE_DOMAIN }}
+          # Legacy: Individual URLs (used if BASE_DOMAIN not set)
           QWEN_API_URL: ${{ secrets.QWEN_API_URL }}
           PHI_API_URL: ${{ secrets.PHI_API_URL }}
           LLAMA_API_URL: ${{ secrets.LLAMA_API_URL }}

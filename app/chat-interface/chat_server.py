@@ -193,8 +193,22 @@ MODEL_CONFIG = (
     },
 )
 
+# Base domain configuration for production (Cloudflare tunnels)
+# If set, will construct URLs as https://{service}.{base_domain}
+# Otherwise falls back to individual env vars or localhost defaults
+BASE_DOMAIN = os.getenv("BASE_DOMAIN", "")
+
+def get_endpoint(config):
+    """Get endpoint URL for a service, using BASE_DOMAIN if available."""
+    if BASE_DOMAIN:
+        # Extract service name from model ID (e.g., "qwen2.5-7b" -> "qwen")
+        service = config["id"].split("-")[0].split(".")[0]
+        return f"https://{service}.{BASE_DOMAIN}"
+    # Fall back to individual env var or localhost
+    return os.getenv(config["env"], config["default_url"])
+
 MODEL_ENDPOINTS = {
-    config["id"]: os.getenv(config["env"], config["default_url"])
+    config["id"]: get_endpoint(config)
     for config in MODEL_CONFIG
 }
 
@@ -204,7 +218,10 @@ MODEL_DISPLAY_NAMES = {
 }
 
 # VibeVoice configuration
-VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", "http://localhost:8000")
+if BASE_DOMAIN:
+    VIBEVOICE_ENDPOINT = f"https://vibevoice.{BASE_DOMAIN}"
+else:
+    VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", "http://localhost:8000")
 
 DEFAULT_MODEL_ID = next(
     (config["id"] for config in MODEL_CONFIG if config.get("default")),

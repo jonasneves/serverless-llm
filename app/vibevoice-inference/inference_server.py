@@ -156,10 +156,37 @@ async def generate_speech(request: SpeechRequest):
     logger.info(f"Generating speech for: '{request.text[:50]}...' with speakers: {request.speakers}")
 
     try:
-        # Use the text as-is (should already have speaker labels)
-        formatted_text = request.text
+        # VibeVoice expects "Speaker N:" format, so transform named speakers
+        # Create speaker mapping (e.g., Alice -> 1, Bob -> 2)
+        speaker_mapping = {name: idx + 1 for idx, name in enumerate(request.speakers)}
 
-        # Prepare voice samples for each speaker
+        # Transform script from "Alice: text" to "Speaker 1: text"
+        formatted_lines = []
+        for line in request.text.split('\n'):
+            line = line.strip()
+            if not line:
+                formatted_lines.append('')
+                continue
+
+            # Check if line has speaker label
+            if ':' in line:
+                speaker_name, text = line.split(':', 1)
+                speaker_name = speaker_name.strip()
+
+                # Map speaker name to number
+                if speaker_name in speaker_mapping:
+                    speaker_num = speaker_mapping[speaker_name]
+                    formatted_lines.append(f"Speaker {speaker_num}: {text.strip()}")
+                else:
+                    # Unknown speaker, keep as-is
+                    formatted_lines.append(line)
+            else:
+                formatted_lines.append(line)
+
+        formatted_text = '\n'.join(formatted_lines)
+        logger.info(f"Formatted script:\n{formatted_text[:200]}...")
+
+        # Prepare voice samples for each speaker in order
         voice_samples = []
         missing_speakers = []
 
