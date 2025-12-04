@@ -1,41 +1,217 @@
-name: Build VibeVoice Inference
+name: VibeVoice Inference
+
+run-name: VibeVoice 1.5B Inference Server
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'app/vibevoice-inference/**'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'app/vibevoice-inference/**'
+  workflow_dispatch:
+    inputs:
+      duration_hours:
+        description: 'How long to run (max 5.5 hours)'
+        required: false
+        default: '5'
+        type: string
+      auto_restart:
+        description: 'Auto-restart before timeout'
+        required: false
+        default: true
+        type: boolean
+
+  repository_dispatch:
+    types: [restart-vibevoice-inference]
 
 jobs:
-  build:
+  inference:
+    name: VibeVoice Server
     runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      actions: write
+      contents: read
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Find previous running workflow
+        id: find_previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Current run ID: ${{ github.run_id }}"
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+          # Find other running instances of this workflow (excluding current run)
+          API_RESPONSE=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/vibevoice-inference.yml/runs?status=in_progress")
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r app/vibevoice-inference/requirements.txt
+          # Find the previous run (not current)
+          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
 
-    - name: Lint with ruff
-      run: |
-        pip install ruff
-        # Stop the build if there are Python syntax errors or undefined names
-        ruff check app/vibevoice-inference --select=E9,F63,F7,F82 --target-version=py310
-        # Exit-zero treats all errors as warnings.
-        ruff check app/vibevoice-inference --exit-zero
+          if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ] && [ "$PREVIOUS_RUN_ID" != "" ]; then
+            echo "Found previous running workflow: $PREVIOUS_RUN_ID"
+            echo "previous_run_id=$PREVIOUS_RUN_ID" >> $GITHUB_OUTPUT
+          else
+            echo "No previous running workflow found"
+            echo "previous_run_id=" >> $GITHUB_OUTPUT
+          fi
 
-    - name: Build Docker image
-      run: |
-        cd app/vibevoice-inference
-        docker build . --file Dockerfile --tag vibevoice-inference:latest
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # VibeVoice usually safer with 3.10 for audio libs
+          cache: 'pip'
+          cache-dependency-path: 'app/vibevoice-inference/requirements.txt'
+
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-vibevoice-1.5b-${{ runner.os }}
+          restore-keys: |
+            hf-vibevoice-1.5b-
+
+      - name: Install dependencies
+        run: |
+          # Install ffmpeg system dependency
+          sudo apt-get update && sudo apt-get install -y ffmpeg libsndfile1
+          pip install -r app/vibevoice-inference/requirements.txt
+
+      - name: Install cloudflared
+        run: |
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/
+
+      - name: Start inference server
+        env:
+          PORT: "8007"
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd app/vibevoice-inference
+          python inference_server.py 2>&1 | tee /tmp/inference_server.log &
+          SERVER_PID=$!
+          echo "Server PID: $SERVER_PID"
+          echo "Waiting for model to download and load..."
+
+          # Wait for server with longer timeout for model download (3GB)
+          for i in {1..120}; do
+            if curl -s http://localhost:8007/health | grep -q "healthy"; then
+              echo "Server is healthy!"
+              break
+            fi
+            echo "Waiting for server... attempt $i/120"
+            sleep 10
+          done
+
+          # Verify health
+          curl -s http://localhost:8007/health || { echo "Server failed to start"; cat /tmp/inference_server.log; exit 1; }
+
+      - name: Start Cloudflare Tunnel
+        env:
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_VIBEVOICE }}
+        run: |
+          if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+            cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN" 2>&1 | tee /tmp/tunnel.log &
+            TUNNEL_PID=$!
+            echo "Tunnel PID: $TUNNEL_PID"
+            echo "Cloudflare tunnel started"
+            sleep 15
+
+            # Show tunnel status
+            echo "=== Tunnel Log (first 30 lines) ==="
+            head -30 /tmp/tunnel.log || true
+          else
+            echo "No tunnel token provided, server only accessible locally"
+          fi
+
+      - name: Cancel previous workflow (graceful handoff)
+        if: steps.find_previous.outputs.previous_run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIOUS_RUN_ID: ${{ steps.find_previous.outputs.previous_run_id }}
+        run: |
+          echo "New server is ready, cancelling previous workflow run: $PREVIOUS_RUN_ID"
+
+          # Cancel the previous workflow run
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel"
+
+          # Wait for graceful handoff
+          sleep 180 
+
+      - name: Health monitoring loop
+        env:
+          DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
+          AUTO_RESTART: ${{ inputs.auto_restart == false && 'false' || 'true' }}
+        run: |
+          set -e
+          cleanup() {
+            pkill -f cloudflared || true
+            pkill -f inference_server.py || true
+            exit 0
+          }
+          trap cleanup SIGTERM SIGINT
+
+          # Convert hours to seconds
+          DURATION_SECONDS=$((DURATION_HOURS * 3600))
+          RESTART_BUFFER=360  
+          RESTART_THRESHOLD=$((DURATION_SECONDS - RESTART_BUFFER))
+
+          START_TIME=$(date +%s)
+          END_TIME=$((START_TIME + DURATION_SECONDS))
+
+          RESTART_TRIGGERED=false
+
+          while true; do
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            
+            # Health checks
+            SERVER_OK=$(curl -sf http://localhost:8007/health > /dev/null 2>&1 && echo "OK" || echo "DOWN")
+            TUNNEL_OK=$(pgrep -f cloudflared > /dev/null && echo "OK" || echo "DOWN")
+
+            echo "Status: Server=$SERVER_OK Tunnel=$TUNNEL_OK Time=${ELAPSED}s"
+
+            # Restart server if down
+            if [ "$SERVER_OK" = "DOWN" ]; then
+              echo "Restarting inference server..."
+              pkill -f inference_server.py || true
+              cd app/vibevoice-inference
+              python inference_server.py 2>&1 | tee -a /tmp/inference_server.log &
+              sleep 60
+            fi
+
+            # Restart tunnel if down
+            if [ "$TUNNEL_OK" = "DOWN" ]; then
+              echo "Restarting Cloudflare tunnel..."
+              cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_VIBEVOICE }} 2>&1 | tee -a /tmp/tunnel.log &
+              sleep 5
+            fi
+
+            # Trigger Auto-Restart
+            if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ "$AUTO_RESTART" = "true" ]; then
+               echo "Triggering restart..."
+               PAT_TOKEN="${{ secrets.WORKFLOW_PAT }}"
+               if [ -n "$PAT_TOKEN" ]; then
+                  curl -sX POST \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Authorization: Bearer $PAT_TOKEN" \
+                    "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+                    -d '{"event_type":"restart-vibevoice-inference"}'
+                  
+                  sleep 180 # Wait for handoff
+               fi
+               RESTART_TRIGGERED=true
+            fi
+
+            if [ $CURRENT_TIME -ge $END_TIME ]; then
+              echo "Duration exceeded, shutting down..."
+              break
+            fi
+
+            sleep 30
+          done
+          cleanup
