@@ -95,7 +95,10 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ffmpeg libsndfile1
           pip install -r app/vibevoice-inference/requirements.txt
           # Install latest transformers from source (for VibeVoice support)
-          pip install --upgrade git+https://github.com/huggingface/transformers.git
+          pip uninstall -y transformers
+          pip install git+https://github.com/huggingface/transformers.git
+          # Verify transformers version
+          python -c "import transformers; print(f'Transformers version: {transformers.__version__}')"
 
       - name: Install cloudflared
         run: |
