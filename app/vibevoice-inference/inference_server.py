@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import VibeVoiceForConditionalGenerationInference, VibeVoiceProcessor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 logger.info(f"Running on device: {device}")
 
 # Global model variables
-tokenizer = None
+processor = None
 model = None
 
 class SpeechRequest(BaseModel):
@@ -50,12 +50,16 @@ class SpeechRequest(BaseModel):
 
 @app.on_event("startup")
 async def load_model():
-    global tokenizer, model
+    global processor, model
     logger.info(f"Loading model: {MODEL_ID}...")
     try:
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(MODEL_ID, trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
-        model.eval()
+        dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
+        model = VibeVoiceForConditionalGenerationInference.from_pretrained(
+            MODEL_ID,
+            torch_dtype=dtype,
+            device_map=device
+        )
+        processor = VibeVoiceProcessor.from_pretrained(MODEL_ID)
         logger.info("Model loaded successfully.")
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
@@ -64,7 +68,7 @@ async def load_model():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    if model is None or tokenizer is None:
+    if model is None or processor is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     return {"status": "healthy", "service": "VibeVoice Inference", "device": device}
 
@@ -73,85 +77,61 @@ async def generate_speech(request: SpeechRequest):
     """
     Generates speech from text using VibeVoice.
     """
-    if model is None or tokenizer is None:
+    if model is None or processor is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    logger.info(f"Generating speech for: '{request.text[:50]}...'")
+    logger.info(f"Generating speech for: '{request.text[:50]}...' with speakers: {request.speakers}")
 
     try:
-        # VibeVoice prompting style:
-        # Ideally, the prompt should include speaker information if the model supports it directly via prompt.
-        # Based on the model card, it's an LLM-based TTS. We need to format the input correctly.
-        # Assuming a simple text-to-speech prompt format for now as per general LLM-TTS usage:
-        # "Generate audio for: [TEXT]" or just tokenizing the text.
-        # Note: The specific prompt format for VibeVoice might need adjustment based on deep-dive docs.
-        # For now, we treat the input text as the direct prompt for the TTS model.
-        
-        inputs = tokenizer(request.text, return_tensors="pt").to(device)
-        
-        # Generate audio tokens/embedding
-        # Note: This is a simplified generation call. VibeVoice might return specific output types.
-        # We need to capture the audio output. 
-        # If the model returns raw waveforms or VQ tokens, we need to decode them.
-        # Standard transformers `generate` usually returns text tokens. 
-        # For Audio-LLMs, it might return a specific object.
-        
-        # Investigating VibeVoice specific generation:
-        # It usually requires a specific `generate_speech` method or similar if integrated into Transformers properly,
-        # or we process the output logits to audio.
-        
-        # Placeholder for specific VibeVoice generation logic:
-        # Since VibeVoice 1.5B is new/custom, 'trust_remote_code=True' suggests custom modeling code.
-        # We assume it has a method or standard generation that yields audio.
-        
-        # Let's assume a standard `.generate()` that returns audio values or we use a pipeline.
-        # If strictly following the "Code" link from the model card, it might need specific steps.
-        # For this implementation, we will wrap the generation in a generic block 
-        # and assume `model.generate_speech(text)` or similar exists if defined in the repo.
-        
-        # CAUTION: Without the exact API of the custom model code, this is a best-guess integration.
-        # We will try to use a hypothetical `model.generate` and process output.
-        
-        with torch.no_grad():
-            # Many TTS models in transformers use `model.generate(**inputs)` returning audio values.
-            output = model.generate(**inputs, max_new_tokens=4000)
-            
-        # Assuming output is the audio waveform (tensor)
-        # If it's a tuple, we might need output.waveform or similar.
-        # For now, let's assume `output` contains the audio array.
-        
-        if hasattr(output, "waveform"):
-             audio_data = output.waveform.cpu().numpy()
-        elif isinstance(output, torch.Tensor):
-             audio_data = output.cpu().numpy()
-        else:
-             # Fallback or specific field access
-             audio_data = output[0].cpu().numpy() 
+        # Prepare inputs using the processor
+        # VibeVoice expects text and speaker information
+        inputs = processor(
+            text=request.text,
+            speaker_names=request.speakers,
+            return_tensors="pt"
+        ).to(device)
 
-        # Normalize if needed (float32 -1 to 1)
-        # Save to buffer
-        
-        sample_rate = 24000 # VibeVoice is often 24kHz
-        
+        # Generate audio using the model
+        with torch.no_grad():
+            audio_output = model.generate(**inputs)
+
+        # Extract audio waveform
+        # The output should contain the audio array
+        if hasattr(audio_output, "waveform"):
+            audio_data = audio_output.waveform.cpu().numpy()
+        elif hasattr(audio_output, "audio_values"):
+            audio_data = audio_output.audio_values.cpu().numpy()
+        elif isinstance(audio_output, torch.Tensor):
+            audio_data = audio_output.cpu().numpy()
+        else:
+            # Fallback to first element
+            audio_data = audio_output[0].cpu().numpy()
+
+        # Ensure audio_data is in the right format
+        if audio_data.ndim > 1:
+            # If stereo or batch, take first channel/batch
+            audio_data = audio_data[0] if audio_data.shape[0] == 1 else audio_data.squeeze()
+
+        # VibeVoice uses 24kHz sample rate
+        sample_rate = 24000
+
+        # Convert to int16 for WAV format
+        audio_data = np.clip(audio_data, -1.0, 1.0)
+        audio_data = (audio_data * 32767).astype(np.int16)
+
+        # Write to buffer
         byte_io = io.BytesIO()
         scipy.io.wavfile.write(byte_io, sample_rate, audio_data)
         wav_bytes = byte_io.getvalue()
 
-        # Convert to requested format (MP3) if needed
-        # We use ffmpeg (via pydub or subprocess) or just return WAV if MP3 not strictly required by frontend.
-        # Frontend <audio> supports WAV. Let's stick to WAV for simplicity/speed unless MP3 requested.
-        
-        if request.format == "mp3":
-            # Simple conversion if we had pydub, but for now returning WAV (base64) is safer/faster
-            # Frontend will handle it.
-            pass
-
+        # Encode to base64
         audio_base64 = base64.b64encode(wav_bytes).decode("utf-8")
 
         return {
             "status": "success",
-            "format": "wav", # Returning wav for now
+            "format": "wav",
             "data": audio_base64,
+            "sample_rate": sample_rate,
             "message": "Audio generated successfully"
         }
 
