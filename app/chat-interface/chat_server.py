@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from typing import List, Optional, AsyncGenerator
 import uvicorn
 import pathlib
+from urllib.parse import urlparse
 
 from http_client import HTTPClient
 
@@ -196,9 +197,23 @@ MODEL_CONFIG = (
 )
 
 # Base domain configuration for production (Cloudflare tunnels)
-# If set, will construct URLs as https://{service}.{base_domain}
-# Otherwise falls back to individual env vars or localhost defaults
-BASE_DOMAIN = os.getenv("BASE_DOMAIN", "")
+# Accepts raw hostnames ("neevs.io") or full URLs ("https://neevs.io")
+RAW_BASE_DOMAIN = os.getenv("BASE_DOMAIN", "").strip()
+BASE_DOMAIN = ""
+BASE_SCHEME = "https"
+
+if RAW_BASE_DOMAIN:
+    candidate = RAW_BASE_DOMAIN.strip()
+    if candidate.startswith("http://") or candidate.startswith("https://"):
+        parsed = urlparse(candidate)
+        BASE_SCHEME = parsed.scheme or "https"
+        candidate = (parsed.netloc or parsed.path).strip()
+    BASE_DOMAIN = candidate.rstrip("/")
+
+
+def build_service_url(service: str) -> str:
+    """Construct a service URL using the normalized base domain."""
+    return f"{BASE_SCHEME}://{service}.{BASE_DOMAIN}"
 
 def get_endpoint(config):
     """Get endpoint URL for a service, using BASE_DOMAIN if available."""
@@ -206,7 +221,7 @@ def get_endpoint(config):
         # Allow explicit service override, otherwise derive from model ID
         # Qwen IDs include version numbers (e.g., qwen2.5), so we need to map them to "qwen"
         service = config.get("service") or config["id"].split("-")[0].split(".")[0]
-        return f"https://{service}.{BASE_DOMAIN}"
+        return build_service_url(service)
     # Fall back to individual env var or localhost
     return os.getenv(config["env"], config["default_url"])
 
@@ -222,7 +237,7 @@ MODEL_DISPLAY_NAMES = {
 
 # VibeVoice configuration
 if BASE_DOMAIN:
-    VIBEVOICE_ENDPOINT = f"https://vibevoice.{BASE_DOMAIN}"
+    VIBEVOICE_ENDPOINT = build_service_url("vibevoice")
 else:
     VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", "http://localhost:8000")
 
