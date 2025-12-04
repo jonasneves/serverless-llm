@@ -155,8 +155,9 @@ Rules:
             "format": "mp3" # or wav
         }
 
-        # VibeVoice runs over Cloudflare, so requests longer than ~100 seconds will be dropped.
-        max_synthesis_seconds = int(os.getenv("VOICE_TTS_TIMEOUT", "120"))
+        # Allow deployments to tune synthesis timeout without redeploying.
+        # Default to 240s so Cloudflare (or other proxies) have enough headroom.
+        max_synthesis_seconds = int(os.getenv("VOICE_TTS_TIMEOUT", "240"))
 
         try:
             # Note: This is a placeholder URL structure until we build the vibe-inference server
