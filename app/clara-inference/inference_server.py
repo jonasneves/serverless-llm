@@ -73,17 +73,36 @@ def load_model():
     global clara_model
 
     compression = COMPRESSION_LEVEL
-    model_path = f"apple/CLaRa-7B-Instruct/compression-{compression}"
 
-    print(f"Loading CLaRa model: {model_path}")
+    # CLaRa uses subfolders within the repo for different compression levels
+    # We need to download the repo and load from the subfolder
+    from huggingface_hub import snapshot_download
+
+    base_repo = "apple/CLaRa-7B-Instruct"
+
+    print(f"Downloading CLaRa model from: {base_repo}")
     print(f"Using compression level: {compression}x")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
 
+    # Download the entire repo
+    cache_dir = os.getenv("HF_HOME", None)
+    repo_path = snapshot_download(
+        repo_id=base_repo,
+        cache_dir=cache_dir,
+        token=os.getenv("HF_TOKEN")
+    )
+
+    # Load from the compression subfolder
+    model_path = os.path.join(repo_path, f"compression-{compression}")
+
+    print(f"Loading model from: {model_path}")
+
     clara_model = AutoModel.from_pretrained(
         model_path,
-        trust_remote_code=True
+        trust_remote_code=True,
+        local_files_only=True
     ).to(device)
 
     print("CLaRa model loaded successfully!")
