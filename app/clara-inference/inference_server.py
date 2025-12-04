@@ -123,16 +123,24 @@ def load_model():
             json.dump(config_dict, f, indent=2)
         print("Config file patched successfully")
 
-    # Simplified loading - let CLaRa handle everything internally
-    # device_map="auto" causes PEFT adapter issues with Dropout modules
-    print(f"Loading CLaRa model on device: {device}")
+    # Try loading with minimal interference - let CLaRa's custom code handle everything
+    print(f"Loading CLaRa model (this may take several minutes)...")
+    print("Note: CLaRa requires significant RAM for LoRA adapters + base model")
 
-    clara_model = AutoModel.from_pretrained(
-        model_path,
-        trust_remote_code=True,
-        torch_dtype=torch.float32,  # Use FP32 for stability (CPU-only anyway)
-        # Don't use device_map or low_cpu_mem_usage - let CLaRa handle loading
-    ).to(device)
+    try:
+        clara_model = AutoModel.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            # Minimal parameters to avoid PEFT conflicts
+        ).to(device)
+    except ValueError as e:
+        if "Dropout" in str(e) and "not supported" in str(e):
+            print(f"\n{'='*60}")
+            print("ERROR: CLaRa has a PEFT compatibility issue")
+            print("The model tries to apply LoRA to Dropout modules,")
+            print("which PEFT doesn't support. This is a bug in CLaRa's code.")
+            print(f"{'='*60}\n")
+        raise
 
     print("CLaRa model loaded successfully!")
 
