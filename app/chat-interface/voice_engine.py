@@ -155,6 +155,9 @@ Rules:
             "format": "mp3" # or wav
         }
 
+        # VibeVoice runs over Cloudflare, so requests longer than ~100 seconds will be dropped.
+        max_synthesis_seconds = int(os.getenv("VOICE_TTS_TIMEOUT", "120"))
+
         try:
             # Note: This is a placeholder URL structure until we build the vibe-inference server
             # We might want to stream the audio bytes back, or wait and return a URL.
@@ -170,7 +173,7 @@ Rules:
             response = await self.client.post(
                 f"{self.tts_endpoint}/v1/audio/speech", 
                 json=payload, 
-                timeout=300 # Long timeout for audio generation
+                timeout=max_synthesis_seconds
             )
 
             if response.status_code != 200:
@@ -188,6 +191,10 @@ Rules:
             else:
                  raise Exception("No audio data received")
 
+        except httpx.ReadTimeout:
+            error_msg = "VibeVoice timed out (took longer than expected). Try a shorter script or retry."
+            logger.error(error_msg)
+            yield {"type": "error", "error": error_msg}
         except Exception as e:
             logger.error(f"Audio synthesis failed: {e}")
             yield {"type": "error", "error": str(e)}
