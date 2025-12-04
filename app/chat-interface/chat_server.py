@@ -177,6 +177,12 @@ MODEL_CONFIG = (
         "default_url": "http://localhost:8006",
     },
     {
+        "id": "clara-7b-instruct",
+        "name": "CLaRa 7B",
+        "env": "CLARA_API_URL",
+        "default_url": "http://localhost:8007",
+    },
+    {
         "id": "mistral-7b-instruct-v0.3",
         "name": "Mistral 7B v0.3",
         "env": "MISTRAL_API_URL",
