@@ -60,17 +60,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         for (const eventBlock of events) {
             const lines = eventBlock.split('\n');
-            for (const line of lines) {
-                if (!line.startsWith('data: ')) continue;
-                const payload = line.slice(6).trim();
-                if (!payload) continue;
+            let dataPayload = '';
 
-                try {
-                    const data = JSON.parse(payload);
-                    onEvent(data);
-                } catch (err) {
-                    console.error('Failed to parse SSE payload', payload, err);
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) {
+                    continue;
                 }
+
+                // Remove the "data: " prefix but keep multi-line payloads intact.
+                // Trim only the CRLF remnants; the payload itself may include leading spaces.
+                const linePayload = line.slice(6).replace(/\r?$/, '');
+                dataPayload += linePayload;
+            }
+
+            if (!dataPayload.trim()) {
+                continue;
+            }
+
+            try {
+                const parsed = JSON.parse(dataPayload);
+                onEvent(parsed);
+            } catch (err) {
+                console.error('Failed to parse SSE payload', dataPayload, err);
             }
         }
 
