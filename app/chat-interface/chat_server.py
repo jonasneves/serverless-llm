@@ -35,6 +35,8 @@ from orchestrator_engine import OrchestratorEngine as ToolOrchestratorEngine # A
 # Verbalized Sampling mode imports
 from verbalized_sampling_engine import VerbalizedSamplingEngine
 from confession_engine import ConfessionEngine
+# Podcast mode imports
+from podcast_engine import PodcastEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -147,6 +149,7 @@ def get_static_versions() -> dict:
         "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
         "confessions_js": get_file_version("confessions.js"),
         "model_loader_js": get_file_version("model-loader.js"),
+        "podcast_js": get_file_version("podcast.js"),
     }
 
 
@@ -200,6 +203,9 @@ MODEL_DISPLAY_NAMES = {
     for config in MODEL_CONFIG
 }
 
+# VibeVoice configuration
+VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", "http://localhost:8007")
+
 DEFAULT_MODEL_ID = next(
     (config["id"] for config in MODEL_CONFIG if config.get("default")),
     MODEL_CONFIG[0]["id"] if MODEL_CONFIG else None,
@@ -217,6 +223,7 @@ logger.info("=" * 60)
 logger.info("MODEL ENDPOINTS CONFIGURED:")
 for model_id, endpoint in MODEL_ENDPOINTS.items():
     logger.info(f"  {model_id}: {endpoint}")
+logger.info(f"  VibeVoice: {VIBEVOICE_ENDPOINT}")
 logger.info("Request queueing enabled: 1 concurrent request per model")
 logger.info("=" * 60)
 
@@ -260,6 +267,15 @@ class VerbalizedSamplingRequest(BaseModel):
 
 class ConfessionRequest(BaseModel):
     query: str
+
+class PodcastScriptRequest(BaseModel):
+    topic: str
+    style: str = "podcast"
+    speakers: List[str]
+
+class PodcastAudioRequest(BaseModel):
+    script: str
+    speakers: List[str]
 
 
 def serialize_messages(messages: List[ChatMessage]) -> List[dict]:
@@ -306,6 +322,14 @@ async def discussion_interface(request: Request):
     """Serve discussion mode interface with automatic cache busting"""
     return templates.TemplateResponse(
         "discussion.html",
+        {"request": request, **get_static_versions()}
+    )
+
+@app.get("/podcast")
+async def podcast_interface(request: Request):
+    """Serve podcast studio interface"""
+    return templates.TemplateResponse(
+        "podcast.html",
         {"request": request, **get_static_versions()}
     )
 
@@ -1231,6 +1255,71 @@ async def confessions_stream(
             temperature,
             max_tokens
         ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+# ===== PODCAST MODE =====
+async def stream_podcast_script_events(
+    topic: str,
+    style: str,
+    speakers: List[str]
+) -> AsyncGenerator[str, None]:
+    try:
+        # Use the default model (Qwen) for scripting
+        default_model_endpoint = MODEL_ENDPOINTS.get(DEFAULT_MODEL_ID)
+        if not default_model_endpoint:
+             yield f"data: {json.dumps({'event': 'error', 'error': 'No default LLM configured'}, ensure_ascii=False)}\n\n"
+             return
+
+        engine = PodcastEngine(default_model_endpoint, VIBEVOICE_ENDPOINT)
+        
+        async for event in engine.generate_script(topic, style, speakers):
+            yield f"data: {json.dumps({'event': event['type'], **event}, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        logger.error(f"Podcast script error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+
+@app.post("/api/podcast/script")
+async def podcast_script(request: PodcastScriptRequest):
+    """Stream script generation"""
+    return StreamingResponse(
+        stream_podcast_script_events(request.topic, request.style, request.speakers),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+async def stream_podcast_audio_events(
+    script: str,
+    speakers: List[str]
+) -> AsyncGenerator[str, None]:
+    try:
+        # Use the default model endpoint as placeholder if needed, but engine mostly uses TTS endpoint
+        default_model_endpoint = MODEL_ENDPOINTS.get(DEFAULT_MODEL_ID)
+        engine = PodcastEngine(default_model_endpoint, VIBEVOICE_ENDPOINT)
+        
+        async for event in engine.synthesize_audio(script, speakers):
+            yield f"data: {json.dumps({'event': event['type'], **event}, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        logger.error(f"Podcast audio error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+
+@app.post("/api/podcast/audio")
+async def podcast_audio(request: PodcastAudioRequest):
+    """Stream audio generation progress/result"""
+    return StreamingResponse(
+        stream_podcast_audio_events(request.script, request.speakers),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

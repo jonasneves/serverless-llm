@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+python-multipart # For potential future file uploads, good to include
+ffmpeg-python # For audio processing, if needed
+numpy # Often a dependency for audio libraries
+scipy # Often a dependency for audio libraries
+soundfile # For reading/writing audio files
+# For the actual VibeVoice model, you would add more specific libraries here
+# e.g., transformers, torch, accelerate, sentencepiece, etc.
