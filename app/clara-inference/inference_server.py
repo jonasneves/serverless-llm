@@ -99,10 +99,29 @@ def load_model():
 
     print(f"Loading model from: {model_path}")
 
-    clara_model = AutoModel.from_pretrained(
+    # Load and patch config to use HF model IDs instead of local paths
+    from transformers import AutoConfig
+
+    config = AutoConfig.from_pretrained(
         model_path,
         trust_remote_code=True,
         local_files_only=True
+    )
+
+    # Patch hardcoded local paths to use HF model IDs
+    if hasattr(config, 'compr_base_model_name') and '/mnt/ceph_rbd' in config.compr_base_model_name:
+        print(f"Patching compr_base_model_name: {config.compr_base_model_name} -> mistralai/Mistral-7B-Instruct-v0.2")
+        config.compr_base_model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+
+    if hasattr(config, 'decoder_model_name') and '/mnt/ceph_rbd' in config.decoder_model_name:
+        print(f"Patching decoder_model_name: {config.decoder_model_name} -> mistralai/Mistral-7B-Instruct-v0.2")
+        config.decoder_model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+
+    clara_model = AutoModel.from_pretrained(
+        model_path,
+        config=config,
+        trust_remote_code=True,
+        # Don't use local_files_only so it can download Mistral base model if needed
     ).to(device)
 
     print("CLaRa model loaded successfully!")
