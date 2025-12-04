@@ -1,4 +1,5 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const modelSelect = document.getElementById('modelSelect');
     const topicInput = document.getElementById('topicInput');
     const styleSelect = document.getElementById('styleSelect');
     const speaker1Input = document.getElementById('speaker1Input');
@@ -13,7 +14,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentScript = "";
 
-    // Auto-resize script display logic if needed, but CSS handles most of it.
+    // Load available models
+    try {
+        const response = await fetch('/api/models');
+        const data = await response.json();
+        
+        modelSelect.innerHTML = ''; // Clear loading message
+        
+        data.models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name;
+            if (model.default) {
+                option.selected = true;
+            }
+            modelSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load models:', error);
+        modelSelect.innerHTML = '<option disabled>Error loading models</option>';
+    }
 
     generateScriptBtn.addEventListener('click', async () => {
         const topic = topicInput.value.trim();
@@ -21,8 +41,14 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Please enter a topic");
             return;
         }
+        
+        const selectedModel = modelSelect.value;
+        if (!selectedModel) {
+            alert("Please select a Script Writer model");
+            return;
+        }
 
-        setLoading(true, "Writing Script...");
+        setLoading(true, `Writing Script (${modelSelect.options[modelSelect.selectedIndex].text})...`);
         scriptDisplay.textContent = ""; // Clear previous
         currentScript = "";
         generateAudioBtn.disabled = true;
@@ -34,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     topic: topic,
                     style: styleSelect.value,
-                    speakers: [speaker1Input.value, speaker2Input.value]
+                    speakers: [speaker1Input.value, speaker2Input.value],
+                    model: selectedModel
                 })
             });
 

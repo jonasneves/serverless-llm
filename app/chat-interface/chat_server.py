@@ -272,6 +272,7 @@ class VoiceScriptRequest(BaseModel):
     topic: str
     style: str = "podcast"
     speakers: List[str]
+    model: Optional[str] = None
 
 class VoiceAudioRequest(BaseModel):
     script: str
@@ -1268,16 +1269,21 @@ async def confessions_stream(
 async def stream_voice_script_events(
     topic: str,
     style: str,
-    speakers: List[str]
+    speakers: List[str],
+    model_id: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     try:
-        # Use the default model (Qwen) for scripting
-        default_model_endpoint = MODEL_ENDPOINTS.get(DEFAULT_MODEL_ID)
-        if not default_model_endpoint:
-             yield f"data: {json.dumps({'event': 'error', 'error': 'No default LLM configured'}, ensure_ascii=False)}\n\n"
+        # Determine which model endpoint to use
+        if model_id and model_id in MODEL_ENDPOINTS:
+             llm_endpoint = MODEL_ENDPOINTS[model_id]
+        else:
+             llm_endpoint = MODEL_ENDPOINTS.get(DEFAULT_MODEL_ID)
+        
+        if not llm_endpoint:
+             yield f"data: {json.dumps({'event': 'error', 'error': 'No LLM endpoint configured'}, ensure_ascii=False)}\n\n"
              return
 
-        engine = VoiceEngine(default_model_endpoint, VIBEVOICE_ENDPOINT)
+        engine = VoiceEngine(llm_endpoint, VIBEVOICE_ENDPOINT)
         
         async for event in engine.generate_script(topic, style, speakers):
             yield f"data: {json.dumps({'event': event['type'], **event}, ensure_ascii=False)}\n\n"
@@ -1290,7 +1296,7 @@ async def stream_voice_script_events(
 async def voice_script(request: VoiceScriptRequest):
     """Stream script generation"""
     return StreamingResponse(
-        stream_voice_script_events(request.topic, request.style, request.speakers),
+        stream_voice_script_events(request.topic, request.style, request.speakers, request.model),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
