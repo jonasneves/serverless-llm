@@ -346,3 +346,12 @@ jobs:
           done
 
           cleanup
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Inference Server Log ==="
+          cat /tmp/inference_server.log 2>/dev/null || echo "No server log"
+          echo ""
+          echo "=== Tunnel Log ==="
+          cat /tmp/tunnel.log 2>/dev/null || echo "No tunnel log"
