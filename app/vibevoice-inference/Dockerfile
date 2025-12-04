@@ -1,5 +1,8 @@
 FROM python:3.10-slim
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 # Install system dependencies for audio processing (ffmpeg is critical)
@@ -15,8 +18,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY inference_server.py .
 
+ENV MODEL_NAME=vibevoice-1.5b
+ENV PORT=8000
+
 # Expose the port
-EXPOSE 8007
+EXPOSE 8000
 
 # Run the server
-CMD ["uvicorn", "inference_server:app", "--host", "0.0.0.0", "--port", "8007"]
+CMD ["python3", "inference_server.py"]

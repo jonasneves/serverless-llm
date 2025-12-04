@@ -1,3 +1,8 @@
+"""
+VibeVoice Inference Server
+FastAPI-based REST API for VibeVoice Text-to-Speech model
+"""
+
 import os
 import uvicorn
 import base64
@@ -6,6 +11,7 @@ import torch
 import scipy.io.wavfile
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -18,6 +24,14 @@ app = FastAPI(
     title="VibeVoice Inference Server",
     description="Inference server for VibeVoice Text-to-Speech model",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Model Configuration
@@ -146,5 +160,5 @@ async def generate_speech(request: SpeechRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8007))
+    port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

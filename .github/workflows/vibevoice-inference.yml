@@ -15,18 +15,31 @@ on:
         required: false
         default: true
         type: boolean
+      instances:
+        description: 'Number of parallel instances (1-3)'
+        required: false
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
 
   repository_dispatch:
     types: [restart-vibevoice-inference]
 
 jobs:
   inference:
-    name: VibeVoice Server
+    name: VibeVoice Server #${{ matrix.instance }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     permissions:
       actions: write
       contents: read
+    strategy:
+      matrix:
+        instance: ${{ fromJson(github.event.inputs.instances == '3' && '[1,2,3]' || github.event.inputs.instances == '2' && '[1,2]' || '[1]') }}
+      fail-fast: false
 
     steps:
       - name: Find previous running workflow
@@ -41,6 +54,9 @@ jobs:
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/actions/workflows/vibevoice-inference.yml/runs?status=in_progress")
+
+          RUN_COUNT=$(echo "$API_RESPONSE" | jq '.total_count')
+          echo "Total in_progress runs found: $RUN_COUNT"
 
           # Find the previous run (not current)
           PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
