@@ -414,6 +414,52 @@ GEMMA2_9B_PROFILE = {
     "description": "Well-rounded 9B model with strong reasoning and safety guarantees"
 }
 
+CLARA_7B_PROFILE = {
+    "model_id": "clara-7b-instruct",
+    "display_name": "CLaRa 7B Instruct",
+    "creator": "Apple",
+    "size": "7B parameters",
+    "quantization": None,
+
+    "primary_strengths": ["rag", "document_compression", "retrieval"],
+
+    "benchmark_scores": {
+        # CLaRa is specialized for RAG, not general benchmarks
+        # Performance is measured on retrieval-augmented tasks
+    },
+
+    "expertise_domains": {
+        "retrieval": 0.95,              # Exceptional - purpose-built for RAG
+        "document_compression": 0.98,   # Exceptional - 16x-128x compression
+        "summarization": 0.88,          # Strong - handles long documents
+        "question_answering": 0.85,     # Strong - instruction-tuned for Q&A
+        "information_extraction": 0.82, # Strong - retrieval focus
+        "multi_document_reasoning": 0.85, # Strong - handles multiple sources
+        "technical_writing": 0.65,      # Moderate - based on Mistral-7B-v0.2
+        "instruction_following": 0.80,  # Good - instruction-tuned
+        "logical_reasoning": 0.70,      # Good - inherits from Mistral base
+        "conversation": 0.60,           # Moderate - not primary focus
+        "coding": 0.55,                 # Moderate - limited by base model
+        "mathematics": 0.55,            # Moderate - not specialized
+        "creative_writing": 0.50,       # Weak - not designed for this
+        "common_sense": 0.65,           # Moderate
+    },
+
+    "use_as_lead_for": [
+        "document question answering",
+        "long context summarization",
+        "multi-document synthesis",
+        "information retrieval",
+        "semantic document compression",
+        "research paper analysis",
+        "legal document review",
+        "knowledge base queries",
+    ],
+
+    "context_length": 32768,  # With compression, effective context much larger
+    "description": "Specialized RAG model with semantic document compression (16x-128x)"
+}
+
 # Aggregate profiles for easy access
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models
@@ -423,6 +469,7 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
     "qwen2.5-14b-instruct": QWEN_14B_PROFILE,
     "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
+    "clara-7b-instruct": CLARA_7B_PROFILE,
     # API models
     "gpt-4.1": GPT4_1_PROFILE,
     "gpt-4o": GPT4O_PROFILE,
@@ -538,6 +585,7 @@ __all__ = [
     "MISTRAL_7B_PROFILE",
     "QWEN_14B_PROFILE",
     "GEMMA2_9B_PROFILE",
+    "CLARA_7B_PROFILE",
     # API models
     "GPT4_1_PROFILE",
     "GPT4O_PROFILE",
