@@ -35,6 +35,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         modelSelect.innerHTML = '<option disabled>Error loading models</option>';
     }
 
+    async function readSSEStream(reader, onEvent) {
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+                // Flush any trailing event in buffer
+                if (buffer.trim()) {
+                    processBufferChunk(buffer, onEvent);
+                }
+                break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            buffer = processBufferChunk(buffer, onEvent);
+        }
+    }
+
+    function processBufferChunk(buffer, onEvent) {
+        const events = buffer.split('\n\n');
+        buffer = events.pop(); // Remainder (possibly incomplete event)
+
+        for (const eventBlock of events) {
+            const lines = eventBlock.split('\n');
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const payload = line.slice(6).trim();
+                if (!payload) continue;
+
+                try {
+                    const data = JSON.parse(payload);
+                    onEvent(data);
+                } catch (err) {
+                    console.error('Failed to parse SSE payload', payload, err);
+                }
+            }
+        }
+
+        return buffer;
+    }
+
     generateScriptBtn.addEventListener('click', async () => {
         const topic = topicInput.value.trim();
         if (!topic) {
@@ -66,35 +108,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const reader = response.body.getReader();
-            const decoder = new TextDecoder();
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n\n');
-                
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = JSON.parse(line.slice(6));
-                        
-                        if (data.event === 'script_chunk') {
-                            currentScript += data.content;
-                            scriptDisplay.innerText = currentScript;
-                            // Auto scroll to bottom
-                            scriptDisplay.scrollTop = scriptDisplay.scrollHeight;
-                        } else if (data.event === 'script_complete') {
-                            setLoading(false, "Script Ready");
-                            generateAudioBtn.disabled = false;
-                        } else if (data.event === 'error') {
-                            console.error(data.error);
-                            setLoading(false, "Error");
-                            scriptDisplay.innerText += `\n[Error: ${data.error}]`;
-                        }
-                    }
+            await readSSEStream(reader, (data) => {
+                if (data.event === 'script_chunk') {
+                    currentScript += data.content;
+                    scriptDisplay.innerText = currentScript;
+                    scriptDisplay.scrollTop = scriptDisplay.scrollHeight;
+                } else if (data.event === 'script_complete') {
+                    setLoading(false, "Script Ready");
+                    generateAudioBtn.disabled = false;
+                } else if (data.event === 'error') {
+                    console.error(data.error);
+                    setLoading(false, "Error");
+                    scriptDisplay.innerText += `\n[Error: ${data.error}]`;
                 }
-            }
+            });
         } catch (err) {
             console.error(err);
             setLoading(false, "Error");
@@ -119,40 +147,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const reader = response.body.getReader();
-            const decoder = new TextDecoder();
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n\n');
+            await readSSEStream(reader, (data) => {
+                if (data.event === 'audio_complete') {
+                    if (data.url) {
+                        audioPlayer.src = data.url;
+                        downloadLink.href = data.url;
+                    } else if (data.data) {
+                        const audioBlob = base64ToBlob(data.data, 'audio/mp3');
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        audioPlayer.src = audioUrl;
+                        downloadLink.href = audioUrl;
+                    }
 
-                for (const line of lines) {
-                     if (line.startsWith('data: ')) {
-                        const data = JSON.parse(line.slice(6));
-                        
-                        if (data.event === 'audio_complete') {
-                            if (data.url) {
-                                audioPlayer.src = data.url;
-                                downloadLink.href = data.url;
-                            } else if (data.data) {
-                                const audioBlob = base64ToBlob(data.data, 'audio/mp3');
-                                const audioUrl = URL.createObjectURL(audioBlob);
-                                audioPlayer.src = audioUrl;
-                                downloadLink.href = audioUrl;
-                            }
-                            
-                            audioPlayerContainer.classList.add('visible');
-                            setLoading(false, "Audio Ready");
-                            
-                        } else if (data.event === 'error') {
-                             setLoading(false, "Error");
-                             alert("Audio generation failed: " + data.error);
-                        }
-                     }
+                    audioPlayerContainer.classList.add('visible');
+                    setLoading(false, "Audio Ready");
+                } else if (data.event === 'error') {
+                    setLoading(false, "Error");
+                    alert("Audio generation failed: " + data.error);
                 }
-            }
+            });
 
         } catch (err) {
             console.error(err);
