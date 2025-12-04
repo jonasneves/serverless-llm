@@ -159,6 +159,7 @@ MODEL_CONFIG = (
         "name": "Qwen 2.5-14B",
         "env": "QWEN14B_API_URL",
         "default_url": "http://localhost:8004",
+        "service": "qwen14b",
     },
     {
         "id": "qwen2.5-7b",
@@ -166,6 +167,7 @@ MODEL_CONFIG = (
         "env": "QWEN_API_URL",
         "default_url": "http://localhost:8001",
         "default": True,
+        "service": "qwen",
     },
     {
         "id": "gemma-2-9b-instruct",
@@ -201,8 +203,9 @@ BASE_DOMAIN = os.getenv("BASE_DOMAIN", "")
 def get_endpoint(config):
     """Get endpoint URL for a service, using BASE_DOMAIN if available."""
     if BASE_DOMAIN:
-        # Extract service name from model ID (e.g., "qwen2.5-7b" -> "qwen")
-        service = config["id"].split("-")[0].split(".")[0]
+        # Allow explicit service override, otherwise derive from model ID
+        # Qwen IDs include version numbers (e.g., qwen2.5), so we need to map them to "qwen"
+        service = config.get("service") or config["id"].split("-")[0].split(".")[0]
         return f"https://{service}.{BASE_DOMAIN}"
     # Fall back to individual env var or localhost
     return os.getenv(config["env"], config["default_url"])
