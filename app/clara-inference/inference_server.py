@@ -123,12 +123,14 @@ def load_model():
             json.dump(config_dict, f, indent=2)
         print("Config file patched successfully")
 
+    # Use 8-bit quantization to fit in GitHub Actions' 7GB RAM limit
+    # Mistral-7B needs ~14GB in FP16, but only ~7GB in 8-bit
     clara_model = AutoModel.from_pretrained(
         model_path,
         trust_remote_code=True,
         device_map="auto",  # Automatically manage device placement
+        load_in_8bit=True,  # 8-bit quantization to reduce memory by 50%
         low_cpu_mem_usage=True,  # More memory-efficient loading
-        torch_dtype=torch.float16 if device == "cuda" else torch.float32,  # Use FP16 on GPU
         # Don't use local_files_only so it can download Mistral base model if needed
     )
 
