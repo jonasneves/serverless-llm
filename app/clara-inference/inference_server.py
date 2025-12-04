@@ -123,16 +123,16 @@ def load_model():
             json.dump(config_dict, f, indent=2)
         print("Config file patched successfully")
 
-    # Public repos get 16GB RAM - use FP16 for better quality than 8-bit
-    # Mistral-7B in FP16: ~14GB + CLaRa: ~2GB = ~16GB total (fits perfectly!)
+    # Simplified loading - let CLaRa handle everything internally
+    # device_map="auto" causes PEFT adapter issues with Dropout modules
+    print(f"Loading CLaRa model on device: {device}")
+
     clara_model = AutoModel.from_pretrained(
         model_path,
         trust_remote_code=True,
-        device_map="auto",  # Automatically manage device placement
-        torch_dtype=torch.float16,  # FP16 for balance of speed and quality
-        low_cpu_mem_usage=True,  # More memory-efficient loading
-        # Don't use local_files_only so it can download Mistral base model if needed
-    )
+        torch_dtype=torch.float32,  # Use FP32 for stability (CPU-only anyway)
+        # Don't use device_map or low_cpu_mem_usage - let CLaRa handle loading
+    ).to(device)
 
     print("CLaRa model loaded successfully!")
 
