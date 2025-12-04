@@ -12,6 +12,7 @@ https://chat.neevs.io
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
 [![Qwen 14B API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-14b-instruct)](https://qwen14b.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
+[![CLaRa API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/clara-7b-instruct)](https://clara.neevs.io/health)
 
 LLM inference on GitHub Actions free tier with public access via Cloudflare Tunnels.
 
