@@ -1,5 +1,5 @@
 """
-Podcast Engine - Multi-Speaker Audio Generation
+Voice Engine - Multi-Speaker Audio Generation
 
 Orchestrates the creation of audio content:
 1. Generates a multi-speaker script from a topic using an LLM.
@@ -19,20 +19,20 @@ from http_client import HTTPClient
 logger = logging.getLogger(__name__)
 
 @dataclass
-class PodcastScriptLine:
+class ScriptLine:
     speaker: str
     text: str
 
 @dataclass
-class PodcastGenerationRequest:
+class VoiceGenerationRequest:
     topic: str
     style: str = "podcast"  # podcast, interview, storytelling, debate
     duration_minutes: int = 2
     speakers: List[str] = None  # ["Host (Alice)", "Guest (Bob)"]
 
-class PodcastEngine:
+class VoiceEngine:
     """
-    Manages the lifecycle of podcast generation:
+    Manages the lifecycle of voice generation:
     Scripting (LLM) -> Audio (VibeVoice)
     """
 
