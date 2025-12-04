@@ -101,7 +101,7 @@ jobs:
 
       - name: Start inference server
         env:
-          PORT: "8007"
+          PORT: "8000"
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           cd app/vibevoice-inference
@@ -112,7 +112,7 @@ jobs:
 
           # Wait for server with longer timeout for model download (3GB)
           for i in {1..120}; do
-            if curl -s http://localhost:8007/health | grep -q "healthy"; then
+            if curl -s http://localhost:8000/health | grep -q "healthy"; then
               echo "Server is healthy!"
               break
             fi
@@ -121,7 +121,7 @@ jobs:
           done
 
           # Verify health
-          curl -s http://localhost:8007/health || { echo "Server failed to start"; cat /tmp/inference_server.log; exit 1; }
+          curl -s http://localhost:8000/health || { echo "Server failed to start"; cat /tmp/inference_server.log; exit 1; }
 
       - name: Start Cloudflare Tunnel
         env:
@@ -150,13 +150,32 @@ jobs:
           echo "New server is ready, cancelling previous workflow run: $PREVIOUS_RUN_ID"
 
           # Cancel the previous workflow run
-          curl -s -X POST \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel"
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel")
 
-          # Wait for graceful handoff
-          sleep 180 
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+
+          if [ "$HTTP_CODE" = "202" ]; then
+            echo ""
+            echo "=========================================="
+            echo "✓ Previous workflow cancellation accepted"
+            echo "=========================================="
+            echo ""
+            echo "Waiting 3 minutes for graceful handoff..."
+            echo "This ensures minimal downtime during transition."
+            # Wait for graceful handoff
+            for i in {1..18}; do
+              printf "  Handoff wait: %d/180 seconds...\r" "$((i * 10))"
+              sleep 10
+            done
+            echo ""
+            echo "Handoff complete. This instance is now primary."
+          else
+            echo "⚠ Cancel request returned code $HTTP_CODE - previous workflow may have already ended"
+            sleep 5
+          fi 
 
       - name: Health monitoring loop
         env:
