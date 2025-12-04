@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Podcast Studio - AI Audio Generation</title>
+  <title>Voice Studio - AI Audio Generation</title>
   <link rel="stylesheet" href="/static/common.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script defer src="/static/settings.js"></script>
   <style>
-    /* Podcast-specific styles */
+    /* Voice-specific styles */
     :root {
       --studio-accent: #F43F5E; /* Rose-500 */
       --studio-accent-hover: #E11D48;
@@ -215,8 +215,8 @@
       <div class="modes">
         <a href="/" class="mode-link">Chat</a>
         <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/podcast" class="mode-link active">Podcast</a>
         <a href="/autogen" class="mode-link">Agents</a>
+        <a href="/voice" class="mode-link active">Voice</a>
       </div>
       <div class="header-controls">
         <button id="themeToggle" class="icon-btn">Theme</button>
@@ -227,7 +227,7 @@
 
   <div class="studio-container">
     <div class="studio-header">
-      <div class="studio-title">Podcast Studio</div>
+      <div class="studio-title">Voice Studio</div>
       <div class="studio-subtitle">Generate multi-speaker audio content with VibeVoice AI</div>
     </div>
 
@@ -304,6 +304,6 @@
     </div>
   </div>
 
-  <script src="/static/podcast.js"></script>
+  <script src="/static/voice.js"></script>
 </body>
 </html>

@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         generateAudioBtn.disabled = true;
 
         try {
-            const response = await fetch('/api/podcast/script', {
+            const response = await fetch('/api/voice/script', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         audioPlayerContainer.classList.remove('visible');
         
         try {
-            const response = await fetch('/api/podcast/audio', {
+            const response = await fetch('/api/voice/audio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
