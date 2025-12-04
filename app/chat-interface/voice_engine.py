@@ -77,7 +77,7 @@ Rules:
 
         payload = {
             "messages": messages,
-            "max_tokens": 2048,
+            "max_tokens": 768,  # shorter scripts keep TTS jobs under Cloudflare's timeout
             "temperature": 0.8,
             "stream": True
         }
@@ -115,6 +115,20 @@ Rules:
         # Final yield with complete script
         yield {"type": "script_complete", "script": full_script}
 
+    def _truncate_script(self, script: str, max_lines: int = 40, max_chars: int = 4000) -> str:
+        """Limit script length so TTS jobs finish before tunnel timeouts."""
+        lines = [line for line in script.strip().splitlines() if line.strip()]
+        truncated = lines[:max_lines]
+        result = "\n".join(truncated)
+
+        if len(lines) > max_lines:
+            result += "\n[...truncated for faster synthesis...]"
+
+        if len(result) > max_chars:
+            result = result[:max_chars] + "\n[...truncated for faster synthesis...]"
+
+        return result or script
+
     async def synthesize_audio(self, script: str, speakers: List[str]) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Sends the script to the VibeVoice server.
@@ -125,9 +139,18 @@ Rules:
         # Parse script into structured format if needed by VibeVoice, 
         # or send raw text if VibeVoice handles parsing.
         # For now, we'll assume the VibeVoice endpoint expects raw text and handles speaker tagging.
-        
+        prepared_script = self._truncate_script(script)
+        if prepared_script != script:
+            logger.info(
+                "Truncated script for TTS (lines: %d -> %d, chars: %d -> %d)",
+                len([line for line in script.splitlines() if line.strip()]),
+                len([line for line in prepared_script.splitlines() if line.strip()]),
+                len(script),
+                len(prepared_script),
+            )
+
         payload = {
-            "text": script,
+            "text": prepared_script,
             "speakers": speakers,
             "format": "mp3" # or wav
         }
