@@ -126,8 +126,11 @@ def load_model():
     clara_model = AutoModel.from_pretrained(
         model_path,
         trust_remote_code=True,
+        device_map="auto",  # Automatically manage device placement
+        low_cpu_mem_usage=True,  # More memory-efficient loading
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32,  # Use FP16 on GPU
         # Don't use local_files_only so it can download Mistral base model if needed
-    ).to(device)
+    )
 
     print("CLaRa model loaded successfully!")
 
