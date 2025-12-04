@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
-from transformers import VibeVoiceForConditionalGenerationInference, VibeVoiceProcessor
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,12 +54,16 @@ async def load_model():
     logger.info(f"Loading model: {MODEL_ID}...")
     try:
         dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
-        model = VibeVoiceForConditionalGenerationInference.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
-            torch_dtype=dtype,
-            device_map=device
+            device_map=device,
+            trust_remote_code=True,
+            torch_dtype=dtype
         )
-        processor = VibeVoiceProcessor.from_pretrained(MODEL_ID)
+        processor = AutoProcessor.from_pretrained(
+            MODEL_ID,
+            trust_remote_code=True
+        )
         logger.info("Model loaded successfully.")
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
@@ -84,33 +88,24 @@ async def generate_speech(request: SpeechRequest):
 
     try:
         # Prepare inputs using the processor
-        # VibeVoice expects text and speaker information
-        inputs = processor(
-            text=request.text,
-            speaker_names=request.speakers,
-            return_tensors="pt"
-        ).to(device)
+        inputs = processor(request.text, return_tensors="pt").to(model.device)
 
         # Generate audio using the model
         with torch.no_grad():
-            audio_output = model.generate(**inputs)
+            output = model.generate(**inputs, max_new_tokens=None)
 
-        # Extract audio waveform
-        # The output should contain the audio array
-        if hasattr(audio_output, "waveform"):
-            audio_data = audio_output.waveform.cpu().numpy()
-        elif hasattr(audio_output, "audio_values"):
-            audio_data = audio_output.audio_values.cpu().numpy()
-        elif isinstance(audio_output, torch.Tensor):
-            audio_data = audio_output.cpu().numpy()
+        # Extract audio waveform from speech_outputs
+        if hasattr(output, "speech_outputs"):
+            audio_data = output.speech_outputs[0].cpu().numpy()
+        elif isinstance(output, torch.Tensor):
+            audio_data = output.cpu().numpy()
         else:
-            # Fallback to first element
-            audio_data = audio_output[0].cpu().numpy()
+            # Fallback
+            audio_data = output[0].cpu().numpy()
 
-        # Ensure audio_data is in the right format
+        # Ensure audio_data is 1D
         if audio_data.ndim > 1:
-            # If stereo or batch, take first channel/batch
-            audio_data = audio_data[0] if audio_data.shape[0] == 1 else audio_data.squeeze()
+            audio_data = audio_data.squeeze()
 
         # VibeVoice uses 24kHz sample rate
         sample_rate = 24000
