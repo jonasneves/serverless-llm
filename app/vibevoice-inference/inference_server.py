@@ -50,7 +50,7 @@ default_voices: Dict[str, np.ndarray] = {}
 
 class SpeechRequest(BaseModel):
     text: str
-    speaker: str = "Alice"  # Default speaker
+    speakers: List[str] = ["Alice"]  # List of speakers in order of appearance
     format: str = "wav"  # 'wav' only for now
 
 def read_audio(audio_path: str, target_sr: int = 24000) -> np.ndarray:
@@ -145,30 +145,34 @@ async def generate_speech(request: SpeechRequest):
     """
     Generates speech from text using VibeVoice.
 
-    Text format: Either plain text (single speaker) or multi-speaker format:
-    "Speaker 1: Hello there!\\nSpeaker 2: Hi, how are you?"
+    Text format: Multi-speaker format with speaker labels:
+    "Alice: Hello there!\\nBob: Hi, how are you?"
+
+    Speakers should match the order they appear in the text.
     """
     if model is None or processor is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    logger.info(f"Generating speech for: '{request.text[:50]}...' with speaker: {request.speaker}")
+    logger.info(f"Generating speech for: '{request.text[:50]}...' with speakers: {request.speakers}")
 
     try:
-        # Format text for VibeVoice
-        # If text doesn't have speaker labels, add them
-        if ":" not in request.text or not any(line.strip().startswith(("Speaker", request.speaker)) for line in request.text.split("\n")):
-            formatted_text = f"Speaker 1: {request.text}"
-        else:
-            formatted_text = request.text
+        # Use the text as-is (should already have speaker labels)
+        formatted_text = request.text
 
-        # Prepare voice samples
+        # Prepare voice samples for each speaker
         voice_samples = []
-        if request.speaker in default_voices:
-            voice_samples = [default_voices[request.speaker]]
-            logger.info(f"Using voice sample for: {request.speaker}")
-        else:
-            logger.warning(f"Speaker '{request.speaker}' not found. Available: {list(set(default_voices.keys()))}")
-            logger.warning("Generating without voice cloning (lower quality)")
+        missing_speakers = []
+
+        for speaker in request.speakers:
+            if speaker in default_voices:
+                voice_samples.append(default_voices[speaker])
+                logger.info(f"Loaded voice sample for: {speaker}")
+            else:
+                missing_speakers.append(speaker)
+
+        if missing_speakers:
+            logger.warning(f"Speakers not found: {missing_speakers}. Available: {list(set(default_voices.keys()))}")
+            logger.warning("Generating without voice cloning for missing speakers (lower quality)")
 
         # Prepare inputs
         inputs = processor(
