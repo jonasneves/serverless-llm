@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Studio - AI Audio Generation</title>
-  <link rel="stylesheet" href="/static/common.css">
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script defer src="/static/settings.js"></script>
+{% extends "layout.html" %}
+
+{% block title %}Voice Studio - AI Audio Generation{% endblock %}
+{% block subtitle %}AI Audio Generation{% endblock %}
+
+{% block extra_css %}
   <style>
     /* Voice-specific styles */
     :root {
@@ -269,14 +266,8 @@
     .template-chip:hover {
         text-decoration: underline;
     }
-
   </style>
-</head>
-<body>
-{% extends "layout.html" %}
-
-{% block title %}Voice Studio - AI Audio Generation{% endblock %}
-{% block subtitle %}AI Audio Generation{% endblock %}
+{% endblock %}
 
 {% block extra_js %}
   <script src="/static/voice.js?v={{ voice_js }}"></script>
@@ -371,5 +362,3 @@
     </div>
   </div>
 {% endblock %}
-</body>
-</html>
