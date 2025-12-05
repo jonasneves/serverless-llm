@@ -259,19 +259,24 @@ def load_model():
 
     print(f"CLaRa model loaded successfully in {time.perf_counter() - t_load:.1f}s!")
 
-    # Optional: dynamic INT8 quantization for CPU (reduces memory and may speed up)
+    # Optional: dynamic INT8 quantization for CPU (only supported from float32)
     if os.getenv("CLARA_INT8", "0") == "1":
         try:
-            from torch.ao.quantization import quantize_dynamic
-            print("Applying dynamic INT8 quantization to Linear layers...")
-            # On ARM, use qnnpack backend for dynamic quant
-            if hasattr(torch.backends, "quantized"):
-                try:
-                    torch.backends.quantized.engine = "qnnpack"
-                except Exception:
-                    pass
-            clara_model = quantize_dynamic(clara_model, {torch.nn.Linear}, dtype=torch.qint8)
-            print("Dynamic quantization applied.")
+            p = next((p for p in clara_model.parameters()), None)
+            base_dtype = getattr(p, 'dtype', torch.float32) if p is not None else torch.float32
+            if base_dtype != torch.float32:
+                print(f"Skipping INT8 quantization: model dtype is {base_dtype}, requires torch.float32")
+            else:
+                from torch.ao.quantization import quantize_dynamic
+                print("Applying dynamic INT8 quantization to Linear layers (float32 model)...")
+                # On ARM, use qnnpack backend for dynamic quant
+                if hasattr(torch.backends, "quantized"):
+                    try:
+                        torch.backends.quantized.engine = "qnnpack"
+                    except Exception:
+                        pass
+                clara_model = quantize_dynamic(clara_model, {torch.nn.Linear}, dtype=torch.qint8)
+                print("Dynamic quantization applied.")
         except Exception as e:
             print(f"Quantization warning: {e}")
 
