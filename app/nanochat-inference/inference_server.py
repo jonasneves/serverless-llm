@@ -8,6 +8,7 @@ from typing import List, Optional
 import uvicorn
 import json
 import asyncio
+import threading
 
 try:
     from huggingface_hub import hf_hub_download
@@ -18,6 +19,13 @@ try:
     from llama_cpp import Llama  # type: ignore
 except Exception:
     Llama = None  # Optional
+
+try:
+    from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer  # type: ignore
+except Exception:
+    AutoTokenizer = None  # type: ignore
+    AutoModelForCausalLM = None  # type: ignore
+    TextIteratorStreamer = None  # type: ignore
 
 # Placeholder for nanochat core logic.
 # In a real scenario, you would clone the nanochat repository
@@ -50,6 +58,7 @@ tokenizer = None
 llm = None  # llama.cpp model if using GGUF
 inference_lock = asyncio.Semaphore(1)
 model_name = os.environ.get("NANOCHAT_MODEL_NAME", "d32") # Default to d32, can be env var
+hf_model_id = os.environ.get("NANOCHAT_HF_MODEL", "karpathy/nanochat-d32")
 
 class InferenceRequest(BaseModel):
     prompt: str
@@ -202,6 +211,17 @@ async def load_model():
                     print("Loaded real nanochat model via local repo imports.")
         except Exception as e:
             print(f"Nanochat real import attempt failed: {e}")
+
+        if not loaded_real and AutoTokenizer is not None and AutoModelForCausalLM is not None:
+            # 2) Try Transformers from Hugging Face (karpathy/nanochat-d32 by default)
+            print(f"Loading Transformers model from HF: {hf_model_id}")
+            tok = AutoTokenizer.from_pretrained(hf_model_id)
+            mdl = AutoModelForCausalLM.from_pretrained(hf_model_id)
+            mdl.eval()
+            model = mdl
+            tokenizer = tok
+            loaded_real = True
+            print("Loaded nanochat via Transformers (HF)")
 
         if not loaded_real:
             # Fallback to dummy model
@@ -359,7 +379,97 @@ async def chat_completions(request: ChatCompletionRequest):
                 "usage": data["usage"]
             }
 
-    # Fallback: python model/tokenizer
+    # Transformers path (HF)
+    if model is not None and tokenizer is not None and hasattr(model, "generate") and AutoTokenizer is not None:
+        # Prepare input
+        prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+        if request.stream and TextIteratorStreamer is not None:
+            from fastapi.responses import StreamingResponse
+
+            async def stream_hf():
+                nonlocal prompt_text
+                streamer = TextIteratorStreamer(tokenizer, skip_special_tokens=True, timeout=60.0)
+                inputs = tokenizer(prompt_text, return_tensors="pt")
+
+                gen_kwargs = dict(
+                    **inputs,
+                    streamer=streamer,
+                    max_new_tokens=request.max_tokens,
+                    do_sample=True,
+                    temperature=request.temperature,
+                    top_p=request.top_p,
+                )
+
+                # Run generation in a thread
+                thread = threading.Thread(target=model.generate, kwargs=gen_kwargs)
+                thread.start()
+
+                generated_text = ""
+                try:
+                    for piece in streamer:
+                        if piece:
+                            generated_text += piece
+                            chunk = {"choices": [{"delta": {"content": piece}}]}
+                            yield f"data: {json.dumps(chunk)}\n\n"
+                            await asyncio.sleep(0)
+                finally:
+                    thread.join(timeout=0)
+
+                # Usage estimation
+                prompt_tokens = len(tokenizer.encode(prompt_text))
+                completion_tokens = len(tokenizer.encode(generated_text))
+                usage_chunk = {
+                    "choices": [{"delta": {}, "finish_reason": "stop"}],
+                    "usage": {
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": prompt_tokens + completion_tokens
+                    }
+                }
+                yield f"data: {json.dumps(usage_chunk)}\n\n"
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(
+                stream_hf(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive"
+                }
+            )
+        else:
+            # Non-streaming
+            inputs = tokenizer(prompt_text, return_tensors="pt")
+            output_ids = model.generate(
+                **inputs,
+                max_new_tokens=request.max_tokens,
+                do_sample=True,
+                temperature=request.temperature,
+                top_p=request.top_p,
+            )
+            generated_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+
+            prompt_tokens = len(tokenizer.encode(prompt_text))
+            completion_tokens = len(tokenizer.encode(generated_text))
+            return {
+                "id": "chatcmpl-nanochat",
+                "object": "chat.completion",
+                "model": "nanochat-d32-base",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": generated_text},
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": prompt_tokens + completion_tokens
+                }
+            }
+
+    # Fallback: python dummy model/tokenizer
     if model is None or tokenizer is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
