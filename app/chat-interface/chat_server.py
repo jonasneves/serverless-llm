@@ -220,7 +220,7 @@ def build_service_url(service: str) -> str:
 
 def get_endpoint(config):
     """Get endpoint URL for a service, prioritization: Env Var > Base Domain > Default."""
-    # 1. Specific Env Var (e.g. CLARA_API_URL)
+    # 1. Specific Env Var (e.g. QWEN_API_URL)
     if os.getenv(config["env"]):
         return os.getenv(config["env"])
 

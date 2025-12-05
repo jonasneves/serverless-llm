@@ -55,7 +55,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | Secret | Description |
 |--------|-------------|
 | `HF_TOKEN` | Hugging Face token for gated models |
-| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, QWEN14B, GEMMA, CLARA) |
+| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, QWEN14B, GEMMA) |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for web interface |
 | `{MODEL}_API_URL` | Public URL for each model (e.g., `https://qwen.neevs.io`) |
 | `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents modes ([create token](https://github.com/settings/personal-access-tokens/new)) |
