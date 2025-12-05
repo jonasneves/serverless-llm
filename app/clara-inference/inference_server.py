@@ -373,6 +373,21 @@ async def stream_chat_response(question: str, documents: List[List[str]], max_to
             )
 
         answer = answers[0] if answers else "No response generated."
+        if not answer or not str(answer).strip():
+            # Fallback: try using the question itself as a minimal document to nudge generation
+            try:
+                def _gen_fallback(questions, documents, max_new_tokens):
+                    with torch.inference_mode():
+                        return clara_model.generate_from_text(
+                            questions=questions,
+                            documents=documents,
+                            max_new_tokens=max_new_tokens
+                        )
+                fb_docs = [[question]]
+                fb_answers = await asyncio.to_thread(_gen_fallback, [question], fb_docs, max_tokens)
+                answer = fb_answers[0] if fb_answers else "No response generated."
+            except Exception:
+                answer = "No response generated."
 
         # Estimate token counts
         prompt_tokens = len(question.split()) * 1.3
@@ -498,6 +513,21 @@ async def chat_completions(request: GenerateRequest):
             )
 
         answer = answers[0] if answers else "No response generated."
+        if not answer or not str(answer).strip():
+            # Fallback second try with question as minimal document
+            try:
+                def _gen_fallback2(questions, documents, max_new_tokens):
+                    with torch.inference_mode():
+                        return clara_model.generate_from_text(
+                            questions=questions,
+                            documents=documents,
+                            max_new_tokens=max_new_tokens
+                        )
+                fb_docs = [[question]]
+                fb_answers = await asyncio.to_thread(_gen_fallback2, [question], fb_docs, request.max_tokens)
+                answer = fb_answers[0] if fb_answers else "No response generated."
+            except Exception:
+                answer = "No response generated."
 
         # Estimate token counts (rough approximation)
         prompt_tokens = len(question.split()) * 1.3  # rough tokenization
