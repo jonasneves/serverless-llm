@@ -80,9 +80,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y git
-          uv venv venv
-          echo "PATH=$GITHUB_WORKSPACE/venv/bin:$PATH" >> $GITHUB_ENV
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/venv" >> $GITHUB_ENV
+          uv venv
+          echo "VIRTUAL_ENV=$PWD/.venv" >> $GITHUB_ENV
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
           python --version
 
       - name: Cache Hugging Face models
