@@ -365,3 +365,12 @@ jobs:
           echo ""
           echo "=== Tunnel Log ==="
           cat /tmp/tunnel.log 2>/dev/null || echo "No tunnel log"
+          echo ""
+          echo "=== System Memory / OOM Diagnostics ==="
+          free -h || true
+          echo ""
+          echo "Top RSS processes:"
+          ps aux --sort=-rss | head -n 20 || true
+          echo ""
+          echo "Kernel messages (last 200 lines):"
+          sudo dmesg -T | tail -n 200 || true

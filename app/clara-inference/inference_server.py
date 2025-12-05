@@ -197,7 +197,8 @@ def load_model():
         clara_model = AutoModel.from_pretrained(
             model_path,
             trust_remote_code=True,
-            use_safetensors=True
+            use_safetensors=True,
+            low_cpu_mem_usage=True
         ).to(device)
     except ValueError as e:
         if "Dropout" in str(e) and "not supported" in str(e):

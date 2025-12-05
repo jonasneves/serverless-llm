@@ -95,6 +95,16 @@ jobs:
           echo "=== Disk space after cleanup ==="
           df -h
 
+      - name: Enable 8G swap (helps large CPU models)
+        run: |
+          echo "Creating 8G swapfile..."
+          sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          echo "Swap enabled:"
+          sudo swapon --show
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -353,3 +363,12 @@ jobs:
           echo ""
           echo "=== Tunnel Log ==="
           cat /tmp/tunnel.log 2>/dev/null || echo "No tunnel log"
+          echo ""
+          echo "=== System Memory / OOM Diagnostics ==="
+          free -h || true
+          echo ""
+          echo "Top RSS processes:"
+          ps aux --sort=-rss | head -n 20 || true
+          echo ""
+          echo "Kernel messages (last 200 lines):"
+          sudo dmesg -T | tail -n 200 || true
