@@ -30,7 +30,12 @@ from discussion_engine import DiscussionEngine
 from model_profiles import MODEL_PROFILES
 
 # Orchestrator mode imports
-from autogen_orchestrator import AutoGenOrchestrator
+try:
+    from autogen_orchestrator import AutoGenOrchestrator
+except ImportError:
+    print("AutoGen not available. Orchestrator mode disabled.")
+    AutoGenOrchestrator = None
+
 from tool_orchestrator import ToolOrchestrator
 
 # Verbalized Sampling mode imports

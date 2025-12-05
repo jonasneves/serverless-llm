@@ -1,6 +1,6 @@
 git+https://github.com/microsoft/VibeVoice.git
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
+uvicorn==0.24.0
 pydantic==2.10.1
 python-multipart==0.0.6
 ffmpeg-python==0.2.0
