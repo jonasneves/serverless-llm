@@ -9,6 +9,7 @@ import uvicorn
 import json
 import asyncio
 import threading
+import importlib.util
 
 try:
     from huggingface_hub import hf_hub_download
