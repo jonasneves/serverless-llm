@@ -95,15 +95,33 @@ jobs:
           echo "=== Disk space after cleanup ==="
           df -h
 
-      - name: Enable 8G swap (helps large CPU models)
+      - name: Ensure 8G swap (idempotent)
         run: |
-          echo "Creating 8G swapfile..."
-          sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          echo "Swap enabled:"
-          sudo swapon --show
+          set -e
+          if sudo swapon --show | awk '{print $1}' | grep -qx '/swapfile'; then
+            echo "Swapfile already active. Skipping creation."
+            sudo swapon --show
+          else
+            if [ -f /swapfile ]; then
+              echo "/swapfile exists but is not active. Activating..."
+              sudo chmod 600 /swapfile || true
+              sudo mkswap /swapfile || true
+              sudo swapon /swapfile
+            else
+              echo "Creating 8G swapfile..."
+              if sudo fallocate -l 8G /swapfile 2>/dev/null; then
+                echo "fallocate succeeded"
+              else
+                echo "fallocate failed; falling back to dd (this may take a while)"
+                sudo dd if=/dev/zero of=/swapfile bs=1M count=8192 status=progress
+              fi
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+            fi
+            echo "Swap enabled:"
+            sudo swapon --show
+          fi
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
