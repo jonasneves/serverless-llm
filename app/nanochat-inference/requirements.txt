@@ -1,0 +1,10 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+torch==2.1.2
+huggingface-hub==0.23.2
+pydantic==2.10.1
+numpy==1.26.4
+sentencepiece==0.1.99
+tqdm==4.66.4
+transformers==4.39.3
+requests==2.31.0

@@ -179,12 +179,7 @@ MODEL_CONFIG = (
         "env": "GEMMA_API_URL",
         "default_url": "http://localhost:8006",
     },
-    {
-        "id": "clara-7b-instruct",
-        "name": "CLaRa 7B",
-        "env": "CLARA_API_URL",
-        "default_url": "http://localhost:8007",
-    },
+    
     {
         "id": "mistral-7b-instruct-v0.3",
         "name": "Mistral 7B v0.3",
@@ -879,45 +874,6 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                     except StopAsyncIteration:
                         # Stream finished
                         break
-
-                # If no content was streamed and no usage collected, fall back to non-streaming request
-                if not total_content and not usage_data:
-                    try:
-                        non_stream_resp = await client.post(
-                            f"{endpoint}/v1/chat/completions",
-                            json=build_completion_payload(messages, max_tokens, temperature, stream=False),
-                            timeout=60.0,
-                        )
-                        if non_stream_resp.status_code == 200:
-                            payload = non_stream_resp.json()
-                            content = payload.get("choices", [{}])[0].get("message", {}).get("content", "")
-                            if content:
-                                # Simulate chunked streaming from the full content
-                                words = content.split()
-                                chunk_size = max(1, len(words) // 20)
-                                for i in range(0, len(words), chunk_size):
-                                    part = " ".join(words[i:i+chunk_size]) + (" " if i + chunk_size < len(words) else "")
-                                    total_content += part
-                                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': part, 'event': 'token'})}\n\n"
-                                usage_data = payload.get("usage")
-                            else:
-                                # Explicit empty content
-                                err_msg = "Model returned empty response."
-                                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': err_msg})}\n\n"
-                                return
-                        else:
-                            # Non-200 fallback -> propagate a readable error
-                            try:
-                                err_text = non_stream_resp.text
-                            except Exception:
-                                err_text = f"HTTP {non_stream_resp.status_code}"
-                            clean = sanitize_error_message(err_text, endpoint)
-                            yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': clean})}\n\n"
-                            return
-                    except Exception as e:
-                        clean = sanitize_error_message(str(e), endpoint)
-                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': clean})}\n\n"
-                        return
 
                 # Send completion event with stats
                 elapsed = time.time() - start_time

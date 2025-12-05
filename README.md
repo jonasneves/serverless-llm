@@ -6,19 +6,18 @@
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
 [![Qwen 14B API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-14b-instruct)](https://qwen14b.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
-[![CLaRa API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/clara-7b-instruct)](https://clara.neevs.io/health)
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
 
-Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma, CLaRa — powered only by GitHub Actions + Cloudflare
+Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
 ## Overview Features
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: Qwen 2.5 (7B/14B), Phi-3, Llama 3.2, Mistral 7B, Gemma 2 9B, CLaRa 7B (RAG)
+- **Multi-Model Support**: Qwen 2.5 (7B/14B), Phi-3, Llama 3.2, Mistral 7B, Gemma 2 9B
 - **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
 - **Continuous Availability**: Auto-restart with graceful handoff
@@ -72,7 +71,7 @@ Add to **Settings > Secrets and variables > Actions**:
 
 ```bash
 # Start each model server (single instance)
-gh workflow run {model}-inference.yml  # qwen, phi, llama, mistral, qwen14b, gemma, clara
+gh workflow run {model}-inference.yml  # qwen, phi, llama, mistral, qwen14b, gemma
 
 # Or start with multiple instances for high availability
 gh workflow run qwen-inference.yml -f instances=3
@@ -112,7 +111,6 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 | Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |
 | Mistral 7B v0.3 | 7B | Q4_K_M | Structured output, function calling |
 | Gemma 2 | 9B | Q4_K_M | Fact-checking, safety-aligned responses |
-| CLaRa 7B | 7B | FP16 | RAG with semantic compression (16x-128x) |
 
 ## Project Structure
 
@@ -126,7 +124,6 @@ serverless-llm/
 │   ├── llama-inference/        # Llama model server
 │   ├── mistral-inference/      # Mistral model server
 │   ├── gemma-inference/        # Gemma model server
-│   ├── clara-inference/        # CLaRa 7B RAG model server
 │   └── chat-interface/         # Web interface + proxy
 └── docs/                       # Mode-specific documentation
 ```
@@ -136,7 +133,7 @@ serverless-llm/
 | Component | Technology |
 |-----------|------------|
 | Compute | GitHub Actions |
-| LLM Runtime | llama-cpp-python (GGUF), transformers (CLaRa) |
+| LLM Runtime | llama-cpp-python (GGUF) |
 | API Framework | FastAPI |
 | Streaming | Server-Sent Events |
 | Tunneling | Cloudflare Zero Trust |
