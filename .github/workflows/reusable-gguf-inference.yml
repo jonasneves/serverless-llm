@@ -31,6 +31,10 @@ on:
         required: true
         type: string
         description: 'Repository dispatch event type (e.g., "restart-qwen-inference")'
+      workflow_file:
+        required: true
+        type: string
+        description: 'Workflow filename used to find previous runs (e.g., "qwen-inference.yml")'
       duration_hours:
         type: string
         default: '5'
@@ -88,15 +92,18 @@ jobs:
         run: |
           echo "Current run ID: ${{ github.run_id }}"
 
+          WORKFLOW_FILE="${{ inputs.workflow_file }}"
+          echo "Querying runs for workflow file: $WORKFLOW_FILE"
+
           API_RESPONSE=$(curl -s \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress")
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/$WORKFLOW_FILE/runs?status=in_progress")
 
           RUN_COUNT=$(echo "$API_RESPONSE" | jq '.total_count')
           echo "Total in_progress runs found: $RUN_COUNT"
 
-          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | select(.name == \"${{ github.workflow }}\") | .id" | head -1)
+          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
 
           if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ] && [ "$PREVIOUS_RUN_ID" != "" ]; then
             echo "Found previous running workflow: $PREVIOUS_RUN_ID"

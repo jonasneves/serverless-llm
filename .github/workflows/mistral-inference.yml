@@ -43,6 +43,7 @@ jobs:
       cache_key_prefix: "gguf-mistral-7b-q4"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_MISTRAL"
       restart_event_type: "restart-mistral-inference"
+      workflow_file: "mistral-inference.yml"
       duration_hours: ${{ inputs.duration_hours || '5' }}
       auto_restart: ${{ inputs.auto_restart != false }}
       instances: ${{ inputs.instances || '1' }}

@@ -43,6 +43,7 @@ jobs:
       cache_key_prefix: "gguf-phi3-mini-q4"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_PHI"
       restart_event_type: "restart-phi-inference"
+      workflow_file: "phi-inference.yml"
       duration_hours: ${{ inputs.duration_hours || '5' }}
       auto_restart: ${{ inputs.auto_restart != false }}
       instances: ${{ inputs.instances || '1' }}

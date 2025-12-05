@@ -43,6 +43,7 @@ jobs:
       cache_key_prefix: "gguf-qwen2.5-14b-q4"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_QWEN14B"
       restart_event_type: "restart-qwen14b-inference"
+      workflow_file: "qwen14b-inference.yml"
       duration_hours: ${{ inputs.duration_hours || '5' }}
       auto_restart: ${{ inputs.auto_restart != false }}
       instances: ${{ inputs.instances || '1' }}

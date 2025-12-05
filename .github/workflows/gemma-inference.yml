@@ -43,6 +43,7 @@ jobs:
       cache_key_prefix: "gguf-gemma2-9b-q4"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_GEMMA"
       restart_event_type: "restart-gemma-inference"
+      workflow_file: "gemma-inference.yml"
       duration_hours: ${{ inputs.duration_hours || '5' }}
       auto_restart: ${{ inputs.auto_restart != false }}
       instances: ${{ inputs.instances || '1' }}
