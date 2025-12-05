@@ -102,7 +102,7 @@
             outputs = model.generate(
                 **inputs,
                 max_new_tokens=None,
-                cfg_scale=1.3,
+                cfg_scale=1.5,
                 tokenizer=processor.tokenizer,
                 generation_config={'do_sample': False},
                 verbose=False,
