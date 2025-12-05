@@ -1,6 +1,6 @@
-name: Nanochat d32
+name: Nanochat d34
 
-run-name: Nanochat d32 Inference Server
+run-name: Nanochat d34 Inference Server
 
 on:
   workflow_dispatch:
