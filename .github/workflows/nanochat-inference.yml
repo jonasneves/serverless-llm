@@ -126,6 +126,7 @@ jobs:
       - name: Start inference server
         env:
           HF_HOME: /tmp/hf_cache
+          HUGGING_FACE_HUB_TOKEN: ${{ secrets.HF_TOKEN }}
           NANOCHAT_MODEL_NAME: d32
           PYTHONPATH: ${{ github.workspace }}/app/nanochat-inference/nanochat_repo
           NANOCHAT_GGUF_REPO: ${{ inputs.gguf_repo }}
