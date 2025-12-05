@@ -88,10 +88,13 @@ def load_model():
 
     # Download the entire repo
     cache_dir = os.getenv("HF_HOME", None)
+    # Speed up large downloads on Actions: allow only needed files and enable hf_transfer if available
+    allow_patterns = [f"compression-{compression}/*", "tokenizer.*", "tokenizer_config.json", "config.json", "*.py"]
     repo_path = snapshot_download(
         repo_id=base_repo,
         cache_dir=cache_dir,
-        token=os.getenv("HF_TOKEN")
+        token=os.getenv("HF_TOKEN"),
+        allow_patterns=allow_patterns
     )
 
     # Load from the compression subfolder
@@ -178,11 +181,19 @@ def load_model():
     print(f"Loading CLaRa model (this may take several minutes)...")
     print("Note: CLaRa requires significant RAM for LoRA adapters + base model")
 
+    # Tune PyTorch threading for 2-vCPU GitHub runners (adjust via env if needed)
     try:
+        torch.set_num_threads(int(os.getenv("TORCH_NUM_THREADS", "2")))
+        torch.set_num_interop_threads(int(os.getenv("TORCH_NUM_INTEROP_THREADS", "1")))
+    except Exception as _:
+        pass
+
+    try:
+        # Prefer safetensors if available; keep options minimal for remote code
         clara_model = AutoModel.from_pretrained(
             model_path,
             trust_remote_code=True,
-            # Minimal parameters to avoid PEFT conflicts
+            use_safetensors=True
         ).to(device)
     except ValueError as e:
         if "Dropout" in str(e) and "not supported" in str(e):
@@ -195,14 +206,25 @@ def load_model():
 
     print("CLaRa model loaded successfully!")
 
+    # Optional: dynamic INT8 quantization for CPU (reduces memory and may speed up)
+    if os.getenv("CLARA_INT8", "0") == "1":
+        try:
+            from torch.ao.quantization import quantize_dynamic
+            print("Applying dynamic INT8 quantization to Linear layers...")
+            clara_model = quantize_dynamic(clara_model, {torch.nn.Linear}, dtype=torch.qint8)
+            print("Dynamic quantization applied.")
+        except Exception as e:
+            print(f"Quantization warning: {e}")
+
     # Warm up
     print("Warming up model...")
     try:
-        clara_model.generate_from_text(
-            questions=["Test question?"],
-            documents=[["This is a test document."]],
-            max_new_tokens=1
-        )
+        with torch.inference_mode():
+            clara_model.generate_from_text(
+                questions=["Test question?"],
+                documents=[["This is a test document."]],
+                max_new_tokens=1
+            )
         print("Model warm-up complete!")
     except Exception as e:
         print(f"Warm-up warning: {e}")
@@ -248,12 +270,16 @@ async def rag_generate(request: RAGRequest):
         compression = request.compression or COMPRESSION_LEVEL
 
         async with inference_lock:
-            # Use CLaRa's native document-based generation
+            # Use CLaRa's native document-based generation under inference mode
+            def _gen(questions, documents, max_new_tokens):
+                with torch.inference_mode():
+                    return clara_model.generate_from_text(
+                        questions=questions,
+                        documents=documents,
+                        max_new_tokens=max_new_tokens
+                    )
             answers = await asyncio.to_thread(
-                clara_model.generate_from_text,
-                questions=request.questions,
-                documents=request.documents,
-                max_new_tokens=request.max_tokens
+                _gen, request.questions, request.documents, request.max_tokens
             )
 
         return RAGResponse(
@@ -274,12 +300,16 @@ async def stream_chat_response(question: str, documents: List[List[str]], max_to
     """
     try:
         async with inference_lock:
-            # Generate using CLaRa
+            # Generate using CLaRa under inference mode
+            def _gen1(questions, documents, max_new_tokens):
+                with torch.inference_mode():
+                    return clara_model.generate_from_text(
+                        questions=questions,
+                        documents=documents,
+                        max_new_tokens=max_new_tokens
+                    )
             answers = await asyncio.to_thread(
-                clara_model.generate_from_text,
-                questions=[question],
-                documents=documents,
-                max_new_tokens=max_tokens
+                _gen1, [question], documents, max_tokens
             )
 
         answer = answers[0] if answers else "No response generated."
@@ -395,12 +425,16 @@ async def chat_completions(request: GenerateRequest):
 
         # Non-streaming response
         async with inference_lock:
-            # Generate using CLaRa
+            # Generate using CLaRa under inference mode
+            def _gen2(questions, documents, max_new_tokens):
+                with torch.inference_mode():
+                    return clara_model.generate_from_text(
+                        questions=questions,
+                        documents=documents,
+                        max_new_tokens=max_new_tokens
+                    )
             answers = await asyncio.to_thread(
-                clara_model.generate_from_text,
-                questions=[question],
-                documents=documents,
-                max_new_tokens=request.max_tokens
+                _gen2, [question], documents, request.max_tokens
             )
 
         answer = answers[0] if answers else "No response generated."
