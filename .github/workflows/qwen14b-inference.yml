@@ -92,7 +92,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -r app/qwen14b-inference/requirements.txt
+          uv pip install --python 3.12 -r app/qwen14b-inference/requirements.txt
 
       - name: Install cloudflared
         run: |

@@ -92,7 +92,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -r app/mistral-inference/requirements.txt
+          uv pip install --python 3.12 -r app/mistral-inference/requirements.txt
 
       - name: Install cloudflared
         run: |
