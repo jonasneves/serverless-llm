@@ -65,8 +65,8 @@ jobs:
           echo "All running workflow IDs:"
           echo "$API_RESPONSE" | jq -r '.workflow_runs[].id'
 
-          # Find the previous run (not current)
-          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" | head -1)
+          # Find the previous run (strictly older than current) to avoid canceling newer runs
+          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id < ${{ github.run_id }}) | .id" | head -1)
 
           if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ] && [ "$PREVIOUS_RUN_ID" != "" ]; then
             echo "Found previous running workflow: $PREVIOUS_RUN_ID"
