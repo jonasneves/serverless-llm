@@ -117,29 +117,8 @@ jobs:
           echo "=== Torch Import Test ==="
           python -c "import torch; print(f'Torch loaded: {torch.__version__}, CUDA: {torch.cuda.is_available()}')" || echo "Torch import FAILED"
 
-      - name: Import Stress Test (Diagnose Crash)
-        run: |
-          echo "=== Testing Imports One by One ==="
-          
-          echo "Testing numpy..."
-          python3 -c "import numpy; print('Numpy OK')" || echo "CRASH: numpy"
-          
-          echo "Testing soundfile..."
-          python3 -c "import soundfile; print('Soundfile OK')" || echo "CRASH: soundfile"
-          
-          echo "Testing torch..."
-          python3 -c "import torch; print('Torch OK')" || echo "CRASH: torch"
-          
-          echo "Testing transformers..."
-          python3 -c "import transformers; print('Transformers OK')" || echo "CRASH: transformers"
-          
-          echo "Testing vibevoice..."
-          python3 -c "import vibevoice; print('VibeVoice OK')" || echo "CRASH: vibevoice"
-          
-          echo "=== Import Test Complete ==="
-
-            - name: Start inference server
-              env:
+      - name: Start inference server
+        env:
                 PORT: "8000"
                 HF_TOKEN: ${{ secrets.HF_TOKEN }}
                 HF_HOME: /tmp/hf_cache
