@@ -78,12 +78,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "app/*/requirements.txt"
 
-      - name: Set up Python and create venv
+      - name: Create venv (use system Python 3.12)
         run: |
-          uv python install 3.12
-          uv venv --python 3.12
+          uv venv
           echo "VIRTUAL_ENV=$PWD/.venv" >> $GITHUB_ENV
           echo "$PWD/.venv/bin" >> $GITHUB_PATH
+          python --version
 
       - name: Cache GGUF models
         uses: actions/cache@v4
