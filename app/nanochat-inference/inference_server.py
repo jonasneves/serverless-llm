@@ -57,7 +57,8 @@ model = None
 tokenizer = None
 llm = None  # llama.cpp model if using GGUF
 inference_lock = asyncio.Semaphore(1)
-backend: str = "dummy"  # one of: llama_cpp | hf_transformers | nanochat_local | dummy
+# Backend mode: one of: llama_cpp | hf_transformers | nanochat_local | unknown
+backend: str = "unknown"
 model_name = os.environ.get("NANOCHAT_MODEL_NAME", "d34")  # Default to d34
 hf_model_id = os.environ.get("NANOCHAT_HF_MODEL", "karpathy/nanochat-d34")
 
@@ -269,71 +270,66 @@ async def load_model():
                 print(f"HF Transformers load failed: {e}")
 
         if not loaded_real:
-            # Fallback to dummy model
-            class DummyModel:
-                def generate(self, input_ids, max_new_tokens, temperature, top_k):
-                    return "This is a dummy generated response from nanochat."
-
-            class DummyTokenizer:
-                def encode(self, text):
-                    return [1, 2, 3]
-                def decode(self, tokens):
-                    return ""
-
-            model = DummyModel()
-            tokenizer = DummyTokenizer()
-            print(f"Nanochat model {model_name} loaded in dummy mode. Set NANOCHAT_PATH and checkpoints to enable real model.")
-            backend = "dummy"
+            raise RuntimeError("Failed to load nanochat via llama.cpp, local backend, or HF Transformers")
     except Exception as e:
-        # Fall back to dummy to avoid startup crash
-        print(f"Startup load error: {e}. Falling back to dummy backend.")
-        class DummyModel:
-            def generate(self, input_ids, max_new_tokens, temperature, top_k):
-                return "This is a dummy generated response from nanochat."
-        class DummyTokenizer:
-            def encode(self, text):
-                return [1, 2, 3]
-            def decode(self, tokens):
-                return ""
-        model = DummyModel()
-        tokenizer = DummyTokenizer()
-        backend = "dummy"
+        print(f"Startup load error: {e}")
+        raise
 
 @app.post("/generate", response_model=InferenceResponse)
 async def generate_text(request: InferenceRequest):
-    if model is None or tokenizer is None:
-        raise HTTPException(status_code=503, detail="Model not loaded yet.")
-
     try:
-        # --- NANOCHAT SPECIFIC INFERENCE LOGIC GOES HERE ---
-        # This part requires using the nanochat model's generation method.
-        # Example (highly speculative):
-        # input_ids = tokenizer.encode(request.prompt)
-        # input_ids = torch.tensor(input_ids).unsqueeze(0) # Batch dimension
-        # output_ids = model.generate(
-        #     input_ids,
-        #     max_new_tokens=request.max_new_tokens,
-        #     temperature=request.temperature,
-        #     top_k=request.top_k
-        # )
-        # generated_text = tokenizer.decode(output_ids.squeeze().tolist())
+        if backend == "llama_cpp" and llm is not None:
+            async with inference_lock:
+                data = await asyncio.to_thread(
+                    llm.create_chat_completion,
+                    messages=[{"role": "user", "content": request.prompt}],
+                    max_tokens=request.max_new_tokens,
+                    temperature=request.temperature,
+                    top_p=1.0,
+                    stream=False
+                )
+            text = data["choices"][0]["message"]["content"]
+            return InferenceResponse(generated_text=text)
 
-        # Using dummy model for now
-        dummy_input_ids = tokenizer.encode(request.prompt)
-        generated_text = model.generate(
-            dummy_input_ids,
-            request.max_new_tokens,
-            request.temperature,
-            request.top_k
-        )
+        if backend == "hf_transformers" and model is not None and tokenizer is not None:
+            inputs = tokenizer(request.prompt, return_tensors="pt")
+            output_ids = model.generate(
+                **inputs,
+                max_new_tokens=request.max_new_tokens,
+                do_sample=True,
+                temperature=request.temperature,
+                top_p=1.0,
+            )
+            text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+            return InferenceResponse(generated_text=text)
 
-        return InferenceResponse(generated_text=generated_text)
+        if backend == "nanochat_local" and model is not None and tokenizer is not None:
+            input_ids = tokenizer.encode(request.prompt)
+            try:
+                out = model.generate(input_ids, request.max_new_tokens, request.temperature, top_k=request.top_k)
+                if isinstance(out, str):
+                    return InferenceResponse(generated_text=out)
+                try:
+                    text = tokenizer.decode(out)
+                except Exception:
+                    text = str(out)
+                return InferenceResponse(generated_text=text)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Local nanochat generation failed: {e}")
+
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Inference failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "model_loaded": model is not None}
+    ready = (backend in {"llama_cpp", "hf_transformers", "nanochat_local"}) and (model is not None or llm is not None)
+    return {
+        "status": "healthy" if ready else "loading",
+        "model": f"nanochat-{model_name}-base"
+    }
 
 
 @app.get("/v1/models")
@@ -596,67 +592,8 @@ async def chat_completions(request: ChatCompletionRequest):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Local nanochat inference failed: {e}")
 
-    # Fallback: python dummy model/tokenizer
-    if model is None or tokenizer is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-
-    try:
-        prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-        input_ids = tokenizer.encode(prompt_text)
-        generated_text = model.generate(
-            input_ids,
-            request.max_tokens,
-            request.temperature,
-            top_k=20
-        )
-
-        prompt_tokens = len(tokenizer.encode(prompt_text))
-        completion_tokens = len(tokenizer.encode(generated_text))
-        total_tokens = prompt_tokens + completion_tokens
-
-        if request.stream:
-            from fastapi.responses import StreamingResponse
-            async def dummy_stream():
-                first_chunk = {
-                    "choices": [{"delta": {"content": generated_text}}]
-                }
-                yield f"data: {json.dumps(first_chunk)}\n\n"
-                usage_chunk = {
-                    "choices": [{"delta": {}, "finish_reason": "stop"}],
-                    "usage": {
-                        "prompt_tokens": prompt_tokens,
-                        "completion_tokens": completion_tokens,
-                        "total_tokens": total_tokens
-                    }
-                }
-                yield f"data: {json.dumps(usage_chunk)}\n\n"
-                yield "data: [DONE]\n\n"
-            return StreamingResponse(
-                dummy_stream(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive"
-                }
-            )
-
-            return {
-                "id": "chatcmpl-nanochat",
-                "object": "chat.completion",
-                "model": "nanochat-d34-base",
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {"role": "assistant", "content": generated_text},
-                        "finish_reason": "stop"
-                    }
-                ],
-                "usage": {
-                    "prompt_tokens": prompt_tokens,
-                    "completion_tokens": completion_tokens,
-                    "total_tokens": total_tokens
-                }
-            }
+    # No suitable backend loaded
+    raise HTTPException(status_code=503, detail="Model not loaded")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

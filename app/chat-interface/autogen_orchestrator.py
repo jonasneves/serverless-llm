@@ -47,7 +47,7 @@ class AutoGenOrchestrator:
         
         return OpenAIChatCompletionClient(
             model=model_name,
-            api_key="dummy",  # Our endpoints don't need real keys
+            api_key="local",  # Our endpoints don't need real keys
             base_url=f"{base_url}/v1",
             model_info=model_info,
         )
