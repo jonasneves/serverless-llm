@@ -78,8 +78,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "app/*/requirements.txt"
 
-      - name: Set up Python
-        run: uv python install 3.12
+      - name: Set up Python and create venv
+        run: |
+          uv python install 3.12
+          uv venv --python 3.12
+          echo "VIRTUAL_ENV=$PWD/.venv" >> $GITHUB_ENV
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
 
       - name: Cache GGUF models
         uses: actions/cache@v4
@@ -94,7 +98,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --python 3.12 -r app/llama-inference/requirements.txt
+          uv pip install -r app/llama-inference/requirements.txt
 
       - name: Install cloudflared
         run: |
