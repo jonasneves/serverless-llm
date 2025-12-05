@@ -122,6 +122,14 @@ jobs:
               break
             fi
             echo "Waiting for server... attempt $i/120"
+            
+            # Show the last few lines of the log to track progress
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "--- Server Log Tail ---"
+              tail -n 10 /tmp/inference_server.log || true
+              echo "-----------------------"
+            fi
+            
             sleep 10
           done
 

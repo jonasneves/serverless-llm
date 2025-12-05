@@ -123,25 +123,48 @@ def load_model():
             json.dump(config_dict, f, indent=2)
         print("Config file patched successfully")
 
-    # Patch modeling_clara.py to fix PEFT issue
+    # Patch modeling_clara.py to fix PEFT issue and CPU compatibility
     modeling_file = os.path.join(model_path, "modeling_clara.py")
     if os.path.exists(modeling_file):
-        print(f"Checking for PEFT compatibility in: {modeling_file}")
+        print(f"Patching {modeling_file} for PEFT and CPU compatibility")
         with open(modeling_file, 'r') as f:
             content = f.read()
         
-        # Replace target_modules='all-linear' with specific modules
+        modified = False
+
+        # 1. PEFT compatibility: Replace target_modules='all-linear'
         old_target = "target_modules='all-linear'"
         new_target = "target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj']"
         
         if old_target in content:
-            print(f"Patching {modeling_file}: Replacing 'all-linear' with specific modules")
+            print(f"  - Replacing 'all-linear' with specific modules")
             content = content.replace(old_target, new_target)
+            modified = True
+        
+        # 2. CPU compatibility: Remove hardcoded CUDA device calls
+        if ".to('cuda')" in content:
+            print(f"  - Replacing .to('cuda') with .to(self.decoder.device)")
+            content = content.replace(".to('cuda')", ".to(self.decoder.device)")
+            modified = True
+
+        if '.to("cuda")' in content:
+            print(f"  - Replacing .to(\"cuda\") with .to(self.decoder.device)")
+            content = content.replace('.to("cuda")', ".to(self.decoder.device)")
+            modified = True
+
+        # 3. CPU compatibility: Remove CUDA allocation config
+        cuda_conf = 'os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"'
+        if cuda_conf in content:
+            print(f"  - Commenting out PYTORCH_CUDA_ALLOC_CONF")
+            content = content.replace(cuda_conf, f'# {cuda_conf}')
+            modified = True
+
+        if modified:
             with open(modeling_file, 'w') as f:
                 f.write(content)
             print("modeling_clara.py patched successfully")
         else:
-            print(f"Note: Could not find '{old_target}' in modeling_clara.py - check if already patched or different version.")
+            print("No patches needed for modeling_clara.py")
 
     # Try loading with minimal interference - let CLaRa's custom code handle everything
     print(f"Loading CLaRa model (this may take several minutes)...")
