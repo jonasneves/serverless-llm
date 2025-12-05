@@ -175,8 +175,41 @@ async def load_model():
                 if cfg is not None:
                     model_obj = nc_model(cfg)
                 else:
-                    print("nanochat config.get_config not found; cannot instantiate model without config")
+                    print("nanochat config.get_config not found; attempting meta.json config build")
                     model_obj = None
+                    # Attempt to build a config from HF meta JSON
+                    if hf_hub_download:
+                        try:
+                            from types import SimpleNamespace
+                            import json as _json
+                            hf_pt_repo = os.getenv("NANOCHAT_HF_PT_REPO", "karpathy/nanochat-" + model_name)
+                            meta_file = os.getenv("NANOCHAT_HF_META_FILE", "meta_169150.json" if model_name == "d34" else "meta.json")
+                            meta_path = hf_hub_download(repo_id=hf_pt_repo, filename=meta_file, cache_dir=os.getenv("HF_HOME", "/tmp/hf_cache"))
+                            with open(meta_path, "r") as f:
+                                meta = _json.load(f)
+                            src = meta.get("config", meta)
+                            cfg_dict = {}
+                            for k in ("block_size", "n_layer", "n_head", "n_embd", "bias", "vocab_size"):
+                                if k in src:
+                                    cfg_dict[k] = src[k]
+                            cfg_dict.setdefault("block_size", 4096)
+                            cfg_dict.setdefault("bias", False)
+                            # Try GPTConfig if available; else use SimpleNamespace
+                            try:
+                                from model import GPTConfig as NC_GPTConfig  # type: ignore
+                                cfg_obj = NC_GPTConfig(**cfg_dict)
+                            except Exception:
+                                try:
+                                    from nanochat.model import GPTConfig as NC_GPTConfig  # type: ignore
+                                    cfg_obj = NC_GPTConfig(**cfg_dict)
+                                except Exception:
+                                    cfg_obj = SimpleNamespace(**cfg_dict)
+                            try:
+                                model_obj = nc_model(cfg_obj)
+                            except Exception as e:
+                                print(f"Failed to instantiate model from meta config: {e}")
+                        except Exception as e:
+                            print(f"Meta config build failed: {e}")
 
                 # Load checkpoint if provided
                 ckpt_dir = os.environ.get("NANOCHAT_CHECKPOINTS_DIR", "")
@@ -217,16 +250,16 @@ async def load_model():
                     except Exception:
                         tokenizer_obj = None
 
-                # Try to fetch HF PT assets if not present
+                # Try to fetch HF PT assets and tokenizer if not present
                 if hf_hub_download and model_obj is not None:
                     hf_pt_repo = os.getenv("NANOCHAT_HF_PT_REPO", "karpathy/nanochat-" + model_name)
                     model_file = os.getenv("NANOCHAT_HF_MODEL_FILE", "model_169150.pt" if model_name == "d34" else "model.pt")
-                    tok_file = os.getenv("NANOCHAT_HF_TOKENIZER_FILE", "tokenizer.pkl")
+                    tok_file_hf = os.getenv("NANOCHAT_HF_TOKENIZER_FILE", "tokenizer.pkl")
                     meta_file = os.getenv("NANOCHAT_HF_META_FILE", "meta_169150.json" if model_name == "d34" else "meta.json")
 
                     try:
                         ckpt_path = hf_hub_download(repo_id=hf_pt_repo, filename=model_file, cache_dir=os.getenv("HF_HOME", "/tmp/hf_cache"))
-                        tok_dl_path = hf_hub_download(repo_id=hf_pt_repo, filename=tok_file, cache_dir=os.getenv("HF_HOME", "/tmp/hf_cache"))
+                        tok_dl_path = hf_hub_download(repo_id=hf_pt_repo, filename=tok_file_hf, cache_dir=os.getenv("HF_HOME", "/tmp/hf_cache"))
                         _ = hf_hub_download(repo_id=hf_pt_repo, filename=meta_file, cache_dir=os.getenv("HF_HOME", "/tmp/hf_cache"))
                         # Load weights from downloaded checkpoint
                         if ckpt_path and os.path.exists(ckpt_path):
@@ -237,8 +270,9 @@ async def load_model():
                                 if isinstance(sd, dict) and 'model' in sd:
                                     model_obj.load_state_dict(sd['model'])
                             model_obj.eval()
-                        # Prefer downloaded tokenizer path
-                        tokenizer_obj = nc_tokenizer(tok_dl_path)
+                        # Prefer downloaded tokenizer path if not already set
+                        if tokenizer_obj is None and tok_dl_path:
+                            tokenizer_obj = nc_tokenizer(tok_dl_path)
                     except Exception as e:
                         print(f"HF asset download failed or not configured: {e}")
                         ckpt_path = ckpt_path if 'ckpt_path' in locals() else ''
@@ -255,7 +289,7 @@ async def load_model():
         # No Transformers path (not supported for nanochat d34)
 
         if not loaded_real:
-            raise RuntimeError("Failed to load nanochat via llama.cpp, local backend, or HF Transformers")
+            raise RuntimeError("Failed to load nanochat via llama.cpp or local backend")
     except Exception as e:
         print(f"Startup load error: {e}")
         raise
