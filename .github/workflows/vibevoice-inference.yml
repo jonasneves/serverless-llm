@@ -124,7 +124,13 @@ jobs:
           HF_HOME: /tmp/hf_cache
         run: |
           cd app/vibevoice-inference
-          python -u inference_server.py 2>&1 | tee /tmp/inference_server.log &
+          
+          echo "=== Foregound Debug Run (15s) ==="
+          # Run in foreground briefly to catch immediate crashes in main log
+          timeout 15s python -u inference_server.py || true
+          
+          echo "=== Starting Background Service ==="
+          python -u inference_server.py > /tmp/inference_server.log 2>&1 &
           SERVER_PID=$!
           echo "Server PID: $SERVER_PID"
           echo "Waiting for model to download and load..."

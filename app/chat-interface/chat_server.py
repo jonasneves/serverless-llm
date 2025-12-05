@@ -778,7 +778,7 @@ async def chat_multi(request: MultiChatRequest):
 
 
 async def stream_model_response(model_id: str, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
-    """Stream response from a single model using SSE format (with request queueing)"""
+    """Stream response from a single model using SSE format (with request queueing and keep-alives)"""
     endpoint = MODEL_ENDPOINTS[model_id]
     display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
     start_time = time.time()
@@ -786,15 +786,15 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
 
     # Use semaphore to limit concurrent requests per model
     semaphore = MODEL_SEMAPHORES.get(model_id)
-
     client = HTTPClient.get_client()
 
-    try:
-        # Send initial event immediately to keep connection alive and signal start
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
+    # Send initial event immediately
+    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
 
+    try:
         async with semaphore:
-            async with client.stream(
+            # Build the request
+            request = client.build_request(
                 "POST",
                 f"{endpoint}/v1/chat/completions",
                 json=build_completion_payload(
@@ -803,7 +803,31 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                     temperature,
                     stream=True,
                 )
-            ) as response:
+            )
+
+            # Start the request in a way we can monitor progress
+            # We use client.send(..., stream=True) which returns a Response object we must manually close
+            
+            # 1. Wait for Headers (TTFB)
+            response = None
+            try:
+                # We loop until we get the response headers or error
+                while True:
+                    try:
+                        # Wait up to 15 seconds for the connection/headers
+                        response = await asyncio.wait_for(
+                            client.send(request, stream=True),
+                            timeout=15.0
+                        )
+                        break # Got headers!
+                    except asyncio.TimeoutError:
+                        # No headers yet, send keep-alive to browser
+                        yield ": keep-alive\n\n"
+            except Exception as e:
+                # If the actual connection failed or timed out (client-side limit), handle it
+                raise e
+
+            try:
                 if response.status_code != 200:
                     error_text = await response.aread()
                     error_msg = sanitize_error_message(error_text.decode(), endpoint)
@@ -811,25 +835,41 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                     return
 
                 usage_data = None
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str.strip() == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            # Capture usage data if present
-                            if "usage" in data:
-                                usage_data = data["usage"]
+                
+                # 2. Wait for Body Chunks (Streaming)
+                # We need to iterate manually to inject keep-alives during gaps
+                iterator = response.aiter_lines()
+                
+                while True:
+                    try:
+                        # Wait for next line
+                        line = await asyncio.wait_for(anext(iterator), timeout=15.0)
+                        
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str.strip() == "[DONE]":
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                # Capture usage data if present
+                                if "usage" in data:
+                                    usage_data = data["usage"]
 
-                            if "choices" in data and len(data["choices"]) > 0:
-                                delta = data["choices"][0].get("delta", {})
-                                content = delta.get("content", "")
-                                if content:
-                                    total_content += content
-                                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
-                        except json.JSONDecodeError:
-                            pass
+                                if "choices" in data and len(data["choices"]) > 0:
+                                    delta = data["choices"][0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        total_content += content
+                                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
+                            except json.JSONDecodeError:
+                                pass
+                                
+                    except asyncio.TimeoutError:
+                        # Stream stalled, send keep-alive
+                        yield ": keep-alive\n\n"
+                    except StopAsyncIteration:
+                        # Stream finished
+                        break
 
                 # Send completion event with stats
                 elapsed = time.time() - start_time
@@ -838,10 +878,14 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                 if usage_data and "total_tokens" in usage_data:
                     token_count = usage_data["total_tokens"]
                 else:
-                    # Fallback estimate if no usage data (e.g. non-streaming backend)
+                    # Fallback estimate if no usage data
                     token_count = len(total_content.split()) * 1.3
 
                 yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage_data})}\n\n"
+
+            finally:
+                # CRITICAL: Always close the streaming response
+                await response.aclose()
 
     except httpx.TimeoutException:
         logger.error(f"Timeout connecting to {endpoint}")
