@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedModels = new Set();
     let conversationHistory = [];
     let statusIntervalId = null;
+    let initialCheckDone = false;
 
     const chatHistory = document.getElementById('chatHistory');
     const userInput = document.getElementById('userInput');
@@ -75,14 +76,33 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch {
         MODELS[modelId].status = 'offline';
       }
-      renderModelSelector();
+      // Only re-render if we are not in the initial bulk check (which handles its own render)
+      if (initialCheckDone) {
+          renderModelSelector();
+      }
     }
 
     // Check all models
-    function checkAllModels() {
+    async function checkAllModels() {
       if (!Object.keys(MODELS).length) return;
+      
+      const checks = [];
       for (const id of Object.keys(MODELS)) {
-        checkModelStatus(id);
+        checks.push(checkModelStatus(id));
+      }
+      
+      await Promise.all(checks);
+
+      // On initial load, auto-select online models
+      if (!initialCheckDone) {
+          selectedModels.clear();
+          for (const [id, model] of Object.entries(MODELS)) {
+              if (model.status === 'online') {
+                  selectedModels.add(id);
+              }
+          }
+          initialCheckDone = true;
+          renderModelSelector();
       }
     }
 
@@ -95,13 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         data.models.forEach((model) => {
           MODELS[model.id] = { name: model.name, status: 'checking' };
-          // Select all models by default in arena mode
-          selectedModels.add(model.id);
+          // Do not select all by default; wait for status check
         });
 
         renderModelSelector();
         if (Object.keys(MODELS).length) {
-          checkAllModels();
+          await checkAllModels();
           if (!statusIntervalId) {
             statusIntervalId = setInterval(checkAllModels, 30000);
           }
