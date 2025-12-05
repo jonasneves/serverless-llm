@@ -94,8 +94,6 @@ jobs:
           # Install ffmpeg system dependency
           sudo apt-get update && sudo apt-get install -y ffmpeg libsndfile1
           pip install -r app/vibevoice-inference/requirements.txt
-          # Install VibeVoice community fork (Microsoft's repo was disabled)
-          pip install git+https://github.com/vibevoice-community/VibeVoice.git
           # Verify installation
           python -c "import vibevoice; print(f'VibeVoice installed successfully')"
 

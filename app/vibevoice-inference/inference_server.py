@@ -107,10 +107,11 @@ async def load_model():
         # Device-specific configuration
         if device == "cuda":
             dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float32
-            attn_impl = "flash_attention_2"
         else:
             dtype = torch.float32
-            attn_impl = "sdpa"
+
+        # Use SDPA (PyTorch native) for better compatibility
+        attn_impl = "sdpa"
 
         # Load model
         model = VibeVoiceForConditionalGenerationInference.from_pretrained(
