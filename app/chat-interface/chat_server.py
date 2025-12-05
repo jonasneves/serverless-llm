@@ -900,9 +900,24 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                                     total_content += part
                                     yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': part, 'event': 'token'})}\n\n"
                                 usage_data = payload.get("usage")
-                    except Exception:
-                        # Ignore fallback errors; we'll still send a done event
-                        pass
+                            else:
+                                # Explicit empty content
+                                err_msg = "Model returned empty response."
+                                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': err_msg})}\n\n"
+                                return
+                        else:
+                            # Non-200 fallback -> propagate a readable error
+                            try:
+                                err_text = non_stream_resp.text
+                            except Exception:
+                                err_text = f"HTTP {non_stream_resp.status_code}"
+                            clean = sanitize_error_message(err_text, endpoint)
+                            yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': clean})}\n\n"
+                            return
+                    except Exception as e:
+                        clean = sanitize_error_message(str(e), endpoint)
+                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': clean})}\n\n"
+                        return
 
                 # Send completion event with stats
                 elapsed = time.time() - start_time
