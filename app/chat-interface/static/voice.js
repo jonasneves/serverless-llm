@@ -182,11 +182,13 @@ Bob: Absolutely. I can't wait to see what people build with it.`;
                     if (data.url) {
                         audioPlayer.src = data.url;
                         downloadLink.href = data.url;
+                        downloadLink.download = "podcast.wav";
                     } else if (data.data) {
                         const audioBlob = base64ToBlob(data.data, 'audio/wav');
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayer.src = audioUrl;
                         downloadLink.href = audioUrl;
+                        downloadLink.download = "podcast.wav";
                     }
 
                     audioPlayerContainer.classList.add('visible');
