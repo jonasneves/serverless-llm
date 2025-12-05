@@ -117,7 +117,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 | Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |
 | Mistral 7B v0.3 | 7B | Q4_K_M | Structured output, function calling |
 | Gemma 2 | 9B | Q4_K_M | Fact-checking, safety-aligned responses |
-| nanochat d34 | ~2.0B | Q4_K_M | Lightweight conversation, text completion |
+| Nanochat d34 | ~2.0B | Q4_K_M | Lightweight conversation, text completion |
 
 ## Project Structure
 

@@ -57,8 +57,9 @@ model = None
 tokenizer = None
 llm = None  # llama.cpp model if using GGUF
 inference_lock = asyncio.Semaphore(1)
-# Backend mode: one of: llama_cpp | hf_transformers | nanochat_local | unknown
-backend: str = "unknown"
+# Backend mode: one of: llama_cpp | hf_transformers | nanochat_local
+from typing import Optional as _Optional
+backend: _Optional[str] = None
 model_name = os.environ.get("NANOCHAT_MODEL_NAME", "d34")  # Default to d34
 hf_model_id = os.environ.get("NANOCHAT_HF_MODEL", "karpathy/nanochat-d34")
 

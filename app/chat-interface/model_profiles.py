@@ -417,7 +417,7 @@ GEMMA2_9B_PROFILE = {
 
 NANOCHAT_D32_PROFILE = {
     "model_id": "nanochat-d34-base",
-    "display_name": "nanochat d34 Base",
+    "display_name": "Nanochat d34",
     "creator": "Andrej Karpathy",
     "size": "1.9B parameters",
     "quantization": "Q4_K_M", # Assuming common quantization for local models

@@ -34,7 +34,7 @@ class ModelRouter:
             "description": "Fast, basic reasoning"
         },
         "reasoner-4": {
-            "name": "nanochat d34 Base",
+            "name": "Nanochat d34",
             "url_env": "NANOCHAT_API_URL",
             "description": "Small conversational model"
         },
@@ -55,7 +55,7 @@ class ModelRouter:
             "description": "Simple queries, conversational"
         },
         "answer-4": {
-            "name": "nanochat d34 Base",
+            "name": "Nanochat d34",
             "url_env": "NANOCHAT_API_URL",
             "description": "Lightweight conversation and completion"
         },
