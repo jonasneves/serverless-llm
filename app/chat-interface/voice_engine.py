@@ -52,7 +52,8 @@ class VoiceEngine:
         Yields chunks of the generated script for real-time UI feedback.
         """
         if not speakers:
-            speakers = ["Host", "Guest"]
+            # Use actual available voices from VibeVoice
+            speakers = ["Emma", "Carter"]
         
         speakers_str = ", ".join(speakers)
         

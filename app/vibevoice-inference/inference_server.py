@@ -71,30 +71,31 @@ def load_default_voices():
     # Try to find voices directory in the vibevoice package
     import vibevoice
     vibevoice_path = Path(vibevoice.__file__).parent
-    voices_dir = vibevoice_path / "demo" / "voices"
+    voices_dir = vibevoice_path / "demo" / "voices" / "streaming_model"
 
     if not voices_dir.exists():
         logger.warning(f"Default voices directory not found at {voices_dir}")
         logger.warning("Voice cloning will not be available. Using zero-shot mode.")
         return
 
-    # Load all available voice files
-    voice_files = list(voices_dir.glob("*.wav"))
+    # Load all available voice preset files (.pt files)
+    voice_files = list(voices_dir.glob("*.pt"))
     for voice_file in voice_files:
-        # Extract speaker name (e.g., "en-Alice_woman" from "en-Alice_woman.wav")
+        # Extract speaker name (e.g., "Carter_man" from "en-Carter_man.pt")
         speaker_name = voice_file.stem.replace("en-", "").replace("in-", "").replace("zh-", "")
-        # Also create a simplified name (e.g., "Alice" from "Alice_woman")
+        # Also create a simplified name (e.g., "Carter" from "Carter_man")
         simple_name = speaker_name.split("_")[0]
 
         try:
-            audio_data = read_audio(str(voice_file))
-            default_voices[speaker_name] = audio_data
-            default_voices[simple_name] = audio_data
+            # Load .pt voice preset file
+            voice_preset = torch.load(str(voice_file), map_location='cpu')
+            default_voices[speaker_name] = voice_preset
+            default_voices[simple_name] = voice_preset
             logger.info(f"Loaded voice: {speaker_name} (alias: {simple_name})")
         except Exception as e:
             logger.error(f"Failed to load voice {voice_file}: {e}")
 
-    logger.info(f"Loaded {len(set(default_voices.values()))} unique default voices")
+    logger.info(f"Loaded {len(set(id(v) for v in default_voices.values()))} unique default voices")
 
 @app.on_event("startup")
 async def load_model():
@@ -210,18 +211,31 @@ async def generate_speech(request: SpeechRequest):
             logger.warning("Generating without voice cloning for missing speakers (lower quality)")
 
         # Prepare inputs
-        inputs = processor(
-            text=[formatted_text],
-            voice_samples=[voice_samples] if voice_samples else None,
-            padding=True,
-            return_tensors="pt",
-            return_attention_mask=True,
-        )
+        logger.info(f"Processing with {len(voice_samples)} voice samples")
+
+        # Only pass voice_samples if we have them
+        processor_kwargs = {
+            "text": [formatted_text],
+            "padding": True,
+            "return_tensors": "pt",
+            "return_attention_mask": True,
+        }
+
+        if voice_samples:
+            processor_kwargs["voice_samples"] = [voice_samples]
+
+        try:
+            inputs = processor(**processor_kwargs)
+        except Exception as e:
+            logger.error(f"Processor failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Text processing failed: {str(e)}")
 
         # Move tensors to device
         for k, v in inputs.items():
-            if torch.is_tensor(v):
+            if v is not None and torch.is_tensor(v):
                 inputs[k] = v.to(device)
+            elif v is None:
+                logger.warning(f"Input '{k}' is None, skipping device transfer")
 
         # Generate audio
         with torch.no_grad():
