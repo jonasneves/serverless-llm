@@ -38,9 +38,6 @@ on:
 
 jobs:
   inference:
-    concurrency:
-      group: ${{ github.workflow }}-${{ matrix.instance }}
-      cancel-in-progress: true
     name: CLaRa 7B Server #${{ matrix.instance }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 350
@@ -227,7 +224,7 @@ jobs:
           fi
 
       - name: Cancel previous workflow (graceful handoff)
-        if: ${{ false }} # temporarily disabled to rule out cross-cancel during startup
+        if: steps.find_previous.outputs.previous_run_id != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PREVIOUS_RUN_ID: ${{ steps.find_previous.outputs.previous_run_id }}
