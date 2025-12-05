@@ -6,6 +6,18 @@ import os
 import sys
 from typing import List, Optional
 import uvicorn
+import json
+import asyncio
+
+try:
+    from huggingface_hub import hf_hub_download
+except Exception:
+    hf_hub_download = None  # Optional
+
+try:
+    from llama_cpp import Llama  # type: ignore
+except Exception:
+    Llama = None  # Optional
 
 # Placeholder for nanochat core logic.
 # In a real scenario, you would clone the nanochat repository
@@ -35,6 +47,8 @@ app.add_middleware(
 # based on how nanochat handles checkpoints, tokenizers, and model architecture.
 model = None
 tokenizer = None
+llm = None  # llama.cpp model if using GGUF
+inference_lock = asyncio.Semaphore(1)
 model_name = os.environ.get("NANOCHAT_MODEL_NAME", "d32") # Default to d32, can be env var
 
 class InferenceRequest(BaseModel):
@@ -63,9 +77,45 @@ class ChatCompletionRequest(BaseModel):
 
 @app.on_event("startup")
 async def load_model():
-    global model, tokenizer
+    global model, tokenizer, llm
     print(f"Loading nanochat model: {model_name}...")
     try:
+        # 1) Prefer GGUF via llama.cpp if configured (HF like others)
+        gguf_repo = os.getenv("NANOCHAT_GGUF_REPO")
+        gguf_file = os.getenv("NANOCHAT_GGUF_FILE")
+        if gguf_repo and gguf_file and hf_hub_download and Llama:
+            print(f"Downloading GGUF from {gguf_repo}/{gguf_file}")
+            model_path = hf_hub_download(
+                repo_id=gguf_repo,
+                filename=gguf_file,
+                cache_dir=os.getenv("HF_HOME", "/tmp/hf_cache")
+            )
+            n_ctx = int(os.getenv("NANOCHAT_N_CTX", "2048"))
+            n_threads = int(os.getenv("NANOCHAT_N_THREADS", "2"))
+
+            print(f"Loading GGUF with n_ctx={n_ctx}, n_threads={n_threads}")
+            llm = Llama(
+                model_path=model_path,
+                n_ctx=n_ctx,
+                n_threads=n_threads,
+                use_mlock=True,
+                use_mmap=True,
+                n_batch=512,
+                last_n_tokens_size=64,
+                verbose=True
+            )
+            # Warm-up
+            try:
+                llm.create_chat_completion(
+                    messages=[{"role": "user", "content": "Hi"}],
+                    max_tokens=1,
+                    temperature=0.1
+                )
+            except Exception as e:
+                print(f"Warm-up warning: {e}")
+            print("nanochat GGUF loaded via llama.cpp")
+            return
+
         # Try to locate a local clone of karpathy/nanochat if available
         nc_path_env = os.environ.get("NANOCHAT_PATH", "")
         repo_guess = os.path.join(os.path.dirname(__file__), "nanochat_repo")
@@ -221,36 +271,137 @@ async def list_models():
     }
 
 
+async def _generate_with_llama(messages: list, max_tokens: int, temperature: float, top_p: float, stream: bool):
+    global llm
+    if llm is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    if stream:
+        async def streamer():
+            try:
+                async with inference_lock:
+                    response = await asyncio.to_thread(
+                        llm.create_chat_completion,
+                        messages=messages,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        stream=True
+                    )
+                    generated_text = ""
+                    for chunk in response:
+                        if "choices" in chunk and chunk["choices"]:
+                            delta = chunk["choices"][0].get("delta", {})
+                            if "content" in delta:
+                                content = delta["content"]
+                                generated_text += content
+                                yield f"data: {json.dumps(chunk)}\n\n"
+                                await asyncio.sleep(0)
+
+                    # Usage chunk
+                    prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+                    prompt_tokens = len(llm.tokenize(prompt_text.encode()))
+                    completion_tokens = len(llm.tokenize(generated_text.encode()))
+                    usage_chunk = {
+                        "choices": [{"delta": {}, "finish_reason": "stop"}],
+                        "usage": {
+                            "prompt_tokens": prompt_tokens,
+                            "completion_tokens": completion_tokens,
+                            "total_tokens": prompt_tokens + completion_tokens
+                        }
+                    }
+                    yield f"data: {json.dumps(usage_chunk)}\n\n"
+                    yield "data: [DONE]\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        return streamer()
+    else:
+        async with inference_lock:
+            response = await asyncio.to_thread(
+                llm.create_chat_completion,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        return response
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
+    # Build messages
+    if request.messages:
+        messages = [{"role": m.role, "content": m.content} for m in request.messages]
+    elif request.prompt:
+        messages = [{"role": "user", "content": request.prompt}]
+    else:
+        raise HTTPException(status_code=400, detail="Either messages or prompt required")
+
+    # llama.cpp path (GGUF via HF)
+    if llm is not None:
+        if request.stream:
+            from fastapi.responses import StreamingResponse
+            return StreamingResponse(
+                _generate_with_llama(messages, request.max_tokens, request.temperature, request.top_p, True),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive"
+                }
+            )
+        else:
+            data = await _generate_with_llama(messages, request.max_tokens, request.temperature, request.top_p, False)
+            return {
+                "id": "chatcmpl-nanochat",
+                "object": "chat.completion",
+                "model": "nanochat-d32-base",
+                "choices": data["choices"],
+                "usage": data["usage"]
+            }
+
+    # Fallback: python model/tokenizer
     if model is None or tokenizer is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     try:
-        # Build messages
-        if request.messages:
-            messages = [{"role": m.role, "content": m.content} for m in request.messages]
-        elif request.prompt:
-            messages = [{"role": "user", "content": request.prompt}]
-        else:
-            raise HTTPException(status_code=400, detail="Either messages or prompt required")
-
-        # Simple prompt aggregation for dummy tokenizer stats
         prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-
-        # Use existing dummy flow
-        dummy_input_ids = tokenizer.encode(prompt_text)
+        input_ids = tokenizer.encode(prompt_text)
         generated_text = model.generate(
-            dummy_input_ids,
+            input_ids,
             request.max_tokens,
             request.temperature,
-            top_k=20  # keep default top_k for dummy
+            top_k=20
         )
 
-        # Token usage (dummy, but required by client)
         prompt_tokens = len(tokenizer.encode(prompt_text))
         completion_tokens = len(tokenizer.encode(generated_text))
         total_tokens = prompt_tokens + completion_tokens
+
+        if request.stream:
+            from fastapi.responses import StreamingResponse
+            async def dummy_stream():
+                first_chunk = {
+                    "choices": [{"delta": {"content": generated_text}}]
+                }
+                yield f"data: {json.dumps(first_chunk)}\n\n"
+                usage_chunk = {
+                    "choices": [{"delta": {}, "finish_reason": "stop"}],
+                    "usage": {
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": total_tokens
+                    }
+                }
+                yield f"data: {json.dumps(usage_chunk)}\n\n"
+                yield "data: [DONE]\n\n"
+            return StreamingResponse(
+                dummy_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive"
+                }
+            )
 
         return {
             "id": "chatcmpl-nanochat",
@@ -269,7 +420,6 @@ async def chat_completions(request: ChatCompletionRequest):
                 "total_tokens": total_tokens
             }
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

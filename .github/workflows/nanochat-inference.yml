@@ -24,6 +24,14 @@ on:
           - '1'
           - '2'
           - '3'
+      gguf_repo:
+        description: 'Hugging Face repo id for GGUF (e.g., user/nanochat-gguf)'
+        required: false
+        type: string
+      gguf_file:
+        description: 'GGUF filename to download (e.g., nanochat-d32-Q4_K_M.gguf)'
+        required: false
+        type: string
 
   repository_dispatch:
     types: [restart-nanochat-inference]
@@ -120,6 +128,8 @@ jobs:
           HF_HOME: /tmp/hf_cache
           NANOCHAT_MODEL_NAME: d32
           PYTHONPATH: ${{ github.workspace }}/app/nanochat-inference/nanochat_repo
+          NANOCHAT_GGUF_REPO: ${{ inputs.gguf_repo }}
+          NANOCHAT_GGUF_FILE: ${{ inputs.gguf_file }}
         run: |
           cd app/nanochat-inference
           echo "=== Starting Nanochat server (Uvicorn) ==="
@@ -296,4 +306,3 @@ jobs:
           echo ""
           echo "=== Tunnel Log ==="
           cat /tmp/tunnel.log 2>/dev/null || echo "No tunnel log"
-

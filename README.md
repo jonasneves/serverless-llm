@@ -190,11 +190,21 @@ python chat_server.py
 ### Nanochat (experimental)
 
 ```bash
-# Start nanochat server (dummy implementation, OpenAI-compatible)
+# Start nanochat server (OpenAI-compatible). Prefer GGUF via Hugging Face:
 pip install -r app/nanochat-inference/requirements.txt
 cd app/nanochat-inference
-export PORT=8007
-python inference_server.py
+
+# Option A: Use Hugging Face GGUF (recommended)
+export NANOCHAT_GGUF_REPO="<repo_id>"          # e.g., your-org/nanochat-d32-GGUF
+export NANOCHAT_GGUF_FILE="<filename.gguf>"     # e.g., nanochat-d32-Q4_K_M.gguf
+uvicorn inference_server:app --host 0.0.0.0 --port 8007
+
+# Option B: Use local nanochat clone + checkpoints
+# export NANOCHAT_PATH=/path/to/karpathy/nanochat
+# export NANOCHAT_CHECKPOINTS_DIR=~/.cache/nanochat
+# export NANOCHAT_CHECKPOINT_FILE=model_latest.pt
+# export NANOCHAT_TOKENIZER_DIR=~/.cache/nanochat
+# uvicorn inference_server:app --host 0.0.0.0 --port 8007
 
 # Point the chat UI to it (new tab)
 cd ../chat-interface
