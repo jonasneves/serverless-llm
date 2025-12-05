@@ -595,8 +595,6 @@ async def chat_completions(request: ChatCompletionRequest):
 
     # No suitable backend loaded
     raise HTTPException(status_code=503, detail="Model not loaded")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
