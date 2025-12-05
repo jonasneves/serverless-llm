@@ -159,6 +159,14 @@ def load_model():
             content = content.replace(cuda_conf, f'# {cuda_conf}')
             modified = True
 
+        # 4. CPU compatibility: Fix mse_loss BFloat16 issue
+        mse_call = "F.mse_loss(non_mem_mean, mem_mean, reduction='mean')"
+        mse_fix = "F.mse_loss(non_mem_mean.float(), mem_mean.float(), reduction='mean')"
+        if mse_call in content:
+            print(f"  - Patching mse_loss for BFloat16 CPU compatibility")
+            content = content.replace(mse_call, mse_fix)
+            modified = True
+
         if modified:
             with open(modeling_file, 'w') as f:
                 f.write(content)
