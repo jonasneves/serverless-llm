@@ -158,7 +158,7 @@ header {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.15);
+  background: transparent;
   border: none;
   color: white;
   cursor: pointer;
