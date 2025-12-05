@@ -170,13 +170,13 @@ header {
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   margin-left: 16px;
   padding-left: 16px;
   border-left: 1px solid rgba(255, 255, 255, 0.3);
