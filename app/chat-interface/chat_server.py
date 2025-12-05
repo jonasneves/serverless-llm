@@ -48,10 +48,6 @@ from voice_engine import VoiceEngine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Force CLaRa to use local endpoint by default to avoid Cloudflare 100s timeout
-if not os.getenv("CLARA_API_URL"):
-    os.environ["CLARA_API_URL"] = "http://localhost:8000"
-
 def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
     """
     Sanitize error messages to hide raw HTML/technical details from users.
@@ -187,7 +183,7 @@ MODEL_CONFIG = (
         "id": "clara-7b-instruct",
         "name": "CLaRa 7B",
         "env": "CLARA_API_URL",
-        "default_url": "http://localhost:8000", # Changed from 8007 to 8000
+        "default_url": "http://localhost:8007",
     },
     {
         "id": "mistral-7b-instruct-v0.3",
