@@ -129,11 +129,13 @@ async def load_model():
         nc_path_env = os.environ.get("NANOCHAT_PATH", "")
         repo_guess = os.path.join(os.path.dirname(__file__), "nanochat_repo")
         candidate_paths = [p for p in [nc_path_env, repo_guess] if p]
+        print(f"nanochat candidate paths: {candidate_paths}")
         loaded_real = False
 
         for p in candidate_paths:
             if os.path.isdir(p) and p not in sys.path:
                 sys.path.insert(0, p)
+                print(f"Added to sys.path: {p}")
         
         # Attempt speculative imports (structure may change upstream)
         try:
@@ -149,6 +151,7 @@ async def load_model():
                     nc_model = NC_GPT
                 except Exception:
                     pass
+            print(f"Imported nc_model: {'ok' if nc_model else 'missing'}")
             try:
                 from tokenizer import Tokenizer as NC_Tokenizer  # type: ignore
                 nc_tokenizer = NC_Tokenizer  # noqa
@@ -158,6 +161,7 @@ async def load_model():
                     nc_tokenizer = NC_Tokenizer
                 except Exception:
                     pass
+            print(f"Imported nc_tokenizer: {'ok' if nc_tokenizer else 'missing'}")
 
             if nc_model and nc_tokenizer:
                 # If upstream exposes config helpers
@@ -171,6 +175,7 @@ async def load_model():
                         cfg = nc_get_config(model_name)
                     except Exception:
                         cfg = None
+                print(f"Repo get_config available: {'yes' if cfg is not None else 'no'}")
 
                 if cfg is not None:
                     model_obj = nc_model(cfg)
@@ -210,6 +215,7 @@ async def load_model():
                                 print(f"Failed to instantiate model from meta config: {e}")
                         except Exception as e:
                             print(f"Meta config build failed: {e}")
+                print(f"Model instantiated: {'yes' if model_obj is not None else 'no'}")
 
                 # Load checkpoint if provided
                 ckpt_dir = os.environ.get("NANOCHAT_CHECKPOINTS_DIR", "")
@@ -249,6 +255,7 @@ async def load_model():
                         tokenizer_obj = nc_tokenizer()
                     except Exception:
                         tokenizer_obj = None
+                print(f"Tokenizer from local path/init: {'yes' if tokenizer_obj is not None else 'no'}")
 
                 # Try to fetch HF PT assets and tokenizer if not present
                 if hf_hub_download and model_obj is not None:
@@ -276,6 +283,7 @@ async def load_model():
                     except Exception as e:
                         print(f"HF asset download failed or not configured: {e}")
                         ckpt_path = ckpt_path if 'ckpt_path' in locals() else ''
+                print(f"Tokenizer after HF fetch: {'yes' if tokenizer_obj is not None else 'no'}")
 
                 if model_obj is not None and tokenizer_obj is not None:
                     model = model_obj
@@ -283,6 +291,13 @@ async def load_model():
                     loaded_real = True
                     backend = "nanochat_local"
                     print("Loaded real nanochat model via local repo imports.")
+                elif model_obj is not None and tokenizer_obj is None:
+                    # Allow startup with model loaded; tokenizer may be initialized later
+                    model = model_obj
+                    tokenizer = None
+                    loaded_real = True
+                    backend = "nanochat_local"
+                    print("Loaded nanochat model without tokenizer (generation may fail until tokenizer loads).")
         except Exception as e:
             print(f"Nanochat real import attempt failed: {e}")
 
