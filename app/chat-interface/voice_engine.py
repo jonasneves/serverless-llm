@@ -152,7 +152,7 @@ Rules:
         payload = {
             "text": prepared_script,
             "speakers": speakers,
-            "format": "mp3" # or wav
+            "format": "wav"
         }
 
         # Allow deployments to tune synthesis timeout without redeploying.
