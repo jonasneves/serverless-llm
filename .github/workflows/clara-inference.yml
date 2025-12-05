@@ -98,33 +98,35 @@ jobs:
           echo "=== Disk space after cleanup ==="
           df -h
 
-      - name: Ensure 8G swap (idempotent)
+      - name: Ensure 12G swap (idempotent)
         run: |
           set -e
-          if sudo swapon --show | awk '{print $1}' | grep -qx '/swapfile'; then
-            echo "Swapfile already active. Skipping creation."
-            sudo swapon --show
-          else
-            if [ -f /swapfile ]; then
-              echo "/swapfile exists but is not active. Activating..."
-              sudo chmod 600 /swapfile || true
-              sudo mkswap /swapfile || true
-              sudo swapon /swapfile
-            else
-              echo "Creating 8G swapfile..."
-              if sudo fallocate -l 8G /swapfile 2>/dev/null; then
-                echo "fallocate succeeded"
-              else
-                echo "fallocate failed; falling back to dd (this may take a while)"
-                sudo dd if=/dev/zero of=/swapfile bs=1M count=8192 status=progress
-              fi
-              sudo chmod 600 /swapfile
-              sudo mkswap /swapfile
-              sudo swapon /swapfile
+          desired=$((12 * 1024 * 1024 * 1024))
+          current=$(free -b | awk '/Swap:/ { print $2 }')
+          echo "Current total swap: $current bytes"
+          if [ -z "$current" ] || [ "$current" -lt "$desired" ]; then
+            echo "Configuring swapfile to 12G..."
+            # If an existing swapfile is active, turn it off first
+            if sudo swapon --show | awk '{print $1}' | grep -qx '/swapfile'; then
+              sudo swapoff /swapfile || true
             fi
-            echo "Swap enabled:"
-            sudo swapon --show
+            # Create or resize /swapfile
+            if sudo fallocate -l 12G /swapfile 2>/dev/null; then
+              echo "fallocate 12G succeeded"
+            else
+              echo "fallocate failed; using dd (this may take a while)"
+              sudo dd if=/dev/zero of=/swapfile bs=1M count=12288 status=progress
+            fi
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+          else
+            echo "Swap already >= 12G; leaving as-is."
           fi
+          echo "Swap status:"; sudo swapon --show
+          echo "Setting vm.swappiness to 80"
+          echo 'vm.swappiness=80' | sudo tee /etc/sysctl.d/99-swappiness.conf >/dev/null
+          sudo sysctl -p /etc/sysctl.d/99-swappiness.conf || true
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v3

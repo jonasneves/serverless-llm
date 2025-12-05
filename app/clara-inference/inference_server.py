@@ -217,14 +217,38 @@ def load_model():
         pass
 
     t_load = time.perf_counter()
-    try:
-        # Prefer safetensors if available; keep options minimal for remote code
-        clara_model = AutoModel.from_pretrained(
-            model_path,
-            trust_remote_code=True,
-            use_safetensors=True,
-            low_cpu_mem_usage=True
-        ).to(device)
+    # Try to load with reduced-precision weights to cut RAM use
+    dtype_env = os.getenv("CLARA_DTYPE", "bfloat16").lower()
+    dtype_order = [dtype_env, "float16", "float32"]
+    dtype_map = {
+        "bfloat16": torch.bfloat16,
+        "float16": torch.float16,
+        "float32": torch.float32,
+        "fp16": torch.float16,
+        "bf16": torch.bfloat16,
+        "fp32": torch.float32,
+    }
+    last_exc = None
+    for dtype_name in dtype_order:
+        torch_dtype = dtype_map.get(dtype_name, torch.float32)
+        try:
+            print(f"Attempting load with torch_dtype={dtype_name}")
+            clara_model = AutoModel.from_pretrained(
+                model_path,
+                trust_remote_code=True,
+                use_safetensors=True,
+                low_cpu_mem_usage=True,
+                torch_dtype=torch_dtype,
+            ).to(device)
+            print(f"Load succeeded with dtype={dtype_name}")
+            last_exc = None
+            break
+        except Exception as e:
+            print(f"Load attempt with dtype={dtype_name} failed: {e}")
+            last_exc = e
+            continue
+    if last_exc is not None:
+        raise last_exc
     except ValueError as e:
         if "Dropout" in str(e) and "not supported" in str(e):
             print(f"\n{'='*60}")
