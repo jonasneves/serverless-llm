@@ -17,7 +17,7 @@ from tools.code_executor import CodeExecutorTool
 logger = logging.getLogger(__name__)
 
 
-class OrchestratorEngine:
+class ToolOrchestrator:
     """
     Multi-turn orchestration engine
     Uses Qwen as orchestrator to decide which tools/models to call

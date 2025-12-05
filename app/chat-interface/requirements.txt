@@ -1,8 +1,8 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 httpx==0.25.2
-pydantic>=2.0.0
+pydantic==2.10.1
 aiohttp==3.9.1
-autogen-agentchat>=0.7.5
-autogen-ext[openai]>=0.7.5
-jinja2
+autogen-agentchat>=0.2.0
+autogen-ext[openai]>=0.2.0
+jinja2==3.1.4

@@ -31,7 +31,7 @@ from model_profiles import MODEL_PROFILES
 
 # Orchestrator mode imports
 from autogen_orchestrator import AutoGenOrchestrator
-from orchestrator_engine import OrchestratorEngine as ToolOrchestratorEngine # Avoid naming conflict
+from tool_orchestrator import ToolOrchestrator
 
 # Verbalized Sampling mode imports
 from verbalized_sampling_engine import VerbalizedSamplingEngine
@@ -1089,25 +1089,7 @@ async def stream_orchestrator_events(
         pass
 
     try:
-        # We will assume OrchestratorEngine from orchestrator_engine.py is the one we want to use if we want to use the refactored code.
-        # However, if I change the class used, I might break something.
-        # The user asked to review architecture. I am improving performance by adding connection pooling.
-        # If `autogen_orchestrator.py` is used, I should refactor that too!
-        
-        # Let's stick to the original class usage `AutoGenOrchestrator` but I must ensure `autogen_orchestrator.py` ALSO uses the shared client if I want the benefit there.
-        # But wait, I refactored `orchestrator_engine.py`!
-        # If `chat_server.py` doesn't use `orchestrator_engine.py`, then my refactor was useless for the running app?
-        # `orchestrator_engine.py` is imported in `chat_server.py`?
-        # Original `chat_server.py` imports:
-        # from orchestrator import GitHubModelsOrchestrator
-        # from discussion_engine import DiscussionEngine
-        # from autogen_orchestrator import AutoGenOrchestrator
-        # from verbalized_sampling_engine import VerbalizedSamplingEngine
-        
-        # It does NOT import `OrchestratorEngine` from `orchestrator_engine.py`.
-        # This is strange. `AGENTS.md` says `orchestrator_engine.py` is the core.
-        # Maybe `autogen_orchestrator.py` imports `OrchestratorEngine`?
-        
+        # Use ToolOrchestrator which is now the renamed AutoGenOrchestrator
         engine = AutoGenOrchestrator()
 
         async for event in engine.run_orchestration(
@@ -1154,6 +1136,52 @@ async def orchestrator_stream(request: OrchestratorRequest):
     """
     return StreamingResponse(
         stream_orchestrator_events(
+            request.query,
+            request.max_tokens,
+            request.temperature,
+            request.max_rounds
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+# ToolOrchestrator Endpoint
+async def stream_tool_orchestrator_events(
+    query: str,
+    max_tokens: int,
+    temperature: float,
+    max_rounds: int
+) -> AsyncGenerator[str, None]:
+    """
+    Stream ToolOrchestrator events (formerly OrchestratorEngine)
+    """
+    try:
+        engine = ToolOrchestrator(max_rounds=max_rounds)
+
+        async for event in engine.run_orchestration(
+            query=query,
+            max_tokens=max_tokens,
+            temperature=temperature
+        ):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        logger.error(f"ToolOrchestrator error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+
+
+@app.post("/api/chat/tool-orchestrator/stream")
+async def tool_orchestrator_stream(request: OrchestratorRequest):
+    """
+    Stream ToolOrchestrator-style intelligent orchestration
+    """
+    return StreamingResponse(
+        stream_tool_orchestrator_events(
             request.query,
             request.max_tokens,
             request.temperature,
