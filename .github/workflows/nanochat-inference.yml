@@ -24,19 +24,6 @@ on:
           - '1'
           - '2'
           - '3'
-      gguf_repo:
-        description: 'Hugging Face repo id for GGUF (e.g., user/nanochat-gguf)'
-        required: false
-        type: string
-      gguf_file:
-        description: 'GGUF filename to download (e.g., nanochat-d32-Q4_K_M.gguf)'
-        required: false
-        type: string
-      hf_model:
-        description: 'Transformers model id (HF) if not using GGUF (e.g., karpathy/nanochat-d34)'
-        required: false
-        default: 'karpathy/nanochat-d34'
-        type: string
 
   repository_dispatch:
     types: [restart-nanochat-inference]
@@ -113,15 +100,6 @@ jobs:
         run: |
           uv pip install -r app/nanochat-inference/requirements.txt
 
-      - name: Clone nanochat repo
-        run: |
-          cd app/nanochat-inference
-          if [ ! -d nanochat_repo/.git ]; then
-            git clone https://github.com/karpathy/nanochat.git nanochat_repo
-          else
-            echo "nanochat_repo already exists"
-          fi
-
       - name: Install cloudflared
         run: |
           curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o cloudflared
@@ -132,11 +110,7 @@ jobs:
         env:
           HF_HOME: /tmp/hf_cache
           HUGGING_FACE_HUB_TOKEN: ${{ secrets.HF_TOKEN }}
-          NANOCHAT_MODEL_NAME: d32
-          PYTHONPATH: ${{ github.workspace }}/app/nanochat-inference/nanochat_repo
-          NANOCHAT_GGUF_REPO: ${{ inputs.gguf_repo }}
-          NANOCHAT_GGUF_FILE: ${{ inputs.gguf_file }}
-          NANOCHAT_HF_MODEL: ${{ inputs.hf_model }}
+          NANOCHAT_MODEL_NAME: d34
         run: |
           cd app/nanochat-inference
           echo "=== Starting Nanochat server (Uvicorn) ==="

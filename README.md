@@ -84,10 +84,6 @@ gh workflow run chat-interface.yml
 
 # Start Nanochat server (optional)
 gh workflow run nanochat-inference.yml
-  # To use d34 via Transformers:
-  # gh workflow run nanochat-inference.yml -f hf_model="karpathy/nanochat-d34"
-  # To use GGUF instead:
-  # gh workflow run nanochat-inference.yml -f gguf_repo="<repo_id>" -f gguf_file="<filename.gguf>"
 ```
 
 ## OpenAI-Compatible API
