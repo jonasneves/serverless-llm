@@ -20,12 +20,9 @@ try:
 except Exception:
     Llama = None  # Optional
 
-try:
-    from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer  # type: ignore
-except Exception:
-    AutoTokenizer = None  # type: ignore
-    AutoModelForCausalLM = None  # type: ignore
-    TextIteratorStreamer = None  # type: ignore
+# Note: We do not use Hugging Face Transformers for nanochat d34, since the
+# HF repo does not provide a transformers-compatible config. We rely on either
+# llama.cpp GGUF (if provided) or the native nanochat Python repo + PT weights.
 
 # Placeholder for nanochat core logic.
 # In a real scenario, you would clone the nanochat repository
@@ -61,7 +58,6 @@ inference_lock = asyncio.Semaphore(1)
 from typing import Optional as _Optional
 backend: _Optional[str] = None
 model_name = os.environ.get("NANOCHAT_MODEL_NAME", "d34")  # Default to d34
-hf_model_id = os.environ.get("NANOCHAT_HF_MODEL", "karpathy/nanochat-d34")
 
 class InferenceRequest(BaseModel):
     prompt: str
@@ -179,7 +175,8 @@ async def load_model():
                 if cfg is not None:
                     model_obj = nc_model(cfg)
                 else:
-                    model_obj = nc_model  # May be a prebuilt object (unlikely)
+                    print("nanochat config.get_config not found; cannot instantiate model without config")
+                    model_obj = None
 
                 # Load checkpoint if provided
                 ckpt_dir = os.environ.get("NANOCHAT_CHECKPOINTS_DIR", "")
@@ -191,7 +188,7 @@ async def load_model():
                 else:
                     ckpt_path = ""
 
-                if ckpt_path and os.path.exists(ckpt_path):
+                if model_obj is not None and ckpt_path and os.path.exists(ckpt_path):
                     sd = torch.load(ckpt_path, map_location="cpu")
                     try:
                         model_obj.load_state_dict(sd)
@@ -221,7 +218,7 @@ async def load_model():
                         tokenizer_obj = None
 
                 # Try to fetch HF PT assets if not present
-                if hf_hub_download:
+                if hf_hub_download and model_obj is not None:
                     hf_pt_repo = os.getenv("NANOCHAT_HF_PT_REPO", "karpathy/nanochat-" + model_name)
                     model_file = os.getenv("NANOCHAT_HF_MODEL_FILE", "model_169150.pt" if model_name == "d34" else "model.pt")
                     tok_file = os.getenv("NANOCHAT_HF_TOKENIZER_FILE", "tokenizer.pkl")
@@ -255,20 +252,7 @@ async def load_model():
         except Exception as e:
             print(f"Nanochat real import attempt failed: {e}")
 
-        if not loaded_real and AutoTokenizer is not None and AutoModelForCausalLM is not None:
-            # 2) Try Transformers from Hugging Face (karpathy/nanochat-d34 by default)
-            try:
-                print(f"Loading Transformers model from HF: {hf_model_id}")
-                tok = AutoTokenizer.from_pretrained(hf_model_id)
-                mdl = AutoModelForCausalLM.from_pretrained(hf_model_id)
-                mdl.eval()
-                model = mdl
-                tokenizer = tok
-                loaded_real = True
-                backend = "hf_transformers"
-                print("Loaded nanochat via Transformers (HF)")
-            except Exception as e:
-                print(f"HF Transformers load failed: {e}")
+        # No Transformers path (not supported for nanochat d34)
 
         if not loaded_real:
             raise RuntimeError("Failed to load nanochat via llama.cpp, local backend, or HF Transformers")
@@ -292,17 +276,7 @@ async def generate_text(request: InferenceRequest):
             text = data["choices"][0]["message"]["content"]
             return InferenceResponse(generated_text=text)
 
-        if backend == "hf_transformers" and model is not None and tokenizer is not None:
-            inputs = tokenizer(request.prompt, return_tensors="pt")
-            output_ids = model.generate(
-                **inputs,
-                max_new_tokens=request.max_new_tokens,
-                do_sample=True,
-                temperature=request.temperature,
-                top_p=1.0,
-            )
-            text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-            return InferenceResponse(generated_text=text)
+        # No Transformers path
 
         if backend == "nanochat_local" and model is not None and tokenizer is not None:
             input_ids = tokenizer.encode(request.prompt)
@@ -326,7 +300,7 @@ async def generate_text(request: InferenceRequest):
 
 @app.get("/health")
 async def health_check():
-    ready = (backend in {"llama_cpp", "hf_transformers", "nanochat_local"}) and (model is not None or llm is not None)
+    ready = (backend in {"llama_cpp", "nanochat_local"}) and (model is not None or llm is not None)
     return {
         "status": "healthy" if ready else "loading",
         "model": f"nanochat-{model_name}"
@@ -434,95 +408,7 @@ async def chat_completions(request: ChatCompletionRequest):
                 "usage": data["usage"]
             }
 
-    # Transformers path (HF)
-    if backend == "hf_transformers" and model is not None and tokenizer is not None:
-        # Prepare input
-        prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-        if request.stream and TextIteratorStreamer is not None:
-            from fastapi.responses import StreamingResponse
-
-            async def stream_hf():
-                nonlocal prompt_text
-                streamer = TextIteratorStreamer(tokenizer, skip_special_tokens=True, timeout=60.0)
-                inputs = tokenizer(prompt_text, return_tensors="pt")
-
-                gen_kwargs = dict(
-                    **inputs,
-                    streamer=streamer,
-                    max_new_tokens=request.max_tokens,
-                    do_sample=True,
-                    temperature=request.temperature,
-                    top_p=request.top_p,
-                )
-
-                # Run generation in a thread
-                thread = threading.Thread(target=model.generate, kwargs=gen_kwargs)
-                thread.start()
-
-                generated_text = ""
-                try:
-                    for piece in streamer:
-                        if piece:
-                            generated_text += piece
-                            chunk = {"choices": [{"delta": {"content": piece}}]}
-                            yield f"data: {json.dumps(chunk)}\n\n"
-                            await asyncio.sleep(0)
-                finally:
-                    thread.join(timeout=0)
-
-                # Usage estimation
-                prompt_tokens = len(tokenizer.encode(prompt_text))
-                completion_tokens = len(tokenizer.encode(generated_text))
-                usage_chunk = {
-                    "choices": [{"delta": {}, "finish_reason": "stop"}],
-                    "usage": {
-                        "prompt_tokens": prompt_tokens,
-                        "completion_tokens": completion_tokens,
-                        "total_tokens": prompt_tokens + completion_tokens
-                    }
-                }
-                yield f"data: {json.dumps(usage_chunk)}\n\n"
-                yield "data: [DONE]\n\n"
-
-            return StreamingResponse(
-                stream_hf(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive"
-                }
-            )
-        else:
-            # Non-streaming
-            inputs = tokenizer(prompt_text, return_tensors="pt")
-            output_ids = model.generate(
-                **inputs,
-                max_new_tokens=request.max_tokens,
-                do_sample=True,
-                temperature=request.temperature,
-                top_p=request.top_p,
-            )
-            generated_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-
-            prompt_tokens = len(tokenizer.encode(prompt_text))
-            completion_tokens = len(tokenizer.encode(generated_text))
-            return {
-                "id": "chatcmpl-nanochat",
-                "object": "chat.completion",
-                "model": "nanochat-d34",
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {"role": "assistant", "content": generated_text},
-                        "finish_reason": "stop"
-                    }
-                ],
-                "usage": {
-                    "prompt_tokens": prompt_tokens,
-                    "completion_tokens": completion_tokens,
-                    "total_tokens": prompt_tokens + completion_tokens
-                }
-            }
+    # No Transformers path
 
     # nanochat local path
     if backend == "nanochat_local" and model is not None and tokenizer is not None:
