@@ -329,7 +329,7 @@ async def health_check():
     ready = (backend in {"llama_cpp", "hf_transformers", "nanochat_local"}) and (model is not None or llm is not None)
     return {
         "status": "healthy" if ready else "loading",
-        "model": f"nanochat-{model_name}-base"
+        "model": f"nanochat-{model_name}"
     }
 
 
@@ -338,7 +338,7 @@ async def list_models():
     return {
         "data": [
             {
-                "id": "nanochat-d34-base",
+                "id": "nanochat-d34",
                 "object": "model",
                 "owned_by": "nanochat"
             }
@@ -429,7 +429,7 @@ async def chat_completions(request: ChatCompletionRequest):
             return {
                 "id": "chatcmpl-nanochat",
                 "object": "chat.completion",
-                "model": "nanochat-d34-base",
+                "model": "nanochat-d34",
                 "choices": data["choices"],
                 "usage": data["usage"]
             }
@@ -509,7 +509,7 @@ async def chat_completions(request: ChatCompletionRequest):
             return {
                 "id": "chatcmpl-nanochat",
                 "object": "chat.completion",
-                "model": "nanochat-d34-base",
+                "model": "nanochat-d34",
                 "choices": [
                     {
                         "index": 0,
@@ -580,7 +580,7 @@ async def chat_completions(request: ChatCompletionRequest):
             return {
                 "id": "chatcmpl-nanochat",
                 "object": "chat.completion",
-                "model": "nanochat-d34-base",
+                "model": "nanochat-d34",
                 "choices": [
                     {"index": 0, "message": {"role": "assistant", "content": out_text}, "finish_reason": "stop"}
                 ],

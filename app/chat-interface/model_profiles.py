@@ -416,7 +416,7 @@ GEMMA2_9B_PROFILE = {
 }
 
 NANOCHAT_D32_PROFILE = {
-    "model_id": "nanochat-d34-base",
+    "model_id": "nanochat-d34",
     "display_name": "Nanochat d34",
     "creator": "Andrej Karpathy",
     "size": "1.9B parameters",
@@ -462,7 +462,7 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
     "qwen2.5-14b-instruct": QWEN_14B_PROFILE,
     "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
-    "nanochat-d34-base": NANOCHAT_D32_PROFILE,
+    "nanochat-d34": NANOCHAT_D32_PROFILE,
     # API models
     "gpt-4.1": GPT4_1_PROFILE,
     "gpt-4o": GPT4O_PROFILE,

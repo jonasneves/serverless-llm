@@ -6,7 +6,7 @@
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
 [![Qwen 14B API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-14b-instruct)](https://qwen14b.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
-[![Nanochat API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/nanochat-d34-base)](https://nanochat.neevs.io/health)
+[![Nanochat API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/nanochat-d34)](https://nanochat.neevs.io/health)
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
