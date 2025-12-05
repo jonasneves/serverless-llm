@@ -87,7 +87,7 @@ def load_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
 
-    # Download the entire repo
+    # Download only what's needed for the selected compression level
     cache_dir = os.getenv("HF_HOME", None)
     # Speed up large downloads on Actions: allow only needed files and enable hf_transfer if available
     allow_patterns = [f"compression-{compression}/*", "tokenizer.*", "tokenizer_config.json", "config.json", "*.py"]
@@ -100,6 +100,25 @@ def load_model():
     )
     print(f"Snapshot download completed in {time.perf_counter() - t_download:.1f}s")
 
+    # Prefetch base decoder model into cache to avoid download during load
+    try:
+        base_decoder_repo = "mistralai/Mistral-7B-Instruct-v0.2"
+        print(f"Prefetching base decoder: {base_decoder_repo}")
+        t_prefetch = time.perf_counter()
+        snapshot_download(
+            repo_id=base_decoder_repo,
+            cache_dir=cache_dir,
+            token=os.getenv("HF_TOKEN"),
+            allow_patterns=[
+                "config.json", "generation_config.json", "*.safetensors",
+                "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json",
+                "vocab.json", "merges.txt"
+            ]
+        )
+        print(f"Prefetch completed in {time.perf_counter() - t_prefetch:.1f}s")
+    except Exception as e:
+        print(f"Prefetch warning: {e}")
+
     # Load from the compression subfolder
     model_path = os.path.join(repo_path, f"compression-{compression}")
 
@@ -111,7 +130,7 @@ def load_model():
     with open(config_file, 'r') as f:
         config_dict = json.load(f)
 
-    # Replace hardcoded local paths with HF model IDs
+    # Replace hardcoded local paths with HF model IDs and force inference-only
     patched = False
     if 'compr_base_model_name' in config_dict and '/mnt/ceph_rbd' in config_dict['compr_base_model_name']:
         print(f"Patching compr_base_model_name: {config_dict['compr_base_model_name']} -> mistralai/Mistral-7B-Instruct-v0.2")
@@ -121,6 +140,12 @@ def load_model():
     if 'decoder_model_name' in config_dict and '/mnt/ceph_rbd' in config_dict['decoder_model_name']:
         print(f"Patching decoder_model_name: {config_dict['decoder_model_name']} -> mistralai/Mistral-7B-Instruct-v0.2")
         config_dict['decoder_model_name'] = "mistralai/Mistral-7B-Instruct-v0.2"
+        patched = True
+
+    # Prefer pure inference mode on server to avoid training-specific paths
+    if config_dict.get('pure_inference') is False:
+        print("Setting pure_inference=True in config to avoid training logic")
+        config_dict['pure_inference'] = True
         patched = True
 
     # Write patched config back to disk
