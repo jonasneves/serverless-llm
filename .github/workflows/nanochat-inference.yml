@@ -114,6 +114,10 @@ jobs:
           else
             echo "nanochat_repo already exists"
           fi
+          echo "=== nanochat_repo tree (top-level) ==="
+          ls -la nanochat_repo || true
+          echo "=== nanochat_repo tree (2 levels) ==="
+          find nanochat_repo -maxdepth 2 -type f -print | head -200 || true
 
       - name: Start inference server
         env:
