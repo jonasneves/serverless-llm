@@ -110,7 +110,7 @@ jobs:
           HF_HOME: /tmp/hf_cache
         run: |
           cd app/vibevoice-inference
-          python inference_server.py 2>&1 | tee /tmp/inference_server.log &
+          python -u inference_server.py 2>&1 | tee /tmp/inference_server.log &
           SERVER_PID=$!
           echo "Server PID: $SERVER_PID"
           echo "Waiting for model to download and load..."
