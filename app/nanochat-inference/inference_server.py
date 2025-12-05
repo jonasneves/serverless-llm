@@ -180,21 +180,32 @@ async def load_model():
             try:
                 from tokenizer import Tokenizer as NC_Tokenizer  # type: ignore
                 nc_tokenizer = NC_Tokenizer  # noqa
-            except Exception:
+            except Exception as e1:
+                print(f"Direct tokenizer import failed: {e1}")
                 try:
                     from nanochat.tokenizer import Tokenizer as NC_Tokenizer  # type: ignore
                     nc_tokenizer = NC_Tokenizer
-                except Exception:
+                except Exception as e2:
+                    print(f"nanochat.tokenizer import failed: {e2}")
                     # Search for tokenizer.py in repo
                     if candidate_paths:
                         tok_file = _find_file(candidate_paths[0], "tokenizer.py")
+                        print(f"Found tokenizer.py at: {tok_file}")
                         if tok_file and os.path.isfile(tok_file):
                             try:
                                 mod = _load_module_from_file("nanochat_tokenizer_dyn", tok_file)
                                 if hasattr(mod, "Tokenizer"):
                                     nc_tokenizer = getattr(mod, "Tokenizer")
+                                else:
+                                    print(f"Module loaded but no Tokenizer attribute found")
                             except Exception as e:
                                 print(f"Dynamic load of tokenizer.py failed: {e}")
+                                import traceback
+                                traceback.print_exc()
+                        else:
+                            print(f"tokenizer.py not found or not a file")
+                    else:
+                        print(f"No candidate paths to search for tokenizer.py")
             print(f"Imported nc_tokenizer: {'ok' if nc_tokenizer else 'missing'}")
 
             if nc_model and nc_tokenizer:
