@@ -1,8 +1,11 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import torch
 import os
 import sys
+from typing import List, Optional
+import uvicorn
 
 # Placeholder for nanochat core logic.
 # In a real scenario, you would clone the nanochat repository
@@ -13,7 +16,19 @@ import sys
 # sys.path.insert(0, NANOCHAT_PATH)
 # from nanochat.model import GPT  # This is an educated guess
 
-app = FastAPI()
+app = FastAPI(
+    title="nanochat Inference API",
+    description="REST API for nanochat model inference",
+    version="0.1.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Model loading placeholder
 # This will be replaced with actual nanochat model loading logic
@@ -30,6 +45,21 @@ class InferenceRequest(BaseModel):
 
 class InferenceResponse(BaseModel):
     generated_text: str
+
+
+# OpenAI-compatible request/response models
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatCompletionRequest(BaseModel):
+    prompt: Optional[str] = None
+    messages: Optional[List[ChatMessage]] = None
+    max_tokens: int = 512
+    temperature: float = 0.7
+    top_p: float = 0.9
+    stream: bool = False
 
 @app.on_event("startup")
 async def load_model():
@@ -117,3 +147,74 @@ async def generate_text(request: InferenceRequest):
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "model_loaded": model is not None}
+
+
+@app.get("/v1/models")
+async def list_models():
+    return {
+        "data": [
+            {
+                "id": "nanochat-d32-base",
+                "object": "model",
+                "owned_by": "nanochat"
+            }
+        ]
+    }
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: ChatCompletionRequest):
+    if model is None or tokenizer is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    try:
+        # Build messages
+        if request.messages:
+            messages = [{"role": m.role, "content": m.content} for m in request.messages]
+        elif request.prompt:
+            messages = [{"role": "user", "content": request.prompt}]
+        else:
+            raise HTTPException(status_code=400, detail="Either messages or prompt required")
+
+        # Simple prompt aggregation for dummy tokenizer stats
+        prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+
+        # Use existing dummy flow
+        dummy_input_ids = tokenizer.encode(prompt_text)
+        generated_text = model.generate(
+            dummy_input_ids,
+            request.max_tokens,
+            request.temperature,
+            top_k=20  # keep default top_k for dummy
+        )
+
+        # Token usage (dummy, but required by client)
+        prompt_tokens = len(tokenizer.encode(prompt_text))
+        completion_tokens = len(tokenizer.encode(generated_text))
+        total_tokens = prompt_tokens + completion_tokens
+
+        return {
+            "id": "chatcmpl-nanochat",
+            "object": "chat.completion",
+            "model": "nanochat-d32-base",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": generated_text},
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

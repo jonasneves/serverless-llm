@@ -180,6 +180,21 @@ export LLAMA_API_URL=http://localhost:8003
 python chat_server.py
 ```
 
+### Nanochat (experimental)
+
+```bash
+# Start nanochat server (dummy implementation, OpenAI-compatible)
+pip install -r app/nanochat-inference/requirements.txt
+cd app/nanochat-inference
+export PORT=8007
+python inference_server.py
+
+# Point the chat UI to it (new tab)
+cd ../chat-interface
+export NANOCHAT_API_URL=http://localhost:8007
+python chat_server.py
+```
+
 ## License
 
 MIT License - see [LICENSE](LICENSE)

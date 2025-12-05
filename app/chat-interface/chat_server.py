@@ -198,6 +198,12 @@ MODEL_CONFIG = (
         "env": "LLAMA_API_URL",
         "default_url": "http://localhost:8003",
     },
+    {
+        "id": "nanochat-d32-base",
+        "name": "nanochat d32 Base",
+        "env": "NANOCHAT_API_URL",
+        "default_url": "http://localhost:8007",
+    },
 )
 
 # Base domain configuration for production (Cloudflare tunnels)
