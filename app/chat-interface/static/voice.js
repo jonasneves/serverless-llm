@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const speaker1Input = document.getElementById('speaker1Input');
     const speaker2Input = document.getElementById('speaker2Input');
     const generateScriptBtn = document.getElementById('generateScriptBtn');
+    const loadExampleBtn = document.getElementById('loadExampleBtn');
     const scriptDisplay = document.getElementById('scriptDisplay');
     const generateAudioBtn = document.getElementById('generateAudioBtn');
     const statusBadge = document.getElementById('statusBadge');
@@ -88,6 +89,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         return buffer;
     }
 
+    // Load Example Template
+    loadExampleBtn.addEventListener('click', () => {
+        // Set inputs to match the example
+        speaker1Input.value = "Alice";
+        speaker2Input.value = "Bob";
+        topicInput.value = "Quick greeting";
+        
+        const exampleScript = `Alice: Hey Bob, have you seen the new voice studio update?
+Bob: Yes Alice, it's pretty incredible. The latency is almost zero!
+Alice: I know right? And the quality is surprisingly good for a serverless setup.
+Bob: Absolutely. I can't wait to see what people build with it.`;
+        
+        scriptDisplay.innerText = exampleScript;
+        generateAudioBtn.disabled = false;
+        setLoading(false, "Example Loaded");
+    });
+
     generateScriptBtn.addEventListener('click', async () => {
         const topic = topicInput.value.trim();
         if (!topic) {
@@ -101,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        setLoading(true, `Writing Script (${modelSelect.options[modelSelect.selectedIndex].text})...`);
+        setLoading(true, `Writing Script...`);
         scriptDisplay.textContent = ""; // Clear previous
         currentScript = "";
         generateAudioBtn.disabled = true;
@@ -131,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (data.event === 'error') {
                     console.error(data.error);
                     setLoading(false, "Error");
-                    scriptDisplay.innerText += `\n[Error: ${data.error}]`;
+                    scriptDisplay.innerText += `\n\n[Error: ${data.error}]`;
                 }
             });
         } catch (err) {
@@ -165,13 +183,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         audioPlayer.src = data.url;
                         downloadLink.href = data.url;
                     } else if (data.data) {
-                        const audioBlob = base64ToBlob(data.data, 'audio/mp3');
+                        const audioBlob = base64ToBlob(data.data, 'audio/wav');
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayer.src = audioUrl;
                         downloadLink.href = audioUrl;
                     }
 
                     audioPlayerContainer.classList.add('visible');
+                    // Auto-play when ready
+                    audioPlayer.play().catch(e => console.log("Auto-play prevented:", e));
                     setLoading(false, "Audio Ready");
                 } else if (data.event === 'error') {
                     setLoading(false, "Error");
@@ -190,9 +210,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isLoading) {
             statusBadge.innerHTML = `<span class="loading-wave"><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span></span> ${text}`;
             generateScriptBtn.disabled = true;
+            generateAudioBtn.disabled = true;
         } else {
             statusBadge.textContent = text;
             generateScriptBtn.disabled = false;
+            // Only enable audio gen if script is not empty
+            if (scriptDisplay.innerText.trim().length > 0) {
+                generateAudioBtn.disabled = false;
+            }
         }
     }
     

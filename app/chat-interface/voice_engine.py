@@ -9,6 +9,7 @@ Orchestrates the creation of audio content:
 import json
 import logging
 import os
+import re
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
@@ -51,9 +52,8 @@ class VoiceEngine:
         Generates a script using the configured LLM.
         Yields chunks of the generated script for real-time UI feedback.
         """
-        if not speakers:
-            # Use actual available voices from VibeVoice
-            speakers = ["Emma", "Carter"]
+        if not speakers or len(speakers) < 2:
+            speakers = ["Alice", "Bob"]
         
         speakers_str = ", ".join(speakers)
         
@@ -62,13 +62,14 @@ Your task is to write a lively, engaging {style} script about the TOPIC: "{topic
 
 Participants: {speakers_str}.
 
-Rules:
-1. Write ONLY the dialogue.
-2. Use the format: "Speaker Name: [Line of text]"
-3. Keep turns relatively short and conversational.
-4. Include natural fillers (hmm, well, exactly) where appropriate for realism.
-5. Do not add sound effects or stage directions in brackets.
+CRITICAL RULES:
+1. Write ONLY the dialogue. Do not write a Title, Character List, or Scene Setting.
+2. You MUST use the EXACT participant names provided: {speakers_str}. Do not use abbreviations like "I" or "E".
+3. Format: "Name: [Line of text]"
+4. Keep turns relatively short and conversational.
+5. Do not add sound effects, stage directions, or parentheticals like (laughs) or (nods).
 6. Ensure the tone fits the requested style ({style}).
+7. Start immediately with the first line of dialogue.
 """
 
         messages = [
@@ -79,7 +80,7 @@ Rules:
         payload = {
             "messages": messages,
             "max_tokens": 768,  # shorter scripts keep TTS jobs under Cloudflare's timeout
-            "temperature": 0.8,
+            "temperature": 0.7, # Slightly lower temp for better instruction following
             "stream": True
         }
 
@@ -116,39 +117,68 @@ Rules:
         # Final yield with complete script
         yield {"type": "script_complete", "script": full_script}
 
-    def _truncate_script(self, script: str, max_lines: int = 40, max_chars: int = 4000) -> str:
-        """Limit script length so TTS jobs finish before tunnel timeouts."""
-        lines = [line for line in script.strip().splitlines() if line.strip()]
-        truncated = lines[:max_lines]
+    def _clean_and_truncate_script(self, script: str, speakers: List[str], max_lines: int = 40, max_chars: int = 4000) -> str:
+        """
+        Cleans up the script to ensure it matches VibeVoice's expected format
+        and fits within timeout limits.
+        """
+        cleaned_lines = []
+        
+        # Regex to identify valid dialogue lines: "Name: Text"
+        # We construct a regex that matches the provided speakers
+        speaker_pattern = "|".join([re.escape(s) for s in speakers])
+        dialogue_regex = re.compile(f"^({speaker_pattern}):\s*(.*)", re.IGNORECASE)
+
+        lines = script.strip().splitlines()
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Remove stage directions in parentheses e.g. (laughs)
+            line = re.sub(r'\([^)]*\)', '', line).strip()
+            if not line:
+                continue
+
+            # Check if it's a valid dialogue line
+            match = dialogue_regex.match(line)
+            if match:
+                cleaned_lines.append(line)
+            else:
+                # If it's not a strict match, check if it looks like dialogue but with wrong name
+                # or just loose text.
+                # For now, we skip non-dialogue lines (Title, Scene, etc) to avoid TTS errors
+                # unless it's very clearly dialogue.
+                if ":" in line:
+                    # Might be a speaker we missed or slight typo, keep it safely
+                    cleaned_lines.append(line)
+                else:
+                    logger.info(f"Skipping non-dialogue line: {line}")
+
+        # Truncate
+        truncated = cleaned_lines[:max_lines]
         result = "\n".join(truncated)
 
-        if len(lines) > max_lines:
-            result += "\n[...truncated for faster synthesis...]"
+        if len(cleaned_lines) > max_lines:
+            # Add a closing line if truncated
+            last_speaker = speakers[0] if len(cleaned_lines) % 2 == 0 else speakers[1]
+            result += f"\n{last_speaker}: We'll have to pause here for now."
 
-        if len(result) > max_chars:
-            result = result[:max_chars] + "\n[...truncated for faster synthesis...]"
-
-        return result or script
+        return result
 
     async def synthesize_audio(self, script: str, speakers: List[str]) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Sends the script to the VibeVoice server.
-        Since audio generation is slow, this might just yield progress or a final URL.
         """
         yield {"type": "audio_start"}
 
-        # Parse script into structured format if needed by VibeVoice, 
-        # or send raw text if VibeVoice handles parsing.
-        # For now, we'll assume the VibeVoice endpoint expects raw text and handles speaker tagging.
-        prepared_script = self._truncate_script(script)
-        if prepared_script != script:
-            logger.info(
-                "Truncated script for TTS (lines: %d -> %d, chars: %d -> %d)",
-                len([line for line in script.splitlines() if line.strip()]),
-                len([line for line in prepared_script.splitlines() if line.strip()]),
-                len(script),
-                len(prepared_script),
-            )
+        # Clean and prepare script
+        prepared_script = self._clean_and_truncate_script(script, speakers)
+        
+        if not prepared_script:
+            yield {"type": "error", "error": "Script is empty after cleaning. Please regenerate with proper format."}
+            return
 
         payload = {
             "text": prepared_script,
@@ -157,21 +187,9 @@ Rules:
         }
 
         # Allow deployments to tune synthesis timeout without redeploying.
-        # Default to 240s so Cloudflare (or other proxies) have enough headroom.
-        max_synthesis_seconds = int(os.getenv("VOICE_TTS_TIMEOUT", "240"))
+        max_synthesis_seconds = int(os.getenv("VOICE_TTS_TIMEOUT", "300"))
 
         try:
-            # Note: This is a placeholder URL structure until we build the vibe-inference server
-            # We might want to stream the audio bytes back, or wait and return a URL.
-            # For a "Serverless" feel, returning a URL to a stored file is often better for playback.
-            
-            # Option A: Stream bytes (better for immediate playback)
-            # Option B: Generate and host (better for seeking/saving)
-            
-            # Let's assume we stream bytes for now to fit the "stream" paradigm, 
-            # or we return a URL if the server saves it. 
-            # Given VibeVoice is heavy, it might take a while.
-            
             response = await self.client.post(
                 f"{self.tts_endpoint}/v1/audio/speech", 
                 json=payload, 
@@ -179,7 +197,12 @@ Rules:
             )
 
             if response.status_code != 200:
-                raise Exception(f"TTS Error {response.status_code}: {response.text}")
+                try:
+                    error_data = response.json()
+                    detail = error_data.get("detail", response.text)
+                except:
+                    detail = response.text
+                raise Exception(f"TTS Error {response.status_code}: {detail}")
 
             # Assuming the response contains a URL or base64 audio
             data = response.json()
@@ -194,7 +217,7 @@ Rules:
                  raise Exception("No audio data received")
 
         except httpx.ReadTimeout:
-            error_msg = "VibeVoice timed out (took longer than expected). Try a shorter script or retry."
+            error_msg = "VibeVoice timed out. The script might be too long for the server to process."
             logger.error(error_msg)
             yield {"type": "error", "error": error_msg}
         except Exception as e:
