@@ -38,6 +38,9 @@ on:
 
 jobs:
   inference:
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.instance }}
+      cancel-in-progress: true
     name: CLaRa 7B Server #${{ matrix.instance }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 350
@@ -169,7 +172,7 @@ jobs:
           # Ensure CPU-only on Actions; avoid CUDA probing delays
           CUDA_VISIBLE_DEVICES: ""
           # Keep PyTorch CPU threads aligned with 2 vCPU runners (tunable)
-          TORCH_NUM_THREADS: "2"
+          TORCH_NUM_THREADS: "1"
           TORCH_NUM_INTEROP_THREADS: "1"
           # Enable dynamic INT8 quantization for CPU-only inference
           CLARA_INT8: "1"
@@ -177,6 +180,13 @@ jobs:
           OMP_NUM_THREADS: "2"
           OPENBLAS_NUM_THREADS: "2"
         run: |
+          on_term() {
+            echo "\n=== Received SIGTERM/SIGINT during start step ==="
+            date
+            echo "\nTop RSS processes:"; ps aux --sort=-rss | head -n 20 || true
+            echo "\nKernel messages (last 100):"; sudo dmesg -T | tail -n 100 || true
+          }
+          trap on_term TERM INT
           cd app/clara-inference
           python inference_server.py 2>&1 | tee /tmp/inference_server.log &
           SERVER_PID=$!
@@ -215,7 +225,7 @@ jobs:
           fi
 
       - name: Cancel previous workflow (graceful handoff)
-        if: steps.find_previous.outputs.previous_run_id != ''
+        if: ${{ false }} # temporarily disabled to rule out cross-cancel during startup
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PREVIOUS_RUN_ID: ${{ steps.find_previous.outputs.previous_run_id }}
