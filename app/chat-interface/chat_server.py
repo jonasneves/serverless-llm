@@ -326,6 +326,7 @@ class VoiceScriptRequest(BaseModel):
 class VoiceAudioRequest(BaseModel):
     script: str
     speakers: List[str]
+    model: Optional[str] = "vibevoice"
 
 
 def serialize_messages(messages: List[ChatMessage]) -> List[dict]:
@@ -1429,14 +1430,15 @@ async def voice_script(request: VoiceScriptRequest):
 
 async def stream_voice_audio_events(
     script: str,
-    speakers: List[str]
+    speakers: List[str],
+    model: str = "vibevoice"
 ) -> AsyncGenerator[str, None]:
     try:
         # Use the default model endpoint as placeholder if needed, but engine mostly uses TTS endpoint
         default_model_endpoint = MODEL_ENDPOINTS.get(DEFAULT_MODEL_ID)
         engine = VoiceEngine(default_model_endpoint, VIBEVOICE_ENDPOINT)
         
-        async for event in engine.synthesize_audio(script, speakers):
+        async for event in engine.synthesize_audio(script, speakers, model=model):
             yield f"data: {json.dumps({'event': event['type'], **event}, ensure_ascii=False)}\n\n"
 
     except Exception as e:
@@ -1447,7 +1449,7 @@ async def stream_voice_audio_events(
 async def voice_audio(request: VoiceAudioRequest):
     """Stream audio generation progress/result"""
     return StreamingResponse(
-        stream_voice_audio_events(request.script, request.speakers),
+        stream_voice_audio_events(request.script, request.speakers, request.model),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

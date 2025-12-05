@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const modelSelect = document.getElementById('modelSelect');
+    const audioModelSelect = document.getElementById('audioModelSelect');
     const topicInput = document.getElementById('topicInput');
     const styleSelect = document.getElementById('styleSelect');
     const speaker1Input = document.getElementById('speaker1Input');
@@ -171,7 +172,8 @@ Bob: Absolutely. I can't wait to see what people build with it.`;
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     script: scriptContent,
-                    speakers: [speaker1Input.value, speaker2Input.value]
+                    speakers: [speaker1Input.value, speaker2Input.value],
+                    model: audioModelSelect.value
                 })
             });
 
