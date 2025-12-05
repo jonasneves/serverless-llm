@@ -9,7 +9,7 @@ scipy==1.13.1
 soundfile==0.12.1
 librosa==0.10.2.post1
 transformers>=4.51.3
-torch>=2.2.0
+torch==2.4.0
 accelerate>=0.27.0
 sentencepiece==0.2.0
 huggingface_hub>=0.23.0
