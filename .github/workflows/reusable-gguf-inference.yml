@@ -131,7 +131,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system -r app/${{ inputs.model_dir }}/requirements.txt
+          uv pip install -r app/${{ inputs.model_dir }}/requirements.txt
 
       - name: Install cloudflared
         run: |
