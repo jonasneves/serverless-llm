@@ -43,6 +43,9 @@ from voice_engine import VoiceEngine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Force CLaRa to use local endpoint by default to avoid Cloudflare 100s timeout
+if not os.getenv("CLARA_API_URL"):
+    os.environ["CLARA_API_URL"] = "http://localhost:8000"
 
 def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
     """
@@ -67,7 +70,7 @@ def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
     if "502" in error_text or "503" in error_text or "504" in error_text:
         return "Model server is temporarily unavailable."
 
-    if "520" in error_text or "521" in error_text or "522" in error_text:
+    if "520" in error_text or "521" in error_text or "522" in error_lower:
         return "Service temporarily unavailable (CDN error)."
 
     # Strip any HTML tags as a fallback
@@ -153,7 +156,6 @@ def get_static_versions() -> dict:
         "voice_js": get_file_version("voice.js"),
     }
 
-
 MODEL_CONFIG = (
     {
         "id": "qwen2.5-14b-instruct",
@@ -180,7 +182,7 @@ MODEL_CONFIG = (
         "id": "clara-7b-instruct",
         "name": "CLaRa 7B",
         "env": "CLARA_API_URL",
-        "default_url": "http://localhost:8007",
+        "default_url": "http://localhost:8000", # Changed from 8007 to 8000
     },
     {
         "id": "mistral-7b-instruct-v0.3",
@@ -216,20 +218,25 @@ if RAW_BASE_DOMAIN:
         candidate = (parsed.netloc or parsed.path).strip()
     BASE_DOMAIN = candidate.rstrip("/")
 
-
 def build_service_url(service: str) -> str:
     """Construct a service URL using the normalized base domain."""
     return f"{BASE_SCHEME}://{service}.{BASE_DOMAIN}"
 
 def get_endpoint(config):
-    """Get endpoint URL for a service, using BASE_DOMAIN if available."""
+    """Get endpoint URL for a service, prioritization: Env Var > Base Domain > Default."""
+    # 1. Specific Env Var (e.g. CLARA_API_URL)
+    if os.getenv(config["env"]):
+        return os.getenv(config["env"])
+
+    # 2. Base Domain (if configured)
     if BASE_DOMAIN:
         # Allow explicit service override, otherwise derive from model ID
         # Qwen IDs include version numbers (e.g., qwen2.5), so we need to map them to "qwen"
         service = config.get("service") or config["id"].split("-")[0].split(".")[0]
         return build_service_url(service)
-    # Fall back to individual env var or localhost
-    return os.getenv(config["env"], config["default_url"])
+    
+    # 3. Default Local URL
+    return config["default_url"]
 
 MODEL_ENDPOINTS = {
     config["id"]: get_endpoint(config)

@@ -72,12 +72,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10' # VibeVoice usually safer with 3.10 for audio libs
-          cache: 'pip'
-          cache-dependency-path: 'app/vibevoice-inference/requirements.txt'
+      - name: Set up Python (System)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv python3-pip ffmpeg libsndfile1
+          python3 -m venv venv
+          echo "PATH=$GITHUB_WORKSPACE/venv/bin:$PATH" >> $GITHUB_ENV
 
       - name: Cache Hugging Face models
         uses: actions/cache@v4
@@ -91,8 +91,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Install ffmpeg system dependency
-          sudo apt-get update && sudo apt-get install -y ffmpeg libsndfile1
+          # Install dependencies in the venv
+          pip install --upgrade pip
           pip install -r app/vibevoice-inference/requirements.txt
           # Verify installation
           python -c "import vibevoice; print(f'VibeVoice installed successfully')"
