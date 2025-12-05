@@ -790,6 +790,9 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
     client = HTTPClient.get_client()
 
     try:
+        # Send initial event immediately to keep connection alive and signal start
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
+
         async with semaphore:
             async with client.stream(
                 "POST",
@@ -806,9 +809,6 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                     error_msg = sanitize_error_message(error_text.decode(), endpoint)
                     yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
                     return
-
-                # Send initial event
-                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
 
                 usage_data = None
                 async for line in response.aiter_lines():
@@ -838,9 +838,10 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                 if usage_data and "total_tokens" in usage_data:
                     token_count = usage_data["total_tokens"]
                 else:
-                    raise ValueError(f"Token usage data not received from model {model_id}")
+                    # Fallback estimate if no usage data (e.g. non-streaming backend)
+                    token_count = len(total_content.split()) * 1.3
 
-                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': token_count, 'usage': usage_data})}\n\n"
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage_data})}\n\n"
 
     except httpx.TimeoutException:
         logger.error(f"Timeout connecting to {endpoint}")

@@ -13,7 +13,7 @@ class HTTPClient:
         if cls._client is None:
             logger.info("Initializing shared HTTP client")
             cls._client = httpx.AsyncClient(
-                timeout=120.0,
+                timeout=600.0,
                 limits=httpx.Limits(max_keepalive_connections=20, max_connections=100)
             )
         return cls._client

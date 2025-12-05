@@ -103,6 +103,20 @@ jobs:
           chmod +x cloudflared
           sudo mv cloudflared /usr/local/bin/
 
+      - name: System Diagnostics
+        run: |
+          echo "=== Disk Space ==="
+          df -h
+          echo ""
+          echo "=== Memory ==="
+          free -h
+          echo ""
+          echo "=== Python Basic Test ==="
+          python -c "print('Python is working')"
+          echo ""
+          echo "=== Torch Import Test ==="
+          python -c "import torch; print(f'Torch loaded: {torch.__version__}, CUDA: {torch.cuda.is_available()}')" || echo "Torch import FAILED"
+
       - name: Start inference server
         env:
           PORT: "8000"
