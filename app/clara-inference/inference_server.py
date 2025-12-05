@@ -123,6 +123,26 @@ def load_model():
             json.dump(config_dict, f, indent=2)
         print("Config file patched successfully")
 
+    # Patch modeling_clara.py to fix PEFT issue
+    modeling_file = os.path.join(model_path, "modeling_clara.py")
+    if os.path.exists(modeling_file):
+        print(f"Checking for PEFT compatibility in: {modeling_file}")
+        with open(modeling_file, 'r') as f:
+            content = f.read()
+        
+        # Replace target_modules='all-linear' with specific modules
+        old_target = "target_modules='all-linear'"
+        new_target = "target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj']"
+        
+        if old_target in content:
+            print(f"Patching {modeling_file}: Replacing 'all-linear' with specific modules")
+            content = content.replace(old_target, new_target)
+            with open(modeling_file, 'w') as f:
+                f.write(content)
+            print("modeling_clara.py patched successfully")
+        else:
+            print(f"Note: Could not find '{old_target}' in modeling_clara.py - check if already patched or different version.")
+
     # Try loading with minimal interference - let CLaRa's custom code handle everything
     print(f"Loading CLaRa model (this may take several minutes)...")
     print("Note: CLaRa requires significant RAM for LoRA adapters + base model")
