@@ -1,6 +1,4 @@
 # Serverless LLM Arena
-<!-- Live API Health Status -->
-[![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
 
 [![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-7b)](https://qwen.neevs.io/health)
 [![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
@@ -9,6 +7,9 @@
 [![Qwen 14B API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-14b-instruct)](https://qwen14b.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
 [![CLaRa API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/clara-7b-instruct)](https://clara.neevs.io/health)
+
+<!-- Live API Health Status -->
+[![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
 
 Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma, CLaRa — powered only by GitHub Actions + Cloudflare
 
