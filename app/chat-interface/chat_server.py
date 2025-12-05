@@ -880,6 +880,30 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
                         # Stream finished
                         break
 
+                # If no content was streamed and no usage collected, fall back to non-streaming request
+                if not total_content and not usage_data:
+                    try:
+                        non_stream_resp = await client.post(
+                            f"{endpoint}/v1/chat/completions",
+                            json=build_completion_payload(messages, max_tokens, temperature, stream=False),
+                            timeout=60.0,
+                        )
+                        if non_stream_resp.status_code == 200:
+                            payload = non_stream_resp.json()
+                            content = payload.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            if content:
+                                # Simulate chunked streaming from the full content
+                                words = content.split()
+                                chunk_size = max(1, len(words) // 20)
+                                for i in range(0, len(words), chunk_size):
+                                    part = " ".join(words[i:i+chunk_size]) + (" " if i + chunk_size < len(words) else "")
+                                    total_content += part
+                                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': part, 'event': 'token'})}\n\n"
+                                usage_data = payload.get("usage")
+                    except Exception:
+                        # Ignore fallback errors; we'll still send a done event
+                        pass
+
                 # Send completion event with stats
                 elapsed = time.time() - start_time
 
