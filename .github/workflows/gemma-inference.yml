@@ -92,7 +92,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system -r app/gemma-inference/requirements.txt
+          uv pip install -r app/gemma-inference/requirements.txt
 
       - name: Install cloudflared
         run: |

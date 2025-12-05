@@ -90,7 +90,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system -r app/chat-interface/requirements.txt
+          uv pip install -r app/chat-interface/requirements.txt
 
       - name: Install cloudflared
         run: |
