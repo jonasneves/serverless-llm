@@ -33,6 +33,11 @@ class ModelRouter:
             "url_env": "LLAMA_API_URL",
             "description": "Fast, basic reasoning"
         },
+        "reasoner-4": {
+            "name": "nanochat d32 Base",
+            "url_env": "NANOCHAT_API_URL",
+            "description": "Small conversational model"
+        },
         # Answer models
         "answer-1": {
             "name": "Qwen 2.5-7B",
@@ -49,6 +54,11 @@ class ModelRouter:
             "url_env": "LLAMA_API_URL",
             "description": "Simple queries, conversational"
         },
+        "answer-4": {
+            "name": "nanochat d32 Base",
+            "url_env": "NANOCHAT_API_URL",
+            "description": "Lightweight conversation and completion"
+        },
     }
 
     def __init__(self):
@@ -57,7 +67,8 @@ class ModelRouter:
         default_urls = {
             "QWEN_API_URL": "https://qwen.neevs.io",
             "PHI_API_URL": "https://phi.neevs.io",
-            "LLAMA_API_URL": "https://llama.neevs.io"
+            "LLAMA_API_URL": "https://llama.neevs.io",
+            "NANOCHAT_API_URL": "https://nanochat.neevs.io"
         }
         # Load API URLs from environment (with defaults)
         for model_id, config in self.MODEL_MAPPING.items():

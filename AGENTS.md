@@ -96,17 +96,7 @@ Response: Server-Sent Events stream with `tool_call`, `tool_result`, and `final_
 
 ### Modify Model Routing
 
-Edit `MODEL_MAPPING` in `app/chat-interface/tools/model_router.py`:
-
-```python
-MODEL_MAPPING = {
-    "reasoner-1": {
-        "name": "Qwen 2.5-7B",
-        "url_env": "QWEN_API_URL",
-        "description": "Strong reasoning and coding"
-    }
-}
-```
+Edit `MODEL_MAPPING` in `app/chat-interface/tools/model_router.py` to add/remove backends. For example, nanochat support is wired as `reasoner-4`/`answer-4` using `NANOCHAT_API_URL`.
 
 ## vs. Discussion Mode
 
