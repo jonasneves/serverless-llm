@@ -187,6 +187,13 @@ async def generate_speech(request: SpeechRequest):
         formatted_text = '\n'.join(formatted_lines)
         logger.info(f"Formatted script:\n{formatted_text[:200]}...")
 
+        # Validate that we have speaker-labeled lines
+        speaker_lines = [line for line in formatted_lines if line.strip() and line.strip().startswith('Speaker ') and ':' in line]
+        if not speaker_lines:
+            error_msg = f"No valid speaker lines found in script. Original text: {request.text[:100]}... Speakers: {request.speakers}"
+            logger.error(error_msg)
+            raise HTTPException(status_code=400, detail="No valid speaker lines found in script")
+
         # Prepare voice samples for each speaker in order
         voice_samples = []
         missing_speakers = []
