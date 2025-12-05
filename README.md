@@ -194,12 +194,19 @@ python chat_server.py
 pip install -r app/nanochat-inference/requirements.txt
 cd app/nanochat-inference
 
-# Option A: Use Hugging Face GGUF (recommended)
+# Option A: Use Hugging Face GGUF (recommended when GGUF is available)
 export NANOCHAT_GGUF_REPO="<repo_id>"          # e.g., your-org/nanochat-d32-GGUF
 export NANOCHAT_GGUF_FILE="<filename.gguf>"     # e.g., nanochat-d32-Q4_K_M.gguf
 uvicorn inference_server:app --host 0.0.0.0 --port 8007
 
-# Option B: Use local nanochat clone + checkpoints
+# Option B: Use Hugging Face Transformers (default)
+# If GGUF vars are not set, the server loads karpathy/nanochat-d32 via Transformers.
+# To use d34 instead:
+# export NANOCHAT_HF_MODEL=karpathy/nanochat-d34
+# Then run:
+# uvicorn inference_server:app --host 0.0.0.0 --port 8007
+
+# Option C: Use local nanochat clone + checkpoints
 # export NANOCHAT_PATH=/path/to/karpathy/nanochat
 # export NANOCHAT_CHECKPOINTS_DIR=~/.cache/nanochat
 # export NANOCHAT_CHECKPOINT_FILE=model_latest.pt
