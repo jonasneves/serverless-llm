@@ -1,8 +1,4 @@
 # Serverless LLM Arena
-Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma, CLaRa — powered only by GitHub Actions + Cloudflare
-
-https://chat.neevs.io
-
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
 
@@ -14,7 +10,7 @@ https://chat.neevs.io
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
 [![CLaRa API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/clara-7b-instruct)](https://clara.neevs.io/health)
 
-LLM inference on GitHub Actions free tier with public access via Cloudflare Tunnels.
+Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma, CLaRa — powered only by GitHub Actions + Cloudflare
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
