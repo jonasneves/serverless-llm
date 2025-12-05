@@ -142,6 +142,11 @@ jobs:
           # Keep PyTorch CPU threads aligned with 2 vCPU runners (tunable)
           TORCH_NUM_THREADS: "2"
           TORCH_NUM_INTEROP_THREADS: "1"
+          # Enable dynamic INT8 quantization for CPU-only inference
+          CLARA_INT8: "1"
+          # Align BLAS thread pools with PyTorch to prevent oversubscription
+          OMP_NUM_THREADS: "2"
+          OPENBLAS_NUM_THREADS: "2"
         run: |
           cd app/clara-inference
           python inference_server.py 2>&1 | tee /tmp/inference_server.log &

@@ -10,6 +10,7 @@ CLaRa supports two modes:
 import os
 import json
 import asyncio
+import time
 import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -90,12 +91,14 @@ def load_model():
     cache_dir = os.getenv("HF_HOME", None)
     # Speed up large downloads on Actions: allow only needed files and enable hf_transfer if available
     allow_patterns = [f"compression-{compression}/*", "tokenizer.*", "tokenizer_config.json", "config.json", "*.py"]
+    t_download = time.perf_counter()
     repo_path = snapshot_download(
         repo_id=base_repo,
         cache_dir=cache_dir,
         token=os.getenv("HF_TOKEN"),
         allow_patterns=allow_patterns
     )
+    print(f"Snapshot download completed in {time.perf_counter() - t_download:.1f}s")
 
     # Load from the compression subfolder
     model_path = os.path.join(repo_path, f"compression-{compression}")
@@ -188,6 +191,7 @@ def load_model():
     except Exception as _:
         pass
 
+    t_load = time.perf_counter()
     try:
         # Prefer safetensors if available; keep options minimal for remote code
         clara_model = AutoModel.from_pretrained(
@@ -204,13 +208,19 @@ def load_model():
             print(f"{'='*60}\n")
         raise
 
-    print("CLaRa model loaded successfully!")
+    print(f"CLaRa model loaded successfully in {time.perf_counter() - t_load:.1f}s!")
 
     # Optional: dynamic INT8 quantization for CPU (reduces memory and may speed up)
     if os.getenv("CLARA_INT8", "0") == "1":
         try:
             from torch.ao.quantization import quantize_dynamic
             print("Applying dynamic INT8 quantization to Linear layers...")
+            # On ARM, use qnnpack backend for dynamic quant
+            if hasattr(torch.backends, "quantized"):
+                try:
+                    torch.backends.quantized.engine = "qnnpack"
+                except Exception:
+                    pass
             clara_model = quantize_dynamic(clara_model, {torch.nn.Linear}, dtype=torch.qint8)
             print("Dynamic quantization applied.")
         except Exception as e:
@@ -218,6 +228,7 @@ def load_model():
 
     # Warm up
     print("Warming up model...")
+    t_warm = time.perf_counter()
     try:
         with torch.inference_mode():
             clara_model.generate_from_text(
@@ -225,7 +236,7 @@ def load_model():
                 documents=[["This is a test document."]],
                 max_new_tokens=1
             )
-        print("Model warm-up complete!")
+        print(f"Model warm-up complete in {time.perf_counter() - t_warm:.1f}s!")
     except Exception as e:
         print(f"Warm-up warning: {e}")
 
