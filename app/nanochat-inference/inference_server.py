@@ -155,27 +155,27 @@ async def load_model():
 
         # Attempt speculative imports (structure may change upstream)
         try:
-            # Common patterns: model.py with GPT, tokenizer.py with Tokenizer
+            # Common patterns: gpt.py with GPT, tokenizer.py with Tokenizer
             nc_model = None
             nc_tokenizer = None
             try:
-                from model import GPT as NC_GPT  # type: ignore
+                from gpt import GPT as NC_GPT  # type: ignore
                 nc_model = NC_GPT  # noqa
             except Exception:
                 try:
-                    from nanochat.model import GPT as NC_GPT  # type: ignore
+                    from nanochat.gpt import GPT as NC_GPT  # type: ignore
                     nc_model = NC_GPT
                 except Exception:
-                    # Search for model.py in repo
+                    # Search for gpt.py in repo
                     if candidate_paths:
-                        model_file = _find_file(candidate_paths[0], "model.py")
+                        model_file = _find_file(candidate_paths[0], "gpt.py")
                         if model_file and os.path.isfile(model_file):
                             try:
-                                mod = _load_module_from_file("nanochat_model_dyn", model_file)
+                                mod = _load_module_from_file("nanochat_gpt_dyn", model_file)
                                 if hasattr(mod, "GPT"):
                                     nc_model = getattr(mod, "GPT")
                             except Exception as e:
-                                print(f"Dynamic load of model.py failed: {e}")
+                                print(f"Dynamic load of gpt.py failed: {e}")
             print(f"Imported nc_model: {'ok' if nc_model else 'missing'}")
             try:
                 from tokenizer import Tokenizer as NC_Tokenizer  # type: ignore
@@ -235,11 +235,11 @@ async def load_model():
                             cfg_dict.setdefault("bias", False)
                             # Try GPTConfig if available; else use SimpleNamespace
                             try:
-                                from model import GPTConfig as NC_GPTConfig  # type: ignore
+                                from gpt import GPTConfig as NC_GPTConfig  # type: ignore
                                 cfg_obj = NC_GPTConfig(**cfg_dict)
                             except Exception:
                                 try:
-                                    from nanochat.model import GPTConfig as NC_GPTConfig  # type: ignore
+                                    from nanochat.gpt import GPTConfig as NC_GPTConfig  # type: ignore
                                     cfg_obj = NC_GPTConfig(**cfg_dict)
                                 except Exception:
                                     cfg_obj = SimpleNamespace(**cfg_dict)
