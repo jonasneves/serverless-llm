@@ -138,45 +138,49 @@ jobs:
           
           echo "=== Import Test Complete ==="
 
-      - name: Start inference server
-        env:
-          PORT: "8000"
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_HOME: /tmp/hf_cache
-        run: |
-          cd app/vibevoice-inference
-          
-          echo "=== Foregound Debug Run (15s) ==="
-          # Run in foreground briefly to catch immediate crashes in main log
-          timeout 15s python -u inference_server.py || true
-          
-          echo "=== Starting Background Service ==="
-          python -u inference_server.py > /tmp/inference_server.log 2>&1 &
-          SERVER_PID=$!
-          echo "Server PID: $SERVER_PID"
-          echo "Waiting for model to download and load..."
-
-          # Wait for server with longer timeout for model download (3GB)
-          for i in {1..120}; do
-            if curl -s http://localhost:8000/health | grep -q "healthy"; then
-              echo "Server is healthy!"
-              break
-            fi
-            echo "Waiting for server... attempt $i/120"
-            
-            # Show the last few lines of the log to track progress
-            if [ $((i % 5)) -eq 0 ]; then
-              echo "--- Server Log Tail ---"
-              tail -n 10 /tmp/inference_server.log || true
-              echo "-----------------------"
-            fi
-            
-            sleep 10
-          done
-
-          # Verify health
-          curl -s http://localhost:8000/health || { echo "Server failed to start"; cat /tmp/inference_server.log; exit 1; }
-
+            - name: Start inference server
+              env:
+                PORT: "8000"
+                HF_TOKEN: ${{ secrets.HF_TOKEN }}
+                HF_HOME: /tmp/hf_cache
+              run: |
+                cd app/vibevoice-inference
+                
+                echo "=== Starting Background Service (Uvicorn CLI) ==="
+                # Use uvicorn CLI directly
+                uvicorn inference_server:app --host 0.0.0.0 --port 8000 > /tmp/inference_server.log 2>&1 &
+                SERVER_PID=$!
+                echo "Server PID: $SERVER_PID"
+                echo "Waiting for model to download and load..."
+                
+                # Wait for server with longer timeout for model download (3GB)
+                for i in {1..120}; do
+                  # Check if process is still alive
+                  if ! kill -0 $SERVER_PID 2>/dev/null; then
+                    echo "CRITICAL: Server process $SERVER_PID has died!"
+                    echo "--- Last 50 lines of log ---"
+                    tail -n 50 /tmp/inference_server.log
+                    exit 1
+                  fi
+      
+                  if curl -s http://localhost:8000/health | grep -q "healthy"; then
+                    echo "Server is healthy!"
+                    break
+                  fi
+                  echo "Waiting for server... attempt $i/120"
+                  
+                  # Show the last few lines of the log to track progress
+                  if [ $((i % 5)) -eq 0 ]; then
+                    echo "--- Server Log Tail ---"
+                    tail -n 10 /tmp/inference_server.log || true
+                    echo "-----------------------"
+                  fi
+                  
+                  sleep 10
+                done
+      
+                # Verify health
+                curl -s http://localhost:8000/health || { echo "Server failed to start"; cat /tmp/inference_server.log; exit 1; }
       - name: Start Cloudflare Tunnel
         env:
           CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_VIBEVOICE }}

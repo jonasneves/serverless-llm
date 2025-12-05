@@ -265,11 +265,93 @@ async def rag_generate(request: RAGRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+async def stream_chat_response(question: str, documents: List[List[str]], max_tokens: int):
+    """
+    Stream chat response in SSE format with simulated token-by-token output
+
+    Since CLaRa doesn't support native streaming, we generate the full response
+    then chunk it to simulate streaming and avoid Cloudflare timeouts.
+    """
+    try:
+        async with inference_lock:
+            # Generate using CLaRa
+            answers = await asyncio.to_thread(
+                clara_model.generate_from_text,
+                questions=[question],
+                documents=documents,
+                max_new_tokens=max_tokens
+            )
+
+        answer = answers[0] if answers else "No response generated."
+
+        # Estimate token counts
+        prompt_tokens = len(question.split()) * 1.3
+        completion_tokens = len(answer.split()) * 1.3
+
+        # Chunk the response to simulate streaming (helps with Cloudflare timeouts)
+        # Split by words for smoother streaming experience
+        words = answer.split()
+        chunk_size = max(1, len(words) // 20)  # ~20 chunks
+
+        for i in range(0, len(words), chunk_size):
+            chunk = ' '.join(words[i:i+chunk_size])
+            if i + chunk_size < len(words):
+                chunk += ' '  # Add space between chunks except last one
+
+            chunk_data = {
+                "id": "chatcmpl-clara",
+                "object": "chat.completion.chunk",
+                "model": "clara-7b-instruct",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": chunk},
+                        "finish_reason": None
+                    }
+                ]
+            }
+            yield f"data: {json.dumps(chunk_data)}\n\n"
+
+            # Small delay to simulate real streaming and keep connection alive
+            await asyncio.sleep(0.05)
+
+        # Send final chunk with usage data
+        final_chunk = {
+            "id": "chatcmpl-clara",
+            "object": "chat.completion.chunk",
+            "model": "clara-7b-instruct",
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": int(prompt_tokens),
+                "completion_tokens": int(completion_tokens),
+                "total_tokens": int(prompt_tokens + completion_tokens)
+            }
+        }
+        yield f"data: {json.dumps(final_chunk)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    except Exception as e:
+        error_chunk = {
+            "error": {
+                "message": str(e),
+                "type": "server_error"
+            }
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(request: GenerateRequest):
     """
     Standard chat completions endpoint
 
+    Supports both streaming and non-streaming modes.
     For orchestrator compatibility. Note: This doesn't use CLaRa's compression
     features - use /v1/rag/generate for document-based Q&A.
     """
@@ -299,6 +381,19 @@ async def chat_completions(request: GenerateRequest):
         else:
             raise HTTPException(status_code=400, detail="Either messages or prompt required")
 
+        # Handle streaming requests
+        if request.stream:
+            return StreamingResponse(
+                stream_chat_response(question, documents, request.max_tokens),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"
+                }
+            )
+
+        # Non-streaming response
         async with inference_lock:
             # Generate using CLaRa
             answers = await asyncio.to_thread(
