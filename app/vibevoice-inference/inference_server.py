@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 import logging
-from vibevoice.modular.modeling_vibevoice_inference import VibeVoiceForConditionalGenerationInference
+from vibevoice.modular.modeling_vibevoice_streaming_inference import VibeVoiceStreamingForConditionalGenerationInference
 from vibevoice.processor.vibevoice_processor import VibeVoiceProcessor
 
 logging.basicConfig(level=logging.INFO)
@@ -114,7 +114,7 @@ async def load_model():
         attn_impl = "sdpa"
 
         # Load model
-        model = VibeVoiceForConditionalGenerationInference.from_pretrained(
+        model = VibeVoiceStreamingForConditionalGenerationInference.from_pretrained(
             MODEL_ID,
             torch_dtype=dtype,
             device_map=device,
