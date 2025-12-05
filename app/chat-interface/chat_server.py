@@ -199,8 +199,8 @@ MODEL_CONFIG = (
         "default_url": "http://localhost:8003",
     },
     {
-        "id": "nanochat-d32-base",
-        "name": "nanochat d32 Base",
+        "id": "nanochat-d34-base",
+        "name": "nanochat d34 Base",
         "env": "NANOCHAT_API_URL",
         "default_url": "http://localhost:8007",
         "service": "nanochat",

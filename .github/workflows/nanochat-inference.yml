@@ -32,6 +32,11 @@ on:
         description: 'GGUF filename to download (e.g., nanochat-d32-Q4_K_M.gguf)'
         required: false
         type: string
+      hf_model:
+        description: 'Transformers model id (HF) if not using GGUF (e.g., karpathy/nanochat-d34)'
+        required: false
+        default: 'karpathy/nanochat-d34'
+        type: string
 
   repository_dispatch:
     types: [restart-nanochat-inference]
@@ -131,6 +136,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/app/nanochat-inference/nanochat_repo
           NANOCHAT_GGUF_REPO: ${{ inputs.gguf_repo }}
           NANOCHAT_GGUF_FILE: ${{ inputs.gguf_file }}
+          NANOCHAT_HF_MODEL: ${{ inputs.hf_model }}
         run: |
           cd app/nanochat-inference
           echo "=== Starting Nanochat server (Uvicorn) ==="

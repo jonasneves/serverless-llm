@@ -57,8 +57,8 @@ model = None
 tokenizer = None
 llm = None  # llama.cpp model if using GGUF
 inference_lock = asyncio.Semaphore(1)
-model_name = os.environ.get("NANOCHAT_MODEL_NAME", "d32") # Default to d32, can be env var
-hf_model_id = os.environ.get("NANOCHAT_HF_MODEL", "karpathy/nanochat-d32")
+model_name = os.environ.get("NANOCHAT_MODEL_NAME", "d34")  # Default to d34
+hf_model_id = os.environ.get("NANOCHAT_HF_MODEL", "karpathy/nanochat-d34")
 
 class InferenceRequest(BaseModel):
     prompt: str
@@ -213,7 +213,7 @@ async def load_model():
             print(f"Nanochat real import attempt failed: {e}")
 
         if not loaded_real and AutoTokenizer is not None and AutoModelForCausalLM is not None:
-            # 2) Try Transformers from Hugging Face (karpathy/nanochat-d32 by default)
+            # 2) Try Transformers from Hugging Face (karpathy/nanochat-d34 by default)
             print(f"Loading Transformers model from HF: {hf_model_id}")
             tok = AutoTokenizer.from_pretrained(hf_model_id)
             mdl = AutoModelForCausalLM.from_pretrained(hf_model_id)
@@ -283,7 +283,7 @@ async def list_models():
     return {
         "data": [
             {
-                "id": "nanochat-d32-base",
+                "id": "nanochat-d34-base",
                 "object": "model",
                 "owned_by": "nanochat"
             }
@@ -374,7 +374,7 @@ async def chat_completions(request: ChatCompletionRequest):
             return {
                 "id": "chatcmpl-nanochat",
                 "object": "chat.completion",
-                "model": "nanochat-d32-base",
+                "model": "nanochat-d34-base",
                 "choices": data["choices"],
                 "usage": data["usage"]
             }
@@ -454,7 +454,7 @@ async def chat_completions(request: ChatCompletionRequest):
             return {
                 "id": "chatcmpl-nanochat",
                 "object": "chat.completion",
-                "model": "nanochat-d32-base",
+                "model": "nanochat-d34-base",
                 "choices": [
                     {
                         "index": 0,
@@ -513,23 +513,23 @@ async def chat_completions(request: ChatCompletionRequest):
                 }
             )
 
-        return {
-            "id": "chatcmpl-nanochat",
-            "object": "chat.completion",
-            "model": "nanochat-d32-base",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {"role": "assistant", "content": generated_text},
-                    "finish_reason": "stop"
+            return {
+                "id": "chatcmpl-nanochat",
+                "object": "chat.completion",
+                "model": "nanochat-d34-base",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": generated_text},
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens
                 }
-            ],
-            "usage": {
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": total_tokens
             }
-        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
