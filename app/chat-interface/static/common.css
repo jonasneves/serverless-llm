@@ -828,3 +828,25 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
     min-height: 44px;
   }
 }
+
+/* Responsive Navigation */
+@media (max-width: 768px) {
+  .header-actions {
+    gap: 12px;
+    overflow: hidden; /* Contain the scrollable area */
+  }
+
+  .modes {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 4px; /* Space for scrollbar if visible */
+    -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, black 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+  }
+  
+  .mode-link {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}

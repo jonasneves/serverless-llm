@@ -1,123 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#1e3a5f">
-  <title>LLM Arena</title>
-  <!-- Auto-generated cache-busting versions based on file content hash -->
-  <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
-  <link rel="stylesheet" href="/static/chat.css?v={{ chat_css }}">
-  <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script defer src="/static/settings.js?v={{ settings_js }}"></script>
-  <script defer src="/static/chat.js?v={{ chat_js }}"></script>
-</head>
-<body>
-  <header>
-    <div class="logo">
-      <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
-        </svg>
-      </div>
-      <div class="logo-text">
-        <span class="logo-title">LLM Arena</span>
-        <span class="logo-subtitle">Compare AI Models</span>
+{% extends "layout.html" %}
+
+{% block title %}LLM Arena{% endblock %}
+{% block subtitle %}Compare AI Models{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/chat.css?v={{ chat_css }}">
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/chat.js?v={{ chat_js }}"></script>
+{% endblock %}
+
+{% block content %}
+<div id="chatHistory" class="chat-history">
+  <div class="welcome-card">
+    <div class="welcome-title">Compare AI Model Responses</div>
+    <div class="welcome-subtitle">
+      Select one or multiple models to compare their responses side-by-side.
+      Each response includes metrics like tokens and response time.
+    </div>
+    <div class="example-prompts" style="margin-top: 20px;">
+      <div class="example-prompts-label">Try an example:</div>
+      <div class="example-chips">
+        <button class="example-chip" data-prompt="How many times does the letter 'r' appear in the word 'irregularity'?">Count 'r' in irregularity</button>
+        <button class="example-chip" data-prompt="Count how many 's' letters are in the word 'assassination'.">Count 's' in assassination</button>
+        <button class="example-chip" data-prompt="Which number is larger: 7.09 or 7.9?">7.09 vs 7.9</button>
+        <button class="example-chip" data-prompt="Which number is bigger: 10.12 or 10.9?">10.12 vs 10.9</button>
+        <button class="example-chip" data-prompt="Alice has 4 brothers and 5 sisters. How many sisters does Alice's brother have?">Alice sibling puzzle</button>
+        <button class="example-chip" data-prompt="If architect I. M. Pei designed the Louvre Pyramid, who designed the Louvre Pyramid?">Louvre designer reversal</button>
+        <button class="example-chip" data-prompt="The Apollo 11 landing was in July 1969 and Apollo 12 in November 1969. Which mission happened second?">Apollo chronology</button>
+        <button class="example-chip" data-prompt="A shipping company has 48 boxes and each pallet holds 6 boxes. How many pallets are needed? Do we need an extra pallet?">48 boxes / pallet sanity</button>
       </div>
     </div>
-    <div class="header-actions">
-      <div class="modes">
-        <a href="/" class="mode-link active">Arena</a>
-        <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/autogen" class="mode-link">Agents</a>
-        <a href="/variations" class="mode-link">Variations</a>
-        <a href="/confessions" class="mode-link">Confessions</a>
-        <a href="/voice" class="mode-link">Voice</a>
-      </div>
-      <div class="header-controls">
-        <button id="themeToggle" class="icon-btn" title="Toggle Theme">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-          </svg>
-        </button>
-        <button id="settingsBtn" class="icon-btn" title="Settings" data-settings-trigger>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V10a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
-          </svg>
-        </button>
-      </div>
+  </div>
+</div>
+
+<div class="typing-indicator" id="typingIndicator">
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Generating...</span>
+</div>
+
+<div class="input-container">
+  <div class="controls-row">
+    <div class="model-selector" id="modelSelector">
+      <!-- Model chips populated by JS -->
     </div>
-  </header>
-
-  <main>
-    <div id="chatHistory" class="chat-history">
-      <div class="welcome-card">
-        <div class="welcome-title">Compare AI Model Responses</div>
-        <div class="welcome-subtitle">
-          Select one or multiple models to compare their responses side-by-side.
-          Each response includes metrics like tokens and response time.
-        </div>
-        <div class="example-prompts" style="margin-top: 20px;">
-          <div class="example-prompts-label">Try an example:</div>
-          <div class="example-chips">
-            <button class="example-chip" data-prompt="How many times does the letter 'r' appear in the word 'irregularity'?">Count 'r' in irregularity</button>
-            <button class="example-chip" data-prompt="Count how many 's' letters are in the word 'assassination'.">Count 's' in assassination</button>
-            <button class="example-chip" data-prompt="Which number is larger: 7.09 or 7.9?">7.09 vs 7.9</button>
-            <button class="example-chip" data-prompt="Which number is bigger: 10.12 or 10.9?">10.12 vs 10.9</button>
-            <button class="example-chip" data-prompt="Alice has 4 brothers and 5 sisters. How many sisters does Alice's brother have?">Alice sibling puzzle</button>
-            <button class="example-chip" data-prompt="If architect I. M. Pei designed the Louvre Pyramid, who designed the Louvre Pyramid?">Louvre designer reversal</button>
-            <button class="example-chip" data-prompt="The Apollo 11 landing was in July 1969 and Apollo 12 in November 1969. Which mission happened second?">Apollo chronology</button>
-            <button class="example-chip" data-prompt="A shipping company has 48 boxes and each pallet holds 6 boxes. How many pallets are needed? Do we need an extra pallet?">48 boxes / pallet sanity</button>
-          </div>
-        </div>
+    <div style="flex: 1;"></div>
+    <div class="controls-secondary">
+      <div class="control-group">
+        <label>Temp:</label>
+        <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
+        <span id="tempValue">0.7</span>
       </div>
-    </div>
-
-    <div class="typing-indicator" id="typingIndicator">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Generating...</span>
-    </div>
-
-    <div class="input-container">
-      <div class="controls-row">
-        <div class="model-selector" id="modelSelector">
-          <!-- Model chips populated by JS -->
-        </div>
-        <div style="flex: 1;"></div>
-        <div class="controls-secondary">
-          <div class="control-group">
-            <label>Temp:</label>
-            <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
-            <span id="tempValue">0.7</span>
-          </div>
-          <div class="control-group">
-            <label>Tokens:</label>
-            <input type="number" id="maxTokens" value="512" min="1" max="4096" style="width: 70px;">
-          </div>
-          <button id="clearBtn" class="clear-btn" type="button">Clear</button>
-        </div>
+      <div class="control-group">
+        <label>Tokens:</label>
+        <input type="number" id="maxTokens" value="512" min="1" max="4096" style="width: 70px;">
       </div>
-
-      <div class="input-wrapper">
-        <textarea id="userInput" placeholder="Ask a question to compare model responses..." rows="1"></textarea>
-        <button id="sendBtn" class="send-btn" disabled aria-label="Send message">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          </svg>
-        </button>
-      </div>
+      <button id="clearBtn" class="clear-btn" type="button">Clear</button>
     </div>
-  </main>
+  </div>
 
-  
-</body>
-</html>
+  <div class="input-wrapper">
+    <textarea id="userInput" placeholder="Ask a question to compare model responses..." rows="1"></textarea>
+    <button id="sendBtn" class="send-btn" disabled aria-label="Send message">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </button>
+  </div>
+</div>
+{% endblock %}

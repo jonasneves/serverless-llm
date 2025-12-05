@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <title>Model Roundtable - Orchestrated Discussion</title>
-  <!-- Auto-generated cache-busting versions based on file content hash -->
-  <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script defer src="/static/settings.js?v={{ settings_js }}"></script>
+{% extends "layout.html" %}
+
+{% block title %}Model Roundtable - Orchestrated Discussion{% endblock %}
+{% block subtitle %}Orchestrated Discussion{% endblock %}
+
+{% block extra_css %}
   <style>
     /* Page-specific styles for Discussion mode */
     :root {
@@ -883,108 +879,72 @@
       font-size: 14px;
     }
   </style>
-</head>
-<body>
-  <header>
-    <div class="logo">
-      <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-      </div>
-      <div class="logo-text">
-        <span class="logo-title">Model Roundtable</span>
-        <span class="logo-subtitle">Orchestrated Discussion</span>
-      </div>
-    </div>
-    <div class="header-actions">
-      <div class="modes">
-        <a href="/" class="mode-link">Arena</a>
-        <a href="/discussion" class="mode-link active">Discussion</a>
-        <a href="/autogen" class="mode-link">Agents</a>
-        <a href="/variations" class="mode-link">Variations</a>
-        <a href="/confessions" class="mode-link">Confessions</a>
-        <a href="/voice" class="mode-link">Voice</a>
-      </div>
-      <div class="header-controls">
-        <button id="themeToggle" class="icon-btn" title="Toggle Theme">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-          </svg>
-        </button>
-        <button id="settingsBtn" class="icon-btn" title="Settings" data-settings-trigger>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V10a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </header>
+{% endblock %}
 
-  <div class="container">
-        <div class="mode-overview-card">
-      <div class="mode-overview-title">Let models debate before answering</div>
-      <p class="mode-overview-subtitle">
-        Pick any mix of local or API models and have Qwen 2.5 orchestrate a structured, turn-based
-        discussion before returning the final takeaways.
-      </p>
-      <ul class="mode-overview-list">
-        <li>Select participants, orchestrator model, and number of rounds.</li>
-        <li>Watch each turn stream in real time with reasoning from every model.</li>
-        <li>Use debates to stress-test tricky problems or compare reasoning styles.</li>
-      </ul>
-      <div class="mode-overview-actions">
-        <span class="mode-overview-chip">Turn-based facilitation</span>
-        <span class="mode-overview-chip">Model diversity</span>
-      </div>
-      <div class="card-divider"></div>
+{% block extra_js %}
+  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
+  <script defer src="/static/discussion.js?v={{ discussion_js }}"></script>
+{% endblock %}
 
-      <div class="discussion-config">
-        <div class="setup-header">
-          <div>
-            <h3>Configure the roundtable</h3>
-            <p>Choose which models will participate and who orchestrates the debate.</p>
-          </div>
-          <div class="setup-summary">
-            <span id="participantCount" class="participant-count"><strong>0</strong> participants selected</span>
-            <div id="apiWarning" class="api-warning">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12.5"></line>
-                <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
-              </svg>
-              <span>API models use GitHub Models credits. Add your token in Settings.</span>
-              <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
-            </div>
+{% block content %}
+  <div class="mode-overview-card">
+    <div class="mode-overview-title">Let models debate before answering</div>
+    <p class="mode-overview-subtitle">
+      Pick any mix of local or API models and have Qwen 2.5 orchestrate a structured, turn-based
+      discussion before returning the final takeaways.
+    </p>
+    <ul class="mode-overview-list">
+      <li>Select participants, orchestrator model, and number of rounds.</li>
+      <li>Watch each turn stream in real time with reasoning from every model.</li>
+      <li>Use debates to stress-test tricky problems or compare reasoning styles.</li>
+    </ul>
+    <div class="mode-overview-actions">
+      <span class="mode-overview-chip">Turn-based facilitation</span>
+      <span class="mode-overview-chip">Model diversity</span>
+    </div>
+    <div class="card-divider"></div>
+
+    <div class="discussion-config">
+      <div class="setup-header">
+        <div>
+          <h3>Configure the roundtable</h3>
+          <p>Choose which models will participate and who orchestrates the debate.</p>
+        </div>
+        <div class="setup-summary">
+          <span id="participantCount" class="participant-count"><strong>0</strong> participants selected</span>
+          <div id="apiWarning" class="api-warning">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12.5"></line>
+              <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
+            </svg>
+            <span>API models use GitHub Models credits. Add your token in Settings.</span>
+            <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
           </div>
         </div>
-        <div class="setup-body">
-          <div class="setup-column">
-            <div class="config-group">
-              <div class="config-group-label">Local Models</div>
-              <div class="participants-row" id="localParticipantsContainer">
-                <div style="color: #888; padding: 12px;">Loading models...</div>
-              </div>
-            </div>
-            <div class="config-group">
-              <div class="config-group-label">API Models</div>
-              <div class="participants-row" id="apiParticipantsContainer"></div>
+      </div>
+      <div class="setup-body">
+        <div class="setup-column">
+          <div class="config-group">
+            <div class="config-group-label">Local Models</div>
+            <div class="participants-row" id="localParticipantsContainer">
+              <div style="color: #888; padding: 12px;">Loading models...</div>
             </div>
           </div>
-          <div class="setup-column orchestrator-column">
-            <label class="config-group-label">Orchestrator</label>
-            <div class="orchestrator-control">
-              <select id="orchestratorModel">
-                <option>Loading...</option>
-              </select>
-              <span id="orchestratorBadge" class="model-type-badge api">API</span>
-            </div>
-            <div class="setup-status" id="statusIndicator"></div>
+          <div class="config-group">
+            <div class="config-group-label">API Models</div>
+            <div class="participants-row" id="apiParticipantsContainer"></div>
+          </div>
+        </div>
+        <div class="setup-column orchestrator-column">
+          <label class="config-group-label">Orchestrator</label>
+          <div class="orchestrator-control">
+            <select id="orchestratorModel">
+              <option>Loading...</option>
+            </select>
+            <span id="orchestratorBadge" class="model-type-badge api">API</span>
+          </div>
+          <div class="setup-status" id="statusIndicator"></div>
         </div>
       </div>
 
@@ -1001,48 +961,48 @@
       </div>
     </div>
   </div>
-    <div class="discussion-area">
-      <!-- Input Section -->
-      <!-- Orchestrator Status Bar -->
-      <div id="orchestratorBar" class="orchestrator-bar">
-        <div class="orchestrator-bar-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-          </svg>
-        </div>
-        <div class="orchestrator-bar-content">
-          <div class="orchestrator-bar-label">Orchestrator</div>
-          <div class="orchestrator-bar-status">
-            <span class="orchestrator-bar-model" id="orchestratorModelName">Loading...</span>
-            <span class="orchestrator-bar-action" id="orchestratorAction">
-              <span class="orchestrator-bar-spinner"></span>
-              <span id="orchestratorActionText">Initializing...</span>
-            </span>
-          </div>
-        </div>
-        <button class="orchestrator-info-btn" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          <div class="orchestrator-tooltip">
-            <strong>What does the orchestrator do?</strong>
-            <p style="margin: 8px 0 6px 0;">Coordinates discussion via small API calls (~300 tokens each):</p>
-            <ul style="margin: 0; padding-left: 16px;">
-              <li><strong>Analyzes</strong> your query and scores model expertise</li>
-              <li><strong>Evaluates</strong> each response for quality</li>
-              <li><strong>Synthesizes</strong> the final answer</li>
-            </ul>
-            <p style="margin: 8px 0 0 0;">It doesn't generate content—just directs traffic between local models.</p>
-          </div>
-        </button>
-      </div>
 
-      <!-- Discussion Content -->
-      <div id="discussionContent"></div>
+  <div class="discussion-area">
+    <!-- Input Section -->
+    <!-- Orchestrator Status Bar -->
+    <div id="orchestratorBar" class="orchestrator-bar">
+      <div class="orchestrator-bar-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+        </svg>
+      </div>
+      <div class="orchestrator-bar-content">
+        <div class="orchestrator-bar-label">Orchestrator</div>
+        <div class="orchestrator-bar-status">
+          <span class="orchestrator-bar-model" id="orchestratorModelName">Loading...</span>
+          <span class="orchestrator-bar-action" id="orchestratorAction">
+            <span class="orchestrator-bar-spinner"></span>
+            <span id="orchestratorActionText">Initializing...</span>
+          </span>
+        </div>
+      </div>
+      <button class="orchestrator-info-btn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="orchestrator-tooltip">
+          <strong>What does the orchestrator do?</strong>
+          <p style="margin: 8px 0 6px 0;">Coordinates discussion via small API calls (~300 tokens each):</p>
+          <ul style="margin: 0; padding-left: 16px;">
+            <li><strong>Analyzes</strong> your query and scores model expertise</li>
+            <li><strong>Evaluates</strong> each response for quality</li>
+            <li><strong>Synthesizes</strong> the final answer</li>
+          </ul>
+          <p style="margin: 8px 0 0 0;">It doesn't generate content—just directs traffic between local models.</p>
+        </div>
+      </button>
     </div>
+
+    <!-- Discussion Content -->
+    <div id="discussionContent"></div>
   </div>
 
   <div class="discussion-input input-container">
@@ -1069,9 +1029,4 @@
       </button>
     </div>
   </div>
-
-  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
-  <script defer src="/static/discussion.js?v={{ discussion_js }}"></script>
-
-</body>
-</html>
+{% endblock %}

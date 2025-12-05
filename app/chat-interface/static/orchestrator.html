@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <title>Agents - Multi-Agent Orchestration</title>
-  <!-- Auto-generated cache-busting versions based on file content hash -->
-  <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script defer src="/static/settings.js?v={{ settings_js }}"></script>
+{% extends "layout.html" %}
+
+{% block title %}Agents - Multi-Agent Orchestration{% endblock %}
+{% block subtitle %}Multi-Agent Orchestration{% endblock %}
+
+{% block extra_css %}
   <style>
     /* Page-specific styles for AutoGen mode */
     :root {
@@ -336,125 +332,87 @@
       color: var(--text-secondary);
     }
   </style>
-</head>
-<body>
-  <header>
-    <div class="logo">
-      <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 3 21 3 21 8"></polyline>
-          <line x1="4" y1="20" x2="21" y2="3"></line>
-          <polyline points="21 16 21 21 16 21"></polyline>
-          <line x1="15" y1="15" x2="21" y2="21"></line>
-          <line x1="4" y1="4" x2="9" y2="9"></line>
+{% endblock %}
+
+{% block extra_js %}
+  <script defer src="/static/orchestrator.js?v={{ orchestrator_js }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="mode-overview-card" id="orchestrationSection">
+    <div class="mode-overview-title">Agents Mode: Multi-Agent Orchestration System</div>
+    <p class="mode-overview-subtitle">
+      A Qwen 2.5-7B orchestrator plans the conversation, decides which specialist tool to call,
+      and keeps going for multiple rounds until it can return a confident answer.
+    </p>
+    <p class="mode-overview-subtitle" style="margin-top: 8px;">
+      Specialist agents (Qwen, Phi, Llama) collaborate with tools to solve complex tasks using Microsoft's AutoGen framework
+      for intelligent multi-agent coordination.
+    </p>
+    <ul class="mode-overview-list">
+      <li>Available tools: reasoning models, final answer generation, DuckDuckGo search, and Python code interpreter.</li>
+      <li>Control temperature, max tokens, and round budget for each run.</li>
+      <li>Stream tool calls/results as they happen for full transparency.</li>
+    </ul>
+    <div class="example-prompts">
+      <div class="example-prompts-label">Try an example:</div>
+      <div class="example-chips">
+        <button class="example-chip" data-prompt="Search for the latest AI breakthroughs and summarize them">Latest AI news</button>
+        <button class="example-chip" data-prompt="Write Python code to calculate Fibonacci sequence recursively">Fibonacci code</button>
+        <button class="example-chip" data-prompt="Explain how transformers work, then write sample code">Transformers explained</button>
+        <button class="example-chip" data-prompt="Research quantum computing applications and create a summary">Quantum research</button>
+      </div>
+    </div>
+
+    <div class="tools-info-card" style="margin-top: 20px;">
+      <div class="tools-info-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
+        <span>Available Tools</span>
       </div>
-      <div class="logo-text">
-        <span class="logo-title">Agents</span>
-        <span class="logo-subtitle">Multi-Agent Orchestration</span>
-      </div>
-    </div>
-    <div class="header-actions">
-      <div class="modes">
-        <a href="/" class="mode-link">Arena</a>
-        <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/autogen" class="mode-link active">Agents</a>
-        <a href="/variations" class="mode-link">Variations</a>
-        <a href="/confessions" class="mode-link">Confessions</a>
-        <a href="/voice" class="mode-link">Voice</a>
-      </div>
-      <div class="header-controls">
-        <button id="themeToggle" class="icon-btn" title="Toggle Theme">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-          </svg>
-        </button>
-        <button id="settingsBtn" class="icon-btn" title="Settings" data-settings-trigger>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V10a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main>
-    <div class="mode-overview-card" id="orchestrationSection">
-      <div class="mode-overview-title">Agents Mode: Multi-Agent Orchestration System</div>
-      <p class="mode-overview-subtitle">
-        A Qwen 2.5-7B orchestrator plans the conversation, decides which specialist tool to call,
-        and keeps going for multiple rounds until it can return a confident answer.
-      </p>
-      <p class="mode-overview-subtitle" style="margin-top: 8px;">
-        Specialist agents (Qwen, Phi, Llama) collaborate with tools to solve complex tasks using Microsoft's AutoGen framework
-        for intelligent multi-agent coordination.
-      </p>
-      <ul class="mode-overview-list">
-        <li>Available tools: reasoning models, final answer generation, DuckDuckGo search, and Python code interpreter.</li>
-        <li>Control temperature, max tokens, and round budget for each run.</li>
-        <li>Stream tool calls/results as they happen for full transparency.</li>
+      <ul class="tools-list">
+        <li>
+          <span class="tool-bullet tool-bullet-reasoning"></span>
+          <div class="tool-item">
+            <strong>enhance_reasoning</strong>
+            <span class="tool-desc">Route to specialized reasoning models</span>
+          </div>
+        </li>
+        <li>
+          <span class="tool-bullet tool-bullet-answer"></span>
+          <div class="tool-item">
+            <strong>answer</strong>
+            <span class="tool-desc">Generate final answers using best-fit model</span>
+          </div>
+        </li>
+        <li>
+          <span class="tool-bullet tool-bullet-search"></span>
+          <div class="tool-item">
+            <strong>search</strong>
+            <span class="tool-desc">Web search via DuckDuckGo API</span>
+          </div>
+        </li>
+        <li>
+          <span class="tool-bullet tool-bullet-code"></span>
+          <div class="tool-item">
+            <strong>code_interpreter</strong>
+            <span class="tool-desc">Execute Python code in sandboxed environment</span>
+          </div>
+        </li>
       </ul>
-      <div class="example-prompts">
-        <div class="example-prompts-label">Try an example:</div>
-        <div class="example-chips">
-          <button class="example-chip" data-prompt="Search for the latest AI breakthroughs and summarize them">Latest AI news</button>
-          <button class="example-chip" data-prompt="Write Python code to calculate Fibonacci sequence recursively">Fibonacci code</button>
-          <button class="example-chip" data-prompt="Explain how transformers work, then write sample code">Transformers explained</button>
-          <button class="example-chip" data-prompt="Research quantum computing applications and create a summary">Quantum research</button>
-        </div>
-      </div>
-
-      <div class="tools-info-card" style="margin-top: 20px;">
-        <div class="tools-info-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          <span>Available Tools</span>
-        </div>
-        <ul class="tools-list">
-          <li>
-            <span class="tool-bullet tool-bullet-reasoning"></span>
-            <div class="tool-item">
-              <strong>enhance_reasoning</strong>
-              <span class="tool-desc">Route to specialized reasoning models</span>
-            </div>
-          </li>
-          <li>
-            <span class="tool-bullet tool-bullet-answer"></span>
-            <div class="tool-item">
-              <strong>answer</strong>
-              <span class="tool-desc">Generate final answers using best-fit model</span>
-            </div>
-          </li>
-          <li>
-            <span class="tool-bullet tool-bullet-search"></span>
-            <div class="tool-item">
-              <strong>search</strong>
-              <span class="tool-desc">Web search via DuckDuckGo API</span>
-            </div>
-          </li>
-          <li>
-            <span class="tool-bullet tool-bullet-code"></span>
-            <div class="tool-item">
-              <strong>code_interpreter</strong>
-              <span class="tool-desc">Execute Python code in sandboxed environment</span>
-            </div>
-          </li>
-        </ul>
-        <div class="tools-footer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-          <span>Powered by <strong>Microsoft AutoGen</strong> framework</span>
-        </div>
+      <div class="tools-footer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+        <span>Powered by <strong>Microsoft AutoGen</strong> framework</span>
       </div>
     </div>
-  </main>
+  </div>
+
   <div class="mode-input-container">
     <div class="input-section">
       <div class="controls">
@@ -481,11 +439,5 @@
         </button>
       </div>
     </div>
-
   </div>
-
-
-  <script defer src="/static/orchestrator.js?v={{ orchestrator_js }}"></script>
-
-</body>
-</html>
+{% endblock %}

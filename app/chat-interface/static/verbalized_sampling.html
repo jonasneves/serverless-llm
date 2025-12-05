@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <title>Variations - Explore Diverse Outputs</title>
-  <!-- Auto-generated cache-busting versions based on file content hash -->
-  <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script defer src="/static/settings.js?v={{ settings_js }}"></script>
+{% extends "layout.html" %}
+
+{% block title %}Variations - Explore Diverse Outputs{% endblock %}
+{% block subtitle %}Explore Diverse Outputs{% endblock %}
+
+{% block extra_css %}
   <style>
     /* Page-specific styles for Variations mode */
 
@@ -273,138 +269,105 @@
       }
     }
   </style>
-</head>
-<body>
-  <header>
-    <div class="logo">
-      <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-        </svg>
-      </div>
-      <div class="logo-text">
-        <span class="logo-title">Variations</span>
-        <span class="logo-subtitle">Explore Diverse Outputs</span>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
+  <script defer src="/static/verbalized_sampling.js?v={{ verbalized_sampling_js }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="technique-explainer mode-overview-card">
+    <h2 class="mode-overview-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+      </svg>
+      Variations: Mitigate Mode Collapse
+    </h2>
+    <p class="mode-overview-subtitle">
+      <strong>The Problem:</strong> Post-training alignment (RLHF) causes LLMs to suffer from "mode collapse" - 
+      they give the same predictable response every time due to typicality bias.
+    </p>
+    <p class="mode-overview-subtitle">
+      <strong>The Solution:</strong> Verbalized Sampling asks for <em>a distribution of responses</em> instead of <em>one response</em>.
+      This forces the model to tap into its diverse pre-trained knowledge rather than the narrow post-aligned mode.
+    </p>
+    <p class="mode-overview-subtitle" style="margin-bottom: 0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: text-bottom;">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+      <a href="https://arxiv.org/abs/2411.16641" target="_blank" class="paper-link">Stanford Research Paper</a> ·
+      Boosts creativity 1.6-2x · Increases diversity 25.7% · Zero training required
+    </p>
+    <div class="example-prompts">
+      <div class="example-prompts-label">Try an example:</div>
+      <div class="example-chips">
+        <button class="example-chip" data-prompt="Tell me a joke about programming">Programming joke</button>
+        <button class="example-chip" data-prompt="Write a creative opening line for a sci-fi novel">Sci-fi opening</button>
+        <button class="example-chip" data-prompt="Suggest unique pizza topping combinations">Creative pizza</button>
+        <button class="example-chip" data-prompt="Generate creative team names for a hackathon">Team names</button>
       </div>
     </div>
-    <div class="header-actions">
-      <div class="modes">
-        <a href="/" class="mode-link">Arena</a>
-        <a href="/discussion" class="mode-link">Discussion</a>
-        <a href="/autogen" class="mode-link">Agents</a>
-        <a href="/variations" class="mode-link active">Variations</a>
-        <a href="/confessions" class="mode-link">Confessions</a>
-        <a href="/voice" class="mode-link">Voice</a>
-      </div>
-      <div class="header-controls">
-        <button id="themeToggle" class="icon-btn" title="Toggle Theme">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+  </div>
+
+  <div class="comparison-container">
+    <!-- Direct Prompting Side -->
+    <div class="comparison-side direct">
+      <div class="side-header direct">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-        </button>
-        <button id="settingsBtn" class="icon-btn" title="Settings" data-settings-trigger>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          Direct Prompting
+        </h3>
+        <span class="badge problem">Mode Collapse</span>
+      </div>
+      <div id="directResponses" class="responses-container">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="8" y="8" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <p>Standard prompting - same response multiple times</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verbalized Sampling Side -->
+    <div class="comparison-side verbalized">
+      <div class="side-header verbalized">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          Variations (Verbalized Sampling)
+        </h3>
+        <span class="badge solution">Diverse Outputs</span>
+      </div>
+      <div id="verbalizedResponses" class="responses-container">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V10a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+            <circle cx="19" cy="5" r="2"></circle>
+            <circle cx="5" cy="19" r="2"></circle>
+            <circle cx="5" cy="5" r="2"></circle>
+            <circle cx="19" cy="19" r="2"></circle>
           </svg>
-        </button>
+          <p>Asks for distribution - unlocks diverse creativity</p>
+        </div>
+      </div>
+      <div id="diversityScore" style="display: none;" class="diversity-score">
+        <div class="diversity-score-label">Diversity Score</div>
+        <div class="diversity-score-value">--</div>
       </div>
     </div>
-  </header>
+  </div>
 
-  <main>
-    <div class="technique-explainer mode-overview-card">
-      <h2 class="mode-overview-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-        </svg>
-        Variations: Mitigate Mode Collapse
-      </h2>
-      <p class="mode-overview-subtitle">
-        <strong>The Problem:</strong> Post-training alignment (RLHF) causes LLMs to suffer from "mode collapse" - 
-        they give the same predictable response every time due to typicality bias.
-      </p>
-      <p class="mode-overview-subtitle">
-        <strong>The Solution:</strong> Verbalized Sampling asks for <em>a distribution of responses</em> instead of <em>one response</em>.
-        This forces the model to tap into its diverse pre-trained knowledge rather than the narrow post-aligned mode.
-      </p>
-      <p class="mode-overview-subtitle" style="margin-bottom: 0;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: text-bottom;">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10 9 9 9 8 9"></polyline>
-        </svg>
-        <a href="https://arxiv.org/abs/2411.16641" target="_blank" class="paper-link">Stanford Research Paper</a> ·
-        Boosts creativity 1.6-2x · Increases diversity 25.7% · Zero training required
-      </p>
-      <div class="example-prompts">
-        <div class="example-prompts-label">Try an example:</div>
-        <div class="example-chips">
-          <button class="example-chip" data-prompt="Tell me a joke about programming">Programming joke</button>
-          <button class="example-chip" data-prompt="Write a creative opening line for a sci-fi novel">Sci-fi opening</button>
-          <button class="example-chip" data-prompt="Suggest unique pizza topping combinations">Creative pizza</button>
-          <button class="example-chip" data-prompt="Generate creative team names for a hackathon">Team names</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="comparison-container">
-      <!-- Direct Prompting Side -->
-      <div class="comparison-side direct">
-        <div class="side-header direct">
-          <h3>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            Direct Prompting
-          </h3>
-          <span class="badge problem">Mode Collapse</span>
-        </div>
-        <div id="directResponses" class="responses-container">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="8" y="8" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            <p>Standard prompting - same response multiple times</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Verbalized Sampling Side -->
-      <div class="comparison-side verbalized">
-        <div class="side-header verbalized">
-          <h3>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
-            Variations (Verbalized Sampling)
-          </h3>
-          <span class="badge solution">Diverse Outputs</span>
-        </div>
-        <div id="verbalizedResponses" class="responses-container">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <circle cx="19" cy="5" r="2"></circle>
-              <circle cx="5" cy="19" r="2"></circle>
-              <circle cx="5" cy="5" r="2"></circle>
-              <circle cx="19" cy="19" r="2"></circle>
-            </svg>
-            <p>Asks for distribution - unlocks diverse creativity</p>
-          </div>
-        </div>
-        <div id="diversityScore" style="display: none;" class="diversity-score">
-          <div class="diversity-score-label">Diversity Score</div>
-          <div class="diversity-score-value">--</div>
-        </div>
-      </div>
-    </div>
-  </main>
   <div class="mode-input-container">
     <div class="input-section">
       <div class="controls">
@@ -436,12 +399,5 @@
         </button>
       </div>
     </div>
-
   </div>
-
-
-  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
-  <script defer src="/static/verbalized_sampling.js?v={{ verbalized_sampling_js }}"></script>
-
-</body>
-</html>
+{% endblock %}
