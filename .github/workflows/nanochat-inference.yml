@@ -106,11 +106,24 @@ jobs:
           chmod +x cloudflared
           sudo mv cloudflared /usr/local/bin/
 
+      - name: Clone nanochat repo (for local backend)
+        run: |
+          cd app/nanochat-inference
+          if [ ! -d nanochat_repo/.git ]; then
+            git clone https://github.com/karpathy/nanochat.git nanochat_repo
+          else
+            echo "nanochat_repo already exists"
+          fi
+
       - name: Start inference server
         env:
           HF_HOME: /tmp/hf_cache
           HUGGING_FACE_HUB_TOKEN: ${{ secrets.HF_TOKEN }}
           NANOCHAT_MODEL_NAME: d34
+          NANOCHAT_HF_PT_REPO: karpathy/nanochat-d34
+          NANOCHAT_HF_MODEL_FILE: model_169150.pt
+          NANOCHAT_HF_TOKENIZER_FILE: tokenizer.pkl
+          NANOCHAT_HF_META_FILE: meta_169150.json
         run: |
           cd app/nanochat-inference
           echo "=== Starting Nanochat server (Uvicorn) ==="
