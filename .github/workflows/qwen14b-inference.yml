@@ -70,12 +70,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'app/qwen14b-inference/requirements.txt'
+          enable-cache: true
+          cache-dependency-glob: "app/*/requirements.txt"
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Cache GGUF models
         uses: actions/cache@v4
@@ -83,13 +85,14 @@ jobs:
           path: |
             ~/.cache/huggingface
             /tmp/hf_cache
-          key: gguf-qwen2.5-14b-q4-${{ runner.os }}
+          key: gguf-qwen2.5-14b-q4-${{ runner.os }}-${{ runner.arch }}
           restore-keys: |
+            gguf-qwen2.5-14b-${{ runner.os }}-
             gguf-qwen2.5-14b-
 
       - name: Install dependencies
         run: |
-          pip install -r app/qwen14b-inference/requirements.txt
+          uv pip install --system -r app/qwen14b-inference/requirements.txt
 
       - name: Install cloudflared
         run: |

@@ -79,16 +79,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'app/chat-interface/requirements.txt'
+          enable-cache: true
+          cache-dependency-glob: "app/*/requirements.txt"
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Install dependencies
         run: |
-          pip install -r app/chat-interface/requirements.txt
+          uv pip install --system -r app/chat-interface/requirements.txt
 
       - name: Install cloudflared
         run: |

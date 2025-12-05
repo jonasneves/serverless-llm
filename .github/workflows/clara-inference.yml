@@ -94,12 +94,14 @@ jobs:
           echo "=== Disk space after cleanup ==="
           df -h
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'app/clara-inference/requirements.txt'
+          enable-cache: true
+          cache-dependency-glob: "app/*/requirements.txt"
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Cache Hugging Face models
         uses: actions/cache@v4
@@ -107,13 +109,14 @@ jobs:
           path: |
             ~/.cache/huggingface
             /tmp/hf_cache
-          key: transformers-clara-7b-${{ inputs.compression_level || '16' }}-${{ runner.os }}
+          key: transformers-clara-7b-${{ inputs.compression_level || '16' }}-${{ runner.os }}-${{ runner.arch }}
           restore-keys: |
+            transformers-clara-7b-${{ inputs.compression_level || '16' }}-${{ runner.os }}-
             transformers-clara-7b-
 
       - name: Install dependencies
         run: |
-          pip install -r app/clara-inference/requirements.txt
+          uv pip install --system -r app/clara-inference/requirements.txt
 
       - name: Install cloudflared
         run: |

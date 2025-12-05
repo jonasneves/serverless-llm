@@ -70,12 +70,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'app/mistral-inference/requirements.txt'
+          enable-cache: true
+          cache-dependency-glob: "app/*/requirements.txt"
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Cache GGUF models
         uses: actions/cache@v4
@@ -83,13 +85,14 @@ jobs:
           path: |
             ~/.cache/huggingface
             /tmp/hf_cache
-          key: gguf-mistral-7b-q4-${{ runner.os }}
+          key: gguf-mistral-7b-q4-${{ runner.os }}-${{ runner.arch }}
           restore-keys: |
+            gguf-mistral-7b-${{ runner.os }}-
             gguf-mistral-7b-
 
       - name: Install dependencies
         run: |
-          pip install -r app/mistral-inference/requirements.txt
+          uv pip install --system -r app/mistral-inference/requirements.txt
 
       - name: Install cloudflared
         run: |
