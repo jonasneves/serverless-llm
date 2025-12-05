@@ -248,15 +248,14 @@ def load_model():
             last_exc = e
             continue
     if last_exc is not None:
-        raise last_exc
-    except ValueError as e:
-        if "Dropout" in str(e) and "not supported" in str(e):
+        # Show friendly hint when the known PEFT/Dropout issue surfaces
+        if "Dropout" in str(last_exc) and "not supported" in str(last_exc):
             print(f"\n{'='*60}")
             print("ERROR: CLaRa has a PEFT compatibility issue")
             print("The model tries to apply LoRA to Dropout modules,")
             print("which PEFT doesn't support. This is a bug in CLaRa's code.")
             print(f"{'='*60}\n")
-        raise
+        raise last_exc
 
     print(f"CLaRa model loaded successfully in {time.perf_counter() - t_load:.1f}s!")
 
