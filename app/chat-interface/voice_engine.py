@@ -125,9 +125,10 @@ CRITICAL RULES:
         cleaned_lines = []
         
         # Regex to identify valid dialogue lines: "Name: Text"
-        # We construct a regex that matches the provided speakers
+        # We construct a regex that matches the provided speakers, allowing for optional markdown (**Name**: or *Name*:)
         speaker_pattern = "|".join([re.escape(s) for s in speakers])
-        dialogue_regex = re.compile(f"^({speaker_pattern}):\s*(.*)", re.IGNORECASE)
+        # Match start of line, optional markdown chars, speaker name, optional markdown chars, colon, then text
+        dialogue_regex = re.compile(f"^[*_]*({speaker_pattern})[*_]*:\s*(.*)", re.IGNORECASE)
 
         lines = script.strip().splitlines()
         

@@ -4,12 +4,12 @@ uvicorn[standard]==0.24.0
 pydantic==2.10.1
 python-multipart==0.0.6
 ffmpeg-python==0.2.0
-numpy==1.26.4
+numpy>=1.24.0
 scipy==1.13.1
 soundfile==0.12.1
 librosa==0.10.2.post1
 transformers==4.37.2
-torch==2.2.2
-accelerate==0.27.2
+torch>=2.2.0
+accelerate>=0.27.0
 sentencepiece==0.2.0
-huggingface_hub==0.23.2
+huggingface_hub>=0.23.0

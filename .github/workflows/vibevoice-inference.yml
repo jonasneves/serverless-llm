@@ -1,6 +1,6 @@
-name: VibeVoice 1.5B
+name: VibeVoice 0.5B Realtime
 
-run-name: VibeVoice 1.5B Inference Server
+run-name: VibeVoice 0.5B Realtime Inference Server
 
 on:
   workflow_dispatch:
@@ -85,9 +85,9 @@ jobs:
           path: |
             ~/.cache/huggingface
             /tmp/hf_cache
-          key: hf-vibevoice-1.5b-${{ runner.os }}
+          key: hf-vibevoice-0.5b-realtime-${{ runner.os }}
           restore-keys: |
-            hf-vibevoice-1.5b-
+            hf-vibevoice-0.5b-realtime-
 
       - name: Install dependencies
         run: |
@@ -209,7 +209,7 @@ jobs:
 
           echo ""
           echo "=========================================="
-          echo "=== VibeVoice 1.5B Inference Server ==="
+          echo "=== VibeVoice 0.5B Realtime Inference Server ==="
           echo "Server running on port 8000"
           echo "Duration: ${DURATION_HOURS} hours"
           echo "Will run until: $(date -d @$END_TIME)"
