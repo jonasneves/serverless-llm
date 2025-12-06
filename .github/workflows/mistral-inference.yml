@@ -28,9 +28,6 @@ on:
   repository_dispatch:
     types: [restart-mistral-inference]
 
-concurrency:
-  group: mistral-inference
-  cancel-in-progress: false  # Let graceful handoff work
 
 permissions:
   actions: write

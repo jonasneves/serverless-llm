@@ -28,9 +28,6 @@ on:
   repository_dispatch:
     types: [restart-phi-inference]
 
-concurrency:
-  group: phi-inference
-  cancel-in-progress: false  # Let graceful handoff work
 
 permissions:
   actions: write

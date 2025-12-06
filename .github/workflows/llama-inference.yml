@@ -28,9 +28,6 @@ on:
   repository_dispatch:
     types: [restart-llama-inference]
 
-concurrency:
-  group: llama-inference
-  cancel-in-progress: false  # Let graceful handoff work
 
 permissions:
   actions: write

@@ -28,9 +28,6 @@ on:
   repository_dispatch:
     types: [restart-vibevoice-inference]
 
-concurrency:
-  group: vibevoice-inference
-  cancel-in-progress: false  # Let graceful handoff work
 
 jobs:
   inference:

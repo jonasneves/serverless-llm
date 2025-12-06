@@ -28,9 +28,6 @@ on:
   repository_dispatch:
     types: [restart-gemma-inference]
 
-concurrency:
-  group: gemma-inference
-  cancel-in-progress: false  # Let graceful handoff work
 
 permissions:
   actions: write

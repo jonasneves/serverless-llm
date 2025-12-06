@@ -28,9 +28,6 @@ on:
   repository_dispatch:
     types: [restart-r1qwen-inference]
 
-concurrency:
-  group: r1qwen-inference
-  cancel-in-progress: false  # Let graceful handoff work
 
 permissions:
   actions: write
