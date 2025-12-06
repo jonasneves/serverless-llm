@@ -606,11 +606,11 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   }
 
   .logo-title {
-    font-size: 16px;
+    font-size: 18px;
   }
 
   .logo-subtitle {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .mode-overview-card,
@@ -643,26 +643,26 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
 
 @media (max-width: 480px) {
   header {
-    padding: 10px 12px;
+    padding: 12px 16px;
   }
 
   .logo-icon {
-    width: 28px;
-    height: 28px;
-    padding: 5px;
+    width: 24px;
+    height: 24px;
+    padding: 6px;
   }
 
   .logo-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 
   .logo {
-    gap: 8px;
+    gap: 10px;
   }
 
   .logo-title {
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .logo-subtitle {
