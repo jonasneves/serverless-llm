@@ -444,22 +444,22 @@ main:not(:has(.chat-history)),
 /* Add padding to main content, but not to input containers or overview cards */
 main > :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
 .container > :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
-  padding: 0 1rem;
+  padding: 0 16px;
 }
 
 main > :not(.mode-input-container):not(.input-container):first-child,
 .container > :not(.mode-input-container):not(.input-container):first-child {
-  padding-top: 1rem;
+  padding-top: 16px;
 }
 
 main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator),
 .container > :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator) {
-  padding-bottom: 1rem;
+  padding-bottom: 16px;
 }
 
 /* Mode overview cards get margin instead of padding */
 .mode-overview-card {
-  margin-top: 1rem;
+  margin-top: 16px;
   margin-bottom: 0;
   margin-left: auto;
   margin-right: auto;
@@ -478,15 +478,20 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 24px;
   box-shadow: var(--shadow-sm);
 }
 
 .card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 1rem;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .badge {
@@ -563,7 +568,7 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   flex-shrink: 0;
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
-  padding: 1rem;
+  padding: 16px;
   box-shadow: var(--shadow-sm);
 }
 

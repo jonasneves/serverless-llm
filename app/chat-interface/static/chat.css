@@ -25,10 +25,10 @@ main {
       min-height: 0;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 1rem;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 24px;
     }
 
     .message {
@@ -286,7 +286,7 @@ main {
 
     .input-container {
       flex-shrink: 0;
-      padding: 1rem;
+      padding: 16px;
       background-color: var(--bg-primary);
       border-top: 1px solid var(--border-color);
     }
