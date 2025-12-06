@@ -167,6 +167,13 @@ MODEL_CONFIG = (
         "service": "qwen",
     },
     {
+        "id": "deepseek-r1-distill-qwen-7b",
+        "name": "DeepSeek R1 Distill Qwen 7B",
+        "env": "R1QWEN_API_URL",
+        "default_url": "http://localhost:8004",
+        "service": "r1qwen",
+    },
+    {
         "id": "gemma-2-9b-instruct",
         "name": "Gemma 2 9B",
         "env": "GEMMA_API_URL",
