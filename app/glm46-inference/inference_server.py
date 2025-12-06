@@ -13,6 +13,7 @@ import os
 import json
 import time
 from typing import Optional, List, AsyncGenerator
+import logging
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -27,6 +28,7 @@ app = FastAPI(
     description="REST API proxy to HF Inference API for zai-org/GLM-4.6",
     version="1.0.0",
 )
+logger = logging.getLogger(__name__)
 
 app.add_middleware(
     CORSMiddleware,
@@ -164,8 +166,9 @@ async def chat_completions(request: GenerateRequest):
 
         # Stream or non-stream path
         if request.stream:
+            # Use reliable one-shot streaming wrapper for GLM
             return StreamingResponse(
-                _stream_glm(prompt, request.max_tokens, request.temperature, request.top_p),
+                _oneshot_stream(prompt, request.max_tokens, request.temperature, request.top_p),
                 media_type="text/event-stream",
                 headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
             )
@@ -303,6 +306,63 @@ async def _stream_glm(
         yield f"data: {json.dumps(usage_chunk)}\n\n"
         yield "data: [DONE]\n\n"
     except Exception as e:
+        logger.error(f"GLM stream error: {e}")
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+
+async def _oneshot_stream(
+    prompt: str, max_tokens: int, temperature: float, top_p: float
+) -> AsyncGenerator[str, None]:
+    """Non-stream generation wrapped as SSE stream for reliability."""
+    client = _get_hf_client()
+    total_content = ""
+    try:
+        # Signal start
+        yield f"data: {json.dumps({'choices':[{'delta':{'role':'assistant'}}]})}\n\n"
+
+        generated = client.text_generation(
+            prompt,
+            max_new_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            stream=False,
+            return_full_text=False,
+        )
+
+        # Normalize
+        if not isinstance(generated, str):
+            if isinstance(generated, list) and generated:
+                cand = generated[0]
+                if isinstance(cand, dict) and isinstance(cand.get("generated_text"), str):
+                    generated = cand["generated_text"]
+                else:
+                    generated = str(cand)
+            elif isinstance(generated, dict) and isinstance(generated.get("generated_text"), str):
+                generated = generated["generated_text"]
+            else:
+                generated = str(generated)
+
+        total_content = generated or ""
+        if total_content:
+            yield f"data: {json.dumps({'choices':[{'delta':{'content': total_content}}]})}\n\n"
+        else:
+            yield f"data: {json.dumps({'error': 'Empty response from HF Inference API'})}\n\n"
+
+        # Usage (estimated)
+        prompt_tokens = _estimate_tokens(prompt)
+        completion_tokens = _estimate_tokens(total_content)
+        usage_chunk = {
+            'choices': [{'delta': {}, 'finish_reason': 'stop'}],
+            'usage': {
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': prompt_tokens + completion_tokens,
+            }
+        }
+        yield f"data: {json.dumps(usage_chunk)}\n\n"
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        logger.error(f"GLM one-shot error: {e}")
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
 
