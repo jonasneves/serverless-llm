@@ -1,6 +1,8 @@
 # Serverless LLM Chat
 
 [![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-7b)](https://qwen.neevs.io/health)
+[![DeepSeek R1Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/deepseek-r1-distill-qwen-1.5b)](https://r1qwen.neevs.io/health)
+[![GLM-4.6 API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/glm-4.6)](https://glm.neevs.io/health)
 [![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
 [![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
@@ -17,7 +19,7 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 ## Overview Features
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: Qwen 2.5 (7B), Phi-3, Llama 3.2, Mistral 7B, Gemma 2 9B
+- **Multi-Model Support**: Qwen 2.5 (7B), DeepSeek R1 Distill Qwen (1.5B), GLM‑4.6, Phi‑3, Llama 3.2, Mistral 7B, Gemma 2 9B
 - **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
 - **Continuous Availability**: Auto-restart with graceful handoff
@@ -55,7 +57,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | Secret | Description |
 |--------|-------------|
 | `HF_TOKEN` | Hugging Face token for gated models |
-| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, GEMMA) |
+| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, GEMMA, R1QWEN, GLM46) |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for web interface |
 | `{MODEL}_API_URL` | Public URL for each model (e.g., `https://qwen.neevs.io`) |
 | `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents modes ([create token](https://github.com/settings/personal-access-tokens/new)) |
@@ -71,7 +73,7 @@ Add to **Settings > Secrets and variables > Actions**:
 
 ```bash
 # Start each model server (single instance)
-gh workflow run {model}-inference.yml  # qwen, phi, llama, mistral, gemma
+gh workflow run {model}-inference.yml  # qwen, phi, llama, mistral, gemma, r1qwen, glm46
 
 # Or start with multiple instances for high availability
 gh workflow run qwen-inference.yml -f instances=3
