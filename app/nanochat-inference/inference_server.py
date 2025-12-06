@@ -79,7 +79,7 @@ class ChatMessage(BaseModel):
 class ChatCompletionRequest(BaseModel):
     prompt: Optional[str] = None
     messages: Optional[List[ChatMessage]] = None
-    max_tokens: int = 512
+    max_tokens: int = 50  # Reduced for CPU inference performance
     temperature: float = 0.7
     top_p: float = 0.9
     stream: bool = False
@@ -582,15 +582,24 @@ async def chat_completions(request: ChatCompletionRequest):
                 input_ids = list(input_ids) if hasattr(input_ids, '__iter__') else [input_ids]
 
             # nanochat model.generate() is a generator that yields token IDs
+            import time
+            start_time = time.time()
             generated_tokens = []
+            print(f"Starting generation with {len(input_ids)} input tokens, max_tokens={request.max_tokens}")
             with torch.no_grad():  # Disable gradient computation for inference
-                for token in model.generate(
+                for i, token in enumerate(model.generate(
                     input_ids,
                     request.max_tokens,
                     request.temperature,
                     top_k=20
-                ):
+                )):
                     generated_tokens.append(token)
+                    if i % 5 == 0:  # Log every 5 tokens
+                        elapsed = time.time() - start_time
+                        print(f"Generated {i+1} tokens in {elapsed:.2f}s ({(i+1)/elapsed:.2f} tok/s)")
+
+            total_time = time.time() - start_time
+            print(f"Generation complete: {len(generated_tokens)} tokens in {total_time:.2f}s ({len(generated_tokens)/total_time:.2f} tok/s)")
 
             # Decode the generated tokens to text
             if generated_tokens:
