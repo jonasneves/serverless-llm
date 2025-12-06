@@ -58,7 +58,7 @@ Search for the latest Python version, then write code to check if it's installed
 cd app/qwen-inference && python inference_server.py            # Terminal 1
 cd app/phi-inference && python inference_server.py             # Terminal 2
 cd app/llama-inference && python inference_server.py           # Terminal 3
-# Optional: DeepSeek-R1-Distill-Qwen-7B reasoning backend
+# Optional: DeepSeek-R1-Distill-Qwen-1.5B reasoning backend
 cd app/deepseek-r1qwen-inference && python inference_server.py # Terminal 4
 
 # Set environment variables

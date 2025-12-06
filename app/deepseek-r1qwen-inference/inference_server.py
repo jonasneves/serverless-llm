@@ -1,5 +1,5 @@
 """
-DeepSeek-R1-Distill-Qwen-7B Inference Server (GGUF)
+DeepSeek-R1-Distill-Qwen-1.5B Inference Server (GGUF)
 FastAPI-based REST API using llama-cpp-python for efficient CPU inference
 
 This mirrors the existing local servers and exposes an OpenAI-compatible
@@ -19,8 +19,8 @@ from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
 
 app = FastAPI(
-    title="DeepSeek R1 Distill Qwen 7B API",
-    description="REST API for DeepSeek-R1-Distill-Qwen-7B (GGUF) via llama.cpp",
+    title="DeepSeek R1 Distill Qwen 1.5B API",
+    description="REST API for DeepSeek-R1-Distill-Qwen-1.5B (GGUF) via llama.cpp",
     version="1.0.0"
 )
 
@@ -35,7 +35,7 @@ app.add_middleware(
 # Global model instance and concurrency gate
 llm = None
 inference_lock = asyncio.Semaphore(1)
-MODEL_NAME = "DeepSeek-R1-Distill-Qwen-7B"
+MODEL_NAME = "DeepSeek-R1-Distill-Qwen-1.5B"
 
 
 class ChatMessage(BaseModel):
@@ -55,8 +55,8 @@ class GenerateRequest(BaseModel):
 def download_model() -> str:
     """Download GGUF model from Hugging Face (configurable via env)."""
     # Defaults to a popular GGUF repo; override in production if needed
-    repo_id = os.getenv("MODEL_REPO", "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF")
-    filename = os.getenv("MODEL_FILE", "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf")
+    repo_id = os.getenv("MODEL_REPO", "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF")
+    filename = os.getenv("MODEL_FILE", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf")
 
     print(f"Downloading model: {repo_id}/{filename}")
     model_path = hf_hub_download(
@@ -120,7 +120,7 @@ async def health():
 async def list_models():
     return {
         "data": [
-            {"id": "deepseek-r1-distill-qwen-7b", "object": "model", "owned_by": "deepseek"}
+            {"id": "deepseek-r1-distill-qwen-1.5b", "object": "model", "owned_by": "deepseek"}
         ]
     }
 
@@ -202,7 +202,7 @@ async def chat_completions(request: GenerateRequest):
         return {
             "id": "chatcmpl-r1qwen",
             "object": "chat.completion",
-            "model": "deepseek-r1-distill-qwen-7b",
+            "model": "deepseek-r1-distill-qwen-1.5b",
             "choices": response["choices"],
             "usage": response["usage"],
         }
@@ -213,4 +213,3 @@ async def chat_completions(request: GenerateRequest):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run(app, host="0.0.0.0", port=port)
-

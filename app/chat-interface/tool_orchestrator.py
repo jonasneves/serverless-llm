@@ -32,7 +32,7 @@ class ToolOrchestrator:
         # Orchestrator model endpoint (use Qwen)
         self.orchestrator_url = os.getenv("QWEN_API_URL", "https://qwen.neevs.io")
 
-        # Prefer DeepSeek R1 Distill Qwen 7B for reasoning if available
+        # Prefer DeepSeek R1 Distill Qwen 1.5B for reasoning if available
         self.default_reasoner = "reasoner-4" if os.getenv("R1QWEN_API_URL") else "reasoner-1"
 
         # Load tools configuration

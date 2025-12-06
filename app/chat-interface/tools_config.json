@@ -10,7 +10,7 @@
           "model": {
             "type": "string",
             "enum": ["reasoner-1", "reasoner-2", "reasoner-3", "reasoner-4"],
-            "description": "The reasoning model to use:\n- reasoner-1 (Qwen 2.5-7B): Strong understanding and reasoning, most reliable. Best for: complex logic, coding tasks.\n- reasoner-2 (Phi-3 Mini): Good reasoning but may struggle with very complex problems. Best for: moderate difficulty tasks.\n- reasoner-3 (Llama 3.2-3B): Fast but basic reasoning. Best for: simple tasks, quick analysis.\n- reasoner-4 (DeepSeek-R1-Distill-Qwen-7B): Reasoning-optimized (R1 distill) for detailed step-by-step thinking."
+            "description": "The reasoning model to use:\n- reasoner-1 (Qwen 2.5-7B): Strong understanding and reasoning, most reliable. Best for: complex logic, coding tasks.\n- reasoner-2 (Phi-3 Mini): Good reasoning but may struggle with very complex problems. Best for: moderate difficulty tasks.\n- reasoner-3 (Llama 3.2-3B): Fast but basic reasoning. Best for: simple tasks, quick analysis.\n- reasoner-4 (DeepSeek-R1-Distill-Qwen-1.5B): Reasoning-optimized (R1 distill) for detailed step-by-step thinking."
           },
           "reasoning_focus": {
             "type": "string",
@@ -32,7 +32,7 @@
           "model": {
             "type": "string",
             "enum": ["answer-1", "answer-2", "answer-3", "answer-4"],
-            "description": "The answer model to use:\n- answer-1 (Qwen 2.5-7B): Excellent for most domains (math, coding, science). Best for: comprehensive answers.\n- answer-2 (Phi-3 Mini): Good for moderate tasks, instruction following. Best for: straightforward questions.\n- answer-3 (Llama 3.2-3B): Basic capability, conversational. Best for: simple queries, creative writing.\n- answer-4 (DeepSeek-R1-Distill-Qwen-7B): Thoughtful answers with explicit chain-of-thought-style reasoning."
+            "description": "The answer model to use:\n- answer-1 (Qwen 2.5-7B): Excellent for most domains (math, coding, science). Best for: comprehensive answers.\n- answer-2 (Phi-3 Mini): Good for moderate tasks, instruction following. Best for: straightforward questions.\n- answer-3 (Llama 3.2-3B): Basic capability, conversational. Best for: simple queries, creative writing.\n- answer-4 (DeepSeek-R1-Distill-Qwen-1.5B): Thoughtful answers with explicit chain-of-thought-style reasoning."
           }
         },
         "required": ["model"]

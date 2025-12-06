@@ -369,12 +369,12 @@ GEMMA2_9B_PROFILE = {
     "description": "Well-rounded 9B model with strong reasoning and safety guarantees"
 }
 
-# DeepSeek R1 Distill Qwen 7B (local, GGUF)
+# DeepSeek R1 Distill Qwen 1.5B (local, GGUF)
 DEEPSEEK_R1_QWEN7B_PROFILE = {
-    "model_id": "deepseek-r1-distill-qwen-7b",
-    "display_name": "DeepSeek R1 Distill Qwen 7B",
+    "model_id": "deepseek-r1-distill-qwen-1.5b",
+    "display_name": "DeepSeek R1 Distill Qwen 1.5B",
     "creator": "DeepSeek x Alibaba",
-    "size": "7B parameters",
+    "size": "1.5B parameters",
     "quantization": "Q4_K_M",
 
     "primary_strengths": ["reasoning", "mathematics", "coding"],
@@ -409,7 +409,7 @@ DEEPSEEK_R1_QWEN7B_PROFILE = {
     ],
 
     "context_length": 32768,
-    "description": "R1-style distilled reasoning on Qwen 7B with strong step-by-step capability",
+    "description": "R1-style distilled reasoning on Qwen 1.5B with strong step-by-step capability",
 }
 
  
@@ -421,7 +421,7 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "qwen2.5-7b": QWEN_PROFILE,
     "phi-3-mini": PHI_PROFILE,
     "llama-3.2-3b": LLAMA_PROFILE,
-    "deepseek-r1-distill-qwen-7b": DEEPSEEK_R1_QWEN7B_PROFILE,
+    "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN7B_PROFILE,
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
     "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
     # API models

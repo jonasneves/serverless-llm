@@ -34,7 +34,7 @@ class ModelRouter:
             "description": "Fast, basic reasoning"
         },
         "reasoner-4": {
-            "name": "DeepSeek-R1-Distill-Qwen-7B",
+            "name": "DeepSeek-R1-Distill-Qwen-1.5B",
             "url_env": "R1QWEN_API_URL",
             "description": "Reasoning-optimized (R1 distill)"
         },
@@ -55,7 +55,7 @@ class ModelRouter:
             "description": "Simple queries, conversational"
         },
         "answer-4": {
-            "name": "DeepSeek-R1-Distill-Qwen-7B",
+            "name": "DeepSeek-R1-Distill-Qwen-1.5B",
             "url_env": "R1QWEN_API_URL",
             "description": "Thoughtful answers with explicit reasoning"
         },

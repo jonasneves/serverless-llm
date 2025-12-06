@@ -19,10 +19,9 @@ RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install --no-
 
 COPY inference_server.py .
 
-ENV MODEL_NAME=DeepSeek-R1-Distill-Qwen-7B
+ENV MODEL_NAME=DeepSeek-R1-Distill-Qwen-1.5B
 ENV PORT=8000
 
 EXPOSE 8000
 
 CMD ["python3", "inference_server.py"]
-

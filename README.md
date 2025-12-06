@@ -108,7 +108,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 | Model | Parameters | Quantization | Strengths |
 |-------|------------|--------------|-----------|
 | Qwen 2.5 | 7B | Q4_K_M | Code generation, multilingual tasks |
-| DeepSeek R1 Distill Qwen | 7B | Q4_K_M | Step-by-step reasoning, math, analysis |
+| DeepSeek R1 Distill Qwen | 1.5B | Q4_K_M | Step-by-step reasoning, math, analysis |
 | Phi-3 Mini | 3.8B | Q4_K_M | Efficient reasoning, instruction following |
 | Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |
 | Mistral 7B v0.3 | 7B | Q4_K_M | Structured output, function calling |
@@ -125,7 +125,7 @@ serverless-llm/
 │   ├── phi-inference/          # Phi model server
 │   ├── llama-inference/        # Llama model server
 │   ├── mistral-inference/      # Mistral model server
-│   ├── deepseek-r1qwen-inference/ # DeepSeek R1 Distill Qwen 7B server
+│   ├── deepseek-r1qwen-inference/ # DeepSeek R1 Distill Qwen 1.5B server
 │   ├── gemma-inference/        # Gemma model server
 │   └── chat-interface/         # Web interface + proxy
 └── docs/                       # Mode-specific documentation
