@@ -13,6 +13,7 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 from tools.web_search import WebSearchTool
 from tools.code_executor import CodeExecutorTool
+from constants import DEFAULT_REMOTE_ENDPOINTS
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +25,10 @@ class AutoGenOrchestrator:
     """
 
     def __init__(self):
-        # Get model endpoints from environment
-        self.qwen_url = os.getenv("QWEN_API_URL", "https://qwen.neevs.io")
-        self.phi_url = os.getenv("PHI_API_URL", "https://phi.neevs.io")
-        self.llama_url = os.getenv("LLAMA_API_URL", "https://llama.neevs.io")
+        # Get model endpoints from environment (fallback to remote defaults)
+        self.qwen_url = os.getenv("QWEN_API_URL", DEFAULT_REMOTE_ENDPOINTS["QWEN_API_URL"]) 
+        self.phi_url = os.getenv("PHI_API_URL", DEFAULT_REMOTE_ENDPOINTS["PHI_API_URL"]) 
+        self.llama_url = os.getenv("LLAMA_API_URL", DEFAULT_REMOTE_ENDPOINTS["LLAMA_API_URL"]) 
 
         # Initialize tools
         self.web_search = WebSearchTool()

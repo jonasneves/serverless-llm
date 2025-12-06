@@ -9,6 +9,7 @@ import logging
 import httpx
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from http_client import HTTPClient
+from constants import DEFAULT_REMOTE_ENDPOINTS
 
 from tools.model_router import ModelRouter
 from tools.web_search import WebSearchTool
@@ -30,7 +31,7 @@ class ToolOrchestrator:
         self.code_executor = CodeExecutorTool()
 
         # Orchestrator model endpoint (use Qwen)
-        self.orchestrator_url = os.getenv("QWEN_API_URL", "https://qwen.neevs.io")
+        self.orchestrator_url = os.getenv("QWEN_API_URL", DEFAULT_REMOTE_ENDPOINTS["QWEN_API_URL"])
 
         # Prefer DeepSeek R1 Distill Qwen 1.5B for reasoning if available
         self.default_reasoner = "reasoner-4" if os.getenv("R1QWEN_API_URL") else "reasoner-1"
