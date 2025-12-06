@@ -106,6 +106,10 @@ class AutoGenOrchestrator:
         """
 
         last_orchestrator_message = None
+        qwen_client = None
+        phi_client = None
+        llama_client = None
+        orchestrator_client = None
 
         try:
             yield {
@@ -116,6 +120,7 @@ class AutoGenOrchestrator:
 
             # Create specialist agents
             logger.info("Creating AutoGen specialist agents...")
+            logger.info(f"Model endpoints - Qwen: {self.qwen_url}, Phi: {self.phi_url}, Llama: {self.llama_url}")
 
             # Math/Reasoning Expert (Qwen)
             qwen_client = self._create_model_client(self.qwen_url, "qwen3-4b")
@@ -225,15 +230,32 @@ Choose the most appropriate specialist or tool for each task. You can use multip
             }
 
             # Close model clients
-            await qwen_client.close()
-            await phi_client.close()
-            await llama_client.close()
-            await orchestrator_client.close()
+            if qwen_client:
+                await qwen_client.close()
+            if phi_client:
+                await phi_client.close()
+            if llama_client:
+                await llama_client.close()
+            if orchestrator_client:
+                await orchestrator_client.close()
 
         except Exception as e:
             logger.error(f"AutoGen orchestration error: {e}", exc_info=True)
+
+            # Provide more specific error messages
+            error_msg = str(e)
+            if "connect" in error_msg.lower() or "connection" in error_msg.lower():
+                error_msg = f"Cannot connect to model endpoints. Please ensure the model services are running. Error: {error_msg}"
+            elif "timeout" in error_msg.lower():
+                error_msg = f"Request timed out connecting to models. Error: {error_msg}"
+
             yield {
                 "event": "error",
-                "error": str(e),
-                "framework": "Microsoft AutoGen"
+                "error": error_msg,
+                "framework": "Microsoft AutoGen",
+                "endpoints": {
+                    "qwen": self.qwen_url,
+                    "phi": self.phi_url,
+                    "llama": self.llama_url
+                }
             }

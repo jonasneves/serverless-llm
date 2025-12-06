@@ -187,10 +187,25 @@ document.addEventListener('DOMContentLoaded', () => {
               } else if (event.event === 'error') {
                 console.error('Orchestration error:', event.error);
                 const errorDiv = document.createElement('div');
-                errorDiv.style.color = 'var(--warning-color)';
-                errorDiv.style.padding = '16px';
+                errorDiv.style.color = 'var(--error-color)';
+                errorDiv.style.padding = '20px';
                 errorDiv.style.marginTop = '16px';
-                errorDiv.textContent = `Error: ${event.error}`;
+                errorDiv.style.background = 'var(--error-bg)';
+                errorDiv.style.borderRadius = '8px';
+                errorDiv.style.border = '1px solid var(--error-color)';
+
+                let errorHtml = `<strong>Error:</strong> ${event.error}`;
+
+                // Show endpoint information if available
+                if (event.endpoints) {
+                  errorHtml += '<br><br><strong>Model Endpoints:</strong><br>';
+                  errorHtml += `• Qwen: ${event.endpoints.qwen}<br>`;
+                  errorHtml += `• Phi: ${event.endpoints.phi}<br>`;
+                  errorHtml += `• Llama: ${event.endpoints.llama}<br>`;
+                  errorHtml += '<br><small>Make sure these model services are running and accessible.</small>';
+                }
+
+                errorDiv.innerHTML = errorHtml;
                 orchestrationSection.appendChild(errorDiv);
               }
 
