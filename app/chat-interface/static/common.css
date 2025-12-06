@@ -486,7 +486,7 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   background: white;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
-  padding: 16px 14px;
+  padding: 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -509,7 +509,7 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   background: white;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
-  padding: 20px 16px;
+  padding: 24px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   max-width: 900px;
   margin-left: auto;
@@ -863,6 +863,58 @@ button.small {
 [data-theme="dark"] .example-prompt:hover {
   background: var(--bg-secondary);
   border-color: var(--accent-color);
+}
+
+/* Example chips - CanvasFlow Style (horizontal wrapped chips) */
+.example-prompts {
+  margin-top: 12px;
+}
+
+.example-prompts-label {
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 12px;
+  font-weight: 400;
+}
+
+.example-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.example-chip {
+  background: #FAFAFA;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.example-chip:hover {
+  background: #F3F4F6;
+  border-color: #1e3a5f;
+  color: #1e3a5f;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(30, 58, 95, 0.15);
+}
+
+[data-theme="dark"] .example-chip {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .example-chip:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 /* Shared input wrapper styles for all modes */
