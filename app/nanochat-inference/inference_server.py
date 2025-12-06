@@ -242,12 +242,33 @@ async def load_model():
                             with open(meta_path, "r") as f:
                                 meta = _json.load(f)
                             src = meta.get("config", meta)
+                            print(f"Meta config keys: {list(src.keys())}")
+
                             cfg_dict = {}
-                            for k in ("block_size", "n_layer", "n_head", "n_embd", "bias", "vocab_size"):
+                            # Map fields from meta.json to GPTConfig fields
+                            # GPTConfig uses: sequence_len, vocab_size, n_layer, n_head, n_kv_head, n_embd
+                            for k in ("n_layer", "n_head", "n_embd", "vocab_size"):
                                 if k in src:
                                     cfg_dict[k] = src[k]
-                            cfg_dict.setdefault("block_size", 4096)
-                            cfg_dict.setdefault("bias", False)
+
+                            # Handle sequence_len / block_size mapping
+                            if "sequence_len" in src:
+                                cfg_dict["sequence_len"] = src["sequence_len"]
+                            elif "block_size" in src:
+                                cfg_dict["sequence_len"] = src["block_size"]
+                            else:
+                                cfg_dict["sequence_len"] = 4096
+
+                            # Handle n_kv_head (defaults to n_head if not specified)
+                            if "n_kv_head" in src:
+                                cfg_dict["n_kv_head"] = src["n_kv_head"]
+                            elif "n_head" in src:
+                                cfg_dict["n_kv_head"] = src["n_head"]  # GQA: default to same as n_head
+
+                            # Set vocab_size default if not in meta
+                            cfg_dict.setdefault("vocab_size", 50304)
+
+                            print(f"Built config dict: {cfg_dict}")
                             # Try GPTConfig if available; else use SimpleNamespace
                             try:
                                 from gpt import GPTConfig as NC_GPTConfig  # type: ignore
