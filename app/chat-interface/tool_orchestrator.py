@@ -191,12 +191,10 @@ class ToolOrchestrator:
                 context_parts.append(f"Reasoning ({result.get('model_name', 'unknown')}):\n{result.get('content', '')}")
 
             elif tool == "search":
-                search_tool = WebSearchTool()
-                context_parts.append(search_tool.format_results_for_context(result))
+                context_parts.append(self.web_search.format_results_for_context(result))
 
             elif tool == "code_interpreter":
-                code_exec = CodeExecutorTool()
-                context_parts.append(code_exec.format_result_for_context(result))
+                context_parts.append(self.code_executor.format_result_for_context(result))
 
             elif tool == "answer":
                 context_parts.append(f"Answer ({result.get('model_name', 'unknown')}):\n{result.get('content', '')}")
