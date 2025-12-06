@@ -653,11 +653,6 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
     display: none;
   }
 
-  .icon-btn {
-    width: 32px;
-    height: 32px;
-  }
-
   .mode-link {
     padding: 5px 8px;
     font-size: 12px;
