@@ -78,13 +78,14 @@ body {
 
 header {
   padding: 16px 24px;
-  background: var(--accent-color);
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .logo {
@@ -155,9 +156,9 @@ header {
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
   background: transparent;
   border: none;
   color: white;
@@ -165,12 +166,17 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.15s ease;
   position: relative;
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.icon-btn.active {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
 .header-controls {
