@@ -370,7 +370,7 @@ GEMMA2_9B_PROFILE = {
 }
 
 # DeepSeek R1 Distill Qwen 1.5B (local, GGUF)
-DEEPSEEK_R1_QWEN7B_PROFILE = {
+DEEPSEEK_R1_QWEN15B_PROFILE = {
     "model_id": "deepseek-r1-distill-qwen-1.5b",
     "display_name": "DeepSeek R1 Distill Qwen 1.5B",
     "creator": "DeepSeek x Alibaba",
@@ -421,7 +421,7 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "qwen2.5-7b": QWEN_PROFILE,
     "phi-3-mini": PHI_PROFILE,
     "llama-3.2-3b": LLAMA_PROFILE,
-    "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN7B_PROFILE,
+    "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
     "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
     # API models

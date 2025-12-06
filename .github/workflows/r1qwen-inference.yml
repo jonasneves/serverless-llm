@@ -1,6 +1,6 @@
-name: DeepSeek R1 Distill Qwen 7B
+name: DeepSeek R1 Distill Qwen 1.5B
 
-run-name: R1-Distill-Qwen-7B Inference Server
+run-name: R1-Distill-Qwen-1.5B Inference Server
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
   inference:
     uses: ./.github/workflows/reusable-gguf-inference.yml
     with:
-      model_name: "DeepSeek R1 Distill Qwen 7B"
+      model_name: "DeepSeek R1 Distill Qwen 1.5B"
       model_dir: "deepseek-r1qwen-inference"
       model_repo: "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF"
       model_file: "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf"
