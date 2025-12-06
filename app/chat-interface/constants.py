@@ -8,6 +8,7 @@ DEFAULT_LOCAL_ENDPOINTS = {
     "PHI_API_URL": "http://localhost:8002",
     "LLAMA_API_URL": "http://localhost:8003",
     "R1QWEN_API_URL": "http://localhost:8004",
+    "RNJ_API_URL": "http://localhost:8009",
     "MISTRAL_API_URL": "http://localhost:8005",
     "GEMMA_API_URL": "http://localhost:8006",
     "VIBEVOICE_API_URL": "http://localhost:8000",
@@ -19,5 +20,5 @@ DEFAULT_REMOTE_ENDPOINTS = {
     "PHI_API_URL": "https://phi.neevs.io",
     "LLAMA_API_URL": "https://llama.neevs.io",
     "R1QWEN_API_URL": "https://r1qwen.neevs.io",
+    # RNJ intentionally omitted from remote defaults until upstream support lands
 }
-

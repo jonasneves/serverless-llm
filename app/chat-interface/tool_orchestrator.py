@@ -41,6 +41,26 @@ class ToolOrchestrator:
         with open(tools_config_path) as f:
             self.tools = json.load(f)
 
+        # Dynamically prune tool model enums based on configured endpoints
+        try:
+            available_models = set(self.model_router.model_urls.keys())
+            allowed_reasoners = [m for m in sorted(available_models) if m.startswith("reasoner-")]
+            allowed_answers = [m for m in sorted(available_models) if m.startswith("answer-")]
+
+            for tool in self.tools:
+                fn = tool.get("function", {})
+                name = fn.get("name")
+                params = fn.get("parameters", {})
+                props = params.get("properties", {})
+                model_prop = props.get("model", {})
+                if name == "enhance_reasoning" and allowed_reasoners:
+                    model_prop["enum"] = allowed_reasoners
+                elif name == "answer" and allowed_answers:
+                    model_prop["enum"] = allowed_answers
+        except Exception:
+            # Non-fatal: if pruning fails, keep static config
+            pass
+
     async def run_orchestration(
         self,
         query: str,

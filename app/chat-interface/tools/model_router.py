@@ -39,6 +39,11 @@ class ModelRouter:
             "url_env": "R1QWEN_API_URL",
             "description": "Reasoning-optimized (R1 distill)"
         },
+        "reasoner-5": {
+            "name": "RNJ-1-Instruct (GGUF)",
+            "url_env": "RNJ_API_URL",
+            "description": "Experimental; requires llama.cpp RNJ support"
+        },
         # Answer models
         "answer-1": {
             "name": "Qwen 2.5-7B",
@@ -59,6 +64,11 @@ class ModelRouter:
             "name": "DeepSeek-R1-Distill-Qwen-1.5B",
             "url_env": "R1QWEN_API_URL",
             "description": "Thoughtful answers with explicit reasoning"
+        },
+        "answer-5": {
+            "name": "RNJ-1-Instruct (GGUF)",
+            "url_env": "RNJ_API_URL",
+            "description": "Experimental; requires llama.cpp RNJ support"
         },
     }
 
