@@ -74,6 +74,23 @@ def _messages_to_prompt(messages: List[dict]) -> str:
     return "\n".join(parts)
 
 
+def _messages_to_chatml(messages: List[dict]) -> str:
+    parts = []
+    for m in messages:
+        role = m.get('role', 'user')
+        content = m.get('content', '')
+        if not content:
+            continue
+        if role == 'system':
+            parts.append("<|system|>\n" + content)
+        elif role == 'assistant':
+            parts.append("<|assistant|>\n" + content)
+        else:
+            parts.append("<|user|>\n" + content)
+    parts.append("<|assistant|>\n")
+    return "\n".join(parts)
+
+
 def _estimate_tokens(text: str) -> int:
     # Rough token estimate: 4 chars/token heuristic
     return max(1, int(len(text) / 4))
@@ -168,7 +185,7 @@ async def chat_completions(request: GenerateRequest):
         if request.stream:
             # Use reliable one-shot streaming wrapper for GLM
             return StreamingResponse(
-                _oneshot_stream(prompt, request.max_tokens, request.temperature, request.top_p),
+                _oneshot_stream(messages, prompt, request.max_tokens, request.temperature, request.top_p),
                 media_type="text/event-stream",
                 headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
             )
@@ -311,7 +328,7 @@ async def _stream_glm(
 
 
 async def _oneshot_stream(
-    prompt: str, max_tokens: int, temperature: float, top_p: float
+    messages: List[dict], prompt: str, max_tokens: int, temperature: float, top_p: float
 ) -> AsyncGenerator[str, None]:
     """Non-stream generation wrapped as SSE stream for reliability."""
     client = _get_hf_client()
@@ -346,7 +363,36 @@ async def _oneshot_stream(
         if total_content:
             yield f"data: {json.dumps({'choices':[{'delta':{'content': total_content}}]})}\n\n"
         else:
-            yield f"data: {json.dumps({'error': 'Empty response from HF Inference API'})}\n\n"
+            # Attempt ChatML fallback
+            try:
+                alt = _messages_to_chatml(messages)
+                generated = client.text_generation(
+                    alt,
+                    max_new_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    stream=False,
+                    return_full_text=False,
+                )
+                if not isinstance(generated, str):
+                    if isinstance(generated, list) and generated:
+                        cand = generated[0]
+                        if isinstance(cand, dict) and isinstance(cand.get("generated_text"), str):
+                            generated = cand["generated_text"]
+                        else:
+                            generated = str(cand)
+                    elif isinstance(generated, dict) and isinstance(generated.get("generated_text"), str):
+                        generated = generated["generated_text"]
+                    else:
+                        generated = str(generated)
+                total_content = generated or ""
+                if total_content:
+                    yield f"data: {json.dumps({'choices':[{'delta':{'content': total_content}}]})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'error': 'Empty response from HF Inference API'})}\n\n"
+            except Exception as e:
+                logger.error(f"GLM ChatML fallback error: {e}")
+                yield f"data: {json.dumps({'error': 'HF Inference error'})}\n\n"
 
         # Usage (estimated)
         prompt_tokens = _estimate_tokens(prompt)
