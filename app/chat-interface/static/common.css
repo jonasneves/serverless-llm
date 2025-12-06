@@ -486,7 +486,7 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   background: white;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
-  padding: 16px;
+  padding: 16px 14px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -509,7 +509,7 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   background: white;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   max-width: 900px;
   margin-left: auto;
