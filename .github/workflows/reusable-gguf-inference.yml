@@ -160,6 +160,7 @@ jobs:
           PORT: ${{ inputs.port }}
           HF_TOKEN: ${{ secrets.hf_token }}
           HF_HOME: /tmp/hf_cache
+          GIT_SHA: ${{ github.sha }}
         run: |
           cd app/${{ inputs.model_dir }}
           python inference_server.py 2>&1 | tee /tmp/inference_server.log &
