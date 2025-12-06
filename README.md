@@ -1,4 +1,4 @@
-# Serverless LLM Arena
+# Serverless LLM Chat
 
 [![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-7b)](https://qwen.neevs.io/health)
 [![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
@@ -29,7 +29,7 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 
 ## Modes
 
-### Arena
+### Chat
 Compare model responses side-by-side with performance metrics (default mode).
 
 ### Discussion

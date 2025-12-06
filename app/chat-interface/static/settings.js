@@ -39,7 +39,7 @@
               </button>
             </div>
             <div class="token-hint">
-              <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Arena&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled, opens in new tab)
+              <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Chat&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled, opens in new tab)
             </div>
             <div class="token-hint" style="margin-top: 8px; opacity: 0.75;">
               🔒 Token is saved in your browser only and injected per request. We never store it on our servers.

@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#1e3a5f">
-  <title>{% block title %}LLM Arena{% endblock %}</title>
+  <title>{% block title %}LLM Chat{% endblock %}</title>
   
   <!-- Shared Styles -->
   <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
@@ -36,7 +36,7 @@
     
     <div class="header-actions">
       <nav class="modes">
-        <a href="/" class="mode-link {% if request.url.path == '/' %}active{% endif %}">Arena</a>
+        <a href="/" class="mode-link {% if request.url.path == '/' %}active{% endif %}">Chat</a>
         <a href="/discussion" class="mode-link {% if request.url.path == '/discussion' %}active{% endif %}">Discussion</a>
         <a href="/autogen" class="mode-link {% if request.url.path == '/autogen' %}active{% endif %}">Agents</a>
         <a href="/variations" class="mode-link {% if request.url.path == '/variations' %}active{% endif %}">Variations</a>
