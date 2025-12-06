@@ -435,8 +435,9 @@ async def generate_text(request: InferenceRequest):
             try:
                 # nanochat model.generate() is a generator that yields token IDs
                 generated_tokens = []
-                for token in model.generate(input_ids, request.max_new_tokens, request.temperature, top_k=request.top_k):
-                    generated_tokens.append(token)
+                with torch.no_grad():  # Disable gradient computation for inference
+                    for token in model.generate(input_ids, request.max_new_tokens, request.temperature, top_k=request.top_k):
+                        generated_tokens.append(token)
 
                 # Decode the generated tokens to text
                 if generated_tokens:
@@ -582,13 +583,14 @@ async def chat_completions(request: ChatCompletionRequest):
 
             # nanochat model.generate() is a generator that yields token IDs
             generated_tokens = []
-            for token in model.generate(
-                input_ids,
-                request.max_tokens,
-                request.temperature,
-                top_k=20
-            ):
-                generated_tokens.append(token)
+            with torch.no_grad():  # Disable gradient computation for inference
+                for token in model.generate(
+                    input_ids,
+                    request.max_tokens,
+                    request.temperature,
+                    top_k=20
+                ):
+                    generated_tokens.append(token)
 
             # Decode the generated tokens to text
             if generated_tokens:
