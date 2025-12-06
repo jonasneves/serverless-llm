@@ -38,11 +38,6 @@ class ModelRouter:
             "url_env": "R1QWEN_API_URL",
             "description": "Reasoning-optimized (R1 distill)"
         },
-        "reasoner-5": {
-            "name": "GLM-4.6",
-            "url_env": "GLM_API_URL",
-            "description": "Solid Chinese/English reasoning"
-        },
         # Answer models
         "answer-1": {
             "name": "Qwen 2.5-7B",
@@ -64,11 +59,6 @@ class ModelRouter:
             "url_env": "R1QWEN_API_URL",
             "description": "Thoughtful answers with explicit reasoning"
         },
-        "answer-5": {
-            "name": "GLM-4.6",
-            "url_env": "GLM_API_URL",
-            "description": "General Q&A, bilingual"
-        },
     }
 
     def __init__(self):
@@ -80,7 +70,7 @@ class ModelRouter:
             "LLAMA_API_URL": "https://llama.neevs.io",
             # Optional hosted endpoint for R1 Distill Qwen if available
             "R1QWEN_API_URL": "https://r1qwen.neevs.io",
-            "GLM_API_URL": "https://glm.neevs.io",
+            
         }
         # Load API URLs from environment (with defaults)
         for model_id, config in self.MODEL_MAPPING.items():

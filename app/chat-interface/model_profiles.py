@@ -369,46 +369,6 @@ GEMMA2_9B_PROFILE = {
     "description": "Well-rounded 9B model with strong reasoning and safety guarantees"
 }
 
-# GLM-4.6 (API/local proxy)
-GLM46_PROFILE = {
-    "model_id": "glm-4.6",
-    "display_name": "GLM-4.6",
-    "creator": "ZAI / ZhipuAI",
-    "size": "N/A (API)",
-    "quantization": None,
-
-    "primary_strengths": ["bilingual", "reasoning", "conversation"],
-
-    "benchmark_scores": {
-        # Indicative: provide relative signals only
-        "general_reasoning": 0.80,
-        "conversation": 0.82,
-        "math": 0.72,
-        "coding": 0.70,
-    },
-
-    "expertise_domains": {
-        "reasoning": 0.80,
-        "logical_reasoning": 0.78,
-        "conversation": 0.82,
-        "summarization": 0.76,
-        "mathematics": 0.70,
-        "coding": 0.68,
-        "creative_writing": 0.74,
-        "instruction_following": 0.78,
-        "common_sense": 0.76,
-    },
-
-    "use_as_lead_for": [
-        "bilingual Q&A (ZH/EN)",
-        "general conversation",
-        "reasoning walkthroughs",
-        "concise summaries",
-    ],
-
-    "context_length": 32768,
-    "description": "GLM family model with strong bilingual conversation and reasoning",
-}
 # DeepSeek R1 Distill Qwen 1.5B (local, GGUF)
 DEEPSEEK_R1_QWEN15B_PROFILE = {
     "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -469,7 +429,6 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "gpt-4o": GPT4O_PROFILE,
     "deepseek-v3-0324": DEEPSEEK_V3_PROFILE,
     "llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
-    "glm-4.6": GLM46_PROFILE,
 }
 
 

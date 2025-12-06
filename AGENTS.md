@@ -60,8 +60,6 @@ cd app/phi-inference && python inference_server.py             # Terminal 2
 cd app/llama-inference && python inference_server.py           # Terminal 3
 # Optional: DeepSeek-R1-Distill-Qwen-1.5B reasoning backend
 cd app/deepseek-r1qwen-inference && python inference_server.py # Terminal 4
-# Optional: GLM-4.6 via HF Inference API (proxy)
-cd app/glm46-inference && HF_TOKEN=... python inference_server.py # Terminal 5
 
 # Set environment variables
 export QWEN_API_URL="http://localhost:8001"
@@ -69,8 +67,6 @@ export PHI_API_URL="http://localhost:8002"
 export LLAMA_API_URL="http://localhost:8003"
 # Only if you started the R1-Distill server
 export R1QWEN_API_URL="http://localhost:8004"
-# If you started the GLM-4.6 proxy server
-export GLM_API_URL="http://localhost:8007"
 
 # Start chat interface
 cd app/chat-interface && python chat_server.py

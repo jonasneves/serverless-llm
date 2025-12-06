@@ -167,13 +167,6 @@ MODEL_CONFIG = (
         "service": "qwen",
     },
     {
-        "id": "glm-4.6",
-        "name": "GLM-4.6",
-        "env": "GLM_API_URL",
-        "default_url": "http://localhost:8007",
-        "service": "glm",
-    },
-    {
         "id": "deepseek-r1-distill-qwen-1.5b",
         "name": "DeepSeek R1 Distill Qwen 1.5B",
         "env": "R1QWEN_API_URL",
