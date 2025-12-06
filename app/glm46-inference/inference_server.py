@@ -230,6 +230,7 @@ async def _stream_glm(
 ) -> AsyncGenerator[str, None]:
     client = _get_hf_client()
     total_content = ""
+    final_generated = ""
     start = time.time()
     try:
         yield f"data: {json.dumps({'choices':[{'delta':{'role':'assistant'}}]})}\n\n"
@@ -246,6 +247,46 @@ async def _stream_glm(
                 total_content += text
                 payload = {"choices": [{"delta": {"content": text}}]}
                 yield f"data: {json.dumps(payload)}\n\n"
+            # Capture final text if provided only at the end
+            gtext = getattr(chunk, "generated_text", None)
+            if isinstance(gtext, str) and gtext:
+                final_generated = gtext
+            elif isinstance(chunk, dict) and isinstance(chunk.get("generated_text"), str):
+                final_generated = chunk["generated_text"]
+
+        # If no token deltas were streamed but a final text exists, emit it
+        if not total_content and final_generated:
+            total_content = final_generated
+            payload = {"choices": [{"delta": {"content": final_generated}}]}
+            yield f"data: {json.dumps(payload)}\n\n"
+        # Fallback: if still empty, try a one-shot non-stream call
+        if not total_content:
+            try:
+                generated = client.text_generation(
+                    prompt,
+                    max_new_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    stream=False,
+                    return_full_text=False,
+                )
+                if not isinstance(generated, str):
+                    if isinstance(generated, list) and generated:
+                        cand = generated[0]
+                        if isinstance(cand, dict) and isinstance(cand.get("generated_text"), str):
+                            generated = cand["generated_text"]
+                        else:
+                            generated = str(cand)
+                    elif isinstance(generated, dict) and isinstance(generated.get("generated_text"), str):
+                        generated = generated["generated_text"]
+                    else:
+                        generated = str(generated)
+                if generated:
+                    total_content = generated
+                    payload = {"choices": [{"delta": {"content": generated}}]}
+                    yield f"data: {json.dumps(payload)}\n\n"
+            except Exception:
+                pass
 
         # Send usage (estimated)
         prompt_tokens = _estimate_tokens(prompt)
