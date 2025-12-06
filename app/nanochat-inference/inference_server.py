@@ -334,7 +334,29 @@ async def load_model():
                             model_obj.eval()
                         # Prefer downloaded tokenizer path if not already set
                         if tokenizer_obj is None and tok_dl_path:
-                            tokenizer_obj = nc_tokenizer(tok_dl_path)
+                            # Handle .pkl tokenizer files
+                            if tok_dl_path.endswith('.pkl'):
+                                try:
+                                    import pickle
+                                    with open(tok_dl_path, 'rb') as f:
+                                        # Load the pickled tokenizer directly
+                                        tokenizer_obj = pickle.load(f)
+                                    print(f"Loaded pickled tokenizer from {tok_dl_path}")
+                                except Exception as e:
+                                    print(f"Failed to load pickled tokenizer: {e}")
+                                    tokenizer_obj = None
+                            else:
+                                # Try using nanochat tokenizer class methods
+                                try:
+                                    if hasattr(nc_tokenizer, 'from_directory'):
+                                        tokenizer_obj = nc_tokenizer.from_directory(os.path.dirname(tok_dl_path))
+                                    elif hasattr(nc_tokenizer, 'from_file'):
+                                        tokenizer_obj = nc_tokenizer.from_file(tok_dl_path)
+                                    else:
+                                        tokenizer_obj = nc_tokenizer(tok_dl_path)
+                                except Exception as e:
+                                    print(f"Failed to load tokenizer from {tok_dl_path}: {e}")
+                                    tokenizer_obj = None
                     except Exception as e:
                         print(f"HF asset download failed or not configured: {e}")
                         ckpt_path = ckpt_path if 'ckpt_path' in locals() else ''
