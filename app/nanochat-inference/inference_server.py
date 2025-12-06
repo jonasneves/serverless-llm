@@ -177,27 +177,31 @@ async def load_model():
                             except Exception as e:
                                 print(f"Dynamic load of gpt.py failed: {e}")
             print(f"Imported nc_model: {'ok' if nc_model else 'missing'}")
+            # nanochat uses HuggingFaceTokenizer or RustBPETokenizer, not a plain "Tokenizer"
             try:
-                from tokenizer import Tokenizer as NC_Tokenizer  # type: ignore
+                from tokenizer import HuggingFaceTokenizer as NC_Tokenizer  # type: ignore
                 nc_tokenizer = NC_Tokenizer  # noqa
             except Exception as e1:
-                print(f"Direct tokenizer import failed: {e1}")
+                print(f"Direct HuggingFaceTokenizer import failed: {e1}")
                 try:
-                    from nanochat.tokenizer import Tokenizer as NC_Tokenizer  # type: ignore
+                    from nanochat.tokenizer import HuggingFaceTokenizer as NC_Tokenizer  # type: ignore
                     nc_tokenizer = NC_Tokenizer
                 except Exception as e2:
-                    print(f"nanochat.tokenizer import failed: {e2}")
-                    # Search for tokenizer.py in repo
+                    print(f"nanochat.tokenizer.HuggingFaceTokenizer import failed: {e2}")
+                    # Fallback: try loading the module and getting the class
                     if candidate_paths:
                         tok_file = _find_file(candidate_paths[0], "tokenizer.py")
                         print(f"Found tokenizer.py at: {tok_file}")
                         if tok_file and os.path.isfile(tok_file):
                             try:
                                 mod = _load_module_from_file("nanochat_tokenizer_dyn", tok_file)
-                                if hasattr(mod, "Tokenizer"):
-                                    nc_tokenizer = getattr(mod, "Tokenizer")
+                                if hasattr(mod, "HuggingFaceTokenizer"):
+                                    nc_tokenizer = getattr(mod, "HuggingFaceTokenizer")
+                                elif hasattr(mod, "RustBPETokenizer"):
+                                    nc_tokenizer = getattr(mod, "RustBPETokenizer")
+                                    print("Using RustBPETokenizer as fallback")
                                 else:
-                                    print(f"Module loaded but no Tokenizer attribute found")
+                                    print(f"Module loaded but no HuggingFaceTokenizer or RustBPETokenizer found")
                             except Exception as e:
                                 print(f"Dynamic load of tokenizer.py failed: {e}")
                                 import traceback
@@ -293,13 +297,19 @@ async def load_model():
                     tok_path = ""
 
                 if tok_dir or tok_file:
-                    tokenizer_obj = nc_tokenizer(tok_path)
-                else:
-                    # Some repos allow constructing without path
+                    # Try loading with nanochat tokenizer class methods
                     try:
-                        tokenizer_obj = nc_tokenizer()
-                    except Exception:
+                        if hasattr(nc_tokenizer, 'from_directory'):
+                            tokenizer_obj = nc_tokenizer.from_directory(os.path.dirname(tok_path))
+                        elif hasattr(nc_tokenizer, 'from_file'):
+                            tokenizer_obj = nc_tokenizer.from_file(tok_path)
+                        else:
+                            tokenizer_obj = nc_tokenizer(tok_path)
+                    except Exception as e:
+                        print(f"Failed to load tokenizer from {tok_path}: {e}")
                         tokenizer_obj = None
+                else:
+                    tokenizer_obj = None
                 print(f"Tokenizer from local path/init: {'yes' if tokenizer_obj is not None else 'no'}")
 
                 # Try to fetch HF PT assets and tokenizer if not present
