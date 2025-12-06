@@ -33,6 +33,11 @@ class ModelRouter:
             "url_env": "LLAMA_API_URL",
             "description": "Fast, basic reasoning"
         },
+        "reasoner-4": {
+            "name": "DeepSeek-R1-Distill-Qwen-7B",
+            "url_env": "R1QWEN_API_URL",
+            "description": "Reasoning-optimized (R1 distill)"
+        },
         # Answer models
         "answer-1": {
             "name": "Qwen 2.5-7B",
@@ -49,6 +54,11 @@ class ModelRouter:
             "url_env": "LLAMA_API_URL",
             "description": "Simple queries, conversational"
         },
+        "answer-4": {
+            "name": "DeepSeek-R1-Distill-Qwen-7B",
+            "url_env": "R1QWEN_API_URL",
+            "description": "Thoughtful answers with explicit reasoning"
+        },
     }
 
     def __init__(self):
@@ -58,6 +68,8 @@ class ModelRouter:
             "QWEN_API_URL": "https://qwen.neevs.io",
             "PHI_API_URL": "https://phi.neevs.io",
             "LLAMA_API_URL": "https://llama.neevs.io",
+            # Optional hosted endpoint for R1 Distill Qwen if available
+            "R1QWEN_API_URL": "https://r1qwen.neevs.io",
         }
         # Load API URLs from environment (with defaults)
         for model_id, config in self.MODEL_MAPPING.items():

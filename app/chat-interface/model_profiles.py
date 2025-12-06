@@ -318,53 +318,7 @@ MISTRAL_7B_PROFILE = {
     "description": "Efficient 7B model excelling at instruction following and structured outputs"
 }
 
-QWEN_14B_PROFILE = {
-    "model_id": "qwen2.5-14b-instruct",
-    "display_name": "Qwen 2.5 14B",
-    "creator": "Alibaba Cloud",
-    "size": "14B parameters",
-    "quantization": "Q4_K_M",
-
-    "primary_strengths": ["mathematics", "coding", "logical_reasoning"],
-
-    "benchmark_scores": {
-        "MMLU": 79.9,           # Massive Multitask Language Understanding
-        "HumanEval": 87.3,      # Code generation benchmark
-        "MATH": 80.7,           # Mathematical problem solving
-        "GSM8K": 88.5,          # Grade school math word problems
-        "BigBench-Hard": 74.2,  # Complex reasoning tasks
-        "GPQA": 48.1,           # Graduate-level science questions
-    },
-
-    "expertise_domains": {
-        "mathematics": 0.98,           # Exceptional - top-tier MATH scores
-        "coding": 0.95,                # Exceptional - 87.3 HumanEval
-        "logical_reasoning": 0.90,     # Exceptional - strong BBH
-        "scientific_knowledge": 0.85,  # Strong - good GPQA
-        "problem_solving": 0.90,       # Exceptional
-        "technical_writing": 0.82,     # Strong
-        "instruction_following": 0.85, # Strong
-        "reasoning": 0.88,             # Strong
-        "creative_writing": 0.65,      # Moderate
-        "conversation": 0.70,          # Good
-        "summarization": 0.75,         # Good
-        "common_sense": 0.75,          # Good
-    },
-
-    "use_as_lead_for": [
-        "complex math problems",
-        "advanced code generation",
-        "algorithm optimization",
-        "data structures design",
-        "scientific computing",
-        "technical documentation",
-        "mathematical proofs",
-        "competitive programming",
-    ],
-
-    "context_length": 32768,
-    "description": "Advanced technical expert with exceptional mathematics and coding abilities"
-}
+ 
 
 GEMMA2_9B_PROFILE = {
     "model_id": "gemma-2-9b-instruct",
@@ -415,6 +369,49 @@ GEMMA2_9B_PROFILE = {
     "description": "Well-rounded 9B model with strong reasoning and safety guarantees"
 }
 
+# DeepSeek R1 Distill Qwen 7B (local, GGUF)
+DEEPSEEK_R1_QWEN7B_PROFILE = {
+    "model_id": "deepseek-r1-distill-qwen-7b",
+    "display_name": "DeepSeek R1 Distill Qwen 7B",
+    "creator": "DeepSeek x Alibaba",
+    "size": "7B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["reasoning", "mathematics", "coding"],
+
+    # Indicative scores; treat as relative strengths rather than exact benchmarks
+    "benchmark_scores": {
+        "GSM8K": 85.0,
+        "MATH": 78.0,
+        "HumanEval": 80.0,
+    },
+
+    "expertise_domains": {
+        "reasoning": 0.92,
+        "logical_reasoning": 0.90,
+        "mathematics": 0.88,
+        "coding": 0.85,
+        "problem_solving": 0.88,
+        "instruction_following": 0.80,
+        "technical_writing": 0.78,
+        "summarization": 0.70,
+        "creative_writing": 0.62,
+        "conversation": 0.70,
+        "common_sense": 0.75,
+    },
+
+    "use_as_lead_for": [
+        "step-by-step reasoning",
+        "math word problems",
+        "algorithmic thinking",
+        "code explanation",
+        "error analysis",
+    ],
+
+    "context_length": 32768,
+    "description": "R1-style distilled reasoning on Qwen 7B with strong step-by-step capability",
+}
+
  
 
 
@@ -424,8 +421,8 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "qwen2.5-7b": QWEN_PROFILE,
     "phi-3-mini": PHI_PROFILE,
     "llama-3.2-3b": LLAMA_PROFILE,
+    "deepseek-r1-distill-qwen-7b": DEEPSEEK_R1_QWEN7B_PROFILE,
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
-    "qwen2.5-14b-instruct": QWEN_14B_PROFILE,
     "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
     # API models
     "gpt-4.1": GPT4_1_PROFILE,
@@ -540,7 +537,6 @@ __all__ = [
     "PHI_PROFILE",
     "LLAMA_PROFILE",
     "MISTRAL_7B_PROFILE",
-    "QWEN_14B_PROFILE",
     "GEMMA2_9B_PROFILE",
     # API models
     "GPT4_1_PROFILE",

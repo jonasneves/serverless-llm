@@ -159,13 +159,6 @@ def get_static_versions() -> dict:
 
 MODEL_CONFIG = (
     {
-        "id": "qwen2.5-14b-instruct",
-        "name": "Qwen 2.5-14B",
-        "env": "QWEN14B_API_URL",
-        "default_url": "http://localhost:8004",
-        "service": "qwen14b",
-    },
-    {
         "id": "qwen2.5-7b",
         "name": "Qwen 2.5-7B",
         "env": "QWEN_API_URL",

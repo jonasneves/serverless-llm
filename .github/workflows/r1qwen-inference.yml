@@ -1,6 +1,6 @@
-name: Qwen 2.5-14B
+name: DeepSeek R1 Distill Qwen 7B
 
-run-name: Qwen 2.5-14B Inference Server
+run-name: R1-Distill-Qwen-7B Inference Server
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ on:
           - '3'
 
   repository_dispatch:
-    types: [restart-qwen14b-inference]
+    types: [restart-r1qwen-inference]
 
 permissions:
   actions: write
@@ -36,18 +36,19 @@ jobs:
   inference:
     uses: ./.github/workflows/reusable-gguf-inference.yml
     with:
-      model_name: "Qwen 2.5-14B"
-      model_dir: "qwen14b-inference"
-      model_repo: "bartowski/Qwen2.5-14B-Instruct-GGUF"
-      model_file: "Qwen2.5-14B-Instruct-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-qwen2.5-14b-q4"
-      tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_QWEN14B"
-      restart_event_type: "restart-qwen14b-inference"
-      workflow_file: "qwen14b-inference.yml"
+      model_name: "DeepSeek R1 Distill Qwen 7B"
+      model_dir: "deepseek-r1qwen-inference"
+      model_repo: "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF"
+      model_file: "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"
+      cache_key_prefix: "gguf-r1qwen7b-q4"
+      tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_R1QWEN"
+      restart_event_type: "restart-r1qwen-inference"
+      workflow_file: "r1qwen-inference.yml"
       duration_hours: ${{ inputs.duration_hours || '5' }}
       auto_restart: ${{ inputs.auto_restart != false }}
       instances: ${{ inputs.instances || '1' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
-      tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QWEN14B }}
+      tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_R1QWEN }}
       workflow_pat: ${{ secrets.WORKFLOW_PAT }}
+

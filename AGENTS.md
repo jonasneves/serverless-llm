@@ -55,14 +55,18 @@ Search for the latest Python version, then write code to check if it's installed
 
 ```bash
 # Start model servers
-cd app/qwen-inference && python inference_server.py  # Terminal 1
-cd app/phi-inference && python inference_server.py   # Terminal 2
-cd app/llama-inference && python inference_server.py # Terminal 3
+cd app/qwen-inference && python inference_server.py            # Terminal 1
+cd app/phi-inference && python inference_server.py             # Terminal 2
+cd app/llama-inference && python inference_server.py           # Terminal 3
+# Optional: DeepSeek-R1-Distill-Qwen-7B reasoning backend
+cd app/deepseek-r1qwen-inference && python inference_server.py # Terminal 4
 
 # Set environment variables
 export QWEN_API_URL="http://localhost:8001"
 export PHI_API_URL="http://localhost:8002"
 export LLAMA_API_URL="http://localhost:8003"
+# Only if you started the R1-Distill server
+export R1QWEN_API_URL="http://localhost:8004"
 
 # Start chat interface
 cd app/chat-interface && python chat_server.py

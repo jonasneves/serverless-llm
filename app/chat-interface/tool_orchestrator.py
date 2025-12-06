@@ -32,6 +32,9 @@ class ToolOrchestrator:
         # Orchestrator model endpoint (use Qwen)
         self.orchestrator_url = os.getenv("QWEN_API_URL", "https://qwen.neevs.io")
 
+        # Prefer DeepSeek R1 Distill Qwen 7B for reasoning if available
+        self.default_reasoner = "reasoner-4" if os.getenv("R1QWEN_API_URL") else "reasoner-1"
+
         # Load tools configuration
         tools_config_path = os.path.join(os.path.dirname(__file__), "tools_config.json")
         with open(tools_config_path) as f:
@@ -91,11 +94,11 @@ class ToolOrchestrator:
                 elif any(word in query.lower() for word in ["code", "python", "calculate", "compute", "program"]):
                     # Might need code execution or reasoning
                     tool_name = "enhance_reasoning"
-                    tool_args = {"model": "reasoner-1", "problem": query, "context": context_str}
+                    tool_args = {"model": self.default_reasoner, "problem": query, "context": context_str}
                 else:
                     # General reasoning
                     tool_name = "enhance_reasoning"
-                    tool_args = {"model": "reasoner-1", "problem": query, "context": context_str}
+                    tool_args = {"model": self.default_reasoner, "problem": query, "context": context_str}
 
                 yield {
                     "event": "tool_call",
@@ -129,7 +132,9 @@ class ToolOrchestrator:
             if round_num > 0 or len(context) > 0:
                 # We have enough info, generate final answer
                 tool_name = "answer"
-                tool_args = {"model": "answer-1", "problem": query, "context": context_str}
+                # If R1 Distill is available, you may prefer its careful answers
+                default_answer = "answer-4" if os.getenv("R1QWEN_API_URL") else "answer-1"
+                tool_args = {"model": default_answer, "problem": query, "context": context_str}
 
                 yield {
                     "event": "tool_call",

@@ -620,97 +620,7 @@
                 </div>
             </div>
 
-            <!-- Qwen 14B -->
-            <div class="workflow-card">
-                <div class="workflow-header">
-                    <div class="workflow-title">
-                        <div class="workflow-icon" style="background: linear-gradient(135deg, #1e3a5f 0%, #2c4f7c 100%);">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-                                <rect x="9" y="9" width="6" height="6"></rect>
-                                <line x1="9" y1="1" x2="9" y2="4"></line>
-                                <line x1="15" y1="1" x2="15" y2="4"></line>
-                                <line x1="9" y1="20" x2="9" y2="23"></line>
-                                <line x1="15" y1="20" x2="15" y2="23"></line>
-                                <line x1="20" y1="9" x2="23" y2="9"></line>
-                                <line x1="20" y1="14" x2="23" y2="14"></line>
-                                <line x1="1" y1="9" x2="4" y2="9"></line>
-                                <line x1="1" y1="14" x2="4" y2="14"></line>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="workflow-name">Qwen 14B</div>
-                            <div class="workflow-type">Inference Server</div>
-                        </div>
-                    </div>
-                    <span class="status-badge status-running pulse">Running</span>
-                </div>
-                <div class="workflow-stats">
-                    <div class="workflow-stat">
-                        <div class="workflow-stat-label">Uptime</div>
-                        <div class="workflow-stat-value">3h 45m</div>
-                    </div>
-                    <div class="workflow-stat">
-                        <div class="workflow-stat-label">Instances</div>
-                        <div class="workflow-stat-value">1</div>
-                    </div>
-                    <div class="workflow-stat">
-                        <div class="workflow-stat-label">Run ID</div>
-                        <div class="workflow-stat-value">#12851</div>
-                    </div>
-                    <div class="workflow-stat">
-                        <div class="workflow-stat-label">Health</div>
-                        <div class="workflow-stat-value" style="display: flex; align-items: center; gap: 4px;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                            <span>OK</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="workflow-config">
-                    <div class="config-row">
-                        <span class="config-label">Duration (hours)</span>
-                        <input type="number" class="config-input" value="5" min="1" max="24">
-                    </div>
-                    <div class="config-row">
-                        <span class="config-label">Instances</span>
-                        <input type="number" class="config-input" value="1" min="1" max="3">
-                    </div>
-                    <div class="config-row">
-                        <span class="config-label">Auto-restart</span>
-                        <div class="toggle active" onclick="this.classList.toggle('active')">
-                            <div class="toggle-slider"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="workflow-controls">
-                    <button class="btn btn-secondary btn-small" onclick="viewLogs('qwen14b')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
-                        <span>Logs</span>
-                    </button>
-                    <button class="btn btn-primary btn-small" onclick="restart('qwen14b')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="23 4 23 10 17 10"></polyline>
-                            <polyline points="1 20 1 14 7 14"></polyline>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                        </svg>
-                        <span>Restart</span>
-                    </button>
-                    <button class="btn btn-danger btn-small" onclick="stop('qwen14b')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="6" y="6" width="12" height="12"></rect>
-                        </svg>
-                        <span>Stop</span>
-                    </button>
-                </div>
-            </div>
+            
 
             <!-- Phi-3 -->
             <div class="workflow-card">
@@ -1158,7 +1068,7 @@
                 <div class="log-line"><span class="log-time">[14:22:18]</span> <span class="log-info">ℹ</span> Health check passed for Llama 3.2 (Run #12840)</div>
                 <div class="log-line"><span class="log-time">[14:21:32]</span> <span class="log-success">✓</span> Chat Interface responding to requests</div>
                 <div class="log-line"><span class="log-time">[14:19:45]</span> <span class="log-info">ℹ</span> Mistral 7B instance scaling to 1 (Run #12856)</div>
-                <div class="log-line"><span class="log-time">[14:15:22]</span> <span class="log-info">ℹ</span> Graceful handoff completed for Qwen 14B</div>
+                <div class="log-line"><span class="log-time">[14:15:22]</span> <span class="log-info">ℹ</span> Graceful handoff completed for Qwen 7B</div>
                 <div class="log-line"><span class="log-time">[14:12:08]</span> <span class="log-success">✓</span> All workflows health check: 5/7 running</div>
                 <div class="log-line"><span class="log-time">[14:10:00]</span> <span class="log-info">ℹ</span> Auto-restart scheduled for Llama 3.2 in 42 minutes</div>
             </div>
@@ -1308,7 +1218,7 @@
 
         // Simulate periodic health checks
         setInterval(() => {
-            const workflows = ['Qwen 7B', 'Qwen 14B', 'Llama 3.2', 'Mistral 7B', 'Chat Interface'];
+            const workflows = ['Qwen 7B', 'Llama 3.2', 'Mistral 7B', 'Chat Interface'];
             const workflow = workflows[Math.floor(Math.random() * workflows.length)];
             addLog(`Health check passed for ${workflow}`, 'info');
         }, 30000);
