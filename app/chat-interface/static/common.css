@@ -56,9 +56,9 @@ html {
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-color: var(--bg-primary);
-  color: var(--text-primary);
+  color: #1F2937;
   height: 100vh;
   height: calc(var(--vh, 1vh) * 100);
   height: 100dvh;
@@ -72,20 +72,21 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  line-height: 1.6;
+  line-height: 1.5;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 header {
-  padding: 16px 24px;
-  background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+  padding: 16px 20px;
+  background: #1e3a5f;
   color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #E5E7EB;
   flex-shrink: 0;
   z-index: 10;
+  position: relative;
 }
 
 .logo {
@@ -99,9 +100,10 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.15);
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px;
   border-radius: 8px;
 }
 
@@ -111,9 +113,13 @@ header {
 }
 
 .logo-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .logo-subtitle {
@@ -125,6 +131,8 @@ header {
   display: flex;
   align-items: center;
   gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .modes {
@@ -170,6 +178,14 @@ header {
   position: relative;
 }
 
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: white;
+  color: white;
+  display: block;
+}
+
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
@@ -182,10 +198,9 @@ header {
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-left: 16px;
-  padding-left: 16px;
-  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  gap: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 #settingsBtn.needs-attention::after {
