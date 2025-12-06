@@ -299,7 +299,7 @@ main {
 
     .model-chip {
       padding: 6px 12px;
-      border-radius: 16px;
+      border-radius: 8px;
       font-size: 12px;
       font-weight: 500;
       cursor: pointer;
@@ -413,7 +413,7 @@ main {
     .input-wrapper {
       position: relative;
       background: var(--bg-primary);
-      border-radius: 14px;
+      border-radius: 12px;
       border: 1px solid var(--border-color);
       box-shadow: none;
       padding: 10px 60px 10px 20px;
@@ -818,7 +818,7 @@ main {
 
       .message.user {
         padding: 8px 12px;
-        border-radius: 12px 12px 4px 12px;
+        border-radius: 12px 12px 6px 12px;
       }
 
       .model-response, .message.assistant {
