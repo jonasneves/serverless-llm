@@ -134,6 +134,59 @@ def _get_hf_client() -> InferenceClient:
     return InferenceClient(model=repo, token=token, timeout=60)
 
 
+def _hf_conversational(
+    messages: List[dict], max_tokens: int, temperature: float, top_p: float
+) -> str:
+    """Call HF Inference API with the 'conversational' task (Novita provider)."""
+    token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
+    repo = os.getenv("HF_MODEL_REPO", "zai-org/GLM-4.6")
+    if not token:
+        raise HTTPException(status_code=500, detail="HF_TOKEN not set")
+
+    # Build conversation payload (use the latest user input)
+    last_user = ""
+    for m in reversed(messages):
+        if m.get("role") == "user" and m.get("content"):
+            last_user = m["content"]
+            break
+    if not last_user:
+        last_user = messages[-1]["content"] if messages else ""
+
+    url = f"https://api-inference.huggingface.co/models/{repo}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "inputs": {
+            "past_user_inputs": [],
+            "generated_responses": [],
+            "text": last_user,
+        },
+        "parameters": {
+            "max_new_tokens": max_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+            "return_full_text": False,
+        },
+    }
+    try:
+        resp = httpx.post(url, headers=headers, json=payload, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        if isinstance(data, list) and data:
+            first = data[0]
+            if isinstance(first, dict) and isinstance(first.get("generated_text"), str):
+                return first["generated_text"]
+        if isinstance(data, dict) and isinstance(data.get("generated_text"), str):
+            return data["generated_text"]
+        # Fallback stringify
+        return data if isinstance(data, str) else json.dumps(data)
+    except httpx.HTTPError as e:
+        logger.error(f"HF conversational error: {e}")
+        raise HTTPException(status_code=502, detail="HF conversational error")
+
+
 @app.get("/health")
 async def health():
     # Only check for token presence; we don't hit HF on every request
@@ -191,14 +244,18 @@ async def chat_completions(request: GenerateRequest):
             )
         else:
             start = time.time()
-            generated = client.text_generation(
-                prompt,
-                max_new_tokens=request.max_tokens,
-                temperature=request.temperature,
-                top_p=request.top_p,
-                stream=False,
-                return_full_text=False,
-            )
+            # Prefer conversational for this provider
+            try:
+                generated = _hf_conversational(messages, request.max_tokens, request.temperature, request.top_p)
+            except HTTPException:
+                generated = client.text_generation(
+                    prompt,
+                    max_new_tokens=request.max_tokens,
+                    temperature=request.temperature,
+                    top_p=request.top_p,
+                    stream=False,
+                    return_full_text=False,
+                )
             elapsed = time.time() - start
 
             # Normalize output to a string
@@ -282,14 +339,24 @@ async def _stream_glm(
         # Fallback: if still empty, try a one-shot non-stream call
         if not total_content:
             try:
-                generated = client.text_generation(
-                    prompt,
-                    max_new_tokens=max_tokens,
-                    temperature=temperature,
-                    top_p=top_p,
-                    stream=False,
-                    return_full_text=False,
-                )
+                # Prefer conversational fallback for this provider
+                try:
+                    generated = _hf_conversational(
+                        [{"role": "user", "content": prompt}]
+                        if not isinstance(prompt, list) else prompt,
+                        max_tokens,
+                        temperature,
+                        top_p,
+                    )
+                except HTTPException:
+                    generated = client.text_generation(
+                        prompt,
+                        max_new_tokens=max_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        stream=False,
+                        return_full_text=False,
+                    )
                 if not isinstance(generated, str):
                     if isinstance(generated, list) and generated:
                         cand = generated[0]
@@ -337,14 +404,18 @@ async def _oneshot_stream(
         # Signal start
         yield f"data: {json.dumps({'choices':[{'delta':{'role':'assistant'}}]})}\n\n"
 
-        generated = client.text_generation(
-            prompt,
-            max_new_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            stream=False,
-            return_full_text=False,
-        )
+        # Prefer conversational for this provider
+        try:
+            generated = _hf_conversational(messages, max_tokens, temperature, top_p)
+        except HTTPException:
+            generated = client.text_generation(
+                prompt,
+                max_new_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                stream=False,
+                return_full_text=False,
+            )
 
         # Normalize
         if not isinstance(generated, str):
