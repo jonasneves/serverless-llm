@@ -143,24 +143,25 @@ header {
 .mode-link {
   padding: 8px 16px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
   cursor: pointer;
   border: none;
-  background: none;
+  background: transparent;
 }
 
 .mode-link:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
 }
 
 .mode-link.active {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.3);
   color: white;
+  font-weight: 600;
 }
 
 .icon-btn {
