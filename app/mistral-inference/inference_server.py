@@ -112,6 +112,19 @@ async def health():
         "format": "GGUF"
     }
 
+@app.get("/health/details")
+async def health_details():
+    return {
+        "status": "healthy" if llm is not None else "loading",
+        "model": MODEL_NAME,
+        "format": "GGUF",
+        "repo": os.getenv("MODEL_REPO", "bartowski/Mistral-7B-Instruct-v0.3-GGUF"),
+        "file": os.getenv("MODEL_FILE", "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf"),
+        "n_ctx": int(os.getenv("N_CTX", "2048")),
+        "n_threads": int(os.getenv("N_THREADS", "2")),
+        "git_sha": os.getenv("GIT_SHA", "unknown"),
+    }
+
 @app.get("/v1/models")
 async def list_models():
     return {
