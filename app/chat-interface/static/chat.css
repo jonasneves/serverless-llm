@@ -49,11 +49,15 @@ main {
     .message.assistant {
       align-self: flex-start;
       width: 100%;
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
+      background: white;
+      border: 1px solid #E5E7EB;
       padding: 16px;
       border-radius: 12px;
-      box-shadow: var(--shadow-sm);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .message.assistant:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .model-responses {
@@ -64,11 +68,15 @@ main {
     }
 
     .model-response {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
+      background: white;
+      border: 1px solid #E5E7EB;
       border-radius: 12px;
       padding: 16px;
-      box-shadow: var(--shadow-sm);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .model-response:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .model-header {
