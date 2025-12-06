@@ -44,6 +44,7 @@ jobs:
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_R1QWEN"
       restart_event_type: "restart-r1qwen-inference"
       workflow_file: "r1qwen-inference.yml"
+      n_ctx: '4096'
       duration_hours: ${{ inputs.duration_hours || '5' }}
       auto_restart: ${{ inputs.auto_restart != false }}
       instances: ${{ inputs.instances || '1' }}
@@ -51,4 +52,3 @@ jobs:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_R1QWEN }}
       workflow_pat: ${{ secrets.WORKFLOW_PAT }}
-

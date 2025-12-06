@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-llama-cpp-python==0.2.90
+# Newer llama-cpp is required to support DeepSeek R1 Qwen tokenizer
+llama-cpp-python>=0.3.7
 huggingface-hub>=0.20.0
 pydantic>=2.0.0
-
