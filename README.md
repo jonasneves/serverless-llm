@@ -109,6 +109,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 |-------|------------|--------------|-----------|
 | Qwen 2.5 | 7B | Q4_K_M | Code generation, multilingual tasks |
 | DeepSeek R1 Distill Qwen | 1.5B | Q4_K_M | Step-by-step reasoning, math, analysis |
+| GLM-4.6 | API | — | Bilingual chat, reasoning |
 | Phi-3 Mini | 3.8B | Q4_K_M | Efficient reasoning, instruction following |
 | Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |
 | Mistral 7B v0.3 | 7B | Q4_K_M | Structured output, function calling |
@@ -126,6 +127,7 @@ serverless-llm/
 │   ├── llama-inference/        # Llama model server
 │   ├── mistral-inference/      # Mistral model server
 │   ├── deepseek-r1qwen-inference/ # DeepSeek R1 Distill Qwen 1.5B server
+│   ├── glm46-inference/        # GLM-4.6 proxy (HF Inference API)
 │   ├── gemma-inference/        # Gemma model server
 │   └── chat-interface/         # Web interface + proxy
 └── docs/                       # Mode-specific documentation
@@ -177,6 +179,9 @@ cd app/qwen-inference && python inference_server.py
 # Optional reasoning backend (new)
 # in another terminal:
 cd app/deepseek-r1qwen-inference && python inference_server.py
+# Optional GLM-4.6 proxy via HF Inference API
+# requires HF_TOKEN environment variable with access to the model
+cd app/glm46-inference && HF_TOKEN=... python inference_server.py
 
 # Start interface (separate terminal)
 cd app/chat-interface
@@ -185,6 +190,8 @@ export PHI_API_URL=http://localhost:8002
 export LLAMA_API_URL=http://localhost:8003
 # Only if you started the R1-Distill server
 export R1QWEN_API_URL=http://localhost:8004
+# If you started the GLM-4.6 proxy server
+export GLM_API_URL=http://localhost:8007
 python chat_server.py
 ```
 
