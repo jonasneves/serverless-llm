@@ -30,6 +30,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  // Auto-resize textarea for consistency with Chat
+  promptInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+  });
+
   const handleRun = async () => {
     const query = promptInput.value.trim();
     if (!query) {

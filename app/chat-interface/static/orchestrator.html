@@ -13,42 +13,7 @@
       --tool-code: #F59E0B;
     }
 
-    .input-section {
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 20px;
-      border: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .controls {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: flex-end;
-    }
-
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .control-group label {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    input[type="number"], select {
-      padding: 10px 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 14px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-    }
+    /* Input section styles now shared via common.css to match Chat */
 
     .orchestration-section {
       background: var(--bg-secondary);
@@ -409,9 +374,8 @@
     </div>
   </div>
 
-  <div class="mode-input-container">
-    <div class="input-section">
-      <div class="controls">
+  <div class="input-container">
+      <div class="controls-row">
         <div class="control-group">
           <label>Engine</label>
           <select id="engineSelect">
@@ -442,6 +406,5 @@
           </svg>
         </button>
       </div>
-    </div>
   </div>
 {% endblock %}

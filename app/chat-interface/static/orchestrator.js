@@ -241,6 +241,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Allow Enter to submit (with Shift+Enter for newlines)
+    // Auto-resize textarea similar to Chat page
+    queryInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
+
+    // Allow Enter to submit (with Shift+Enter for newlines)
     queryInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();

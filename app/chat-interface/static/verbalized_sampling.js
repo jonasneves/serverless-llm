@@ -48,6 +48,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     generateBtn.addEventListener('click', handleGenerate);
 
+    // Auto-resize textarea for consistency with Chat
+    queryInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
+
     // Handle Enter key
     queryInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {

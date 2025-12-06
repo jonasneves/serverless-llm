@@ -572,6 +572,48 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   box-shadow: var(--shadow-sm);
 }
 
+/* Shared chat input container (aligned with Chat page) */
+.input-container {
+  flex-shrink: 0;
+  padding: 16px;
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Shared controls row + groups */
+.controls-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.controls-secondary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.control-group input,
+.control-group select {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
 .mode-input-container .input-section,
 .mode-input-container section {
   margin-bottom: 0;
@@ -593,6 +635,13 @@ main > :not(.mode-input-container):not(.input-container):last-of-type:not(.typin
   .mode-input-container .input-section,
   .mode-input-container section {
     padding: 16px;
+  }
+}
+
+/* Safe area inset for input container on devices with notches */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .input-container {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
