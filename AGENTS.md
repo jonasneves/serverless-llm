@@ -96,7 +96,7 @@ Response: Server-Sent Events stream with `tool_call`, `tool_result`, and `final_
 
 ### Modify Model Routing
 
-Edit `MODEL_MAPPING` in `app/chat-interface/tools/model_router.py` to add/remove backends. For example, nanochat support is wired as `reasoner-4`/`answer-4` using `NANOCHAT_API_URL`.
+Edit `MODEL_MAPPING` in `app/chat-interface/tools/model_router.py` to add or remove backends.
 
 ## vs. Discussion Mode
 

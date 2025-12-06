@@ -6,7 +6,7 @@
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
 [![Qwen 14B API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-14b-instruct)](https://qwen14b.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
-[![Nanochat API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/nanochat-d34)](https://nanochat.neevs.io/health)
+
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
@@ -58,16 +58,14 @@ Add to **Settings > Secrets and variables > Actions**:
 | `HF_TOKEN` | Hugging Face token for gated models |
 | `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, QWEN14B, GEMMA) |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for web interface |
-| `CLOUDFLARE_TUNNEL_TOKEN_NANOCHAT` | Tunnel token for Nanochat server |
 | `{MODEL}_API_URL` | Public URL for each model (e.g., `https://qwen.neevs.io`) |
-| `NANOCHAT_API_URL` | Public URL for Nanochat (e.g., `https://nanochat.neevs.io`) |
 | `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents modes ([create token](https://github.com/settings/personal-access-tokens/new)) |
 
 ### 2. Create Cloudflare Tunnels
 
 1. Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/)
 2. Navigate to **Access > Tunnels**
-3. Create 8 tunnels routing to `localhost:8000` (models) and `localhost:8080` (interface)
+3. Create 7 tunnels routing to `localhost:8000` (models) and `localhost:8080` (interface)
 4. Copy tokens to GitHub secrets
 
 ### 3. Run Workflows
@@ -82,8 +80,7 @@ gh workflow run qwen-inference.yml -f instances=3
 # Start web interface
 gh workflow run chat-interface.yml
 
-# Start Nanochat server (optional)
-gh workflow run nanochat-inference.yml
+
 ```
 
 ## OpenAI-Compatible API
@@ -117,7 +114,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 | Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |
 | Mistral 7B v0.3 | 7B | Q4_K_M | Structured output, function calling |
 | Gemma 2 | 9B | Q4_K_M | Fact-checking, safety-aligned responses |
-| Nanochat d34 | ~2.0B | Q4_K_M | Lightweight conversation, text completion |
+
 
 ## Project Structure
 
@@ -187,35 +184,7 @@ export LLAMA_API_URL=http://localhost:8003
 python chat_server.py
 ```
 
-### Nanochat (experimental)
 
-```bash
-# Start nanochat server (OpenAI-compatible). Prefer GGUF via Hugging Face:
-pip install -r app/nanochat-inference/requirements.txt
-cd app/nanochat-inference
-
-# Option A: Use Hugging Face GGUF (recommended when GGUF is available)
-export NANOCHAT_GGUF_REPO="<repo_id>"          # e.g., your-org/nanochat-d34-GGUF
-export NANOCHAT_GGUF_FILE="<filename.gguf>"     # e.g., nanochat-d34-Q4_K_M.gguf
-uvicorn inference_server:app --host 0.0.0.0 --port 8007
-
-# Option B: Use Hugging Face Transformers (default)
-# If GGUF vars are not set, the server loads karpathy/nanochat-d34 via Transformers by default.
-# Then run:
-# uvicorn inference_server:app --host 0.0.0.0 --port 8007
-
-# Option C: Use local nanochat clone + checkpoints
-# export NANOCHAT_PATH=/path/to/karpathy/nanochat
-# export NANOCHAT_CHECKPOINTS_DIR=~/.cache/nanochat
-# export NANOCHAT_CHECKPOINT_FILE=model_latest.pt
-# export NANOCHAT_TOKENIZER_DIR=~/.cache/nanochat
-# uvicorn inference_server:app --host 0.0.0.0 --port 8007
-
-# Point the chat UI to it (new tab)
-cd ../chat-interface
-export NANOCHAT_API_URL=http://localhost:8007
-python chat_server.py
-```
 
 ## License
 

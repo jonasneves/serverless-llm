@@ -415,42 +415,7 @@ GEMMA2_9B_PROFILE = {
     "description": "Well-rounded 9B model with strong reasoning and safety guarantees"
 }
 
-NANOCHAT_D32_PROFILE = {
-    "model_id": "nanochat-d34",
-    "display_name": "Nanochat d34",
-    "creator": "Andrej Karpathy",
-    "size": "1.9B parameters",
-    "quantization": "Q4_K_M", # Assuming common quantization for local models
-
-    "primary_strengths": ["conversation", "creative_writing", "text_completion"],
-
-    "benchmark_scores": {
-        # Not explicitly provided for base model, will omit for now.
-        # This would be filled in after benchmarking.
-    },
-
-    "expertise_domains": {
-        "conversation": 0.70,
-        "creative_writing": 0.65,
-        "text_completion": 0.70,
-        "common_sense": 0.60,
-        "summarization": 0.55,
-        "reasoning": 0.50,
-        "instruction_following": 0.50,
-        "mathematics": 0.40,
-        "coding": 0.40,
-    },
-
-    "use_as_lead_for": [
-        "casual conversation",
-        "short story generation",
-        "text prompting",
-        "brainstorming ideas",
-    ],
-
-    "context_length": 4096, # Assuming a typical context length for a ~2B model
-    "description": "nanochat d34 by Andrej Karpathy, better baseline for conversational tasks and text completion."
-}
+ 
 
 
 # Aggregate profiles for easy access
@@ -462,7 +427,6 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
     "qwen2.5-14b-instruct": QWEN_14B_PROFILE,
     "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
-    "nanochat-d34": NANOCHAT_D32_PROFILE,
     # API models
     "gpt-4.1": GPT4_1_PROFILE,
     "gpt-4o": GPT4O_PROFILE,
@@ -578,7 +542,6 @@ __all__ = [
     "MISTRAL_7B_PROFILE",
     "QWEN_14B_PROFILE",
     "GEMMA2_9B_PROFILE",
-    "NANOCHAT_D32_PROFILE",
     # API models
     "GPT4_1_PROFILE",
     "GPT4O_PROFILE",
