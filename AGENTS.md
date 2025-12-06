@@ -100,7 +100,7 @@ Response: Server-Sent Events stream with `tool_call`, `tool_result`, and `final_
 
 1. Define tool in `tools_config.json` (OpenAI function format)
 2. Implement handler in `tools/` directory
-3. Register in `orchestrator_engine.py` → `_execute_tool()`
+3. Register in `tool_orchestrator.py` → `_execute_tool()`
 
 ### Modify Model Routing
 
@@ -119,7 +119,7 @@ Edit `MODEL_MAPPING` in `app/chat-interface/tools/model_router.py` to add or rem
 
 ```
 app/chat-interface/
-├── orchestrator_engine.py    # Core orchestration logic
+├── tool_orchestrator.py      # Core orchestration logic (ToolOrchestra)
 ├── tools_config.json          # Tool definitions
 ├── tools/
 │   ├── model_router.py        # Routes to Qwen/Phi/Llama

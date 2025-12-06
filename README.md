@@ -102,6 +102,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
+| `/health/details` | GET | Detailed info (repo/file, context) |
 | `/v1/models` | GET | List available models |
 | `/v1/chat/completions` | POST | Chat completion (streaming supported) |
 

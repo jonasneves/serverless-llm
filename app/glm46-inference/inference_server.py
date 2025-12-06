@@ -77,6 +77,36 @@ def _estimate_tokens(text: str) -> int:
     return max(1, int(len(text) / 4))
 
 
+def _chunk_to_text(chunk) -> str:
+    """Robustly extract text from HF streaming chunk (str, dict, or dataclass)."""
+    # Common case: string
+    if isinstance(chunk, str):
+        return chunk
+    # Dataclass-like with .token.text
+    token = getattr(chunk, "token", None)
+    if token is not None:
+        # token can be a simple str or object with .text
+        if isinstance(token, str):
+            return token
+        text = getattr(token, "text", None)
+        if isinstance(text, str):
+            return text
+    # Dict responses
+    if isinstance(chunk, dict):
+        t = chunk.get("token")
+        if isinstance(t, dict):
+            txt = t.get("text")
+            if isinstance(txt, str):
+                return txt
+        # Some providers put text directly
+        if isinstance(chunk.get("text"), str):
+            return chunk["text"]
+        # Finalization payload sometimes contains full text
+        if isinstance(chunk.get("generated_text"), str):
+            return chunk["generated_text"]
+    return ""
+
+
 def _get_hf_client() -> InferenceClient:
     token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
     repo = os.getenv("HF_MODEL_REPO", "zai-org/GLM-4.6")
@@ -93,6 +123,18 @@ async def health():
         "status": "healthy" if ok else "missing_token",
         "model": os.getenv("HF_MODEL_REPO", "zai-org/GLM-4.6"),
         "format": "proxy",
+    }
+
+@app.get("/health/details")
+async def health_details():
+    token_present = bool(os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN"))
+    return {
+        "status": "healthy" if token_present else "missing_token",
+        "model": os.getenv("HF_MODEL_REPO", "zai-org/GLM-4.6"),
+        "format": "proxy",
+        "repo": os.getenv("HF_MODEL_REPO", "zai-org/GLM-4.6"),
+        "stream_supported": True,
+        "git_sha": os.getenv("GIT_SHA", "unknown"),
     }
 
 
@@ -135,12 +177,27 @@ async def chat_completions(request: GenerateRequest):
                 temperature=request.temperature,
                 top_p=request.top_p,
                 stream=False,
+                return_full_text=False,
             )
             elapsed = time.time() - start
 
+            # Normalize output to a string
+            if not isinstance(generated, str):
+                # Some backends may return list or dict
+                if isinstance(generated, list) and generated:
+                    cand = generated[0]
+                    if isinstance(cand, dict) and isinstance(cand.get("generated_text"), str):
+                        generated = cand["generated_text"]
+                    else:
+                        generated = str(cand)
+                elif isinstance(generated, dict) and isinstance(generated.get("generated_text"), str):
+                    generated = generated["generated_text"]
+                else:
+                    generated = str(generated)
+
             # Usage estimation (approximate)
             prompt_tokens = _estimate_tokens(prompt)
-            completion_tokens = _estimate_tokens(generated)
+            completion_tokens = _estimate_tokens(generated or "")
             total_tokens = prompt_tokens + completion_tokens
 
             return {
@@ -182,23 +239,17 @@ async def _stream_glm(
             temperature=temperature,
             top_p=top_p,
             stream=True,
+            return_full_text=False,
         ):
-            # chunk is TextGenerationStreamResponse
-            token_text = getattr(chunk, "token", None)
-            if token_text and hasattr(token_text, "text"):
-                text = token_text.text
-                if text:
-                    total_content += text
-                    payload = {
-                        "choices": [
-                            {"delta": {"content": text}}
-                        ]
-                    }
-                    yield f"data: {json.dumps(payload)}\n\n"
+            text = _chunk_to_text(chunk)
+            if text:
+                total_content += text
+                payload = {"choices": [{"delta": {"content": text}}]}
+                yield f"data: {json.dumps(payload)}\n\n"
 
         # Send usage (estimated)
         prompt_tokens = _estimate_tokens(prompt)
-        completion_tokens = _estimate_tokens(total_content)
+        completion_tokens = _estimate_tokens(total_content or "")
         total_tokens = prompt_tokens + completion_tokens
         usage_chunk = {
             "choices": [{"delta": {}, "finish_reason": "stop"}],
