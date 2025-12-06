@@ -26,9 +26,16 @@ class AutoGenOrchestrator:
 
     def __init__(self):
         # Get model endpoints from environment (fallback to remote defaults)
-        self.qwen_url = os.getenv("QWEN_API_URL", DEFAULT_REMOTE_ENDPOINTS["QWEN_API_URL"]) 
-        self.phi_url = os.getenv("PHI_API_URL", DEFAULT_REMOTE_ENDPOINTS["PHI_API_URL"]) 
-        self.llama_url = os.getenv("LLAMA_API_URL", DEFAULT_REMOTE_ENDPOINTS["LLAMA_API_URL"]) 
+        # Use remote defaults when env var missing or empty; normalize scheme
+        def _norm(u: str) -> str:
+            u = (u or "").strip().rstrip("/")
+            if not (u.startswith("http://") or u.startswith("https://")):
+                u = f"http://{u}" if u else u
+            return u
+
+        self.qwen_url = _norm(os.getenv("QWEN_API_URL") or DEFAULT_REMOTE_ENDPOINTS["QWEN_API_URL"])
+        self.phi_url = _norm(os.getenv("PHI_API_URL") or DEFAULT_REMOTE_ENDPOINTS["PHI_API_URL"])
+        self.llama_url = _norm(os.getenv("LLAMA_API_URL") or DEFAULT_REMOTE_ENDPOINTS["LLAMA_API_URL"])
 
         # Initialize tools
         self.web_search = WebSearchTool()

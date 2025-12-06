@@ -30,8 +30,12 @@ class ToolOrchestrator:
         self.web_search = WebSearchTool()
         self.code_executor = CodeExecutorTool()
 
-        # Orchestrator model endpoint (use Qwen)
-        self.orchestrator_url = os.getenv("QWEN_API_URL", DEFAULT_REMOTE_ENDPOINTS["QWEN_API_URL"])
+        # Orchestrator model endpoint (use Qwen). Treat empty env as unset.
+        raw_url = os.getenv("QWEN_API_URL") or DEFAULT_REMOTE_ENDPOINTS["QWEN_API_URL"]
+        self.orchestrator_url = raw_url.strip()
+        if not (self.orchestrator_url.startswith("http://") or self.orchestrator_url.startswith("https://")):
+            # Normalize to http if user provided a bare host:port
+            self.orchestrator_url = f"http://{self.orchestrator_url}"
 
         # Prefer DeepSeek R1 Distill Qwen 1.5B for reasoning if available
         self.default_reasoner = "reasoner-4" if os.getenv("R1QWEN_API_URL") else "reasoner-1"

@@ -76,10 +76,14 @@ class ModelRouter:
         self.model_urls = {}
         # Default URLs for GitHub workflow deployments
         default_urls = DEFAULT_REMOTE_ENDPOINTS
-        # Load API URLs from environment (with defaults)
+        # Load API URLs from environment (empty strings fallback to defaults)
         for model_id, config in self.MODEL_MAPPING.items():
-            url = os.getenv(config["url_env"], default_urls.get(config["url_env"]))
+            env_val = os.getenv(config["url_env"])  # may be None or ""
+            url = env_val if env_val else default_urls.get(config["url_env"])  # prefer env if non-empty
             if url:
+                url = url.strip().rstrip("/")
+                if not (url.startswith("http://") or url.startswith("https://")):
+                    url = f"http://{url}"
                 self.model_urls[model_id] = url
             else:
                 logger.warning(f"No URL configured for {model_id} (env: {config['url_env']})")
