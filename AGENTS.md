@@ -106,6 +106,15 @@ Response: Server-Sent Events stream with `tool_call`, `tool_result`, and `final_
 
 Edit `MODEL_MAPPING` in `app/chat-interface/tools/model_router.py` to add or remove backends.
 
+You can enable additional models via environment variables (Agents auto-discovers configured endpoints):
+
+- `GEMMA_API_URL` → enables Gemma 2 9B as `reasoner-7` / `answer-7`
+- `MISTRAL_API_URL` → enables Mistral 7B as `reasoner-6` / `answer-6`
+- `R1QWEN_API_URL` → enables DeepSeek-R1-Distill-Qwen-1.5B as `reasoner-4` / `answer-4`
+- `RNJ_API_URL` → enables RNJ-1 (experimental) as `reasoner-5` / `answer-5`
+
+The orchestrator prunes tool enums at runtime to only include available models, and picks sensible defaults in this preference order for reasoning: R1 → Qwen → Phi → Llama → Gemma → Mistral → RNJ.
+
 ## vs. Discussion Mode
 
 | Feature | Discussion | Agents |

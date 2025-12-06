@@ -36,6 +36,9 @@ class AutoGenOrchestrator:
         self.qwen_url = _norm(os.getenv("QWEN_API_URL") or DEFAULT_REMOTE_ENDPOINTS["QWEN_API_URL"])
         self.phi_url = _norm(os.getenv("PHI_API_URL") or DEFAULT_REMOTE_ENDPOINTS["PHI_API_URL"])
         self.llama_url = _norm(os.getenv("LLAMA_API_URL") or DEFAULT_REMOTE_ENDPOINTS["LLAMA_API_URL"])
+        # Optional additional specialists if endpoints configured
+        self.gemma_url = _norm(os.getenv("GEMMA_API_URL") or "")
+        self.mistral_url = _norm(os.getenv("MISTRAL_API_URL") or "")
 
         # Initialize tools
         self.web_search = WebSearchTool()
@@ -156,10 +159,33 @@ class AutoGenOrchestrator:
                 description="Expert for quick, concise responses",
             )
 
+            # Optional extra specialists
+            extra_agents = []
+            if self.gemma_url:
+                gemma_client = self._create_model_client(self.gemma_url, "gemma-2-9b-instruct")
+                gemma_agent = AssistantAgent(
+                    "gemma_expert",
+                    model_client=gemma_client,
+                    system_message="You are a helpful generalist with strong instruction following.",
+                    description="Gemma 2 9B generalist",
+                )
+                extra_agents.append(("gemma_expert", gemma_agent, gemma_client))
+
+            if self.mistral_url:
+                mistral_client = self._create_model_client(self.mistral_url, "mistral-7b-instruct-v0.3")
+                mistral_agent = AssistantAgent(
+                    "mistral_expert",
+                    model_client=mistral_client,
+                    system_message="You respond quickly and clearly for instruction tasks.",
+                    description="Mistral 7B instruct",
+                )
+                extra_agents.append(("mistral_expert", mistral_agent, mistral_client))
+
             # Wrap specialist agents as tools for the orchestrator
             reasoning_tool = AgentTool(reasoning_agent, return_value_as_last_message=True)
             knowledge_tool = AgentTool(knowledge_agent, return_value_as_last_message=True)
             quick_tool = AgentTool(quick_agent, return_value_as_last_message=True)
+            extra_tools = [AgentTool(agent, return_value_as_last_message=True) for (_, agent, _) in extra_agents]
 
             # Main orchestrator agent
             orchestrator_client = self._create_model_client(self.qwen_url, "qwen-orchestrator")
@@ -178,13 +204,13 @@ Available tools:
 - execute_python: Run Python code for calculations or data processing
 
 Choose the most appropriate specialist or tool for each task. You can use multiple agents/tools if needed.""",
-                tools=[reasoning_tool, knowledge_tool, quick_tool, self.search_web, self.execute_python],
+                tools=[reasoning_tool, knowledge_tool, quick_tool, *extra_tools, self.search_web, self.execute_python],
                 max_tool_iterations=max_turns,
             )
 
             yield {
                 "event": "agents_ready",
-                "agents": ["orchestrator", "reasoning_expert", "knowledge_expert", "quick_expert"],
+                "agents": ["orchestrator", "reasoning_expert", "knowledge_expert", "quick_expert", *[name for (name, _, _) in extra_agents]],
                 "tools": ["search_web", "execute_python"]
             }
 
@@ -245,6 +271,12 @@ Choose the most appropriate specialist or tool for each task. You can use multip
                 await llama_client.close()
             if orchestrator_client:
                 await orchestrator_client.close()
+            # Close extra clients
+            for _, _, client in extra_agents:
+                try:
+                    await client.close()
+                except Exception:
+                    pass
 
         except Exception as e:
             logger.error(f"AutoGen orchestration error: {e}", exc_info=True)

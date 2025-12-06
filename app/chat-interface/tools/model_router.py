@@ -44,6 +44,16 @@ class ModelRouter:
             "url_env": "RNJ_API_URL",
             "description": "Experimental; requires llama.cpp RNJ support"
         },
+        "reasoner-6": {
+            "name": "Mistral 7B Instruct",
+            "url_env": "MISTRAL_API_URL",
+            "description": "Fast, instruction-tuned"
+        },
+        "reasoner-7": {
+            "name": "Gemma 2 9B Instruct",
+            "url_env": "GEMMA_API_URL",
+            "description": "Strong generalist, instruction following"
+        },
         # Answer models
         "answer-1": {
             "name": "Qwen 2.5-7B",
@@ -69,6 +79,16 @@ class ModelRouter:
             "name": "RNJ-1-Instruct (GGUF)",
             "url_env": "RNJ_API_URL",
             "description": "Experimental; requires llama.cpp RNJ support"
+        },
+        "answer-6": {
+            "name": "Mistral 7B Instruct",
+            "url_env": "MISTRAL_API_URL",
+            "description": "Fast, instruction-tuned"
+        },
+        "answer-7": {
+            "name": "Gemma 2 9B Instruct",
+            "url_env": "GEMMA_API_URL",
+            "description": "Strong generalist, instruction following"
         },
     }
 

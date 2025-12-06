@@ -37,8 +37,35 @@ class ToolOrchestrator:
             # Normalize to http if user provided a bare host:port
             self.orchestrator_url = f"http://{self.orchestrator_url}"
 
-        # Prefer DeepSeek R1 Distill Qwen 1.5B for reasoning if available
-        self.default_reasoner = "reasoner-4" if os.getenv("R1QWEN_API_URL") else "reasoner-1"
+        # Choose defaults based on available endpoints with preference order
+        available = set(self.model_router.model_urls.keys())
+        def _pick(prefs):
+            for m in prefs:
+                if m in available:
+                    return m
+            return None
+
+        reasoner_prefs = [
+            "reasoner-4",  # DeepSeek R1 distill
+            "reasoner-1",  # Qwen
+            "reasoner-2",  # Phi
+            "reasoner-3",  # Llama
+            "reasoner-7",  # Gemma
+            "reasoner-6",  # Mistral
+            "reasoner-5",  # RNJ (experimental)
+        ]
+        answer_prefs = [
+            "answer-4",    # DeepSeek R1 distill
+            "answer-1",    # Qwen
+            "answer-2",    # Phi
+            "answer-3",    # Llama
+            "answer-7",    # Gemma
+            "answer-6",    # Mistral
+            "answer-5",    # RNJ (experimental)
+        ]
+
+        self.default_reasoner = _pick(reasoner_prefs) or "reasoner-1"
+        self.default_answer = _pick(answer_prefs) or "answer-1"
 
         # Load tools configuration
         tools_config_path = os.path.join(os.path.dirname(__file__), "tools_config.json")
@@ -151,7 +178,7 @@ class ToolOrchestrator:
                     {"model": self.default_reasoner, "problem": query, "context": context_str}
                 ))
                 # And produce a final answer
-                default_answer = "answer-4" if os.getenv("R1QWEN_API_URL") else "answer-1"
+                default_answer = self.default_answer
                 fallback_plan.append((
                     "answer",
                     {"model": default_answer, "problem": query, "context": context_str}
@@ -196,7 +223,7 @@ class ToolOrchestrator:
                     tool_args["problem"] = tool_args.get("problem", query)
                     tool_args["context"] = tool_args.get("context", context_str)
                 elif tool_name == "answer" and "model" not in tool_args:
-                    tool_args["model"] = "answer-4" if os.getenv("R1QWEN_API_URL") else "answer-1"
+                    tool_args["model"] = self.default_answer
                     tool_args["problem"] = tool_args.get("problem", query)
                     tool_args["context"] = tool_args.get("context", context_str)
 
