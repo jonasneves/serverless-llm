@@ -588,4 +588,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     });
+
+    // Handle example-prompt class buttons (static HTML examples)
+    document.querySelectorAll('.example-prompt').forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const prompt = button.getAttribute('data-prompt');
+        if (prompt) {
+          userInput.value = prompt;
+          userInput.focus();
+        }
+      });
+    });
 });
