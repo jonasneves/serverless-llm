@@ -110,10 +110,56 @@ class ToolOrchestrator:
                 if decision.get("content"):
                     final_answer = decision.get("content")
                     break
-                else:
-                    # Fallback to synthesizing an answer from context
-                    final_answer = await self._generate_final_answer(query, context_str)
+
+                # Fallback: orchestrate a minimal pipeline when function-calling is unsupported
+                # Heuristic: search if query implies recency; otherwise reason -> answer
+                lowered = query.lower()
+                needs_search = any(w in lowered for w in [
+                    "search", "online", "current", "latest", "recent", "news", "today"
+                ])
+
+                fallback_plan = []
+                if needs_search:
+                    fallback_plan.append(("search", {"query": query, "num_results": 3}))
+                # Always add a reasoning pass for structure
+                fallback_plan.append((
+                    "enhance_reasoning",
+                    {"model": self.default_reasoner, "problem": query, "context": context_str}
+                ))
+                # And produce a final answer
+                default_answer = "answer-4" if os.getenv("R1QWEN_API_URL") else "answer-1"
+                fallback_plan.append((
+                    "answer",
+                    {"model": default_answer, "problem": query, "context": context_str}
+                ))
+
+                for tool_name, tool_args in fallback_plan:
+                    yield {"event": "tool_call", "tool": tool_name, "arguments": tool_args}
+                    try:
+                        tool_result = await self._execute_tool(tool_name, tool_args)
+                    except Exception as e:
+                        tool_result = {"error": str(e), "tool": tool_name}
+
+                    yield {"event": "tool_result", "tool": tool_name, "result": tool_result}
+
+                    context.append({
+                        "round": round_num + 1,
+                        "tool": tool_name,
+                        "arguments": tool_args,
+                        "result": tool_result,
+                    })
+                    all_tool_calls.append({"tool": tool_name, "arguments": tool_args})
+
+                    # Capture answer content as final
+                    if tool_name == "answer" and tool_result.get("content"):
+                        final_answer = tool_result.get("content", "")
+                        break
+
+                if final_answer:
                     break
+                # If still nothing, synthesize from accumulated context
+                final_answer = await self._generate_final_answer(query, self._build_context(context))
+                break
 
             # Execute tools sequentially; push results back as context
             for call in tool_calls:
@@ -176,6 +222,8 @@ class ToolOrchestrator:
         yield {
             "event": "complete",
             "summary": {
+                "framework": "ToolOrchestrator",
+                "status": "success",
                 "total_rounds": len(context),
                 "tools_used": [tc["tool"] for tc in all_tool_calls],
                 "final_answer": final_answer

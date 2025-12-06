@@ -1098,7 +1098,8 @@ async def stream_orchestrator_events(
     query: str,
     max_tokens: int,
     temperature: float,
-    max_rounds: int
+    max_rounds: int,
+    engine: str = "auto"
 ) -> AsyncGenerator[str, None]:
     """
     Stream AutoGen multi-agent orchestration events
@@ -1106,49 +1107,27 @@ async def stream_orchestrator_events(
     Uses Microsoft AutoGen framework with specialist agents
     """
     try:
-        # Use ToolOrchestratorEngine instead of AutoGenOrchestrator to match logic in orchestrator_engine.py
-        # Note: The original code imported AutoGenOrchestrator but used it in a way that matched ToolOrchestra.
-        # I will stick to the updated import if it matches the file I just refactored (orchestrator_engine.py).
-        
-        # However, looking at the original file, it imported AutoGenOrchestrator from autogen_orchestrator.py
-        # AND OrchestratorEngine is defined in orchestrator_engine.py which I refactored.
-        # The endpoint `orchestrator_stream` uses `stream_orchestrator_events`.
-        # `stream_orchestrator_events` uses `AutoGenOrchestrator()`.
-        
-        # Wait, `orchestrator_engine.py` contains `OrchestratorEngine`.
-        # `autogen_orchestrator.py` contains `AutoGenOrchestrator`.
-        # The route `/api/chat/orchestrator/stream` in the ORIGINAL file used `stream_orchestrator_events` which used `AutoGenOrchestrator`.
-        
-        # BUT, the docstring for `orchestrator_stream` says: "The orchestrator (Qwen 2.5-7B) intelligently routes..." which matches `OrchestratorEngine` in `orchestrator_engine.py`.
-        # Let me double check the original `chat_server.py` content I read.
-        
-        # In the original file:
-        # from autogen_orchestrator import AutoGenOrchestrator
-        # ...
-        # async def stream_orchestrator_events(...)
-        #    engine = AutoGenOrchestrator()
-        
-        # Yet `orchestrator_engine.py` (which I refactored) seems to be the "ToolOrchestra" implementation described in the docs.
-        # Let's look at `AGENTS.md`. It says "app/chat-interface/orchestrator_engine.py # Core orchestration logic".
-        # So `orchestrator_engine.py` IS the core logic.
-        # Why does `chat_server.py` import `AutoGenOrchestrator`?
-        
-        # Maybe `autogen_orchestrator.py` is a wrapper or a different implementation?
-        # Let's verify `autogen_orchestrator.py` content to be safe.
-        pass
-    except Exception:
-        pass
+        choice = (engine or "auto").lower()
+        if choice == "autogen" and AutoGenOrchestrator is None:
+            choice = "tools"
+        if choice == "auto":
+            choice = "autogen" if AutoGenOrchestrator is not None else "tools"
 
-    try:
-        # Use ToolOrchestrator which is now the renamed AutoGenOrchestrator
-        engine = AutoGenOrchestrator()
+        if choice == "autogen":
+            orch = AutoGenOrchestrator()
+            async for event in orch.run_orchestration(query=query, max_turns=max_rounds):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            return
 
-        async for event in engine.run_orchestration(
+        # tools (fallback or explicit)
+        engine_impl = ToolOrchestrator(max_rounds=max_rounds)
+        async for event in engine_impl.run_orchestration(
             query=query,
-            max_turns=max_rounds
+            max_tokens=max_tokens,
+            temperature=temperature,
         ):
-            # Ensure proper JSON encoding with explicit settings
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        return
 
     except Exception as e:
         logger.error(f"Orchestrator error: {e}", exc_info=True)
@@ -1156,7 +1135,7 @@ async def stream_orchestrator_events(
 
 
 @app.post("/api/chat/orchestrator/stream")
-async def orchestrator_stream(request: OrchestratorRequest):
+async def orchestrator_stream(payload: OrchestratorRequest, req: Request):
     """
     Stream ToolOrchestra-style intelligent orchestration using Server-Sent Events
 
@@ -1185,12 +1164,16 @@ async def orchestrator_stream(request: OrchestratorRequest):
     - search: Web search for missing information
     - code_interpreter: Execute Python code
     """
+    # Choose engine via query param (?engine=autogen|tools|auto), default auto
+    engine = req.query_params.get("engine", "auto")
+
     return StreamingResponse(
         stream_orchestrator_events(
-            request.query,
-            request.max_tokens,
-            request.temperature,
-            request.max_rounds
+            payload.query,
+            payload.max_tokens,
+            payload.temperature,
+            payload.max_rounds,
+            engine,
         ),
         media_type="text/event-stream",
         headers={

@@ -8,7 +8,7 @@ import logging
 import httpx
 from typing import Dict, Any, Optional
 from http_client import HTTPClient
-from ..constants import DEFAULT_REMOTE_ENDPOINTS
+from constants import DEFAULT_REMOTE_ENDPOINTS
 
 logger = logging.getLogger(__name__)
 

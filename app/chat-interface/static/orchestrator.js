@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const queryInput = document.getElementById('query');
     const maxRoundsInput = document.getElementById('maxRounds');
+    const engineSelect = document.getElementById('engineSelect');
     const temperatureInput = document.getElementById('temperature');
     const maxTokensInput = document.getElementById('maxTokens');
     const startBtn = document.getElementById('startBtn');
-    const btnText = document.getElementById('btnText');
+    let originalBtnHTML = null;
     const orchestrationSection = document.getElementById('orchestrationSection');
 
     let isRunning = false;
@@ -19,13 +20,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isRunning) return;
       isRunning = true;
       startBtn.disabled = true;
-      btnText.innerHTML = '<span class="loading"></span> Orchestrating...';
+      // Preserve original content to restore later
+      if (originalBtnHTML === null) originalBtnHTML = startBtn.innerHTML;
+      startBtn.innerHTML = '<span class="loading"></span>';
 
       // Clear previous results
       orchestrationSection.innerHTML = '';
 
       try {
-        const response = await fetch('/api/chat/orchestrator/stream', {
+        const engine = engineSelect ? engineSelect.value : 'auto';
+        const response = await fetch(`/api/chat/orchestrator/stream?engine=${encodeURIComponent(engine)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -171,9 +175,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Summary
                 const summaryDiv = document.createElement('div');
                 summaryDiv.className = 'summary';
+                const framework = event.summary && event.summary.framework ? event.summary.framework : 'Orchestration';
                 summaryDiv.innerHTML = `
-                  <strong>AutoGen Orchestration Complete</strong>
-                  <div class="summary-item"><span>Framework:</span><span>${event.summary.framework}</span></div>
+                  <strong>${framework} Complete</strong>
+                  <div class="summary-item"><span>Framework:</span><span>${framework}</span></div>
                   <div class="summary-item"><span>Status:</span><span>${event.summary.status}</span></div>
                   ${event.summary.total_rounds ? `<div class="summary-item"><span>Rounds:</span><span>${event.summary.total_rounds}</span></div>` : ''}
                   ${event.summary.agents_used ? `<div class="summary-item"><span>Agents:</span><span>${event.summary.agents_used.join(', ')}</span></div>` : ''}
@@ -214,7 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } finally {
         isRunning = false;
         startBtn.disabled = false;
-        btnText.textContent = 'Start Orchestration';
+        if (originalBtnHTML !== null) {
+          startBtn.innerHTML = originalBtnHTML;
+        }
       }
     }
 

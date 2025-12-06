@@ -59,6 +59,9 @@ class GenerateRequest(BaseModel):
     top_p: float = 0.9
     stream: bool = False
 
+    class Config:
+        extra = 'ignore'  # allow OpenAI-style extra fields like 'model', 'tools', etc.
+
 
 def _download_model(default_repo: str, default_file: str) -> str:
     repo_id = os.getenv("MODEL_REPO", default_repo)
@@ -240,4 +243,3 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             raise HTTPException(status_code=500, detail=str(e))
 
     return app
-
