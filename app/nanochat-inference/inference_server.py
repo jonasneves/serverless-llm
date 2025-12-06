@@ -427,14 +427,27 @@ async def generate_text(request: InferenceRequest):
 
         if backend == "nanochat_local" and model is not None and tokenizer is not None:
             input_ids = tokenizer.encode(request.prompt)
+
+            # Ensure input_ids is a Python list (required by nanochat GPT.generate)
+            if not isinstance(input_ids, list):
+                input_ids = list(input_ids) if hasattr(input_ids, '__iter__') else [input_ids]
+
             try:
-                out = model.generate(input_ids, request.max_new_tokens, request.temperature, top_k=request.top_k)
-                if isinstance(out, str):
-                    return InferenceResponse(generated_text=out)
-                try:
-                    text = tokenizer.decode(out)
-                except Exception:
-                    text = str(out)
+                # nanochat model.generate() is a generator that yields token IDs
+                generated_tokens = []
+                for token in model.generate(input_ids, request.max_new_tokens, request.temperature, top_k=request.top_k):
+                    generated_tokens.append(token)
+
+                # Decode the generated tokens to text
+                if generated_tokens:
+                    full_ids = input_ids + generated_tokens
+                    full_text = tokenizer.decode(full_ids)
+                    prompt_only = tokenizer.decode(input_ids)
+                    # Extract just the generated portion
+                    text = full_text[len(prompt_only):]
+                else:
+                    text = ""
+
                 return InferenceResponse(generated_text=text)
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Local nanochat generation failed: {e}")
@@ -562,24 +575,37 @@ async def chat_completions(request: ChatCompletionRequest):
         try:
             prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
             input_ids = tokenizer.encode(prompt_text)
+
+            # Ensure input_ids is a Python list (required by nanochat GPT.generate)
+            if not isinstance(input_ids, list):
+                input_ids = list(input_ids) if hasattr(input_ids, '__iter__') else [input_ids]
+
             out_text = None
-            # Try common generate signatures
+            # nanochat model.generate() is a generator that yields token IDs
             try:
-                output = model.generate(
+                generated_tokens = []
+                for token in model.generate(
                     input_ids,
                     request.max_tokens,
                     request.temperature,
                     top_k=20
-                )
-                if isinstance(output, str):
-                    out_text = output
-                elif isinstance(output, (list, tuple)):
-                    try:
-                        out_text = tokenizer.decode(output)
-                    except Exception:
-                        out_text = str(output)
-            except Exception:
-                # Fallback: if model returns tokens via another method, attempt naive decode
+                ):
+                    generated_tokens.append(token)
+
+                # Decode the generated tokens to text
+                if generated_tokens:
+                    # Combine prompt + generated tokens and decode the generated part
+                    full_ids = input_ids + generated_tokens
+                    full_text = tokenizer.decode(full_ids)
+                    prompt_only = tokenizer.decode(input_ids)
+                    # Extract just the generated portion
+                    out_text = full_text[len(prompt_only):]
+                else:
+                    out_text = ""
+            except Exception as e:
+                print(f"Generation failed: {e}")
+                import traceback
+                traceback.print_exc()
                 out_text = ""
 
             out_text = out_text or "(generation unavailable with current nanochat backend)"
