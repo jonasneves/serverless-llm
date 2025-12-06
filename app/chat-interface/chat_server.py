@@ -23,6 +23,7 @@ import pathlib
 from urllib.parse import urlparse
 
 from http_client import HTTPClient
+from constants import DEFAULT_LOCAL_ENDPOINTS
 
 # Discussion mode imports
 from orchestrator import GitHubModelsOrchestrator
@@ -162,7 +163,7 @@ MODEL_CONFIG = (
         "id": "qwen2.5-7b",
         "name": "Qwen 2.5-7B",
         "env": "QWEN_API_URL",
-        "default_url": "http://localhost:8001",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["QWEN_API_URL"],
         "default": True,
         "service": "qwen",
     },
@@ -170,33 +171,33 @@ MODEL_CONFIG = (
         "id": "deepseek-r1-distill-qwen-1.5b",
         "name": "DeepSeek R1 Distill Qwen 1.5B",
         "env": "R1QWEN_API_URL",
-        "default_url": "http://localhost:8004",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["R1QWEN_API_URL"],
         "service": "r1qwen",
     },
     {
         "id": "gemma-2-9b-instruct",
         "name": "Gemma 2 9B",
         "env": "GEMMA_API_URL",
-        "default_url": "http://localhost:8006",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["GEMMA_API_URL"],
     },
     
     {
         "id": "mistral-7b-instruct-v0.3",
         "name": "Mistral 7B v0.3",
         "env": "MISTRAL_API_URL",
-        "default_url": "http://localhost:8005",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["MISTRAL_API_URL"],
     },
     {
         "id": "phi-3-mini",
         "name": "Phi-3 Mini",
         "env": "PHI_API_URL",
-        "default_url": "http://localhost:8002",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["PHI_API_URL"],
     },
     {
         "id": "llama-3.2-3b",
         "name": "Llama 3.2-3B",
         "env": "LLAMA_API_URL",
-        "default_url": "http://localhost:8003",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["LLAMA_API_URL"],
     },
     
 )
@@ -249,7 +250,7 @@ MODEL_DISPLAY_NAMES = {
 if BASE_DOMAIN:
     VIBEVOICE_ENDPOINT = build_service_url("vibevoice")
 else:
-    VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", "http://localhost:8000")
+    VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", DEFAULT_LOCAL_ENDPOINTS["VIBEVOICE_API_URL"]) 
 
 DEFAULT_MODEL_ID = next(
     (config["id"] for config in MODEL_CONFIG if config.get("default")),

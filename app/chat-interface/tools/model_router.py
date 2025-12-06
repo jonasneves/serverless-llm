@@ -8,6 +8,7 @@ import logging
 import httpx
 from typing import Dict, Any, Optional
 from http_client import HTTPClient
+from ..constants import DEFAULT_REMOTE_ENDPOINTS
 
 logger = logging.getLogger(__name__)
 
@@ -64,14 +65,7 @@ class ModelRouter:
     def __init__(self):
         self.model_urls = {}
         # Default URLs for GitHub workflow deployments
-        default_urls = {
-            "QWEN_API_URL": "https://qwen.neevs.io",
-            "PHI_API_URL": "https://phi.neevs.io",
-            "LLAMA_API_URL": "https://llama.neevs.io",
-            # Optional hosted endpoint for R1 Distill Qwen if available
-            "R1QWEN_API_URL": "https://r1qwen.neevs.io",
-            
-        }
+        default_urls = DEFAULT_REMOTE_ENDPOINTS
         # Load API URLs from environment (with defaults)
         for model_id, config in self.MODEL_MAPPING.items():
             url = os.getenv(config["url_env"], default_urls.get(config["url_env"]))

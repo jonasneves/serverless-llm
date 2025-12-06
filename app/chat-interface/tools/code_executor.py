@@ -1,29 +1,20 @@
 """
-Code Executor Tool - Execute Python code in a restricted environment
-Uses RestrictedPython for basic sandboxing
+Code Executor Tool - Execute Python code in a separate Python process
+Runs in isolated mode (-I) with a short timeout for basic safety.
 """
 
 import logging
 import subprocess
 import tempfile
 import os
+import sys
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
 
 class CodeExecutorTool:
-    """Execute Python code with basic safety restrictions"""
-
-    # Restricted builtins for safer execution
-    SAFE_BUILTINS = {
-        'abs', 'all', 'any', 'ascii', 'bin', 'bool', 'bytearray', 'bytes',
-        'chr', 'dict', 'divmod', 'enumerate', 'filter', 'float', 'format',
-        'frozenset', 'hex', 'int', 'isinstance', 'issubclass', 'iter', 'len',
-        'list', 'map', 'max', 'min', 'oct', 'ord', 'pow', 'print', 'range',
-        'repr', 'reversed', 'round', 'set', 'slice', 'sorted', 'str', 'sum',
-        'tuple', 'type', 'zip'
-    }
+    """Execute Python code with basic isolation using a subprocess"""
 
     def __init__(self):
         pass
@@ -59,13 +50,15 @@ class CodeExecutorTool:
             try:
                 # Execute in subprocess with timeout
                 result = subprocess.run(
-                    ['python', code_path],
+                    [sys.executable or 'python', '-I', code_path],
                     capture_output=True,
                     text=True,
                     timeout=timeout,
                     env={
-                        **os.environ,
-                        'PYTHONIOENCODING': 'utf-8'
+                        'PYTHONIOENCODING': 'utf-8',
+                        # Reduce import surface and user-site effects
+                        'PYTHONPATH': '',
+                        'PYTHONNOUSERSITE': '1',
                     }
                 )
 

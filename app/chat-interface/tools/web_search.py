@@ -4,9 +4,10 @@ Uses DuckDuckGo as free fallback (Tavily can be added later)
 """
 
 import logging
-import aiohttp
-from typing import Dict, Any, List
-from urllib.parse import quote_plus
+import json
+from typing import Dict, Any
+import httpx
+from http_client import HTTPClient
 
 logger = logging.getLogger(__name__)
 
@@ -33,63 +34,54 @@ class WebSearchTool:
             Dict with search results
         """
         try:
-            # Use DuckDuckGo Instant Answer API (free, no key needed)
-            async with aiohttp.ClientSession() as session:
-                params = {
-                    "q": query,
-                    "format": "json",
-                    "no_html": "1",
-                    "skip_disambig": "1"
-                }
+            client = HTTPClient.get_client()
+            params = {
+                "q": query,
+                "format": "json",
+                "no_html": "1",
+                "skip_disambig": "1",
+            }
 
-                async with session.get(
-                    self.ddg_api,
-                    params=params,
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
-                    if not response.ok:
-                        raise Exception(f"Search API error: {response.status}")
+            response = await client.get(self.ddg_api, params=params, timeout=10.0)
 
-                    # DuckDuckGo returns application/x-javascript, so read as text first
-                    text = await response.text()
-                    import json
-                    data = json.loads(text)
+            if not response.is_success:
+                raise Exception(f"Search API error: {response.status_code}")
 
-                    # Extract results
-                    results = []
+            # DuckDuckGo returns application/x-javascript; parse manually
+            text = response.text
+            data = json.loads(text)
 
-                    # Abstract (instant answer)
-                    if data.get("Abstract"):
-                        results.append({
-                            "title": data.get("Heading", "Instant Answer"),
-                            "snippet": data.get("Abstract"),
-                            "url": data.get("AbstractURL", "")
-                        })
+            results = []
 
-                    # Related topics
-                    for topic in data.get("RelatedTopics", [])[:num_results-len(results)]:
-                        if isinstance(topic, dict) and "Text" in topic:
-                            results.append({
-                                "title": topic.get("Text", "")[:100],
-                                "snippet": topic.get("Text", ""),
-                                "url": topic.get("FirstURL", "")
-                            })
+            if data.get("Abstract"):
+                results.append({
+                    "title": data.get("Heading", "Instant Answer"),
+                    "snippet": data.get("Abstract"),
+                    "url": data.get("AbstractURL", ""),
+                })
 
-                    # If no results, provide a message
-                    if not results:
-                        results.append({
-                            "title": "No results found",
-                            "snippet": f"Could not find specific information for: {query}",
-                            "url": ""
-                        })
+            for topic in data.get("RelatedTopics", [])[: max(0, num_results - len(results))]:
+                if isinstance(topic, dict) and "Text" in topic:
+                    results.append({
+                        "title": topic.get("Text", "")[:100],
+                        "snippet": topic.get("Text", ""),
+                        "url": topic.get("FirstURL", ""),
+                    })
 
-                    return {
-                        "query": query,
-                        "num_results": len(results),
-                        "results": results[:num_results],
-                        "tool": "search",
-                        "provider": "DuckDuckGo"
-                    }
+            if not results:
+                results.append({
+                    "title": "No results found",
+                    "snippet": f"Could not find specific information for: {query}",
+                    "url": "",
+                })
+
+            return {
+                "query": query,
+                "num_results": len(results),
+                "results": results[:num_results],
+                "tool": "search",
+                "provider": "DuckDuckGo",
+            }
 
         except Exception as e:
             logger.error(f"Web search failed: {e}")

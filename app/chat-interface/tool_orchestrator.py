@@ -58,9 +58,9 @@ class ToolOrchestrator:
         - {"event": "complete", "summary": {...}}
         """
 
-        context = []
-        all_tool_calls = []
-        final_answer = None
+        context: List[Dict[str, Any]] = []
+        all_tool_calls: List[Dict[str, Any]] = []
+        final_answer: Optional[str] = None
 
         yield {
             "event": "start",
@@ -68,93 +68,100 @@ class ToolOrchestrator:
             "max_rounds": self.max_rounds
         }
 
+        # Prepare initial messages for orchestrator with tools
+        messages: List[Dict[str, str]] = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a tool orchestrator. Decide which tools to call and in what order. "
+                    "Carefully read the user's query and any provided context. Only call tools you need. "
+                    "When you have enough information, do not call any tool and instead provide the final answer."
+                ),
+            },
+            {
+                "role": "user",
+                "content": query,
+            },
+        ]
+
         for round_num in range(self.max_rounds):
-            yield {
-                "event": "round_start",
-                "round": round_num + 1
-            }
+            yield {"event": "round_start", "round": round_num + 1}
 
-            # Build context from previous rounds
+            # Refresh context summary for the orchestrator
             context_str = self._build_context(context)
+            if context_str:
+                messages.append({
+                    "role": "system",
+                    "content": f"Context so far:\n{context_str}",
+                })
 
-            # Determine which tool to call based on query and context
-            # Use a simpler approach: directly infer the tool from the query
-            if round_num == 0:
-                # First round - analyze what we need
-                if any(word in query.lower() for word in ["search", "online", "current", "latest", "recent", "find information"]):
-                    # Web search needed - clean up the query
-                    search_query = query.lower()
-                    # Remove common instruction phrases
-                    for phrase in ["search web for", "search for", "find information about", "look up", "search online for", "find online"]:
-                        search_query = search_query.replace(phrase, "")
-                    search_query = search_query.strip()
+            # Ask orchestrator what to do next
+            decision = await self._call_orchestrator(messages, self.tools, temperature=temperature)
 
-                    tool_name = "search"
-                    tool_args = {"query": search_query, "num_results": 3}
-                elif any(word in query.lower() for word in ["code", "python", "calculate", "compute", "program"]):
-                    # Might need code execution or reasoning
-                    tool_name = "enhance_reasoning"
-                    tool_args = {"model": self.default_reasoner, "problem": query, "context": context_str}
+            if decision.get("content"):
+                yield {"event": "orchestrator_thinking", "content": decision["content"]}
+                # Record the orchestrator message for continuity
+                messages.append({"role": "assistant", "content": decision["content"]})
+
+            tool_calls = decision.get("tool_calls", []) or []
+            if not tool_calls:
+                # No tool calls requested — treat content as final answer if present
+                if decision.get("content"):
+                    final_answer = decision.get("content")
+                    break
                 else:
-                    # General reasoning
-                    tool_name = "enhance_reasoning"
-                    tool_args = {"model": self.default_reasoner, "problem": query, "context": context_str}
+                    # Fallback to synthesizing an answer from context
+                    final_answer = await self._generate_final_answer(query, context_str)
+                    break
 
-                yield {
-                    "event": "tool_call",
-                    "tool": tool_name,
-                    "arguments": tool_args
-                }
+            # Execute tools sequentially; push results back as context
+            for call in tool_calls:
+                tool_name = call.get("name")
+                tool_args = call.get("arguments", {})
 
-                # Execute tool
-                tool_result = await self._execute_tool(tool_name, tool_args)
+                # Fill in defaults for our tools if missing
+                if tool_name == "enhance_reasoning" and "model" not in tool_args:
+                    tool_args["model"] = self.default_reasoner
+                    tool_args["problem"] = tool_args.get("problem", query)
+                    tool_args["context"] = tool_args.get("context", context_str)
+                elif tool_name == "answer" and "model" not in tool_args:
+                    tool_args["model"] = "answer-4" if os.getenv("R1QWEN_API_URL") else "answer-1"
+                    tool_args["problem"] = tool_args.get("problem", query)
+                    tool_args["context"] = tool_args.get("context", context_str)
 
-                yield {
-                    "event": "tool_result",
-                    "tool": tool_name,
-                    "result": tool_result
-                }
+                yield {"event": "tool_call", "tool": tool_name, "arguments": tool_args}
 
-                # Add to context
+                try:
+                    tool_result = await self._execute_tool(tool_name, tool_args)
+                except Exception as e:
+                    tool_result = {"error": str(e), "tool": tool_name}
+
+                yield {"event": "tool_result", "tool": tool_name, "result": tool_result}
+
                 context.append({
                     "round": round_num + 1,
                     "tool": tool_name,
                     "arguments": tool_args,
-                    "result": tool_result
+                    "result": tool_result,
+                })
+                all_tool_calls.append({"tool": tool_name, "arguments": tool_args})
+
+                # Provide tool results back to orchestrator as a compact JSON string
+                try:
+                    tool_result_str = json.dumps(tool_result)[:4000]
+                except Exception:
+                    tool_result_str = str(tool_result)[:4000]
+                messages.append({
+                    "role": "system",
+                    "content": f"Tool {tool_name} result:\n{tool_result_str}",
                 })
 
-                all_tool_calls.append({
-                    "tool": tool_name,
-                    "arguments": tool_args
-                })
+                # If the tool was 'answer', we can treat it as final
+                if tool_name == "answer" and tool_result.get("content"):
+                    final_answer = tool_result.get("content", "")
+                    break
 
-            # After first round, generate final answer
-            if round_num > 0 or len(context) > 0:
-                # We have enough info, generate final answer
-                tool_name = "answer"
-                # If R1 Distill is available, you may prefer its careful answers
-                default_answer = "answer-4" if os.getenv("R1QWEN_API_URL") else "answer-1"
-                tool_args = {"model": default_answer, "problem": query, "context": context_str}
-
-                yield {
-                    "event": "tool_call",
-                    "tool": tool_name,
-                    "arguments": tool_args
-                }
-
-                tool_result = await self._execute_tool(tool_name, tool_args)
-
-                yield {
-                    "event": "tool_result",
-                    "tool": tool_name,
-                    "result": tool_result
-                }
-
-                final_answer = tool_result.get("content", "")
-                all_tool_calls.append({
-                    "tool": tool_name,
-                    "arguments": tool_args
-                })
+            if final_answer:
                 break
 
         # Provide final answer
@@ -163,10 +170,7 @@ class ToolOrchestrator:
             context_str = self._build_context(context)
             final_answer = await self._generate_final_answer(query, context_str)
 
-        yield {
-            "event": "final_answer",
-            "content": final_answer
-        }
+        yield {"event": "final_answer", "content": final_answer}
 
         yield {
             "event": "complete",
