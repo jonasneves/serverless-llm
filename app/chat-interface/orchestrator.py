@@ -388,8 +388,8 @@ Discussion Summary:
 {discussion_summary}
 
 Create a synthesis plan with these exact fields:
-1. primary_source_model: The model ID to prioritize (e.g., "phi-3-mini", "qwen2.5-7b")
-2. source_weights: Dictionary mapping each model ID to its weight, e.g., {{"phi-3-mini": 0.7, "qwen2.5-7b": 0.3}}
+1. primary_source_model: The model ID to prioritize (e.g., "phi-3-mini", "qwen3-4b")
+2. source_weights: Dictionary mapping each model ID to its weight, e.g., {{"phi-3-mini": 0.7, "qwen3-4b": 0.3}}
 3. merge_strategy: One of "prioritize_lead", "combine_best", or "consensus"
 4. sections_to_include: Array of sections, each with:
    - source_model: Model ID to source from (e.g., "phi-3-mini")
@@ -398,7 +398,7 @@ Create a synthesis plan with these exact fields:
 5. final_confidence: Overall confidence 0-1
 6. synthesis_instructions: How to generate the final response
 
-IMPORTANT: Use actual model IDs from the discussion (e.g., "phi-3-mini", "qwen2.5-7b", "llama-3.2-3b"), not generic names."""
+IMPORTANT: Use actual model IDs from the discussion (e.g., "phi-3-mini", "qwen3-4b", "llama-3.2-3b"), not generic names."""
 
         return await self._call_structured(prompt, SynthesisResult)
 

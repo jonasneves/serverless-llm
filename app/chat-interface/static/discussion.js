@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'llama-3.3-70b-instruct': 'Llama 3.3 70B',
       'llama-4-scout-17b-16e-instruct': 'Llama 4 Scout 17B',
       'meta-llama-3.1-405b-instruct': 'Llama 3.1 405B',
-      'qwen2.5-7b': 'Qwen 2.5-7B',
+      'qwen3-4b': 'Qwen3 4B',
       'phi-3-mini': 'Phi-3 Mini',
       'llama-3.2-3b': 'Llama 3.2-3B'
     };

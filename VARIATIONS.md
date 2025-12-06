@@ -103,7 +103,7 @@ Request:
 ```json
 {
   "query": "Your prompt",
-  "model": "qwen2.5-7b",
+  "model": "qwen3-4b",
   "num_responses": 5,
   "temperature": 0.8,
   "max_tokens": 1024

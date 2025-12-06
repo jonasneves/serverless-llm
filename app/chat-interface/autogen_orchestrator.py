@@ -118,7 +118,7 @@ class AutoGenOrchestrator:
             logger.info("Creating AutoGen specialist agents...")
 
             # Math/Reasoning Expert (Qwen)
-            qwen_client = self._create_model_client(self.qwen_url, "qwen-2.5-7b")
+            qwen_client = self._create_model_client(self.qwen_url, "qwen3-4b")
             reasoning_agent = AssistantAgent(
                 "reasoning_expert",
                 model_client=qwen_client,

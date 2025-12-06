@@ -1,6 +1,6 @@
-name: Qwen 2.5-7B
+name: Qwen3-4B
 
-run-name: Qwen 2.5-7B Inference Server
+run-name: Qwen3-4B Inference Server
 
 on:
   workflow_dispatch:
@@ -28,6 +28,10 @@ on:
   repository_dispatch:
     types: [restart-qwen-inference]
 
+concurrency:
+  group: qwen-inference
+  cancel-in-progress: false  # Let graceful handoff work
+
 permissions:
   actions: write
   contents: read
@@ -36,17 +40,17 @@ jobs:
   inference:
     uses: ./.github/workflows/reusable-gguf-inference.yml
     with:
-      model_name: "Qwen 2.5-7B"
+      model_name: "Qwen3-4B"
       model_dir: "qwen-inference"
-      model_repo: "bartowski/Qwen2.5-7B-Instruct-GGUF"
-      model_file: "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-qwen2.5-7b-q4"
+      model_repo: "unsloth/Qwen3-4B-GGUF"
+      model_file: "Qwen3-4B-Q4_K_M.gguf"
+      cache_key_prefix: "gguf-qwen3-4b-q4"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_QWEN"
       restart_event_type: "restart-qwen-inference"
       workflow_file: "qwen-inference.yml"
-      duration_hours: ${{ inputs.duration_hours || '5' }}
-      auto_restart: ${{ inputs.auto_restart != false }}
-      instances: ${{ inputs.instances || '1' }}
+      duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
+      auto_restart: ${{ github.event.client_payload.auto_restart != false && (inputs.auto_restart != false) }}
+      instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QWEN }}

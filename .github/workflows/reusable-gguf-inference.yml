@@ -301,8 +301,8 @@ jobs:
               sleep 5
             fi
 
-            # Check if we need to trigger restart (only once)
-            if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ]; then
+            # Check if we need to trigger restart (only once, and only from instance #1 to avoid multiple dispatches)
+            if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ "${{ matrix.instance }}" = "1" ]; then
               echo ""
               echo "=== Restart threshold reached ==="
               echo "Elapsed: ${ELAPSED}s, Threshold: ${RESTART_THRESHOLD}s"
@@ -324,7 +324,7 @@ jobs:
                     -H "Authorization: Bearer $PAT_TOKEN" \
                     -H "X-GitHub-Api-Version: 2022-11-28" \
                     https://api.github.com/repos/${{ github.repository }}/dispatches \
-                    -d '{"event_type":"${{ inputs.restart_event_type }}"}' \
+                    -d "{\"event_type\":\"${{ inputs.restart_event_type }}\",\"client_payload\":{\"duration_hours\":\"${{ inputs.duration_hours }}\",\"auto_restart\":${{ inputs.auto_restart }},\"instances\":\"${{ inputs.instances }}\"}}" \
                     -w "\nHTTP_STATUS:%{http_code}" 2>&1)
 
                   HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)

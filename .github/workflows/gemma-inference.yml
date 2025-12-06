@@ -28,6 +28,10 @@ on:
   repository_dispatch:
     types: [restart-gemma-inference]
 
+concurrency:
+  group: gemma-inference
+  cancel-in-progress: false  # Let graceful handoff work
+
 permissions:
   actions: write
   contents: read
@@ -44,9 +48,9 @@ jobs:
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_GEMMA"
       restart_event_type: "restart-gemma-inference"
       workflow_file: "gemma-inference.yml"
-      duration_hours: ${{ inputs.duration_hours || '5' }}
-      auto_restart: ${{ inputs.auto_restart != false }}
-      instances: ${{ inputs.instances || '1' }}
+      duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
+      auto_restart: ${{ github.event.client_payload.auto_restart != false && (inputs.auto_restart != false) }}
+      instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_GEMMA }}

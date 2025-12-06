@@ -1,7 +1,7 @@
 # Serverless LLM Chat
 
 [![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
-[![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen2.5-7b)](https://qwen.neevs.io/health)
+[![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen3-4b)](https://qwen.neevs.io/health)
 [![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
@@ -11,14 +11,14 @@
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
 
-Free, serverless, multi-model chat with Qwen, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
+Free, serverless, multi-model chat with Qwen3, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
 ## Overview Features
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: Qwen 2.5 (7B), DeepSeek R1 Distill Qwen (1.5B), GLM‑4.6, Phi‑3, Llama 3.2, Mistral 7B, Gemma 2 9B
+- **Multi-Model Support**: Qwen3 (4B), DeepSeek R1 Distill Qwen (1.5B), GLM‑4.6, Phi‑3, Llama 3.2, Mistral 7B, Gemma 2 9B
 - **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
 - **Continuous Availability**: Auto-restart with graceful handoff
@@ -109,7 +109,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 
 | Model | Parameters | Quantization | Strengths |
 |-------|------------|--------------|-----------|
-| Qwen 2.5 | 7B | Q4_K_M | Code generation, multilingual tasks |
+| Qwen3 | 4B | Q4_K_M | Thinking mode, advanced reasoning, agent capabilities, code generation |
 | DeepSeek R1 Distill Qwen | 1.5B | Q4_K_M | Step-by-step reasoning, math, analysis |
 | Phi-3 Mini | 3.8B | Q4_K_M | Efficient reasoning, instruction following |
 | Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |

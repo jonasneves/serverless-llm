@@ -1,5 +1,5 @@
 """
-Qwen2.5 Inference Server (GGUF) via shared base
+Qwen3 Inference Server (GGUF) via shared base
 """
 
 import os
@@ -13,13 +13,13 @@ from shared.inference_base import ModelConfig, create_inference_app  # noqa: E40
 
 
 config = ModelConfig(
-    title="Qwen2.5 Inference API",
-    description="REST API for Qwen2.5 model inference using GGUF",
-    model_name="Qwen2.5-7B-Instruct",
-    openai_model_id="qwen2.5-7b-instruct",
+    title="Qwen3 Inference API",
+    description="REST API for Qwen3 model inference using GGUF",
+    model_name="Qwen3-4B",
+    openai_model_id="qwen3-4b",
     owned_by="qwen",
-    default_repo="bartowski/Qwen2.5-7B-Instruct-GGUF",
-    default_file="Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+    default_repo="unsloth/Qwen3-4B-GGUF",
+    default_file="Qwen3-4B-Q4_K_M.gguf",
     default_n_ctx=2048,
     default_n_threads=2,
     n_batch=512,

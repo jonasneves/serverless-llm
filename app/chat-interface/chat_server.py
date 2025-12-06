@@ -160,8 +160,8 @@ def get_static_versions() -> dict:
 
 MODEL_CONFIG = (
     {
-        "id": "qwen2.5-7b",
-        "name": "Qwen 2.5-7B",
+        "id": "qwen3-4b",
+        "name": "Qwen3 4B",
         "env": "QWEN_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["QWEN_API_URL"],
         "default": True,
@@ -298,7 +298,7 @@ class ModelStatus(BaseModel):
 
 class DiscussionRequest(GenerationParams):
     query: str
-    orchestrator_model: Optional[str] = None  # Model ID for orchestrator (e.g., 'gpt-5-nano', 'qwen2.5-7b')
+    orchestrator_model: Optional[str] = None  # Model ID for orchestrator (e.g., 'gpt-5-nano', 'qwen3-4b')
     github_token: Optional[str] = None  # User-provided GitHub token for API models
     turns: int = 2  # Number of discussion rounds (all models participate each round)
     participants: Optional[List[str]] = None  # List of model IDs to participate (default: all local models)
@@ -1273,19 +1273,19 @@ async def stream_verbalized_sampling_events(
 @app.post("/api/verbalized-sampling/stream")
 async def verbalized_sampling_stream(
     request: VerbalizedSamplingRequest,
-    model: str = "qwen2.5-7b",
+    model: str = "qwen3-4b",
     num_responses: int = 5,
     temperature: float = 0.8,
     max_tokens: int = 1024
 ):
     """
     Stream Verbalized Sampling responses using Server-Sent Events
-    
+
     Implements Stanford's Verbalized Sampling technique to mitigate mode collapse
     and unlock LLM diversity by asking for a distribution of responses.
-    
+
     Query parameters:
-    - model: Model to use (default: qwen2.5-7b)
+    - model: Model to use (default: qwen3-4b)
     - num_responses: Number of diverse responses (default: 5)
     - temperature: Sampling temperature for diversity (default: 0.8)
     - max_tokens: Max tokens per response (default: 1024)
@@ -1347,7 +1347,7 @@ async def stream_confession_events(
 @app.post("/api/confessions/stream")
 async def confessions_stream(
     request: ConfessionRequest,
-    model: str = "qwen2.5-7b",
+    model: str = "qwen3-4b",
     temperature: float = 0.7,
     max_tokens: int = 512
 ):

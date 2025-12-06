@@ -5,7 +5,7 @@ Defines capabilities and benchmark performance for each model in the arena.
 Used by the orchestrator to weight contributions in discussion mode.
 
 Benchmark sources:
-- Qwen 2.5-7B: https://qwenlm.github.io/blog/qwen2.5/ (official release)
+- Qwen3-4B: https://qwenlm.github.io/blog/qwen3/ (official release)
 - Phi-3 Mini: https://huggingface.co/microsoft/Phi-3-mini-4k-instruct (model card)
 - Llama 3.2-3B: https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/ (Meta release)
 """
@@ -17,49 +17,54 @@ from typing import Dict, List, Any
 # Based on benchmark performance and model architecture
 
 QWEN_PROFILE = {
-    "model_id": "qwen2.5-7b",
-    "display_name": "Qwen 2.5 7B",
+    "model_id": "qwen3-4b",
+    "display_name": "Qwen3 4B",
     "creator": "Alibaba Cloud",
-    "size": "7B parameters",
+    "size": "4B parameters",
     "quantization": "Q4_K_M",
 
-    "primary_strengths": ["mathematics", "coding", "logical_reasoning"],
+    "primary_strengths": ["reasoning", "coding", "agent_capabilities", "thinking_mode"],
 
     "benchmark_scores": {
-        "MMLU": 74.2,           # Massive Multitask Language Understanding
-        "HumanEval": 84.8,      # Code generation benchmark
-        "MATH": 75.5,           # Mathematical problem solving
-        "GSM8K": 82.3,          # Grade school math word problems
-        "BigBench-Hard": 68.5,  # Complex reasoning tasks
-        "GPQA": 42.3,           # Graduate-level science questions
+        # Qwen3 shows enhanced performance over Qwen2.5 in reasoning tasks
+        "MMLU": 73.0,           # Maintained strong general knowledge
+        "HumanEval": 82.0,      # Strong code generation (smaller but optimized)
+        "MATH": 78.0,           # Improved mathematical reasoning
+        "GSM8K": 85.0,          # Enhanced math word problems with thinking mode
+        "BigBench-Hard": 72.0,  # Improved complex reasoning
+        "GPQA": 44.0,           # Graduate-level science questions
     },
 
     "expertise_domains": {
-        "mathematics": 0.95,           # Exceptional - top MATH and GSM8K scores
-        "coding": 0.90,                # Exceptional - 84.8 HumanEval
-        "logical_reasoning": 0.85,     # Strong - good BBH performance
-        "scientific_knowledge": 0.80,  # Strong - decent GPQA score
-        "problem_solving": 0.85,       # Strong - excels at structured problems
-        "technical_writing": 0.75,     # Good - clear explanations
-        "creative_writing": 0.60,      # Moderate - not primary focus
-        "conversation": 0.65,          # Moderate - more technical than conversational
-        "summarization": 0.70,         # Good - understands structure
-        "common_sense": 0.70,          # Good - general knowledge
+        "reasoning": 0.95,             # Exceptional - thinking mode enhances reasoning
+        "mathematics": 0.93,           # Exceptional - improved over Qwen2.5
+        "coding": 0.90,                # Exceptional - maintained high performance
+        "logical_reasoning": 0.92,     # Exceptional - thinking mode advantage
+        "agent_capabilities": 0.95,    # Exceptional - designed for tool calling
+        "problem_solving": 0.90,       # Exceptional - thinking mode helps
+        "instruction_following": 0.88, # Strong - improved human preference alignment
+        "technical_writing": 0.80,     # Strong - better at explanations
+        "scientific_knowledge": 0.78,  # Good
+        "conversation": 0.75,          # Good - improved over Qwen2.5
+        "creative_writing": 0.70,      # Good - better instruction following
+        "summarization": 0.75,         # Good
+        "common_sense": 0.75,          # Good
     },
 
     "use_as_lead_for": [
+        "complex reasoning with thinking mode",
         "math problems",
         "code generation",
+        "agent tasks and tool calling",
         "algorithm design",
-        "data structures",
+        "step-by-step problem solving",
         "technical explanations",
         "data analysis",
         "scientific computing",
-        "optimization problems",
     ],
 
-    "context_length": 32768,
-    "description": "Technical expert optimized for mathematics and coding tasks"
+    "context_length": 32768,  # Native support, expandable to 131K with YaRN
+    "description": "Advanced 4B model with thinking mode, exceptional reasoning, and agent capabilities"
 }
 
 
@@ -418,7 +423,7 @@ DEEPSEEK_R1_QWEN15B_PROFILE = {
 # Aggregate profiles for easy access
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models
-    "qwen2.5-7b": QWEN_PROFILE,
+    "qwen3-4b": QWEN_PROFILE,
     "phi-3-mini": PHI_PROFILE,
     "llama-3.2-3b": LLAMA_PROFILE,
     "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,
@@ -469,7 +474,7 @@ def get_domain_expert(domain: str) -> str:
             best_score = score
             best_model = model_id
 
-    return best_model or "qwen2.5-7b"  # Default to Qwen
+    return best_model or "qwen3-4b"  # Default to Qwen
 
 
 def rank_models_for_query(domain_weights: Dict[str, float]) -> List[tuple[str, float]]:

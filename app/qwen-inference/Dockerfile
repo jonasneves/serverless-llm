@@ -19,7 +19,7 @@ RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install --no-
 
 COPY inference_server.py .
 
-ENV MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
+ENV MODEL_NAME=Qwen/Qwen3-4B
 ENV PORT=8000
 
 EXPOSE 8000

@@ -28,6 +28,10 @@ on:
   repository_dispatch:
     types: [restart-vibevoice-inference]
 
+concurrency:
+  group: vibevoice-inference
+  cancel-in-progress: false  # Let graceful handoff work
+
 jobs:
   inference:
     name: VibeVoice Server #${{ matrix.instance }}
@@ -38,7 +42,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        instance: ${{ fromJson(github.event.inputs.instances == '3' && '[1,2,3]' || github.event.inputs.instances == '2' && '[1,2]' || '[1]') }}
+        instance: ${{ fromJson((github.event.client_payload.instances || github.event.inputs.instances) == '3' && '[1,2,3]' || (github.event.client_payload.instances || github.event.inputs.instances) == '2' && '[1,2]' || '[1]') }}
       fail-fast: false
 
     steps:
@@ -225,8 +229,9 @@ jobs:
 
       - name: Health monitoring loop
         env:
-          DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
-          AUTO_RESTART: ${{ inputs.auto_restart == false && 'false' || 'true' }}
+          DURATION_HOURS: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
+          AUTO_RESTART: ${{ (github.event.client_payload.auto_restart == false || inputs.auto_restart == false) && 'false' || 'true' }}
+          INSTANCES: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
         run: |
           set -e
           # Handle cancellation gracefully
@@ -298,9 +303,9 @@ jobs:
               sleep 5
             fi
 
-            # Check if we need to trigger restart (only once)
+            # Check if we need to trigger restart (only once, and only from instance #1 to avoid multiple dispatches)
             # Check elapsed time first, then AUTO_RESTART inside (matches working pattern)
-            if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ]; then
+            if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ "${{ matrix.instance }}" = "1" ]; then
               echo ""
               echo "=== Restart threshold reached ==="
               echo "Elapsed: ${ELAPSED}s, Threshold: ${RESTART_THRESHOLD}s"
@@ -332,7 +337,7 @@ jobs:
                     -H "Authorization: Bearer $PAT_TOKEN" \
                     -H "X-GitHub-Api-Version: 2022-11-28" \
                     https://api.github.com/repos/${{ github.repository }}/dispatches \
-                    -d '{"event_type":"restart-vibevoice-inference"}' \
+                    -d "{\"event_type\":\"restart-vibevoice-inference\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$([ \"$AUTO_RESTART\" = \"true\" ] && echo \"true\" || echo \"false\"),\"instances\":\"$INSTANCES\"}}" \
                     -w "\nHTTP_STATUS:%{http_code}" 2>&1)
 
                   HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
