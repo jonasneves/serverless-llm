@@ -305,6 +305,53 @@ main {
       flex-wrap: wrap;
     }
 
+    .token-usage-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      font-size: 12px;
+    }
+
+    .token-usage-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .token-usage-bar {
+      width: 100px;
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .token-usage-fill {
+      height: 100%;
+      background: var(--accent-color);
+      transition: width 0.3s ease, background-color 0.3s ease;
+      width: 0%;
+    }
+
+    .token-usage-fill.warning {
+      background: var(--warning-color);
+    }
+
+    .token-usage-fill.danger {
+      background: var(--danger-color);
+    }
+
+    .token-usage-text {
+      color: var(--text-primary);
+      font-weight: 500;
+      white-space: nowrap;
+      font-size: 11px;
+    }
+
     .model-chip {
       padding: 6px 12px;
       border-radius: 8px;
@@ -334,6 +381,19 @@ main {
       height: 6px;
       border-radius: 50%;
       margin-right: 6px;
+    }
+
+    .model-chip .context-info {
+      margin-left: 6px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      font-weight: 600;
+    }
+
+    .model-chip.selected .context-info {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     .status-online { background: var(--success-color); }

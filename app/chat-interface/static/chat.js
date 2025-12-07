@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let conversationHistory = [];
     let statusIntervalId = null;
     let initialCheckDone = false;
+    let totalTokensUsed = 0;
 
     const chatHistory = document.getElementById('chatHistory');
     const userInput = document.getElementById('userInput');
@@ -32,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const tempValue = document.getElementById('tempValue');
     const maxTokens = document.getElementById('maxTokens');
     const typingIndicator = document.getElementById('typingIndicator');
+    const tokenUsageContainer = document.getElementById('tokenUsageContainer');
+    const tokenUsageFill = document.getElementById('tokenUsageFill');
+    const tokenUsageText = document.getElementById('tokenUsageText');
 
     // Initialize model selector
     function renderModelSelector() {
@@ -39,11 +43,66 @@ document.addEventListener('DOMContentLoaded', () => {
       for (const [id, model] of Object.entries(MODELS)) {
         const chip = document.createElement('div');
         chip.className = `model-chip ${selectedModels.has(id) ? 'selected' : ''}`;
-        chip.innerHTML = `<span class="status-dot status-${model.status}"></span>${model.name}`;
+        const contextInfo = model.context_length > 0 ? formatContextLength(model.context_length) : '';
+        chip.innerHTML = `
+          <span class="status-dot status-${model.status}"></span>
+          <span class="model-name-text">${model.name}</span>
+          ${contextInfo ? `<span class="context-info">${contextInfo}</span>` : ''}
+        `;
         chip.onclick = () => toggleModel(id);
         modelSelector.appendChild(chip);
       }
       updateSelectedCount();
+    }
+
+    function formatContextLength(length) {
+      if (length >= 1000000) {
+        return `${(length / 1000000).toFixed(1)}M`;
+      } else if (length >= 1000) {
+        return `${(length / 1000).toFixed(0)}K`;
+      }
+      return length.toString();
+    }
+
+    function updateTokenUsage() {
+      // Only show token usage if exactly one model is selected
+      if (selectedModels.size !== 1) {
+        tokenUsageContainer.style.display = 'none';
+        return;
+      }
+
+      const selectedModelId = Array.from(selectedModels)[0];
+      const model = MODELS[selectedModelId];
+
+      if (!model || !model.context_length) {
+        tokenUsageContainer.style.display = 'none';
+        return;
+      }
+
+      tokenUsageContainer.style.display = 'flex';
+      const contextLength = model.context_length;
+      const percentage = Math.min((totalTokensUsed / contextLength) * 100, 100);
+
+      tokenUsageFill.style.width = `${percentage}%`;
+      tokenUsageFill.className = 'token-usage-fill';
+
+      if (percentage >= 90) {
+        tokenUsageFill.classList.add('danger');
+      } else if (percentage >= 70) {
+        tokenUsageFill.classList.add('warning');
+      }
+
+      tokenUsageText.textContent = `${totalTokensUsed.toLocaleString()} / ${formatContextLength(contextLength)}`;
+    }
+
+    function addTokens(tokens) {
+      totalTokensUsed += tokens;
+      updateTokenUsage();
+    }
+
+    function resetTokenUsage() {
+      totalTokensUsed = 0;
+      updateTokenUsage();
     }
 
     function toggleModel(id) {
@@ -53,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedModels.add(id);
       }
       renderModelSelector();
+      updateTokenUsage();
     }
 
     function updateSelectedCount() {
@@ -114,7 +174,11 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedModels.clear();
 
         data.models.forEach((model) => {
-          MODELS[model.id] = { name: model.name, status: 'checking' };
+          MODELS[model.id] = {
+            name: model.name,
+            status: 'checking',
+            context_length: model.context_length || 0
+          };
           // Do not select all by default; wait for status check
         });
 
@@ -410,6 +474,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (entry.tokensEl) {
           entry.tokensEl.textContent = tokenEstimate || '-';
         }
+
+        // Add tokens to usage tracker (only if one model is selected)
+        if (selectedModels.size === 1 && tokenEstimate) {
+          addTokens(parseInt(tokenEstimate) || 0);
+        }
       }
     }
 
@@ -558,6 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       });
+
+      resetTokenUsage();
     }
 
     // Initialize

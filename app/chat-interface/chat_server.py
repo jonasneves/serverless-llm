@@ -635,6 +635,7 @@ async def list_models():
                 "name": config["name"],
                 "endpoint": MODEL_ENDPOINTS[config["id"]],
                 "default": config.get("default", False),
+                "context_length": MODEL_PROFILES.get(config["id"], {}).get("context_length", 0),
             }
             for config in MODEL_CONFIG
         ],
