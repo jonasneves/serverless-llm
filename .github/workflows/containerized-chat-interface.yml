@@ -150,18 +150,46 @@ jobs:
             -e GH_MODELS_TOKEN="$GH_MODELS_TOKEN" \
             chat-server:latest
 
-          echo "Waiting for chat server to be ready..."
+          echo "Chat server container started"
+          echo "Waiting for server to be ready..."
           sleep 10
 
-          # Health check
-          for i in {1..10}; do
-            if curl -s http://localhost:8080/health | grep -q "healthy"; then
-              echo "Chat server is healthy!"
+          # Health check with better debugging
+          HEALTHY=false
+          for i in {1..15}; do
+            echo "Health check attempt $i/15..."
+
+            # Check if container is still running
+            if ! docker ps | grep -q chat-server; then
+              echo "ERROR: Container has stopped!"
+              echo "Container logs:"
+              docker logs chat-server
+              exit 1
+            fi
+
+            # Try health endpoint
+            RESPONSE=$(curl -s http://localhost:8080/health || echo "")
+            if echo "$RESPONSE" | grep -q "healthy"; then
+              echo "✓ Chat server is healthy!"
+              echo "Response: $RESPONSE"
+              HEALTHY=true
               break
             fi
-            echo "Waiting for server... attempt $i"
+
+            echo "Server not ready yet (attempt $i/15)"
             sleep 5
           done
+
+          if [ "$HEALTHY" = "false" ]; then
+            echo "ERROR: Server failed to become healthy after 75 seconds"
+            echo ""
+            echo "=== Container Status ==="
+            docker ps -a | grep chat-server
+            echo ""
+            echo "=== Container Logs ==="
+            docker logs chat-server
+            exit 1
+          fi
 
       # Start cloudflared in lightweight container
       - name: Start Cloudflare tunnel (lightweight sidecar)
