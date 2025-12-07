@@ -233,20 +233,7 @@
       gap: 12px;
     }
 
-    .loading-spinner {
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255,255,255,.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      display: inline-block;
-      margin-right: 8px;
-    }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
 
     @media (max-width: 768px) {
       .controls {
@@ -330,6 +317,13 @@
       </div>
     </div>
   </section>
+</div>
+
+<div class="typing-indicator" id="typingIndicator">
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Auditing...</span>
 </div>
 
   <div class="input-container">

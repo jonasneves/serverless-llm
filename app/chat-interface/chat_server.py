@@ -42,8 +42,7 @@ from tool_orchestrator import ToolOrchestrator
 # Verbalized Sampling mode imports
 from verbalized_sampling_engine import VerbalizedSamplingEngine
 from confession_engine import ConfessionEngine
-# Voice mode imports
-from voice_engine import VoiceEngine
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -156,7 +155,7 @@ def get_static_versions() -> dict:
         "confessions_js": get_file_version("confessions.js"),
         "model_loader_js": get_file_version("model-loader.js"),
         "model_selector_js": get_file_version("model-selector.js"),
-        "voice_js": get_file_version("voice.js"),
+
     }
 
 MODEL_CONFIG = (
@@ -247,11 +246,7 @@ MODEL_DISPLAY_NAMES = {
     for config in MODEL_CONFIG
 }
 
-# VibeVoice configuration
-if BASE_DOMAIN:
-    VIBEVOICE_ENDPOINT = build_service_url("vibevoice")
-else:
-    VIBEVOICE_ENDPOINT = os.getenv("VIBEVOICE_API_URL", DEFAULT_LOCAL_ENDPOINTS["VIBEVOICE_API_URL"]) 
+ 
 
 DEFAULT_MODEL_ID = next(
     (config["id"] for config in MODEL_CONFIG if config.get("default")),
@@ -270,7 +265,7 @@ logger.info("=" * 60)
 logger.info("MODEL ENDPOINTS CONFIGURED:")
 for model_id, endpoint in MODEL_ENDPOINTS.items():
     logger.info(f"  {model_id}: {endpoint}")
-logger.info(f"  VibeVoice: {VIBEVOICE_ENDPOINT}")
+
 logger.info("Request queueing enabled: 1 concurrent request per model")
 logger.info("=" * 60)
 
@@ -315,16 +310,7 @@ class VerbalizedSamplingRequest(BaseModel):
 class ConfessionRequest(BaseModel):
     query: str
 
-class VoiceScriptRequest(BaseModel):
-    topic: str
-    style: str = "podcast"
-    speakers: List[str]
-    model: Optional[str] = None
 
-class VoiceAudioRequest(BaseModel):
-    script: str
-    speakers: List[str]
-    model: Optional[str] = "vibevoice"
 
 
 def serialize_messages(messages: List[ChatMessage]) -> List[dict]:
@@ -374,13 +360,7 @@ async def discussion_interface(request: Request):
         {"request": request, **get_static_versions()}
     )
 
-@app.get("/voice")
-async def voice_interface(request: Request):
-    """Serve voice studio interface"""
-    return templates.TemplateResponse(
-        "voice.html",
-        {"request": request, **get_static_versions()}
-    )
+
 
 @app.get("/autogen")
 async def autogen_interface(request: Request):
@@ -1361,77 +1341,6 @@ async def confessions_stream(
             temperature,
             max_tokens
         ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
-
-
-# ===== VOICE MODE =====
-async def stream_voice_script_events(
-    topic: str,
-    style: str,
-    speakers: List[str],
-    model_id: Optional[str] = None
-) -> AsyncGenerator[str, None]:
-    try:
-        # Determine which model endpoint to use
-        if model_id and model_id in MODEL_ENDPOINTS:
-             llm_endpoint = MODEL_ENDPOINTS[model_id]
-        else:
-             llm_endpoint = MODEL_ENDPOINTS.get(DEFAULT_MODEL_ID)
-        
-        if not llm_endpoint:
-             yield f"data: {json.dumps({'event': 'error', 'error': 'No LLM endpoint configured'}, ensure_ascii=False)}\n\n"
-             return
-
-        engine = VoiceEngine(llm_endpoint, VIBEVOICE_ENDPOINT)
-        
-        async for event in engine.generate_script(topic, style, speakers):
-            yield f"data: {json.dumps({'event': event['type'], **event}, ensure_ascii=False)}\n\n"
-
-    except Exception as e:
-        logger.error(f"Voice script error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
-
-@app.post("/api/voice/script")
-async def voice_script(request: VoiceScriptRequest):
-    """Stream script generation"""
-    return StreamingResponse(
-        stream_voice_script_events(request.topic, request.style, request.speakers, request.model),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
-
-async def stream_voice_audio_events(
-    script: str,
-    speakers: List[str],
-    model: str = "vibevoice"
-) -> AsyncGenerator[str, None]:
-    try:
-        # Use the default model endpoint as placeholder if needed, but engine mostly uses TTS endpoint
-        default_model_endpoint = MODEL_ENDPOINTS.get(DEFAULT_MODEL_ID)
-        engine = VoiceEngine(default_model_endpoint, VIBEVOICE_ENDPOINT)
-        
-        async for event in engine.synthesize_audio(script, speakers, model=model):
-            yield f"data: {json.dumps({'event': event['type'], **event}, ensure_ascii=False)}\n\n"
-
-    except Exception as e:
-        logger.error(f"Voice audio error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
-
-@app.post("/api/voice/audio")
-async def voice_audio(request: VoiceAudioRequest):
-    """Stream audio generation progress/result"""
-    return StreamingResponse(
-        stream_voice_audio_events(request.script, request.speakers, request.model),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

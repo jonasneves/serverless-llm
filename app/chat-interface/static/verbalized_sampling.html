@@ -248,20 +248,7 @@
       font-size: 14px;
     }
 
-    .loading-spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255,255,255,.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s ease-in-out infinite;
-      margin-right: 8px;
-    }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
 
     @media (max-width: 1024px) {
       .comparison-container {
@@ -368,6 +355,13 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="typing-indicator" id="typingIndicator">
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Generating...</span>
 </div>
 
   <div class="input-container">

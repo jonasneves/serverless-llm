@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const directResponsesContainer = document.getElementById('directResponses');
     const verbalizedResponsesContainer = document.getElementById('verbalizedResponses');
     const diversityScoreContainer = document.getElementById('diversityScore');
+    const typingIndicator = document.getElementById('typingIndicator');
 
     // Temperature slider
     temperatureInput.addEventListener('input', () => {
@@ -45,11 +46,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const temperature = parseFloat(temperatureInput.value);
 
       generateBtn.disabled = true;
-      generateBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+      typingIndicator.classList.add('active');
 
       // Clear previous results
-      directResponsesContainer.innerHTML = '<div class="empty-state"><div class="loading-spinner" style="width: 40px; height: 40px; border-width: 4px;"></div><p>Generating direct responses...</p></div>';
-      verbalizedResponsesContainer.innerHTML = '<div class="empty-state"><div class="loading-spinner" style="width: 40px; height: 40px; border-width: 4px;"></div><p>Generating verbalized sampling responses...</p></div>';
+      directResponsesContainer.innerHTML = '<div class="empty-state"><p>Generating direct responses...</p></div>';
+      verbalizedResponsesContainer.innerHTML = '<div class="empty-state"><p>Generating verbalized sampling responses...</p></div>';
       diversityScoreContainer.style.display = 'none';
 
       try {
@@ -63,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('Error generating responses. Check console for details.');
       } finally {
         generateBtn.disabled = false;
-        generateBtn.innerHTML = 'Compare Methods';
+        typingIndicator.classList.remove('active');
       }
     };
 
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="response-header">
             <span class="response-number">Response ${i + 1}</span>
           </div>
-          <div class="response-content"><div class="loading-spinner"></div> Generating...</div>
+          <div class="response-content">Generating...</div>
         `;
         directResponsesContainer.appendChild(responseDiv);
 
@@ -146,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function generateVerbalized(query, model, numResponses, temperature) {
-      verbalizedResponsesContainer.innerHTML = '<div class="empty-state"><div class="loading-spinner" style="width: 40px; height: 40px; border-width: 4px;"></div><p>Streaming verbalized sampling...</p></div>';
+      verbalizedResponsesContainer.innerHTML = '<div class="empty-state"><p>Streaming verbalized sampling...</p></div>';
 
       try {
         const response = await fetch(`/api/verbalized-sampling/stream?model=${model}&num_responses=${numResponses}&temperature=${temperature}`, {

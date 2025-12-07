@@ -11,7 +11,6 @@ DEFAULT_LOCAL_ENDPOINTS = {
     "RNJ_API_URL": "http://localhost:8009",
     "MISTRAL_API_URL": "http://localhost:8005",
     "GEMMA_API_URL": "http://localhost:8006",
-    "VIBEVOICE_API_URL": "http://localhost:8000",
 }
 
 # Remote hosted defaults (optional deployments)

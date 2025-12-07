@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const maxTokensInput = document.getElementById('maxTokens');
   const answerContent = document.getElementById('answerContent');
   const confessionPanel = document.getElementById('confessionPanel');
+  const typingIndicator = document.getElementById('typingIndicator');
 
   // Temperature slider
   tempInput.addEventListener('input', () => {
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const maxTokens = parseInt(maxTokensInput.value, 10) || 768;
 
     runBtn.disabled = true;
-    runBtn.innerHTML = '<span class="loading-spinner"></span> Auditing...';
+    typingIndicator.classList.add('active');
 
     resetAnswer(answerContent, 'Streaming answer...');
     showConfessionPlaceholder(confessionPanel, 'Waiting for confession report...');
@@ -130,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       showConfessionPlaceholder(confessionPanel, 'Confession unavailable.');
     } finally {
       runBtn.disabled = false;
-      runBtn.innerHTML = '<span>Run Confession Audit</span>';
+      typingIndicator.classList.remove('active');
     }
   };
 
