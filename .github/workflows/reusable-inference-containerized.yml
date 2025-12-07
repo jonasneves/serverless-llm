@@ -96,10 +96,10 @@ jobs:
 
       - name: Setup dynamic swap
         run: |
-          echo "Setting up dynamic swap..."
+          echo "Setting up swap..."
 
-          # Create 16GB sparse file (only uses disk space as needed)
-          sudo truncate -s 16G /swapfile
+          # Create 16GB swap file (fallocate is fast and works with swapon)
+          sudo fallocate -l 16G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -108,7 +108,7 @@ jobs:
           sudo sysctl -w vm.swappiness=60
           sudo sysctl -w vm.vfs_cache_pressure=50
 
-          echo "✓ Swap configured: 16GB sparse file (grows from 0 as needed)"
+          echo "✓ Swap enabled: 16GB"
           echo ""
           free -h
           echo ""
