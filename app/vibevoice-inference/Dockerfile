@@ -22,7 +22,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY vibevoice-inference/requirements.txt .
 
 # Install dependencies with CPU-only PyTorch
+# Install vibevoice with --no-deps to skip gradio, aiortc, diffusers (saves ~1GB+)
 RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --no-deps git+https://github.com/microsoft/VibeVoice.git \
     # Clean up to reduce image size
     && find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true \
     && find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true \
