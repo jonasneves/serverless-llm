@@ -19,7 +19,7 @@ COPY shared/ ./shared/
 # Copy model-specific files
 COPY deepseek-r1qwen-inference/requirements.txt .
 # Install with OpenBLAS support for CPU acceleration
-RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_NATIVE=OFF" pip3 install --no-cache-dir -r requirements.txt
+RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install --no-cache-dir -r requirements.txt
 
 COPY deepseek-r1qwen-inference/inference_server.py .
 
