@@ -96,19 +96,19 @@ jobs:
 
       - name: Setup dynamic swap
         run: |
-          echo "Setting up swap on /mnt..."
+          echo "Setting up swap..."
 
-          # Create 16GB swap file on /mnt (ephemeral disk)
-          sudo fallocate -l 16G /mnt/swapfile
-          sudo chmod 600 /mnt/swapfile
-          sudo mkswap /mnt/swapfile
-          sudo swapon /mnt/swapfile
+          # Create 16GB swap file (fallocate is fast and works with swapon)
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
 
           # Optimize for model loading and inference
           sudo sysctl -w vm.swappiness=60
           sudo sysctl -w vm.vfs_cache_pressure=50
 
-          echo "✓ Swap enabled: 16GB on /mnt"
+          echo "✓ Swap enabled: 16GB"
           echo ""
           free -h
           echo ""
