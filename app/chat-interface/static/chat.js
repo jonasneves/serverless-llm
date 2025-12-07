@@ -43,11 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
       for (const [id, model] of Object.entries(MODELS)) {
         const chip = document.createElement('div');
         chip.className = `model-chip ${selectedModels.has(id) ? 'selected' : ''}`;
-        const contextInfo = model.context_length > 0 ? formatContextLength(model.context_length) : '';
         chip.innerHTML = `
           <span class="status-dot status-${model.status}"></span>
           <span class="model-name-text">${model.name}</span>
-          ${contextInfo ? `<span class="context-info">${contextInfo}</span>` : ''}
         `;
         chip.onclick = () => toggleModel(id);
         modelSelector.appendChild(chip);
@@ -62,6 +60,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${(length / 1000).toFixed(0)}K`;
       }
       return length.toString();
+    }
+
+    function getModelIdByName(modelName) {
+      for (const [id, model] of Object.entries(MODELS)) {
+        if (model.name === modelName) {
+          return id;
+        }
+      }
+      return null;
+    }
+
+    function getContextInfo(modelIdOrName) {
+      // Try as ID first
+      let model = MODELS[modelIdOrName];
+      // If not found, try to find by name
+      if (!model) {
+        const modelId = getModelIdByName(modelIdOrName);
+        model = modelId ? MODELS[modelId] : null;
+      }
+      if (model && model.context_length > 0) {
+        return `<span class="context-info">${formatContextLength(model.context_length)} ctx</span>`;
+      }
+      return '';
     }
 
     function updateTokenUsage() {
@@ -258,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${resp.model}</span>
+            ${getContextInfo(resp.model)}
             ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
           </div>
           <div class="message-content">${formatContent(resp.content)}</div>
@@ -290,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
           responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${resp.model}</span>
+              ${getContextInfo(resp.model)}
               ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
             </div>
             <div class="message-content">${formatContent(resp.content)}</div>
@@ -377,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${modelName}</span>
+            ${getContextInfo(modelId)}
             <span class="model-badge streaming-badge">Streaming...</span>
           </div>
           <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>
@@ -404,6 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
           responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${modelName}</span>
+              ${getContextInfo(modelId)}
               <span class="model-badge streaming-badge">Waiting...</span>
             </div>
             <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>

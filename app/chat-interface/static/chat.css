@@ -383,17 +383,12 @@ main {
       margin-right: 6px;
     }
 
-    .model-chip .context-info {
-      margin-left: 6px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      background: rgba(255, 255, 255, 0.1);
-      font-weight: 600;
-    }
-
-    .model-chip.selected .context-info {
-      background: rgba(255, 255, 255, 0.2);
+    .model-header .context-info {
+      margin-left: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      opacity: 0.7;
     }
 
     .status-online { background: var(--success-color); }
