@@ -143,6 +143,13 @@ jobs:
       - name: Create network
         run: docker network create inference-network
 
+      - name: Setup HuggingFace cache
+        run: |
+          # Create cache directory with proper permissions for container user
+          mkdir -p $HOME/.cache/huggingface
+          # Make it world-writable so container user (UID 10000 or 1000) can write
+          chmod -R 777 $HOME/.cache/huggingface
+
       - name: Start inference server
         env:
           MODEL_REPO: ${{ inputs.model_repo }}
