@@ -200,8 +200,16 @@ jobs:
           HEALTHY=false
           for i in {1..30}; do
             if ! docker ps | grep -q inference-server; then
-              echo "Container stopped"
-              docker logs inference-server
+              echo "Container stopped unexpectedly"
+              echo ""
+              echo "=== Full container logs ==="
+              docker logs inference-server 2>&1
+              echo ""
+              echo "=== Container exit code ==="
+              docker inspect inference-server --format='{{.State.ExitCode}}'
+              echo ""
+              echo "=== Memory usage before crash ==="
+              free -h
               exit 1
             fi
 
