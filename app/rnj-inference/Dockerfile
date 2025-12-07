@@ -13,11 +13,15 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Copy shared module first
+COPY shared/ ./shared/
+
+# Copy model-specific files
+COPY rnj-inference/requirements.txt .
 # Install with OpenBLAS support for CPU acceleration
 RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install --no-cache-dir -r requirements.txt
 
-COPY inference_server.py .
+COPY rnj-inference/inference_server.py .
 
 ENV MODEL_NAME=EssentialAI/rnj-1-instruct-GGUF
 ENV PORT=8000

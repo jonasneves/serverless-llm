@@ -96,7 +96,8 @@ jobs:
       - name: Build inference server
         uses: docker/build-push-action@v5
         with:
-          context: ./app/${{ inputs.model_dir }}
+          context: ./app
+          file: ./app/${{ inputs.model_dir }}/Dockerfile
           tags: ${{ inputs.model_name }}-inference:latest
           load: true
           cache-from: type=gha,scope=${{ inputs.cache_key_prefix }}

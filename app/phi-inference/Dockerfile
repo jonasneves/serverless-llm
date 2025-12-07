@@ -18,7 +18,7 @@ WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
+COPY phi-inference/requirements.txt .
 # Install with OpenBLAS support for CPU acceleration
 RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install --no-cache-dir -r requirements.txt
 
@@ -43,8 +43,11 @@ WORKDIR /app
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
+# Copy shared module first
+COPY --chown=appuser:appuser shared/ ./shared/
+
 # Copy application code
-COPY --chown=appuser:appuser inference_server.py .
+COPY --chown=appuser:appuser phi-inference/inference_server.py .
 
 # Switch to non-root user
 USER appuser
