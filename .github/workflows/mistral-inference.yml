@@ -24,6 +24,18 @@ on:
           - '1'
           - '2'
           - '3'
+      n_ctx:
+        description: 'Context window size (default: 1024)'
+        required: false
+        type: string
+      n_threads:
+        description: 'CPU threads (default: 2)'
+        required: false
+        type: string
+      n_batch:
+        description: 'Batch size (default: 256)'
+        required: false
+        type: string
 
   repository_dispatch:
     types: [restart-mistral-inference]
@@ -48,6 +60,9 @@ jobs:
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
       auto_restart: ${{ github.event.client_payload.auto_restart != false && (inputs.auto_restart != false) }}
       instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
+      n_ctx: ${{ inputs.n_ctx }}
+      n_threads: ${{ inputs.n_threads }}
+      n_batch: ${{ inputs.n_batch }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_MISTRAL }}
