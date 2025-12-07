@@ -92,7 +92,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build cloudflared
+      - name: Pull cloudflared from GHCR
+        id: pull-cloudflared
+        continue-on-error: true
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest"
+          echo "Attempting to pull $IMAGE"
+
+          if docker pull "$IMAGE"; then
+            docker tag "$IMAGE" "cloudflared:latest"
+            echo "pulled=true" >> $GITHUB_OUTPUT
+            echo "Successfully pulled cloudflared from GHCR"
+          else
+            echo "pulled=false" >> $GITHUB_OUTPUT
+            echo "Failed to pull cloudflared from GHCR, will build locally"
+          fi
+
+      - name: Build cloudflared (fallback)
+        if: steps.pull-cloudflared.outputs.pulled != 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./docker/cloudflared

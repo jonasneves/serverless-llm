@@ -10,6 +10,7 @@ on:
       - 'app/*/requirements.txt'
       - 'app/*/inference_server.py'
       - 'app/chat-interface/**'
+      - 'docker/cloudflared/**'
       - '.github/workflows/build-push-images.yml'
   workflow_dispatch:
     inputs:
@@ -70,8 +71,8 @@ jobs:
           MODELS="${{ steps.detect.outputs.models }}"
 
           if [ "$MODELS" = "all" ] || [ -z "$MODELS" ]; then
-            # Build all models
-            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","chat-interface"]'
+            # Build all services (inference servers + chat + cloudflared)
+            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","chat-interface","cloudflared"]'
           else
             # Build only specified models (use -c for compact output)
             MATRIX=$(echo "$MODELS" | jq -cR 'split(",") | map(select(length > 0))')
@@ -115,8 +116,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./app
-          file: ./app/${{ matrix.model }}/Dockerfile
+          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || './app' }}
+          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || format('./app/{0}/Dockerfile', matrix.model) }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
