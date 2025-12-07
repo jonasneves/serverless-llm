@@ -24,12 +24,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   await modelSelector.loadModels();
 
-  const runBtn = document.getElementById('runConfession');
-  const promptInput = document.getElementById('confessionPrompt');
-  const tempInput = document.getElementById('answerTemperature');
+  const runBtn = document.getElementById('sendBtn');
+  const promptInput = document.getElementById('userInput');
+  const tempInput = document.getElementById('tempSlider');
+  const tempValue = document.getElementById('tempValue');
   const maxTokensInput = document.getElementById('maxTokens');
   const answerContent = document.getElementById('answerContent');
   const confessionPanel = document.getElementById('confessionPanel');
+
+  // Temperature slider
+  tempInput.addEventListener('input', () => {
+    tempValue.textContent = tempInput.value;
+  });
 
   document.querySelectorAll('.example-chip').forEach(chip => {
     chip.addEventListener('click', () => {

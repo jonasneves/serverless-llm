@@ -7,14 +7,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await modelSelector.loadModels();
 
-    const queryInput = document.getElementById('query');
+    const queryInput = document.getElementById('userInput');
     const maxRoundsInput = document.getElementById('maxRounds');
     const engineSelect = document.getElementById('engineSelect');
-    const temperatureInput = document.getElementById('temperature');
+    const temperatureInput = document.getElementById('tempSlider');
+    const tempValue = document.getElementById('tempValue');
     const maxTokensInput = document.getElementById('maxTokens');
-    const startBtn = document.getElementById('startBtn');
+    const startBtn = document.getElementById('sendBtn');
     let originalBtnHTML = null;
     const orchestrationSection = document.getElementById('orchestrationSection');
+
+    // Temperature slider
+    temperatureInput.addEventListener('input', () => {
+      tempValue.textContent = temperatureInput.value;
+    });
 
     let isRunning = false;
 

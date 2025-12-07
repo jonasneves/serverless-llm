@@ -30,10 +30,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     marked.use({ renderer });
 
-    const queryInput = document.getElementById('queryInput');
-    const startBtn = document.getElementById('startBtn');
+    const queryInput = document.getElementById('userInput');
+    const startBtn = document.getElementById('sendBtn');
     const maxTokensInput = document.getElementById('maxTokens');
-    const temperatureInput = document.getElementById('temperature');
+    const temperatureInput = document.getElementById('tempSlider');
+    const tempValue = document.getElementById('tempValue');
     const statusIndicator = document.getElementById('statusIndicator');
     const discussionContent = document.getElementById('discussionContent');
     const orchestratorModel = document.getElementById('orchestratorModel');
@@ -47,6 +48,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const orchestratorActionText = document.getElementById('orchestratorActionText');
     const participantCount = document.getElementById('participantCount');
     const settingsBtn = document.getElementById('settingsBtn');
+
+    // Temperature slider
+    temperatureInput.addEventListener('input', () => {
+      tempValue.textContent = temperatureInput.value;
+    });
 
     let currentDiscussion = null;
 
@@ -443,6 +449,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // Auto-focus
-    queryInput.focus();
+    // Auto-resize textarea
+    queryInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
 });

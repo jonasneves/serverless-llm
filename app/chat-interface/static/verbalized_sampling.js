@@ -15,13 +15,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await modelSelector.loadModels();
 
-    const generateBtn = document.getElementById('generateBtn');
-    const queryInput = document.getElementById('query');
+    const generateBtn = document.getElementById('sendBtn');
+    const queryInput = document.getElementById('userInput');
     const numResponsesInput = document.getElementById('numResponses');
-    const temperatureInput = document.getElementById('temperature');
+    const temperatureInput = document.getElementById('tempSlider');
+    const tempValue = document.getElementById('tempValue');
     const directResponsesContainer = document.getElementById('directResponses');
     const verbalizedResponsesContainer = document.getElementById('verbalizedResponses');
     const diversityScoreContainer = document.getElementById('diversityScore');
+
+    // Temperature slider
+    temperatureInput.addEventListener('input', () => {
+      tempValue.textContent = temperatureInput.value;
+    });
 
     const handleGenerate = async () => {
       const query = queryInput.value.trim();
