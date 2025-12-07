@@ -34,6 +34,7 @@ services:
       - chat-network
 
   # Cloudflared tunnel sidecar (ultra-lightweight, ~30MB)
+  # Uses host network to access chat-server on localhost:8080
   cloudflared:
     build:
       context: ./docker/cloudflared
@@ -46,25 +47,24 @@ services:
       chat-server:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - chat-network
+    network_mode: host
 
   # Health monitor sidecar (lightweight, ~30MB)
+  # Can use localhost since it's on the same network as chat-server
   health-monitor:
     build:
       context: ./docker/health-monitor
       dockerfile: Dockerfile
     container_name: chat-health-monitor
     environment:
-      - SERVER_URL=http://chat-server:8080/health
+      - SERVER_URL=http://localhost:8080/health
       - CHECK_INTERVAL=30
       - TUNNEL_ENABLED=true
     depends_on:
       - chat-server
       - cloudflared
     restart: unless-stopped
-    networks:
-      - chat-network
+    network_mode: host
 
 networks:
   chat-network:

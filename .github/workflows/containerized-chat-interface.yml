@@ -192,6 +192,7 @@ jobs:
           fi
 
       # Start cloudflared in lightweight container
+      # Note: Using --network host so cloudflared can access localhost:8080 (published from chat-server)
       - name: Start Cloudflare tunnel (lightweight sidecar)
         env:
           CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
@@ -199,13 +200,18 @@ jobs:
           if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
             docker run -d \
               --name chat-cloudflared \
-              --network chat-network \
+              --network host \
               cloudflared:latest \
               tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN"
 
             echo "Cloudflared tunnel started in lightweight container"
             echo "Container size: ~30MB (vs ~120MB if bundled with Python)"
-            sleep 10
+            echo "Using host network to access chat-server on localhost:8080"
+            sleep 15
+
+            echo ""
+            echo "=== Checking tunnel logs ==="
+            docker logs chat-cloudflared 2>&1 | head -30
           else
             echo "No tunnel token provided"
           fi
