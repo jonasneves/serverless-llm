@@ -1,8 +1,5 @@
 version: '3.8'
 
-# Chat Interface with separated cloudflared tunnel and health monitor
-# Optimized architecture using ubuntu-slim for lightweight tasks
-
 services:
   # Main chat server (needs Python + dependencies)
   chat-server:
@@ -33,15 +30,9 @@ services:
     networks:
       - chat-network
 
-  # Cloudflared tunnel sidecar (ultra-lightweight, ~30MB)
-  # Uses host network to access chat-server on localhost:8080
   cloudflared:
-    build:
-      context: ./docker/cloudflared
-      dockerfile: Dockerfile
+    build: ./docker/cloudflared
     container_name: chat-cloudflared
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN_CHAT}
     command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN_CHAT}"]
     depends_on:
       chat-server:
@@ -49,28 +40,5 @@ services:
     restart: unless-stopped
     network_mode: host
 
-  # Health monitor sidecar (lightweight, ~30MB)
-  # Can use localhost since it's on the same network as chat-server
-  health-monitor:
-    build:
-      context: ./docker/health-monitor
-      dockerfile: Dockerfile
-    container_name: chat-health-monitor
-    environment:
-      - SERVER_URL=http://localhost:8080/health
-      - CHECK_INTERVAL=30
-      - TUNNEL_ENABLED=true
-    depends_on:
-      - chat-server
-      - cloudflared
-    restart: unless-stopped
-    network_mode: host
-
 networks:
   chat-network:
-    driver: bridge
-
-# Usage:
-# docker-compose -f docker-compose.chat-interface.yml up -d
-# docker-compose -f docker-compose.chat-interface.yml logs -f
-# docker-compose -f docker-compose.chat-interface.yml down

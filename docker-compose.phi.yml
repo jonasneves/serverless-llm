@@ -1,8 +1,5 @@
 version: '3.8'
 
-# Phi-3 Mini Inference Server
-# Optimized with separated cloudflared and health monitor
-
 services:
   phi-inference:
     build:
@@ -32,38 +29,17 @@ services:
       - phi-network
 
   phi-cloudflared:
-    build:
-      context: ./docker/cloudflared
-      dockerfile: Dockerfile
+    build: ./docker/cloudflared
     container_name: phi-cloudflared
     command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN_PHI}"]
     depends_on:
       phi-inference:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - phi-network
-
-  phi-health-monitor:
-    build:
-      context: ./docker/health-monitor
-      dockerfile: Dockerfile
-    container_name: phi-health-monitor
-    environment:
-      - SERVER_URL=http://phi-inference:8000/health
-      - CHECK_INTERVAL=30
-      - TUNNEL_ENABLED=true
-    depends_on:
-      - phi-inference
-      - phi-cloudflared
-    restart: unless-stopped
-    networks:
-      - phi-network
+    network_mode: host
 
 networks:
   phi-network:
-    driver: bridge
 
 volumes:
   phi-cache:
-    driver: local

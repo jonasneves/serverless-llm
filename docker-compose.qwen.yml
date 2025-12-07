@@ -1,8 +1,5 @@
 version: '3.8'
 
-# Qwen 2.5-7B Inference Server
-# Optimized with separated cloudflared and health monitor
-
 services:
   qwen-inference:
     build:
@@ -32,38 +29,17 @@ services:
       - qwen-network
 
   qwen-cloudflared:
-    build:
-      context: ./docker/cloudflared
-      dockerfile: Dockerfile
+    build: ./docker/cloudflared
     container_name: qwen-cloudflared
     command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN_QWEN}"]
     depends_on:
       qwen-inference:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - qwen-network
-
-  qwen-health-monitor:
-    build:
-      context: ./docker/health-monitor
-      dockerfile: Dockerfile
-    container_name: qwen-health-monitor
-    environment:
-      - SERVER_URL=http://qwen-inference:8000/health
-      - CHECK_INTERVAL=30
-      - TUNNEL_ENABLED=true
-    depends_on:
-      - qwen-inference
-      - qwen-cloudflared
-    restart: unless-stopped
-    networks:
-      - qwen-network
+    network_mode: host
 
 networks:
   qwen-network:
-    driver: bridge
 
 volumes:
   qwen-cache:
-    driver: local

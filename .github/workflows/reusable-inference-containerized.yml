@@ -1,36 +1,55 @@
-name: Chat
-
-run-name: Chat Interface
+name: Reusable Containerized Inference
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      duration_hours:
-        description: 'Duration (max 5.5 hours)'
-        required: false
-        default: '5'
+      model_name:
+        required: true
         type: string
+      model_dir:
+        required: true
+        type: string
+      model_repo:
+        required: true
+        type: string
+      model_file:
+        required: true
+        type: string
+      cache_key_prefix:
+        required: true
+        type: string
+      tunnel_secret_name:
+        required: true
+        type: string
+      restart_event_type:
+        required: true
+        type: string
+      workflow_file:
+        required: true
+        type: string
+      duration_hours:
+        type: string
+        default: '5'
       auto_restart:
-        description: 'Auto-restart before timeout'
-        required: false
-        default: true
         type: boolean
+        default: true
       instances:
-        description: 'Parallel instances (1-3)'
-        required: false
+        type: string
         default: '1'
-        type: choice
-        options:
-          - '1'
-          - '2'
-          - '3'
-
-  repository_dispatch:
-    types: [restart-chat-interface]
+      port:
+        type: string
+        default: '8000'
+    secrets:
+      hf_token:
+        required: true
+      tunnel_token:
+        required: true
+      workflow_pat:
+        required: true
 
 jobs:
-  chat:
-    name: Chat Interface #${{ matrix.instance }}
+  inference:
+    name: ${{ inputs.model_name }} #${{ matrix.instance }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     permissions:
@@ -38,7 +57,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        instance: ${{ fromJson((github.event.client_payload.instances || github.event.inputs.instances || '1') == '3' && '[1,2,3]' || (github.event.client_payload.instances || github.event.inputs.instances || '1') == '2' && '[1,2]' || '[1]') }}
+        instance: ${{ fromJson(inputs.instances == '3' && '[1,2,3]' || inputs.instances == '2' && '[1,2]' || '[1]') }}
       fail-fast: false
 
     steps:
@@ -50,7 +69,7 @@ jobs:
           API_RESPONSE=$(curl -s \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/chat-interface.yml/runs?status=in_progress")
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ inputs.workflow_file }}/runs?status=in_progress")
 
           PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id < ${{ github.run_id }}) | .id" | head -1)
 
@@ -74,66 +93,68 @@ jobs:
           cache-from: type=gha,scope=cloudflared
           cache-to: type=gha,mode=max,scope=cloudflared
 
-      - name: Build chat server
+      - name: Build inference server
         uses: docker/build-push-action@v5
         with:
-          context: ./app/chat-interface
-          tags: chat-server:latest
+          context: ./app/${{ inputs.model_dir }}
+          tags: ${{ inputs.model_name }}-inference:latest
           load: true
-          cache-from: type=gha,scope=chat-server
-          cache-to: type=gha,mode=max,scope=chat-server
+          cache-from: type=gha,scope=${{ inputs.cache_key_prefix }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.cache_key_prefix }}
+          build-args: |
+            MODEL_REPO=${{ inputs.model_repo }}
+            MODEL_FILE=${{ inputs.model_file }}
 
       - name: Create network
-        run: docker network create chat-network
+        run: docker network create inference-network
 
-      - name: Start chat server
+      - name: Start inference server
         env:
-          PORT: "8080"
-          BASE_DOMAIN: ${{ secrets.BASE_DOMAIN }}
-          QWEN_API_URL: ${{ secrets.QWEN_API_URL }}
-          PHI_API_URL: ${{ secrets.PHI_API_URL }}
-          LLAMA_API_URL: ${{ secrets.LLAMA_API_URL }}
-          MISTRAL_API_URL: ${{ secrets.MISTRAL_API_URL }}
-          GEMMA_API_URL: ${{ secrets.GEMMA_API_URL }}
-          VIBEVOICE_API_URL: ${{ secrets.VIBEVOICE_API_URL }}
-          GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+          MODEL_REPO: ${{ inputs.model_repo }}
+          MODEL_FILE: ${{ inputs.model_file }}
+          PORT: ${{ inputs.port }}
+          HF_TOKEN: ${{ secrets.hf_token }}
         run: |
           docker run -d \
-            --name chat-server \
-            --network chat-network \
-            -p 8080:8080 \
-            -e PORT -e BASE_DOMAIN -e QWEN_API_URL -e PHI_API_URL \
-            -e LLAMA_API_URL -e MISTRAL_API_URL -e GEMMA_API_URL \
-            -e VIBEVOICE_API_URL -e GH_MODELS_TOKEN \
-            chat-server:latest
+            --name inference-server \
+            --network inference-network \
+            -p ${{ inputs.port }}:${{ inputs.port }} \
+            -e MODEL_REPO="$MODEL_REPO" \
+            -e MODEL_FILE="$MODEL_FILE" \
+            -e PORT="$PORT" \
+            -e HF_TOKEN="$HF_TOKEN" \
+            -e HF_HOME=/app/.cache/huggingface \
+            -v $HOME/.cache/huggingface:/app/.cache/huggingface \
+            ${{ inputs.model_name }}-inference:latest
 
           # Health check
           HEALTHY=false
-          for i in {1..15}; do
-            if ! docker ps | grep -q chat-server; then
-              docker logs chat-server
+          for i in {1..30}; do
+            if ! docker ps | grep -q inference-server; then
+              echo "Container stopped"
+              docker logs inference-server
               exit 1
             fi
 
-            RESPONSE=$(curl -s http://localhost:8080/health || echo "")
+            RESPONSE=$(curl -s http://localhost:${{ inputs.port }}/health || echo "")
             if echo "$RESPONSE" | grep -q "healthy"; then
               echo "Server ready"
               HEALTHY=true
               break
             fi
 
-            echo "Waiting... ($i/15)"
-            sleep 5
+            echo "Waiting... ($i/30)"
+            sleep 10
           done
 
           if [ "$HEALTHY" = "false" ]; then
-            docker logs chat-server
+            docker logs inference-server
             exit 1
           fi
 
       - name: Start cloudflared
         env:
-          TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
+          TUNNEL_TOKEN: ${{ secrets.tunnel_token }}
         run: |
           docker run -d \
             --name cloudflared \
@@ -158,14 +179,14 @@ jobs:
 
       - name: Monitor
         env:
-          DURATION_HOURS: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
-          AUTO_RESTART: ${{ github.event.client_payload.auto_restart != false && (inputs.auto_restart != false) }}
-          INSTANCES: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
+          DURATION_HOURS: ${{ inputs.duration_hours }}
+          AUTO_RESTART: ${{ inputs.auto_restart }}
+          PORT: ${{ inputs.port }}
         run: |
           cleanup() {
-            docker stop chat-server cloudflared 2>/dev/null || true
-            docker rm chat-server cloudflared 2>/dev/null || true
-            docker network rm chat-network 2>/dev/null || true
+            docker stop inference-server cloudflared 2>/dev/null || true
+            docker rm inference-server cloudflared 2>/dev/null || true
+            docker network rm inference-network 2>/dev/null || true
             exit 0
           }
           trap cleanup SIGTERM SIGINT
@@ -179,24 +200,24 @@ jobs:
             ELAPSED=$(($(date +%s) - START_TIME))
             REMAINING=$((DURATION - ELAPSED))
 
-            CHAT_STATUS=$(docker inspect -f '{{.State.Status}}' chat-server 2>/dev/null || echo "stopped")
+            SERVER_STATUS=$(docker inspect -f '{{.State.Status}}' inference-server 2>/dev/null || echo "stopped")
             TUNNEL_STATUS=$(docker inspect -f '{{.State.Status}}' cloudflared 2>/dev/null || echo "stopped")
 
-            printf "[%s] Chat: %s | Tunnel: %s | %dm elapsed | %dm remaining\n" \
-              "$(date '+%H:%M:%S')" "$CHAT_STATUS" "$TUNNEL_STATUS" "$((ELAPSED/60))" "$((REMAINING/60))"
+            printf "[%s] Server: %s | Tunnel: %s | %dm elapsed | %dm remaining\n" \
+              "$(date '+%H:%M:%S')" "$SERVER_STATUS" "$TUNNEL_STATUS" "$((ELAPSED/60))" "$((REMAINING/60))"
 
-            [ "$CHAT_STATUS" != "running" ] && docker start chat-server
+            [ "$SERVER_STATUS" != "running" ] && docker start inference-server
             [ "$TUNNEL_STATUS" != "running" ] && docker start cloudflared
 
             # Auto-restart
             if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ "${{ matrix.instance }}" = "1" ]; then
               if [ "$AUTO_RESTART" = "true" ]; then
-                PAT="${{ secrets.WORKFLOW_PAT }}"
+                PAT="${{ secrets.workflow_pat }}"
                 if [ -n "$PAT" ]; then
                   curl -sX POST \
                     -H "Authorization: Bearer $PAT" \
                     https://api.github.com/repos/${{ github.repository }}/dispatches \
-                    -d "{\"event_type\":\"restart-chat-interface\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$AUTO_RESTART,\"instances\":\"$INSTANCES\"}}"
+                    -d "{\"event_type\":\"${{ inputs.restart_event_type }}\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$AUTO_RESTART,\"instances\":\"${{ inputs.instances }}\"}}"
 
                   sleep 180
                 fi
@@ -213,5 +234,5 @@ jobs:
       - name: Show logs on failure
         if: failure()
         run: |
-          docker logs chat-server 2>&1 | tail -100
+          docker logs inference-server 2>&1 | tail -100
           docker logs cloudflared 2>&1 | tail -50
