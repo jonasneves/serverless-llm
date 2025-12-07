@@ -3,10 +3,12 @@ FROM python:3.10-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+# Use CPU-only PyTorch to save ~2GB
+ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 
 WORKDIR /app
 
-# Install system dependencies for audio processing (needed for build if any wheels need compilation)
+# Install system dependencies for audio processing
 RUN apt-get update && apt-get install -y \
     build-essential \
     git \
@@ -18,7 +20,17 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY vibevoice-inference/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Install dependencies with CPU-only PyTorch
+RUN pip install --no-cache-dir -r requirements.txt \
+    # Clean up to reduce image size
+    && find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true \
+    && find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true \
+    && find /opt/venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true \
+    && find /opt/venv -type f -name "*.pyc" -delete 2>/dev/null || true \
+    && find /opt/venv -type f -name "*.pyo" -delete 2>/dev/null || true \
+    && rm -rf /opt/venv/lib/python*/site-packages/torch/test 2>/dev/null || true \
+    && rm -rf /opt/venv/lib/python*/site-packages/caffe2 2>/dev/null || true
 
 # Stage 2: Runtime
 FROM python:3.10-slim AS runtime
@@ -28,13 +40,14 @@ ENV PYTHONUNBUFFERED=1
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install runtime dependencies for audio processing
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Create a non-root user
-RUN useradd -m -u 1000 appuser
+# Create a non-root user (use UID 10000 to match other images)
+RUN useradd -m -u 10000 appuser
 
 WORKDIR /app
 
