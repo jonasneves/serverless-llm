@@ -1,0 +1,237 @@
+name: Chat (Containerized)
+
+run-name: Chat Interface (Container-based Architecture)
+
+# EXAMPLE: This demonstrates running services in containers
+# Benefits:
+# - Cloudflared runs in ultra-lightweight ubuntu:24.04 (~30MB) instead of full runner
+# - Health monitoring isolated in separate container
+# - Better resource isolation and management
+# - Easier local development with docker-compose
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_hours:
+        description: 'How long to run (max 5.5 hours)'
+        required: false
+        default: '5'
+        type: string
+
+jobs:
+  chat-containerized:
+    name: Chat Interface (Containers)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 350
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build lightweight cloudflared image (~30MB vs ~120MB Python base)
+      - name: Build cloudflared sidecar
+        run: |
+          docker build -t cloudflared:latest ./docker/cloudflared
+          echo "Image size:"
+          docker images cloudflared:latest --format "{{.Size}}"
+
+      # Build health monitor sidecar (~30MB)
+      - name: Build health monitor sidecar
+        run: |
+          docker build -t health-monitor:latest ./docker/health-monitor
+          echo "Image size:"
+          docker images health-monitor:latest --format "{{.Size}}"
+
+      # Build main chat server
+      - name: Build chat server
+        run: |
+          docker build -t chat-server:latest ./app/chat-interface
+          echo "Image size:"
+          docker images chat-server:latest --format "{{.Size}}"
+
+      # Create Docker network for service communication
+      - name: Create Docker network
+        run: docker network create chat-network
+
+      # Start main chat server
+      - name: Start chat server container
+        env:
+          PORT: "8080"
+          BASE_DOMAIN: ${{ secrets.BASE_DOMAIN }}
+          QWEN_API_URL: ${{ secrets.QWEN_API_URL }}
+          PHI_API_URL: ${{ secrets.PHI_API_URL }}
+          LLAMA_API_URL: ${{ secrets.LLAMA_API_URL }}
+          MISTRAL_API_URL: ${{ secrets.MISTRAL_API_URL }}
+          GEMMA_API_URL: ${{ secrets.GEMMA_API_URL }}
+          VIBEVOICE_API_URL: ${{ secrets.VIBEVOICE_API_URL }}
+          GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+        run: |
+          docker run -d \
+            --name chat-server \
+            --network chat-network \
+            -p 8080:8080 \
+            -e PORT="$PORT" \
+            -e BASE_DOMAIN="$BASE_DOMAIN" \
+            -e QWEN_API_URL="$QWEN_API_URL" \
+            -e PHI_API_URL="$PHI_API_URL" \
+            -e LLAMA_API_URL="$LLAMA_API_URL" \
+            -e MISTRAL_API_URL="$MISTRAL_API_URL" \
+            -e GEMMA_API_URL="$GEMMA_API_URL" \
+            -e VIBEVOICE_API_URL="$VIBEVOICE_API_URL" \
+            -e GH_MODELS_TOKEN="$GH_MODELS_TOKEN" \
+            chat-server:latest
+
+          echo "Waiting for chat server to be ready..."
+          sleep 10
+
+          # Health check
+          for i in {1..10}; do
+            if curl -s http://localhost:8080/health | grep -q "healthy"; then
+              echo "Chat server is healthy!"
+              break
+            fi
+            echo "Waiting for server... attempt $i"
+            sleep 5
+          done
+
+      # Start cloudflared in lightweight container
+      - name: Start Cloudflare tunnel (lightweight sidecar)
+        env:
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
+        run: |
+          if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+            docker run -d \
+              --name chat-cloudflared \
+              --network chat-network \
+              cloudflared:latest \
+              tunnel --no-autoupdate run --token "$CLOUDFLARE_TUNNEL_TOKEN"
+
+            echo "Cloudflared tunnel started in lightweight container"
+            echo "Container size: ~30MB (vs ~120MB if bundled with Python)"
+            sleep 10
+          else
+            echo "No tunnel token provided"
+          fi
+
+      # Start health monitor in lightweight container
+      - name: Start health monitor (lightweight sidecar)
+        run: |
+          docker run -d \
+            --name chat-health-monitor \
+            --network chat-network \
+            -e SERVER_URL=http://chat-server:8080/health \
+            -e CHECK_INTERVAL=30 \
+            -e TUNNEL_ENABLED=true \
+            health-monitor:latest
+
+          echo "Health monitor started in lightweight container"
+          echo "Container size: ~30MB"
+
+      # Show container stats
+      - name: Show container architecture
+        run: |
+          echo "=========================================="
+          echo "Container Architecture Summary"
+          echo "=========================================="
+          echo ""
+          docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+          echo ""
+          echo "Total containers: $(docker ps -q | wc -l)"
+          echo ""
+          echo "Image sizes:"
+          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | grep -E "(chat-server|cloudflared|health-monitor)"
+          echo ""
+          echo "Benefits:"
+          echo "✓ Cloudflared isolated in ~30MB container (not bundled with Python)"
+          echo "✓ Health monitor isolated in ~30MB container"
+          echo "✓ Better resource management and isolation"
+          echo "✓ Same docker-compose setup works locally and in production"
+
+      # Monitoring loop
+      - name: Monitor services
+        env:
+          DURATION_HOURS: ${{ inputs.duration_hours || '5' }}
+        run: |
+          set -e
+
+          cleanup() {
+            echo ""
+            echo "=== Shutting down containers ==="
+            docker stop chat-server chat-cloudflared chat-health-monitor 2>/dev/null || true
+            docker rm chat-server chat-cloudflared chat-health-monitor 2>/dev/null || true
+            docker network rm chat-network 2>/dev/null || true
+            exit 0
+          }
+          trap cleanup SIGTERM SIGINT
+
+          DURATION_SECONDS=$((DURATION_HOURS * 3600))
+          START_TIME=$(date +%s)
+          END_TIME=$((START_TIME + DURATION_SECONDS))
+
+          echo ""
+          echo "=========================================="
+          echo "Monitoring containerized services"
+          echo "Duration: ${DURATION_HOURS} hours"
+          echo "=========================================="
+          echo ""
+
+          while true; do
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            REMAINING=$((END_TIME - CURRENT_TIME))
+
+            # Check container health
+            CHAT_STATUS=$(docker inspect -f '{{.State.Status}}' chat-server 2>/dev/null || echo "stopped")
+            TUNNEL_STATUS=$(docker inspect -f '{{.State.Status}}' chat-cloudflared 2>/dev/null || echo "stopped")
+            MONITOR_STATUS=$(docker inspect -f '{{.State.Status}}' chat-health-monitor 2>/dev/null || echo "stopped")
+
+            printf "[%s] Chat: %s | Tunnel: %s | Monitor: %s | Elapsed: %dm | Remaining: %dm\n" \
+              "$(date '+%H:%M:%S')" "$CHAT_STATUS" "$TUNNEL_STATUS" "$MONITOR_STATUS" \
+              "$((ELAPSED/60))" "$((REMAINING/60))"
+
+            # Restart containers if needed
+            if [ "$CHAT_STATUS" != "running" ]; then
+              echo "Restarting chat server container..."
+              docker start chat-server || true
+              sleep 10
+            fi
+
+            if [ "$TUNNEL_STATUS" != "running" ]; then
+              echo "Restarting tunnel container..."
+              docker start chat-cloudflared || true
+              sleep 5
+            fi
+
+            if [ "$MONITOR_STATUS" != "running" ]; then
+              echo "Restarting monitor container..."
+              docker start chat-health-monitor || true
+              sleep 5
+            fi
+
+            # Check if duration reached
+            if [ $CURRENT_TIME -ge $END_TIME ]; then
+              echo "Duration reached, shutting down..."
+              break
+            fi
+
+            sleep 30
+          done
+
+          cleanup
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Chat Server Logs ==="
+          docker logs chat-server 2>&1 | tail -100 || echo "No logs"
+          echo ""
+          echo "=== Tunnel Logs ==="
+          docker logs chat-cloudflared 2>&1 | tail -50 || echo "No logs"
+          echo ""
+          echo "=== Health Monitor Logs ==="
+          docker logs chat-health-monitor 2>&1 | tail -50 || echo "No logs"

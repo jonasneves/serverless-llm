@@ -1,0 +1,76 @@
+version: '3.8'
+
+# Chat Interface with separated cloudflared tunnel and health monitor
+# Optimized architecture using ubuntu-slim for lightweight tasks
+
+services:
+  # Main chat server (needs Python + dependencies)
+  chat-server:
+    build:
+      context: ./app/chat-interface
+      dockerfile: Dockerfile
+    container_name: chat-server
+    environment:
+      - PORT=8080
+      - BASE_DOMAIN=${BASE_DOMAIN}
+      # Legacy: Individual URLs (used if BASE_DOMAIN not set)
+      - QWEN_API_URL=${QWEN_API_URL}
+      - PHI_API_URL=${PHI_API_URL}
+      - LLAMA_API_URL=${LLAMA_API_URL}
+      - MISTRAL_API_URL=${MISTRAL_API_URL}
+      - GEMMA_API_URL=${GEMMA_API_URL}
+      - VIBEVOICE_API_URL=${VIBEVOICE_API_URL}
+      - GH_MODELS_TOKEN=${GH_MODELS_TOKEN}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - chat-network
+
+  # Cloudflared tunnel sidecar (ultra-lightweight, ~30MB)
+  cloudflared:
+    build:
+      context: ./docker/cloudflared
+      dockerfile: Dockerfile
+    container_name: chat-cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN_CHAT}
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN_CHAT}"]
+    depends_on:
+      chat-server:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - chat-network
+
+  # Health monitor sidecar (lightweight, ~30MB)
+  health-monitor:
+    build:
+      context: ./docker/health-monitor
+      dockerfile: Dockerfile
+    container_name: chat-health-monitor
+    environment:
+      - SERVER_URL=http://chat-server:8080/health
+      - CHECK_INTERVAL=30
+      - TUNNEL_ENABLED=true
+    depends_on:
+      - chat-server
+      - cloudflared
+    restart: unless-stopped
+    networks:
+      - chat-network
+
+networks:
+  chat-network:
+    driver: bridge
+
+# Usage:
+# docker-compose -f docker-compose.chat-interface.yml up -d
+# docker-compose -f docker-compose.chat-interface.yml logs -f
+# docker-compose -f docker-compose.chat-interface.yml down
