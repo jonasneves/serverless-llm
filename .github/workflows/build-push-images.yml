@@ -9,6 +9,7 @@ on:
       - 'app/*/Dockerfile'
       - 'app/*/requirements.txt'
       - 'app/*/inference_server.py'
+      - 'app/chat-interface/**'
       - '.github/workflows/build-push-images.yml'
   workflow_dispatch:
     inputs:
@@ -70,7 +71,7 @@ jobs:
 
           if [ "$MODELS" = "all" ] || [ -z "$MODELS" ]; then
             # Build all models
-            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference"]'
+            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","chat-interface"]'
           else
             # Build only specified models
             MATRIX=$(echo "$MODELS" | jq -R 'split(",") | map(select(length > 0))')
@@ -114,7 +115,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./app
+          context: ${{ matrix.model == 'chat-interface' && './app/chat-interface' || './app' }}
           file: ./app/${{ matrix.model }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}

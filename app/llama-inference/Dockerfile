@@ -31,7 +31,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Install runtime libraries for OpenBLAS
 RUN apt-get update && apt-get install -y \
-    libopenblas-base \
+    libopenblas0-pthread \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user (use UID 10000 to avoid conflicts)

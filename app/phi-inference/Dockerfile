@@ -31,7 +31,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Install only runtime libraries (no build tools)
 RUN apt-get update && apt-get install -y \
-    libopenblas-base \
+    libopenblas0-pthread \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

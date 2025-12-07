@@ -52,12 +52,17 @@ This repository uses GitHub Container Registry to store pre-built Docker images 
 
 ## Available Images
 
-Current inference servers with GHCR support:
+Current services with GHCR support:
+
+**Inference Servers:**
 - `deepseek-r1qwen-inference` - DeepSeek R1 Distill Qwen 1.5B
 - `qwen-inference` - Qwen3-4B
 - `phi-inference` - Microsoft Phi-3
 - `llama-inference` - Llama 3.2 3B
 - `rnj-inference` - RNJ-1 Instruct
+
+**Web Services:**
+- `chat-interface` - Multi-model chat interface
 
 ## Usage
 
