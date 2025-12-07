@@ -143,32 +143,15 @@ jobs:
       - name: Create network
         run: docker network create inference-network
 
-      - name: Free up disk space
+      - name: Setup cache on /mnt partition
         run: |
-          echo "Disk space before cleanup:"
-          df -h
-
-          # Remove unnecessary files to free up space
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-
-          # Clean docker
-          docker system prune -af --volumes
-
-          echo "Disk space after cleanup:"
-          df -h
-
-      - name: Setup HuggingFace cache
-        run: |
-          # Use /mnt for cache (has 66GB free vs /dev/root which is full)
-          mkdir -p /mnt/huggingface-cache
-          # Make it world-writable so container user (UID 10000 or 1000) can write
-          chmod -R 777 /mnt/huggingface-cache
-          echo "Cache directory: /mnt/huggingface-cache"
+          # GitHub Actions runners: /mnt has 66GB free vs /dev/root which is full
+          echo "Available storage:"
           df -h /mnt
+
+          # Create cache with proper permissions for container users
+          mkdir -p /mnt/huggingface-cache
+          chmod -R 777 /mnt/huggingface-cache
 
       - name: Start inference server
         env:
