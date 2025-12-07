@@ -49,6 +49,9 @@ COPY --chown=appuser:appuser shared/ ./shared/
 # Copy application code
 COPY --chown=appuser:appuser llama-inference/inference_server.py .
 
+# Ensure appuser owns /app directory for cache creation
+RUN chown -R appuser:appuser /app
+
 # Switch to non-root user
 USER appuser
 
