@@ -73,8 +73,8 @@ jobs:
             # Build all models
             MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","chat-interface"]'
           else
-            # Build only specified models
-            MATRIX=$(echo "$MODELS" | jq -R 'split(",") | map(select(length > 0))')
+            # Build only specified models (use -c for compact output)
+            MATRIX=$(echo "$MODELS" | jq -cR 'split(",") | map(select(length > 0))')
           fi
 
           echo "models=$MATRIX" >> $GITHUB_OUTPUT
