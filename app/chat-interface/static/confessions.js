@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       runBtn.disabled = !hasModel || !hasQuery;
     }
   });
-  
+
   await modelSelector.loadModels();
 
   const runBtn = document.getElementById('sendBtn');
@@ -48,10 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Auto-resize textarea for consistency with Chat
-  promptInput.addEventListener('input', function() {
+  promptInput.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-    
+
     // Update button state
     const selected = modelSelector.getSelected();
     const hasModel = selected && selected.length > 0;
@@ -96,29 +96,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     const groupDiv = document.createElement('div');
     groupDiv.className = 'model-result-group';
     groupDiv.style.marginBottom = '32px';
-    
+
     const modelName = modelId; // You might want to lookup friendly name from selector if available
-    
+
     groupDiv.innerHTML = `
-      <h3 style="margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); font-size: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-        <span class="model-badge" style="background: var(--accent-color); color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px;">${modelName}</span>
+      <h3 class="model-group-header">
+        <span class="model-badge">${modelName}</span>
       </h3>
-      <div class="results-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
-        <div class="result-card answer-card">
-          <h3>Main Answer</h3>
-          <div class="result-content placeholder" id="answer-${modelId}">Streaming...</div>
+      <div class="comparison-container">
+        <!-- Main Answer Side -->
+        <div class="comparison-side answer">
+          <div class="side-header answer">
+            <h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Main Answer
+            </h3>
+            <span class="badge streaming">Response</span>
+          </div>
+          <div class="responses-container" id="answer-${modelId}">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <p>Streaming answer...</p>
+            </div>
+          </div>
         </div>
-        <div class="result-card confession-card">
-          <h3>Confession Report</h3>
-          <div id="confession-${modelId}" style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
-            <div class="empty-state">Waiting for report...</div>
+        <!-- Confession Report Side -->
+        <div class="comparison-side confession">
+          <div class="side-header confession">
+            <h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              Confession Report
+            </h3>
+            <span class="badge audit">Honesty Audit</span>
+          </div>
+          <div id="confession-${modelId}" class="responses-container">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+              </svg>
+              <p>Waiting for honesty report...</p>
+            </div>
           </div>
         </div>
       </div>
     `;
-    
+
     resultsContainer.appendChild(groupDiv);
-    
+
     const answerContent = document.getElementById(`answer-${modelId}`);
     const confessionPanel = document.getElementById(`confession-${modelId}`);
     let answerBuffer = '';
@@ -224,17 +256,35 @@ function handleEvent(event, ctx) {
 }
 
 function resetAnswer(container, message) {
-  container.classList.add('result-content', 'placeholder');
-  container.innerHTML = message;
+  container.innerHTML = `
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <p>${message}</p>
+    </div>
+  `;
 }
 
 function renderAnswer(container, content) {
-  container.classList.remove('placeholder');
-  container.innerHTML = marked.parse(content || '');
+  container.innerHTML = `
+    <div class="response-item">
+      ${marked.parse(content || '')}
+    </div>
+  `;
 }
 
 function showConfessionPlaceholder(panel, message) {
-  panel.innerHTML = `<div class="empty-state">${message}</div>`;
+  panel.innerHTML = `
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 16v-4"></path>
+        <path d="M12 8h.01"></path>
+      </svg>
+      <p>${message}</p>
+    </div>
+  `;
 }
 
 function renderConfessionReport(panel, report, rawConfession) {
@@ -304,4 +354,6 @@ function escapeHTML(str = '') {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
