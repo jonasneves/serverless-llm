@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
+COPY vibevoice-inference/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime
@@ -41,7 +41,10 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
-COPY --chown=appuser:appuser inference_server.py .
+COPY --chown=appuser:appuser vibevoice-inference/inference_server.py .
+
+# Ensure appuser owns /app directory for cache creation
+RUN chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
