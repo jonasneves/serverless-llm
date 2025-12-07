@@ -270,6 +270,7 @@
 {% endblock %}
 
 {% block extra_js %}
+  <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
   <script src="/static/voice.js?v={{ voice_js }}"></script>
 {% endblock %}
 
@@ -292,9 +293,9 @@
 
         <div class="control-group">
           <label class="control-label">Script Writer (LLM)</label>
-          <select id="modelSelect" class="control-select">
-            <option value="" disabled selected>Loading models...</option>
-          </select>
+          <div class="model-selector" id="modelSelector">
+            <!-- Model chips populated by model-selector.js -->
+          </div>
         </div>
 
         <div class="control-group">

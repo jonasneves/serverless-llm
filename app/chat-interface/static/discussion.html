@@ -858,6 +858,7 @@
 {% endblock %}
 
 {% block extra_js %}
+  <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
   <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
   <script defer src="/static/discussion.js?v={{ discussion_js }}"></script>
 {% endblock %}
@@ -902,14 +903,10 @@
       <div class="setup-body">
         <div class="setup-column">
           <div class="config-group">
-            <div class="config-group-label">Local Models</div>
-            <div class="participants-row" id="localParticipantsContainer">
-              <div style="color: #888; padding: 12px;">Loading models...</div>
+            <div class="config-group-label">Participants</div>
+            <div class="model-selector" id="modelSelector">
+              <!-- Model chips populated by model-selector.js -->
             </div>
-          </div>
-          <div class="config-group">
-            <div class="config-group-label">API Models</div>
-            <div class="participants-row" id="apiParticipantsContainer"></div>
           </div>
         </div>
         <div class="setup-column orchestrator-column">

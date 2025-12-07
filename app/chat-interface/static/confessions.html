@@ -261,7 +261,7 @@
 {% endblock %}
 
 {% block extra_js %}
-  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
+  <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
   <script defer src="/static/confessions.js?v={{ confessions_js }}"></script>
 {% endblock %}
 
@@ -332,11 +332,8 @@
 
   <div class="input-container">
       <div class="controls-row">
-        <div class="control-group">
-          <label>Model</label>
-          <select id="confessionModel">
-            <option>Loading...</option>
-          </select>
+        <div class="model-selector" id="modelSelector">
+          <!-- Model chips populated by model-selector.js -->
         </div>
         <div class="control-group">
           <label>Answer temperature</label>

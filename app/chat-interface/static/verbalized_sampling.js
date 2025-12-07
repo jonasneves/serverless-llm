@@ -1,11 +1,22 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load models dynamically
-    await modelLoader.load();
-    modelLoader.buildModelSelector('#model');
+    // Initialize model selector (single-select mode)
+    const modelSelector = new ModelSelector('#modelSelector', {
+      multiSelect: false,
+      autoSelectOnline: true,
+      onSelectionChange: (selected) => {
+        // Update button state if needed
+        const generateBtn = document.getElementById('generateBtn');
+        const queryInput = document.getElementById('query');
+        const hasModel = selected !== null;
+        const hasQuery = queryInput.value.trim().length > 0;
+        generateBtn.disabled = !hasModel || !hasQuery;
+      }
+    });
+    
+    await modelSelector.loadModels();
 
     const generateBtn = document.getElementById('generateBtn');
     const queryInput = document.getElementById('query');
-    const modelSelect = document.getElementById('model');
     const numResponsesInput = document.getElementById('numResponses');
     const temperatureInput = document.getElementById('temperature');
     const directResponsesContainer = document.getElementById('directResponses');
@@ -19,7 +30,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const model = modelSelect.value;
+      const model = modelSelector.getSelected();
+      if (!model) {
+        alert('Please select a model');
+        return;
+      }
       const numResponses = parseInt(numResponsesInput.value);
       const temperature = parseFloat(temperatureInput.value);
 
@@ -52,6 +67,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     queryInput.addEventListener('input', function() {
       this.style.height = 'auto';
       this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+      
+      // Update button state
+      const hasModel = modelSelector.getSelected() !== null;
+      const hasQuery = this.value.trim().length > 0;
+      generateBtn.disabled = !hasModel || !hasQuery;
     });
 
     // Handle Enter key

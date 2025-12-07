@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const modelSelect = document.getElementById('modelSelect');
+    // modelSelect removed - using modelSelector instead
     const audioModelSelect = document.getElementById('audioModelSelect');
     const topicInput = document.getElementById('topicInput');
     const styleSelect = document.getElementById('styleSelect');
@@ -16,26 +16,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentScript = "";
 
-    // Load available models
-    try {
-        const response = await fetch('/api/models');
-        const data = await response.json();
-        
-        modelSelect.innerHTML = ''; // Clear loading message
-        
-        data.models.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.id;
-            option.textContent = model.name;
-            if (model.default) {
-                option.selected = true;
-            }
-            modelSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Failed to load models:', error);
-        modelSelect.innerHTML = '<option disabled>Error loading models</option>';
-    }
+    // Initialize model selector (single-select mode)
+    const modelSelector = new ModelSelector('#modelSelector', {
+        multiSelect: false,
+        autoSelectOnline: true
+    });
+    
+    await modelSelector.loadModels();
 
     async function readSSEStream(reader, onEvent) {
         const decoder = new TextDecoder();
@@ -114,7 +101,7 @@ Bob: Absolutely. I can't wait to see what people build with it.`;
             return;
         }
         
-        const selectedModel = modelSelect.value;
+        const selectedModel = modelSelector.getSelected();
         if (!selectedModel) {
             alert("Please select a Script Writer model");
             return;

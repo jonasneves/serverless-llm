@@ -1193,3 +1193,81 @@ button.small {
     font-size: 13px;
   }
 }
+
+/* Model Selector - Reusable across all pages */
+.model-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.model-chip {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.model-chip:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.model-chip.selected {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.model-chip .status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.model-chip .model-name-text {
+  white-space: nowrap;
+}
+
+.status-online { background: var(--success-color); }
+.status-offline { background: var(--danger-color); }
+.status-checking { background: var(--warning-color); }
+
+@media (max-width: 768px) {
+  .model-selector {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .model-selector::-webkit-scrollbar {
+    display: none;
+  }
+
+  .model-chip {
+    padding: 8px 12px;
+    font-size: 11px;
+    flex-shrink: 0;
+    min-height: 36px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .model-chip {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}

@@ -1,4 +1,12 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize model selector (single-select mode, optional for this page)
+    const modelSelector = new ModelSelector('#modelSelector', {
+      multiSelect: false,
+      autoSelectOnline: true
+    });
+    
+    await modelSelector.loadModels();
+
     const queryInput = document.getElementById('query');
     const maxRoundsInput = document.getElementById('maxRounds');
     const engineSelect = document.getElementById('engineSelect');

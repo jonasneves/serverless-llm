@@ -155,6 +155,7 @@ def get_static_versions() -> dict:
         "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
         "confessions_js": get_file_version("confessions.js"),
         "model_loader_js": get_file_version("model-loader.js"),
+        "model_selector_js": get_file_version("model-selector.js"),
         "voice_js": get_file_version("voice.js"),
     }
 

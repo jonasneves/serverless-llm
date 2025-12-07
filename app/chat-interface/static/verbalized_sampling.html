@@ -272,7 +272,7 @@
 {% endblock %}
 
 {% block extra_js %}
-  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
+  <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
   <script defer src="/static/verbalized_sampling.js?v={{ verbalized_sampling_js }}"></script>
 {% endblock %}
 
@@ -370,12 +370,8 @@
 
   <div class="input-container">
       <div class="controls-row">
-        <div class="control-group">
-          <label>Model</label>
-          <select id="model">
-            <!-- Dynamically populated by model-loader.js -->
-            <option>Loading...</option>
-          </select>
+        <div class="model-selector" id="modelSelector">
+          <!-- Model chips populated by model-selector.js -->
         </div>
 
         <div class="control-group">

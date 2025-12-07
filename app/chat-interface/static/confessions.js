@@ -9,12 +9,23 @@ const complianceMap = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await modelLoader.load();
-  modelLoader.buildModelSelector('#confessionModel');
+  // Initialize model selector (single-select mode)
+  const modelSelector = new ModelSelector('#modelSelector', {
+    multiSelect: false,
+    autoSelectOnline: true,
+    onSelectionChange: (selected) => {
+      const runBtn = document.getElementById('runConfession');
+      const promptInput = document.getElementById('confessionPrompt');
+      const hasModel = selected !== null;
+      const hasQuery = promptInput.value.trim().length > 0;
+      runBtn.disabled = !hasModel || !hasQuery;
+    }
+  });
+  
+  await modelSelector.loadModels();
 
   const runBtn = document.getElementById('runConfession');
   const promptInput = document.getElementById('confessionPrompt');
-  const modelSelect = document.getElementById('confessionModel');
   const tempInput = document.getElementById('answerTemperature');
   const maxTokensInput = document.getElementById('maxTokens');
   const answerContent = document.getElementById('answerContent');
@@ -34,6 +45,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   promptInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    
+    // Update button state
+    const hasModel = modelSelector.getSelected() !== null;
+    const hasQuery = this.value.trim().length > 0;
+    runBtn.disabled = !hasModel || !hasQuery;
   });
 
   const handleRun = async () => {
@@ -43,7 +59,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const model = modelSelect.value;
+    const model = modelSelector.getSelected();
+    if (!model) {
+      alert('Please select a model');
+      return;
+    }
     const temperature = parseFloat(tempInput.value) || 0.7;
     const maxTokens = parseInt(maxTokensInput.value, 10) || 768;
 

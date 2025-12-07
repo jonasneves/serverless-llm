@@ -296,6 +296,7 @@
 {% endblock %}
 
 {% block extra_js %}
+  <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
   <script defer src="/static/orchestrator.js?v={{ orchestrator_js }}"></script>
 {% endblock %}
 
@@ -376,6 +377,9 @@
 
   <div class="input-container">
       <div class="controls-row">
+        <div class="model-selector" id="modelSelector">
+          <!-- Model chips populated by model-selector.js -->
+        </div>
         <div class="control-group">
           <label>Engine</label>
           <select id="engineSelect">

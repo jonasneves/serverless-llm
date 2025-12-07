@@ -1,7 +1,17 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load models dynamically
+    // Initialize model selector for participants (multi-select mode)
+    const modelSelector = new ModelSelector('#modelSelector', {
+      multiSelect: true,
+      autoSelectOnline: true,
+      onSelectionChange: (selected) => {
+        updateParticipantUI();
+      }
+    });
+    
+    await modelSelector.loadModels();
+    
+    // Load orchestrator dropdown
     await modelLoader.load();
-    modelLoader.buildParticipantCheckboxes('#participantsContainer'); // Will detect separate containers automatically
     modelLoader.buildOrchestratorDropdown('#orchestratorModel');
 
     // Configure marked.js for proper markdown rendering
@@ -82,9 +92,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Update participant count and API warning
     function updateParticipantUI() {
-      const selectedParticipants = document.querySelectorAll('input[name="participant"]:checked');
-      const count = selectedParticipants.length;
-      const apiParticipantCount = Array.from(selectedParticipants).filter(cb => cb.dataset.type === 'api').length;
+      const selectedModels = modelSelector.getSelected();
+      const count = selectedModels.length;
+      const apiParticipantCount = selectedModels.filter(id => API_MODELS.includes(id)).length;
 
       // Update count display
       participantCount.innerHTML = `<strong>${count}</strong> participant${count !== 1 ? 's' : ''} selected`;
@@ -119,11 +129,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('github-token-change', updateParticipantUI);
 
-    // Listen for orchestrator and participant changes
+    // Listen for orchestrator changes
     orchestratorModel.addEventListener('change', updateParticipantUI);
-    document.querySelectorAll('input[name="participant"]').forEach(checkbox => {
-      checkbox.addEventListener('change', updateParticipantUI);
-    });
     updateParticipantUI(); // Initialize on load
 
     function setStatus(status, text) {
@@ -274,9 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       // Get selected participants
-      const selectedParticipants = Array.from(
-        document.querySelectorAll('input[name="participant"]:checked')
-      ).map(cb => cb.value);
+      const selectedParticipants = modelSelector.getSelected();
 
       if (selectedParticipants.length < 2) {
         alert('Please select at least 2 participants for a discussion');
