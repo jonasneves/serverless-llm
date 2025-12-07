@@ -98,43 +98,21 @@ jobs:
         run: |
           echo "Setting up dynamic swap..."
 
-          # Try zram first (if available on kernel)
-          if ! lsmod | grep -q zram; then
-            if sudo modprobe zram 2>/dev/null; then
-              echo lz4 | sudo tee /sys/block/zram0/comp_algorithm > /dev/null 2>&1 || true
-              echo 4G | sudo tee /sys/block/zram0/disksize > /dev/null
-              sudo mkswap /dev/zram0 > /dev/null 2>&1
-              sudo swapon -p 100 /dev/zram0
-              echo "✓ zram swap enabled (4GB compressed, ~12GB effective)"
-            else
-              echo "⚠ zram not available on this kernel, using sparse file only"
-            fi
-          fi
-
-          # Sparse swap file (always create as primary or fallback)
-          if [ ! -f /swapfile ]; then
-            # Create 16GB sparse file (only uses disk space as needed)
-            sudo truncate -s 16G /swapfile
-            sudo chmod 600 /swapfile
-            sudo mkswap /swapfile > /dev/null 2>&1
-            sudo swapon /swapfile
-            echo "✓ Sparse swap file created (16GB max, grows from 0 as needed)"
-          fi
+          # Create 16GB sparse file (only uses disk space as needed)
+          sudo truncate -s 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
 
           # Optimize for model loading and inference
-          sudo sysctl -w vm.swappiness=60 > /dev/null    # Allow more swapping for large models
-          sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
+          sudo sysctl -w vm.swappiness=60
+          sudo sysctl -w vm.vfs_cache_pressure=50
 
-          # Show configuration
+          echo "✓ Swap configured: 16GB sparse file (grows from 0 as needed)"
           echo ""
-          echo "Memory available:"
           free -h
           echo ""
-          echo "Swap configuration:"
           swapon --show
-          echo ""
-          echo "Sparse file disk usage:"
-          sudo du -h /swapfile 2>/dev/null || echo "  0 bytes (will grow as needed)"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
