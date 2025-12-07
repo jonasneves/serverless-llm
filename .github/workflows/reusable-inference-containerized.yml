@@ -94,6 +94,31 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Free up disk space
+        run: |
+          echo "=== Before cleanup ==="
+          df -h /
+          
+          # Remove large pre-installed software we don't need
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/share/swift
+          
+          # Clean apt cache
+          sudo apt-get clean
+          
+          # Clean Docker cache (old images/layers)
+          docker system prune -af --volumes || true
+          
+          echo ""
+          echo "=== After cleanup ==="
+          df -h /
+          echo ""
+          echo "✓ Freed up disk space for Docker images"
+
       - name: Setup dynamic swap
         run: |
           echo "Setting up swap..."
