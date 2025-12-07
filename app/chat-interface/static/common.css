@@ -435,10 +435,21 @@ main,
 }
 
 /* Scrollable content wrapper - everything except input containers */
-main:not(:has(.chat-history)),
-.container:not(:has(.chat-history)) {
+main:not(:has(.chat-history)):not(:has(.scrollable-content)),
+.container:not(:has(.chat-history)):not(:has(.scrollable-content)) {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.scrollable-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 /* Add padding to main content, but not to input containers or overview cards */

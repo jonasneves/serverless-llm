@@ -94,6 +94,29 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Move Docker data to /mnt
+        run: |
+          echo "=== Available storage ==="
+          df -h / /mnt
+          
+          # Stop Docker
+          sudo systemctl stop docker
+          
+          # Move Docker data directory to /mnt (has ~66GB free)
+          sudo mkdir -p /mnt/docker
+          sudo rsync -aP /var/lib/docker/ /mnt/docker/ || true
+          sudo rm -rf /var/lib/docker
+          sudo ln -s /mnt/docker /var/lib/docker
+          
+          # Restart Docker
+          sudo systemctl start docker
+          
+          echo ""
+          echo "=== Docker now using /mnt ==="
+          docker info | grep "Docker Root Dir"
+          df -h /mnt
+          echo "✓ Docker configured to use /mnt"
+
       - name: Setup dynamic swap
         run: |
           echo "Setting up swap..."
