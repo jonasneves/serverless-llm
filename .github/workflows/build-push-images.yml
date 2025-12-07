@@ -1,0 +1,130 @@
+name: Build and Push Inference Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/shared/**'
+      - 'app/*/Dockerfile'
+      - 'app/*/requirements.txt'
+      - 'app/*/inference_server.py'
+      - '.github/workflows/build-push-images.yml'
+  workflow_dispatch:
+    inputs:
+      models:
+        description: 'Models to build (comma-separated, or "all")'
+        required: false
+        default: 'all'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/serverless-llm
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Determine which models need to be built
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      models: ${{ steps.set-matrix.outputs.models }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed models
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MODELS="${{ inputs.models }}"
+          else
+            # Get changed files
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            # Extract changed model directories
+            CHANGED_MODELS=$(echo "$CHANGED_FILES" | grep -E '^app/.+-inference/' | cut -d'/' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
+
+            # If shared/ changed, rebuild all
+            if echo "$CHANGED_FILES" | grep -q '^app/shared/'; then
+              MODELS="all"
+            elif [ -n "$CHANGED_MODELS" ]; then
+              MODELS="$CHANGED_MODELS"
+            else
+              MODELS=""
+            fi
+          fi
+
+          echo "models=$MODELS" >> $GITHUB_OUTPUT
+
+      - name: Set build matrix
+        id: set-matrix
+        run: |
+          MODELS="${{ steps.detect.outputs.models }}"
+
+          if [ "$MODELS" = "all" ] || [ -z "$MODELS" ]; then
+            # Build all models
+            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference"]'
+          else
+            # Build only specified models
+            MATRIX=$(echo "$MODELS" | jq -R 'split(",") | map(select(length > 0))')
+          fi
+
+          echo "models=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Building models: $MATRIX"
+
+  build-and-push:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.models != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        model: ${{ fromJson(needs.detect-changes.outputs.models) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.model }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          file: ./app/${{ matrix.model }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.model }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.model }}
+
+      - name: Image summary
+        run: |
+          echo "### Built and pushed: ${{ matrix.model }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

@@ -55,6 +55,7 @@ jobs:
     permissions:
       actions: write
       contents: read
+      packages: read
     strategy:
       matrix:
         instance: ${{ fromJson(inputs.instances == '3' && '[1,2,3]' || inputs.instances == '2' && '[1,2]' || '[1]') }}
@@ -84,6 +85,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build cloudflared
         uses: docker/build-push-action@v5
         with:
@@ -93,7 +101,24 @@ jobs:
           cache-from: type=gha,scope=cloudflared
           cache-to: type=gha,mode=max,scope=cloudflared
 
-      - name: Build inference server
+      - name: Pull inference image from GHCR
+        id: pull
+        continue-on-error: true
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest"
+          echo "Attempting to pull $IMAGE"
+
+          if docker pull "$IMAGE"; then
+            docker tag "$IMAGE" "${{ inputs.model_name }}-inference:latest"
+            echo "pulled=true" >> $GITHUB_OUTPUT
+            echo "Successfully pulled image from GHCR"
+          else
+            echo "pulled=false" >> $GITHUB_OUTPUT
+            echo "Failed to pull image from GHCR, will build locally"
+          fi
+
+      - name: Build inference server (fallback)
+        if: steps.pull.outputs.pulled != 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./app
