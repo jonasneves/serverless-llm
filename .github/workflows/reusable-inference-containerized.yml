@@ -150,8 +150,8 @@ jobs:
           df -h /mnt
 
           # Create cache with proper permissions for container users
-          mkdir -p /mnt/huggingface-cache
-          chmod -R 777 /mnt/huggingface-cache
+          sudo mkdir -p /mnt/huggingface-cache
+          sudo chmod -R 777 /mnt/huggingface-cache
 
       - name: Start inference server
         env:
