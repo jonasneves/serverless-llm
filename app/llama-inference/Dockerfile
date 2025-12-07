@@ -29,9 +29,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install runtime libraries for OpenBLAS
+# Install runtime libraries for OpenBLAS and OpenMP
 RUN apt-get update && apt-get install -y \
     libopenblas0-pthread \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user (use UID 10000 to avoid conflicts)

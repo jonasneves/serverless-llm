@@ -32,6 +32,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install only runtime libraries (no build tools)
 RUN apt-get update && apt-get install -y \
     libopenblas0-pthread \
+    libgomp1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
