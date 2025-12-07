@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize model selector (single-select mode)
+    // Initialize model selector (multi-select mode)
     const modelSelector = new ModelSelector('#modelSelector', {
-      multiSelect: false,
+      multiSelect: true,
       autoSelectOnline: true,
       onSelectionChange: (selected) => {
         // Update button state if needed
-        const generateBtn = document.getElementById('generateBtn');
-        const queryInput = document.getElementById('query');
-        const hasModel = selected !== null;
+        const generateBtn = document.getElementById('sendBtn');
+        const queryInput = document.getElementById('userInput');
+        const hasModel = selected && selected.length > 0;
         const hasQuery = queryInput.value.trim().length > 0;
         generateBtn.disabled = !hasModel || !hasQuery;
       }
@@ -37,9 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const model = modelSelector.getSelected();
-      if (!model) {
-        alert('Please select a model');
+      const models = modelSelector.getSelected();
+      if (!models || models.length === 0) {
+        alert('Please select at least one model');
         return;
       }
       const numResponses = parseInt(numResponsesInput.value);
@@ -49,16 +49,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       typingIndicator.classList.add('active');
 
       // Clear previous results
-      directResponsesContainer.innerHTML = '<div class="empty-state"><p>Generating direct responses...</p></div>';
-      verbalizedResponsesContainer.innerHTML = '<div class="empty-state"><p>Generating verbalized sampling responses...</p></div>';
+      directResponsesContainer.innerHTML = '';
+      verbalizedResponsesContainer.innerHTML = '';
       diversityScoreContainer.style.display = 'none';
 
       try {
-        // Run both methods in parallel
-        await Promise.all([
-          generateDirect(query, model, numResponses, temperature),
-          generateVerbalized(query, model, numResponses, temperature)
-        ]);
+        // Run comparisons for all models in parallel
+        const promises = [];
+        for (const modelId of models) {
+          promises.push(generateDirect(query, modelId, numResponses, temperature));
+          promises.push(generateVerbalized(query, modelId, numResponses, temperature));
+        }
+        await Promise.all(promises);
       } catch (error) {
         console.error('Error:', error);
         alert('Error generating responses. Check console for details.');
@@ -92,7 +94,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     async function generateDirect(query, model, numResponses, temperature) {
-      directResponsesContainer.innerHTML = '';
+      // Create a group for this model
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'model-group';
+      groupDiv.innerHTML = `<div class="model-header-small" style="padding: 8px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid var(--border-color); margin-bottom:8px;">${model}</div>`;
+      directResponsesContainer.appendChild(groupDiv);
       
       // Make multiple direct calls
       const responses = [];
@@ -105,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="response-content">Generating...</div>
         `;
-        directResponsesContainer.appendChild(responseDiv);
+        groupDiv.appendChild(responseDiv);
 
         try {
           const response = await fetch('/api/chat', {
@@ -147,7 +153,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function generateVerbalized(query, model, numResponses, temperature) {
-      verbalizedResponsesContainer.innerHTML = '<div class="empty-state"><p>Streaming verbalized sampling...</p></div>';
+      // Create a group for this model
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'model-group';
+      groupDiv.innerHTML = `<div class="model-header-small" style="padding: 8px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid var(--border-color); margin-bottom:8px;">${model}</div>`;
+      verbalizedResponsesContainer.appendChild(groupDiv);
+
+      const streamingDiv = document.createElement('div');
+      streamingDiv.className = 'response-item';
+      streamingDiv.innerHTML = '<div class="response-content">Streaming...</div>';
+      groupDiv.appendChild(streamingDiv);
 
       try {
         const response = await fetch(`/api/verbalized-sampling/stream?model=${model}&num_responses=${numResponses}&temperature=${temperature}`, {
@@ -177,16 +192,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (event.event === 'start') {
                   if (isFirstChunk) {
-                    verbalizedResponsesContainer.innerHTML = '';
+                    // streamingDiv.querySelector('.response-content').textContent = '';
                     isFirstChunk = false;
                   }
                 } else if (event.event === 'chunk') {
                   fullResponse += event.content;
-                  // Update display with streaming content
-                  verbalizedResponsesContainer.innerHTML = `<div class="response-item"><div class="response-content">${fullResponse}</div></div>`;
+                  streamingDiv.querySelector('.response-content').innerHTML = fullResponse;
                 } else if (event.event === 'complete') {
                   // Parse and display structured responses
-                  verbalizedResponsesContainer.innerHTML = '';
+                  streamingDiv.remove();
                   event.parsed_responses.forEach((resp, idx) => {
                     const responseDiv = document.createElement('div');
                     responseDiv.className = 'response-item';
@@ -197,14 +211,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                       </div>
                       <div class="response-content">${resp.response}</div>
                     `;
-                    verbalizedResponsesContainer.appendChild(responseDiv);
+                    groupDiv.appendChild(responseDiv);
                   });
 
-                  // Show diversity score
-                  diversityScoreContainer.style.display = 'block';
-                  diversityScoreContainer.querySelector('.diversity-score-value').textContent = event.diversity_score.toFixed(2);
+                  // Show diversity score in the group
+                  const scoreDiv = document.createElement('div');
+                  scoreDiv.className = 'diversity-score';
+                  scoreDiv.style.marginTop = '16px';
+                  scoreDiv.innerHTML = `
+                    <div class="diversity-score-label">Diversity Score (${model})</div>
+                    <div class="diversity-score-value">${event.diversity_score.toFixed(2)}</div>
+                  `;
+                  groupDiv.appendChild(scoreDiv);
+                  
                 } else if (event.event === 'error') {
-                  verbalizedResponsesContainer.innerHTML = `<div class="empty-state"><p style="color: var(--direct-color);">Error: ${event.error}</p></div>`;
+                  streamingDiv.innerHTML = `<div class="empty-state"><p style="color: var(--direct-color);">Error: ${event.error}</p></div>`;
                 }
               } catch (e) {
                 console.error('Error parsing event:', e);
@@ -213,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         }
       } catch (error) {
-        verbalizedResponsesContainer.innerHTML = `<div class="empty-state"><p style="color: var(--direct-color);">Error: ${error.message}</p></div>`;
+        streamingDiv.innerHTML = `<div class="empty-state"><p style="color: var(--direct-color);">Error: ${error.message}</p></div>`;
       }
     }
 

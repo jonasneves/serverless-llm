@@ -101,7 +101,7 @@ jobs:
           LLAMA_API_URL: ${{ secrets.LLAMA_API_URL }}
           MISTRAL_API_URL: ${{ secrets.MISTRAL_API_URL }}
           GEMMA_API_URL: ${{ secrets.GEMMA_API_URL }}
-          VIBEVOICE_API_URL: ${{ secrets.VIBEVOICE_API_URL }}
+
           GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
         run: |
           docker run -d \
@@ -110,7 +110,7 @@ jobs:
             -p 8080:8080 \
             -e PORT -e BASE_DOMAIN -e QWEN_API_URL -e PHI_API_URL \
             -e LLAMA_API_URL -e MISTRAL_API_URL -e GEMMA_API_URL \
-            -e VIBEVOICE_API_URL -e GH_MODELS_TOKEN \
+            -e GH_MODELS_TOKEN \
             chat-server:latest
 
           # Health check

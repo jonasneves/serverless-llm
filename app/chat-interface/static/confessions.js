@@ -9,14 +9,14 @@ const complianceMap = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize model selector (single-select mode)
+  // Initialize model selector (multi-select mode)
   const modelSelector = new ModelSelector('#modelSelector', {
-    multiSelect: false,
+    multiSelect: true,
     autoSelectOnline: true,
     onSelectionChange: (selected) => {
-      const runBtn = document.getElementById('runConfession');
-      const promptInput = document.getElementById('confessionPrompt');
-      const hasModel = selected !== null;
+      const runBtn = document.getElementById('sendBtn');
+      const promptInput = document.getElementById('userInput');
+      const hasModel = selected && selected.length > 0;
       const hasQuery = promptInput.value.trim().length > 0;
       runBtn.disabled = !hasModel || !hasQuery;
     }
@@ -29,8 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tempInput = document.getElementById('tempSlider');
   const tempValue = document.getElementById('tempValue');
   const maxTokensInput = document.getElementById('maxTokens');
-  const answerContent = document.getElementById('answerContent');
-  const confessionPanel = document.getElementById('confessionPanel');
+  const resultsContainer = document.getElementById('resultsContainer');
   const typingIndicator = document.getElementById('typingIndicator');
 
   // Temperature slider
@@ -54,7 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
     
     // Update button state
-    const hasModel = modelSelector.getSelected() !== null;
+    const selected = modelSelector.getSelected();
+    const hasModel = selected && selected.length > 0;
     const hasQuery = this.value.trim().length > 0;
     runBtn.disabled = !hasModel || !hasQuery;
   });
@@ -66,9 +66,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const model = modelSelector.getSelected();
-    if (!model) {
-      alert('Please select a model');
+    const models = modelSelector.getSelected();
+    if (!models || models.length === 0) {
+      alert('Please select at least one model');
       return;
     }
     const temperature = parseFloat(tempInput.value) || 0.7;
@@ -76,12 +76,55 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     runBtn.disabled = true;
     typingIndicator.classList.add('active');
+    resultsContainer.innerHTML = ''; // Clear previous results
 
-    resetAnswer(answerContent, 'Streaming answer...');
-    showConfessionPlaceholder(confessionPanel, 'Waiting for confession report...');
+    const promises = models.map(modelId => runAuditForModel(modelId, query, temperature, maxTokens));
 
     try {
-      const response = await fetch(`/api/confessions/stream?model=${encodeURIComponent(model)}&temperature=${temperature}&max_tokens=${maxTokens}`, {
+      await Promise.all(promises);
+    } catch (error) {
+      console.error('Error in batch run:', error);
+    } finally {
+      runBtn.disabled = false;
+      typingIndicator.classList.remove('active');
+    }
+  };
+
+  async function runAuditForModel(modelId, query, temperature, maxTokens) {
+    // Create UI elements for this model
+    const resultGroupId = `group-${modelId}`;
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'model-result-group';
+    groupDiv.style.marginBottom = '32px';
+    
+    const modelName = modelId; // You might want to lookup friendly name from selector if available
+    
+    groupDiv.innerHTML = `
+      <h3 style="margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); font-size: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+        <span class="model-badge" style="background: var(--accent-color); color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px;">${modelName}</span>
+      </h3>
+      <div class="results-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+        <div class="result-card answer-card">
+          <h3>Main Answer</h3>
+          <div class="result-content placeholder" id="answer-${modelId}">Streaming...</div>
+        </div>
+        <div class="result-card confession-card">
+          <h3>Confession Report</h3>
+          <div id="confession-${modelId}" style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+            <div class="empty-state">Waiting for report...</div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    resultsContainer.appendChild(groupDiv);
+    
+    const answerContent = document.getElementById(`answer-${modelId}`);
+    const confessionPanel = document.getElementById(`confession-${modelId}`);
+    let answerBuffer = '';
+
+    try {
+      const response = await fetch(`/api/confessions/stream?model=${encodeURIComponent(modelId)}&temperature=${temperature}&max_tokens=${maxTokens}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query })
@@ -94,7 +137,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let answerBuffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -126,14 +168,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     } catch (error) {
-      console.error('Confessions mode error:', error);
+      console.error(`Error for ${modelId}:`, error);
       resetAnswer(answerContent, `Error: ${error.message}`);
       showConfessionPlaceholder(confessionPanel, 'Confession unavailable.');
-    } finally {
-      runBtn.disabled = false;
-      typingIndicator.classList.remove('active');
     }
-  };
+  }
 
   runBtn.addEventListener('click', handleRun);
 
@@ -265,6 +304,4 @@ function escapeHTML(str = '') {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+    .replace(/
