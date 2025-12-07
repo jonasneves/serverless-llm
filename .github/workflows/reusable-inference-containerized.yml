@@ -93,60 +93,20 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull cloudflared from GHCR
-        id: pull-cloudflared
-        continue-on-error: true
         run: |
           IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest"
-          echo "Attempting to pull $IMAGE"
-
-          if docker pull "$IMAGE"; then
-            docker tag "$IMAGE" "cloudflared:latest"
-            echo "pulled=true" >> $GITHUB_OUTPUT
-            echo "Successfully pulled cloudflared from GHCR"
-          else
-            echo "pulled=false" >> $GITHUB_OUTPUT
-            echo "Failed to pull cloudflared from GHCR, will build locally"
-          fi
-
-      - name: Build cloudflared (fallback)
-        if: steps.pull-cloudflared.outputs.pulled != 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./docker/cloudflared
-          tags: cloudflared:latest
-          load: true
-          cache-from: type=gha,scope=cloudflared
-          cache-to: type=gha,mode=max,scope=cloudflared
+          echo "Pulling $IMAGE"
+          docker pull "$IMAGE"
+          docker tag "$IMAGE" "cloudflared:latest"
+          echo "Successfully pulled cloudflared from GHCR"
 
       - name: Pull inference image from GHCR
-        id: pull
-        continue-on-error: true
         run: |
           IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest"
-          echo "Attempting to pull $IMAGE"
-
-          if docker pull "$IMAGE"; then
-            docker tag "$IMAGE" "${{ inputs.model_name }}-inference:latest"
-            echo "pulled=true" >> $GITHUB_OUTPUT
-            echo "Successfully pulled image from GHCR"
-          else
-            echo "pulled=false" >> $GITHUB_OUTPUT
-            echo "Failed to pull image from GHCR, will build locally"
-          fi
-
-      - name: Build inference server (fallback)
-        if: steps.pull.outputs.pulled != 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./app
-          file: ./app/${{ inputs.model_dir }}/Dockerfile
-          tags: ${{ inputs.model_name }}-inference:latest
-          load: true
-          cache-from: type=gha,scope=${{ inputs.cache_key_prefix }}
-          cache-to: type=gha,mode=max,scope=${{ inputs.cache_key_prefix }}
-          build-args: |
-            MODEL_REPO=${{ inputs.model_repo }}
-            MODEL_FILE=${{ inputs.model_file }}
+          echo "Pulling $IMAGE"
+          docker pull "$IMAGE"
+          docker tag "$IMAGE" "${{ inputs.model_name }}-inference:latest"
+          echo "Successfully pulled image from GHCR"
 
       - name: Create network
         run: docker network create inference-network

@@ -25,14 +25,19 @@ This repository uses GitHub Container Registry to store pre-built Docker images 
   - `main-{git-sha}` - specific commit SHA for versioning
 
 ### 2. Inference Workflows
-**File:** `.github/workflows/reusable-inference-containerized.yml`
+**Files:**
+- `.github/workflows/reusable-inference-containerized.yml`
+- `.github/workflows/chat-interface.yml`
 
-- **Pull from GHCR first** (fast startup ~30s)
-  - Images stored at: `ghcr.io/jonasneves/serverless-llm/{model}-inference:latest`
+- **Pull from GHCR only** (fast startup ~30s)
+  - Images stored at: `ghcr.io/jonasneves/serverless-llm/{service}:latest`
+  - No build fallback - workflow fails if image missing
 
-- **Fallback to local build** if pull fails
-  - Ensures workflows still work even if GHCR is unavailable
-  - Uses GitHub Actions cache for faster builds
+- **Why no fallback?**
+  - Separation of concerns: building is only in build workflow
+  - Faster failure detection if image is missing
+  - Predictable performance: always fast pulls, never slow builds
+  - Resource efficiency: don't waste Actions minutes on builds
 
 ## Benefits
 
@@ -44,11 +49,13 @@ This repository uses GitHub Container Registry to store pre-built Docker images 
 ### Cost Efficiency
 - Fewer billable compute minutes in GitHub Actions
 - Build once, use many times (especially with multiple instances)
+- No unexpected builds during inference runs
 
 ### Reliability
 - Pre-built images are tested and verified
-- Consistent environment across runs
+- Consistent environment across all runs
 - Can rollback to specific SHA if needed
+- Inference workflows are predictable and fast
 
 ## Available Images
 
@@ -108,9 +115,12 @@ These are automatically granted via `GITHUB_TOKEN` in Actions.
 ## Troubleshooting
 
 ### Image Pull Fails
-- Workflow automatically falls back to local build
-- Check if image exists: `docker pull ghcr.io/jonasneves/serverless-llm/{model}:latest`
-- Manually trigger build workflow if needed
+- Workflow will fail immediately (no fallback)
+- Check if image exists: `docker pull ghcr.io/jonasneves/serverless-llm/{service}:latest`
+- **Solution:** Trigger the build workflow to create missing images
+  - Go to Actions → "Build and Push Inference Images"
+  - Click "Run workflow"
+  - Set models to "all" or specify the missing service
 
 ### Build Workflow Not Triggering
 - Check if changed files match path filters
