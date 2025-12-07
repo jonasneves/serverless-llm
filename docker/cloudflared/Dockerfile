@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install cloudflared for ARM64
-ARG TARGETARCH=arm64
-RUN ARCH=${TARGETARCH} && \
-    if [ "$ARCH" = "amd64" ]; then ARCH="amd64"; fi && \
+# Download and install cloudflared (auto-detect architecture)
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi && \
+    if [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
     curl -L "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}" -o /usr/local/bin/cloudflared && \
     chmod +x /usr/local/bin/cloudflared
 
