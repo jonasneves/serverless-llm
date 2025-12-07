@@ -18,8 +18,8 @@ FROM python:3.11-slim AS runtime
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Create a non-root user
-RUN useradd -m -u 1000 appuser
+# Create a non-root user (use UID 10000 to avoid conflicts)
+RUN useradd -m -u 10000 appuser
 
 WORKDIR /app
 

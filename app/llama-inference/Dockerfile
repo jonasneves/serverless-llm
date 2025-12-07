@@ -34,8 +34,8 @@ RUN apt-get update && apt-get install -y \
     libopenblas-base \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN useradd -m -u 1000 appuser
+# Create a non-root user (use UID 10000 to avoid conflicts)
+RUN useradd -m -u 10000 appuser
 
 WORKDIR /app
 
