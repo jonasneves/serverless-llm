@@ -163,10 +163,12 @@ jobs:
 
       - name: Setup HuggingFace cache
         run: |
-          # Create cache directory with proper permissions for container user
-          mkdir -p $HOME/.cache/huggingface
+          # Use /mnt for cache (has 66GB free vs /dev/root which is full)
+          mkdir -p /mnt/huggingface-cache
           # Make it world-writable so container user (UID 10000 or 1000) can write
-          chmod -R 777 $HOME/.cache/huggingface
+          chmod -R 777 /mnt/huggingface-cache
+          echo "Cache directory: /mnt/huggingface-cache"
+          df -h /mnt
 
       - name: Start inference server
         env:
@@ -204,7 +206,7 @@ jobs:
             CMD="$CMD -e N_BATCH=\"$N_BATCH\""
           fi
 
-          CMD="$CMD -v \$HOME/.cache/huggingface:/app/.cache/huggingface \
+          CMD="$CMD -v /mnt/huggingface-cache:/app/.cache/huggingface \
             ${{ inputs.model_name }}-inference:latest"
 
           echo "Starting inference server with command:"
