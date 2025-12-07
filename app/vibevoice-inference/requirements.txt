@@ -1,15 +1,28 @@
-git+https://github.com/microsoft/VibeVoice.git
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.10.1
-python-multipart==0.0.6
-ffmpeg-python==0.2.0
+# Core inference dependencies only (no gradio, aiortc, diffusers)
+# Note: vibevoice installed separately with --no-deps in Dockerfile
+
+# Actual dependencies needed for inference
+torch==2.4.0
+transformers==4.51.3
+accelerate==1.6.0
+huggingface_hub>=0.23.0
+safetensors>=0.4.3
+
+# Audio processing
 numpy>=1.24.0
 scipy==1.13.1
 soundfile==0.12.1
 librosa==0.10.2.post1
-transformers>=4.51.3
-torch==2.4.0
-accelerate>=0.27.0
-sentencepiece==0.2.0
-huggingface_hub>=0.23.0
+
+# Inference server
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.10.1
+
+# VibeVoice internal dependencies (subset - no gradio/aiortc/diffusers)
+numba>=0.57.0
+llvmlite>=0.40.0
+ml-collections
+absl-py
+tqdm
+av
