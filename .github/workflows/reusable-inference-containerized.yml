@@ -143,12 +143,16 @@ jobs:
       - name: Create network
         run: docker network create inference-network
 
-      - name: Setup HuggingFace cache
+      - name: Setup cache on /mnt partition
         run: |
-          # Create cache directory with proper permissions
-          mkdir -p $HOME/.cache/huggingface
-          echo "Cache directory: $HOME/.cache/huggingface"
-          df -h $HOME
+          # GitHub Actions runners: /mnt has 66GB free vs $HOME which has limited space
+          echo "Available storage:"
+          df -h /mnt
+
+          # Create cache with proper permissions for container users (UID 10000)
+          sudo mkdir -p /mnt/huggingface-cache
+          sudo chmod -R 777 /mnt/huggingface-cache
+          echo "Cache directory created with full permissions"
 
       - name: Start inference server
         env:
@@ -186,7 +190,7 @@ jobs:
             CMD="$CMD -e N_BATCH=\"$N_BATCH\""
           fi
 
-          CMD="$CMD -v $HOME/.cache/huggingface:/app/.cache/huggingface \
+          CMD="$CMD -v /mnt/huggingface-cache:/app/.cache/huggingface \
             ${{ inputs.model_name }}-inference:latest"
 
           echo "Starting inference server with command:"
