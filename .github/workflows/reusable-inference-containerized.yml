@@ -175,7 +175,8 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ steps.find_previous.outputs.previous_run_id }}/cancel"
 
-          sleep 180
+          echo "Graceful handoff: waiting 60s for previous instance to shutdown"
+          sleep 60
 
       - name: Monitor
         env:
@@ -219,7 +220,8 @@ jobs:
                     https://api.github.com/repos/${{ github.repository }}/dispatches \
                     -d "{\"event_type\":\"${{ inputs.restart_event_type }}\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$AUTO_RESTART,\"instances\":\"${{ inputs.instances }}\"}}"
 
-                  sleep 180
+                  echo "Waiting 90s for new instance to start"
+                  sleep 90
                 fi
                 RESTART_TRIGGERED=true
               fi
