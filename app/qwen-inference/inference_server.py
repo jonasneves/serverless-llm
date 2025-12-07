@@ -20,9 +20,9 @@ config = ModelConfig(
     owned_by="qwen",
     default_repo="unsloth/Qwen3-4B-GGUF",
     default_file="Qwen3-4B-Q4_K_M.gguf",
-    default_n_ctx=2048,
+    default_n_ctx=1024,  # Reduced from 2048 for GitHub Actions 7GB RAM limit
     default_n_threads=2,
-    n_batch=512,
+    n_batch=256,  # Reduced from 512 to lower memory usage
 )
 
 app = create_inference_app(config)

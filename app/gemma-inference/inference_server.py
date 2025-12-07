@@ -18,9 +18,9 @@ config = ModelConfig(
     owned_by="google",
     default_repo="bartowski/gemma-2-9b-it-GGUF",
     default_file="gemma-2-9b-it-Q4_K_M.gguf",
-    default_n_ctx=2048,
+    default_n_ctx=512,  # Reduced from 2048 - 9B model needs low context for 7GB RAM
     default_n_threads=2,
-    n_batch=512,
+    n_batch=128,  # Reduced from 512 to fit in GitHub Actions memory
 )
 
 app = create_inference_app(config)
