@@ -94,6 +94,46 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Setup dynamic swap (zram + sparse file)
+        run: |
+          echo "Setting up hybrid dynamic swap..."
+
+          # Method 1: zram (primary, 4GB compressed ≈ 12GB effective)
+          # Fast, no disk space, perfect for hot data
+          if ! lsmod | grep -q zram; then
+            sudo modprobe zram
+            echo lz4 | sudo tee /sys/block/zram0/comp_algorithm > /dev/null
+            echo 4G | sudo tee /sys/block/zram0/disksize > /dev/null
+            sudo mkswap /dev/zram0
+            sudo swapon -p 100 /dev/zram0
+            echo "✓ zram swap enabled (4GB compressed, ~12GB effective, 0 disk space)"
+          fi
+
+          # Method 2: Sparse file backup (8GB max, grows from 0 as needed)
+          # Only uses disk space when zram is full
+          if [ ! -f /swapfile ]; then
+            sudo truncate -s 8G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon -p 10 /swapfile
+            echo "✓ Sparse swap file created (0 → 8GB dynamic, lower priority)"
+          fi
+
+          # Optimize for model loading and inference
+          sudo sysctl -w vm.swappiness=40 > /dev/null           # Balance RAM/swap for builds
+          sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null   # Keep model cache longer
+
+          # Show configuration
+          echo ""
+          echo "Memory configuration:"
+          free -h
+          echo ""
+          echo "Swap devices:"
+          swapon --show
+          echo ""
+          echo "Actual disk usage of sparse file:"
+          sudo du -h /swapfile 2>/dev/null || echo "  (will grow as needed)"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
