@@ -39,7 +39,7 @@ on:
 jobs:
   chat-containerized:
     name: Chat Interface (Containers) #${{ matrix.instance }}
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     timeout-minutes: 350
     permissions:
       actions: write
