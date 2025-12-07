@@ -9,6 +9,7 @@ WORKDIR /app
 # Install system dependencies for audio processing (needed for build if any wheels need compilation)
 RUN apt-get update && apt-get install -y \
     build-essential \
+    git \
     libsndfile1-dev \
     && rm -rf /var/lib/apt/lists/*
 
