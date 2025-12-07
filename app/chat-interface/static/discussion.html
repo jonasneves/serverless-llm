@@ -817,43 +817,6 @@
       flex-direction: column;
       gap: 8px;
     }
-
-    .discussion-input {
-      border-top: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      padding: 16px 24px 24px;
-    }
-
-    .discussion-input .controls-row {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    .discussion-input .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      min-width: 140px;
-    }
-
-    .discussion-input .control-group label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .discussion-input .control-group input[type="number"] {
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 10px 12px;
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      font-size: 14px;
-    }
   </style>
 {% endblock %}
 
@@ -864,6 +827,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="scrollable-content">
   <div class="mode-overview-card">
     <div class="mode-overview-title">Let models debate before answering</div>
     <p class="mode-overview-subtitle">
@@ -977,6 +941,7 @@
     <!-- Discussion Content -->
     <div id="discussionContent"></div>
   </div>
+</div>
 
   <div class="input-container">
     <div class="controls-row">
