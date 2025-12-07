@@ -149,10 +149,10 @@ jobs:
           echo "Available storage:"
           df -h /mnt
 
-          # Create cache with proper permissions for container users (UID 10000)
+          # Create cache owned by container user (UID 10000 = appuser)
           sudo mkdir -p /mnt/huggingface-cache
-          sudo chmod -R 777 /mnt/huggingface-cache
-          echo "Cache directory created with full permissions"
+          sudo chown -R 10000:10000 /mnt/huggingface-cache
+          echo "Cache directory created with appuser ownership"
 
       - name: Start inference server
         env:
