@@ -111,34 +111,33 @@ jobs:
           # Restart Docker
           sudo systemctl start docker
           
-          echo ""
-          echo "=== Docker now using /mnt ==="
-          docker info | grep "Docker Root Dir"
-          df -h /mnt
           echo "✓ Docker configured to use /mnt"
 
-      - name: Setup dynamic swap
+      - name: Setup environment (parallel)
         run: |
-          echo "Setting up swap..."
-
-          # Create 16GB swap file (fallocate is fast and works with swapon)
-          sudo fallocate -l 16G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-
-          # Optimize for model loading and inference
-          sudo sysctl -w vm.swappiness=60
-          sudo sysctl -w vm.vfs_cache_pressure=50
-
-          echo "✓ Swap enabled: 16GB"
-          echo ""
-          free -h
-          echo ""
-          swapon --show
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+          # Run swap setup in background
+          (
+            sudo fallocate -l 16G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+            sudo sysctl -w vm.swappiness=60 > /dev/null
+            sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
+            echo "✓ Swap enabled: 16GB"
+          ) &
+          SWAP_PID=$!
+          
+          # Setup cache directory in background
+          (
+            sudo mkdir -p /mnt/huggingface-cache
+            sudo chown -R 10000:10000 /mnt/huggingface-cache
+            echo "✓ Cache directory ready"
+          ) &
+          CACHE_PID=$!
+          
+          # Wait for both
+          wait $SWAP_PID $CACHE_PID
+          echo "✓ Environment setup complete"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -147,35 +146,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull cloudflared from GHCR
+      - name: Pull images and setup network (parallel)
         run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest"
-          echo "Pulling $IMAGE"
-          docker pull "$IMAGE"
-          docker tag "$IMAGE" "cloudflared:latest"
-          echo "Successfully pulled cloudflared from GHCR"
-
-      - name: Pull inference image from GHCR
-        run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest"
-          echo "Pulling $IMAGE"
-          docker pull "$IMAGE"
-          docker tag "$IMAGE" "${{ inputs.model_name }}-inference:latest"
-          echo "Successfully pulled image from GHCR"
-
-      - name: Create network
-        run: docker network create inference-network
-
-      - name: Setup cache on /mnt partition
-        run: |
-          # GitHub Actions runners: /mnt has 66GB free vs $HOME which has limited space
-          echo "Available storage:"
-          df -h /mnt
-
-          # Create cache owned by container user (UID 10000 = appuser)
-          sudo mkdir -p /mnt/huggingface-cache
-          sudo chown -R 10000:10000 /mnt/huggingface-cache
-          echo "Cache directory created with appuser ownership"
+          # Pull both images in parallel
+          echo "Pulling images in parallel..."
+          
+          docker pull "ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest" &
+          CLOUDFLARED_PID=$!
+          
+          docker pull "ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest" &
+          INFERENCE_PID=$!
+          
+          # Create network while images are pulling
+          docker network create inference-network || true
+          echo "✓ Network created"
+          
+          # Wait for both pulls to complete
+          echo "Waiting for image pulls..."
+          wait $CLOUDFLARED_PID
+          CLOUDFLARED_EXIT=$?
+          wait $INFERENCE_PID
+          INFERENCE_EXIT=$?
+          
+          # Check results
+          if [ $CLOUDFLARED_EXIT -ne 0 ]; then
+            echo "❌ Failed to pull cloudflared image"
+            exit 1
+          fi
+          
+          if [ $INFERENCE_EXIT -ne 0 ]; then
+            echo "❌ Failed to pull inference image"
+            exit 1
+          fi
+          
+          # Tag images
+          docker tag "ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest" "cloudflared:latest"
+          docker tag "ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest" "${{ inputs.model_name }}-inference:latest"
+          
+          echo "✓ All images pulled and tagged"
 
       - name: Start inference server
         env:
