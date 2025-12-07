@@ -39,6 +39,18 @@ on:
       port:
         type: string
         default: '8000'
+      n_ctx:
+        type: string
+        required: false
+        description: 'Context window size (leave empty to use model default)'
+      n_threads:
+        type: string
+        required: false
+        description: 'Number of CPU threads (leave empty to use model default)'
+      n_batch:
+        type: string
+        required: false
+        description: 'Batch size for processing (leave empty to use model default)'
     secrets:
       hf_token:
         required: true
@@ -117,18 +129,42 @@ jobs:
           MODEL_FILE: ${{ inputs.model_file }}
           PORT: ${{ inputs.port }}
           HF_TOKEN: ${{ secrets.hf_token }}
+          N_CTX: ${{ inputs.n_ctx }}
+          N_THREADS: ${{ inputs.n_threads }}
+          N_BATCH: ${{ inputs.n_batch }}
         run: |
-          docker run -d \
+          # Build docker run command with optional parameters
+          CMD="docker run -d \
             --name inference-server \
             --network inference-network \
             -p ${{ inputs.port }}:${{ inputs.port }} \
-            -e MODEL_REPO="$MODEL_REPO" \
-            -e MODEL_FILE="$MODEL_FILE" \
-            -e PORT="$PORT" \
-            -e HF_TOKEN="$HF_TOKEN" \
-            -e HF_HOME=/app/.cache/huggingface \
-            -v $HOME/.cache/huggingface:/app/.cache/huggingface \
-            ${{ inputs.model_name }}-inference:latest
+            -e MODEL_REPO=\"$MODEL_REPO\" \
+            -e MODEL_FILE=\"$MODEL_FILE\" \
+            -e PORT=\"$PORT\" \
+            -e HF_TOKEN=\"$HF_TOKEN\" \
+            -e HF_HOME=/app/.cache/huggingface"
+
+          # Add N_CTX if provided
+          if [ -n "$N_CTX" ]; then
+            CMD="$CMD -e N_CTX=\"$N_CTX\""
+          fi
+
+          # Add N_THREADS if provided
+          if [ -n "$N_THREADS" ]; then
+            CMD="$CMD -e N_THREADS=\"$N_THREADS\""
+          fi
+
+          # Add N_BATCH if provided
+          if [ -n "$N_BATCH" ]; then
+            CMD="$CMD -e N_BATCH=\"$N_BATCH\""
+          fi
+
+          CMD="$CMD -v \$HOME/.cache/huggingface:/app/.cache/huggingface \
+            ${{ inputs.model_name }}-inference:latest"
+
+          echo "Starting inference server with command:"
+          echo "$CMD"
+          eval $CMD
 
           # Health check
           HEALTHY=false

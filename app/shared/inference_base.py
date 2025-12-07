@@ -101,15 +101,16 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         model_path = _download_model(config.default_repo, config.default_file)
         n_ctx = int(os.getenv("N_CTX", str(config.default_n_ctx)))
         n_threads = int(os.getenv("N_THREADS", str(config.default_n_threads)))
+        n_batch = int(os.getenv("N_BATCH", str(config.n_batch)))
 
-        print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={config.n_batch}")
+        print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}")
         llm = Llama(
             model_path=model_path,
             n_ctx=n_ctx,
             n_threads=n_threads,
             use_mlock=True,
             use_mmap=True,
-            n_batch=config.n_batch,
+            n_batch=n_batch,
             last_n_tokens_size=config.last_n_tokens_size,
             verbose=True,
         )
