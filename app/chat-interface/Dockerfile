@@ -27,17 +27,9 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
-COPY --chown=appuser:appuser chat_server.py .
-COPY --chown=appuser:appuser http_client.py .
-COPY --chown=appuser:appuser autogen_orchestrator.py .
-COPY --chown=appuser:appuser tool_orchestrator.py .
-COPY --chown=appuser:appuser discussion_engine.py .
-COPY --chown=appuser:appuser confession_engine.py .
-COPY --chown=appuser:appuser model_profiles.py .
-COPY --chown=appuser:appuser orchestrator.py .
-COPY --chown=appuser:appuser verbalized_sampling_engine.py .
-COPY --chown=appuser:appuser voice_engine.py .
-COPY --chown=appuser:appuser tools_config.json .
+# Copy all Python files and JSON config
+COPY --chown=appuser:appuser *.py .
+COPY --chown=appuser:appuser *.json .
 COPY --chown=appuser:appuser static ./static
 COPY --chown=appuser:appuser tools ./tools
 
