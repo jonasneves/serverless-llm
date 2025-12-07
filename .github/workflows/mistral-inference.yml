@@ -1,4 +1,4 @@
-name: Mistral 7B v0.3
+name: Mistral 7B
 
 run-name: Mistral 7B Inference Server
 
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       duration_hours:
-        description: 'How long to run (max 5.5 hours)'
+        description: 'Duration (max 5.5 hours)'
         required: false
         default: '5'
         type: string
@@ -16,7 +16,7 @@ on:
         default: true
         type: boolean
       instances:
-        description: 'Number of parallel instances (1-3)'
+        description: 'Parallel instances (1-3)'
         required: false
         default: '1'
         type: choice
@@ -28,16 +28,15 @@ on:
   repository_dispatch:
     types: [restart-mistral-inference]
 
-
 permissions:
   actions: write
   contents: read
 
 jobs:
   inference:
-    uses: ./.github/workflows/reusable-gguf-inference.yml
+    uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "Mistral 7B v0.3"
+      model_name: "mistral"
       model_dir: "mistral-inference"
       model_repo: "bartowski/Mistral-7B-Instruct-v0.3-GGUF"
       model_file: "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf"

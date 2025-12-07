@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       duration_hours:
-        description: 'How long to run (max 5.5 hours)'
+        description: 'Duration (max 5.5 hours)'
         required: false
         default: '5'
         type: string
@@ -16,7 +16,7 @@ on:
         default: true
         type: boolean
       instances:
-        description: 'Number of parallel instances (1-3)'
+        description: 'Parallel instances (1-3)'
         required: false
         default: '1'
         type: choice
@@ -28,20 +28,19 @@ on:
   repository_dispatch:
     types: [restart-gemma-inference]
 
-
 permissions:
   actions: write
   contents: read
 
 jobs:
   inference:
-    uses: ./.github/workflows/reusable-gguf-inference.yml
+    uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "Gemma 2 9B"
+      model_name: "gemma"
       model_dir: "gemma-inference"
       model_repo: "bartowski/gemma-2-9b-it-GGUF"
       model_file: "gemma-2-9b-it-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-gemma2-9b-q4"
+      cache_key_prefix: "gguf-gemma-2-9b-q4"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_GEMMA"
       restart_event_type: "restart-gemma-inference"
       workflow_file: "gemma-inference.yml"

@@ -1,6 +1,6 @@
-name: Qwen3-4B
+name: Qwen 3-4B
 
-run-name: Qwen3-4B Inference Server
+run-name: Qwen 3-4B Inference Server
 
 on:
   workflow_dispatch:
@@ -34,9 +34,9 @@ permissions:
 
 jobs:
   inference:
-    uses: ./.github/workflows/reusable-gguf-inference.yml
+    uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "Qwen3-4B"
+      model_name: "qwen"
       model_dir: "qwen-inference"
       model_repo: "unsloth/Qwen3-4B-GGUF"
       model_file: "Qwen3-4B-Q4_K_M.gguf"

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       duration_hours:
-        description: 'How long to run (max 5.5 hours)'
+        description: 'Duration (max 5.5 hours)'
         required: false
         default: '5'
         type: string
@@ -16,7 +16,7 @@ on:
         default: true
         type: boolean
       instances:
-        description: 'Number of parallel instances (1-3)'
+        description: 'Parallel instances (1-3)'
         required: false
         default: '1'
         type: choice
@@ -28,20 +28,19 @@ on:
   repository_dispatch:
     types: [restart-llama-inference]
 
-
 permissions:
   actions: write
   contents: read
 
 jobs:
   inference:
-    uses: ./.github/workflows/reusable-gguf-inference.yml
+    uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "Llama 3.2-3B"
+      model_name: "llama"
       model_dir: "llama-inference"
       model_repo: "bartowski/Llama-3.2-3B-Instruct-GGUF"
       model_file: "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-llama3.2-3b-q4"
+      cache_key_prefix: "gguf-llama-3.2-3b-q4"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_LLAMA"
       restart_event_type: "restart-llama-inference"
       workflow_file: "llama-inference.yml"
