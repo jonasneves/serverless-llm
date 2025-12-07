@@ -9,7 +9,7 @@ WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
+COPY chat-interface/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime
@@ -28,10 +28,10 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
 # Copy all Python files and JSON config
-COPY --chown=appuser:appuser *.py .
-COPY --chown=appuser:appuser *.json .
-COPY --chown=appuser:appuser static ./static
-COPY --chown=appuser:appuser tools ./tools
+COPY --chown=appuser:appuser chat-interface/*.py .
+COPY --chown=appuser:appuser chat-interface/*.json .
+COPY --chown=appuser:appuser chat-interface/static ./static
+COPY --chown=appuser:appuser chat-interface/tools ./tools
 
 # Switch to non-root user
 USER appuser

@@ -115,7 +115,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.model == 'chat-interface' && './app/chat-interface' || './app' }}
+          context: ./app
           file: ./app/${{ matrix.model }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
