@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import List, Optional, AsyncGenerator
+from typing import Dict, List, Optional, AsyncGenerator
 import uvicorn
 import pathlib
 from urllib.parse import urlparse
@@ -260,6 +260,10 @@ MODEL_SEMAPHORES = {
     for model_id in MODEL_ENDPOINTS.keys()
 }
 
+# Cache for live context lengths fetched from inference servers
+# Keys are model IDs, values are the actual n_ctx the server is running with
+LIVE_CONTEXT_LENGTHS: Dict[str, int] = {}
+
 # Log configured endpoints at startup
 logger.info("=" * 60)
 logger.info("MODEL ENDPOINTS CONFIGURED:")
@@ -403,6 +407,7 @@ async def health():
 async def check_model_health(model_id: str, endpoint: str) -> dict:
     """
     Perform a detailed health check on a single model, including inference test.
+    Also fetches and caches the live context length from /health/details.
     """
     client = HTTPClient.get_client()
     start_time = time.time()
@@ -413,6 +418,17 @@ async def check_model_health(model_id: str, endpoint: str) -> dict:
 
         if health_response.status_code == 200:
             health_data = health_response.json()
+            
+            # Try to fetch detailed health info including actual n_ctx
+            try:
+                details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
+                if details_response.status_code == 200:
+                    details_data = details_response.json()
+                    if "n_ctx" in details_data:
+                        LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
+                        logger.debug(f"Cached live context length for {model_id}: {details_data['n_ctx']}")
+            except Exception:
+                pass  # Details endpoint is optional, don't fail the health check
 
             # Additionally test a simple completion to verify model works
             try:
@@ -431,7 +447,8 @@ async def check_model_health(model_id: str, endpoint: str) -> dict:
                     "endpoint": endpoint,
                     "health": health_data,
                     "inference_test": "passed" if test_response.status_code == 200 else "failed",
-                    "response_time_ms": int((time.time() - start_time) * 1000)
+                    "response_time_ms": int((time.time() - start_time) * 1000),
+                    "context_length": LIVE_CONTEXT_LENGTHS.get(model_id)
                 }
             except Exception as e:
                 # Health passed but inference failed
@@ -441,7 +458,8 @@ async def check_model_health(model_id: str, endpoint: str) -> dict:
                     "health": health_data,
                     "inference_test": "failed",
                     "error": str(e),
-                    "response_time_ms": int((time.time() - start_time) * 1000)
+                    "response_time_ms": int((time.time() - start_time) * 1000),
+                    "context_length": LIVE_CONTEXT_LENGTHS.get(model_id)
                 }
         else:
             return {
@@ -609,6 +627,12 @@ async def model_badge(model_id: str):
 
 @app.get("/api/models")
 async def list_models():
+    def get_context_length(model_id: str) -> int:
+        """Get context length: prefer live value from server, fall back to profile."""
+        if model_id in LIVE_CONTEXT_LENGTHS:
+            return LIVE_CONTEXT_LENGTHS[model_id]
+        return MODEL_PROFILES.get(model_id, {}).get("context_length", 0)
+    
     return {
         "models": [
             {
@@ -616,7 +640,7 @@ async def list_models():
                 "name": config["name"],
                 "endpoint": MODEL_ENDPOINTS[config["id"]],
                 "default": config.get("default", False),
-                "context_length": MODEL_PROFILES.get(config["id"], {}).get("context_length", 0),
+                "context_length": get_context_length(config["id"]),
             }
             for config in MODEL_CONFIG
         ],
