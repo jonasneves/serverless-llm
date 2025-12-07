@@ -94,45 +94,47 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Setup dynamic swap (zram + sparse file)
+      - name: Setup dynamic swap
         run: |
-          echo "Setting up hybrid dynamic swap..."
+          echo "Setting up dynamic swap..."
 
-          # Method 1: zram (primary, 4GB compressed ≈ 12GB effective)
-          # Fast, no disk space, perfect for hot data
+          # Try zram first (if available on kernel)
           if ! lsmod | grep -q zram; then
-            sudo modprobe zram
-            echo lz4 | sudo tee /sys/block/zram0/comp_algorithm > /dev/null
-            echo 4G | sudo tee /sys/block/zram0/disksize > /dev/null
-            sudo mkswap /dev/zram0
-            sudo swapon -p 100 /dev/zram0
-            echo "✓ zram swap enabled (4GB compressed, ~12GB effective, 0 disk space)"
+            if sudo modprobe zram 2>/dev/null; then
+              echo lz4 | sudo tee /sys/block/zram0/comp_algorithm > /dev/null 2>&1 || true
+              echo 4G | sudo tee /sys/block/zram0/disksize > /dev/null
+              sudo mkswap /dev/zram0 > /dev/null 2>&1
+              sudo swapon -p 100 /dev/zram0
+              echo "✓ zram swap enabled (4GB compressed, ~12GB effective)"
+            else
+              echo "⚠ zram not available on this kernel, using sparse file only"
+            fi
           fi
 
-          # Method 2: Sparse file backup (8GB max, grows from 0 as needed)
-          # Only uses disk space when zram is full
+          # Sparse swap file (always create as primary or fallback)
           if [ ! -f /swapfile ]; then
-            sudo truncate -s 8G /swapfile
+            # Create 16GB sparse file (only uses disk space as needed)
+            sudo truncate -s 16G /swapfile
             sudo chmod 600 /swapfile
-            sudo mkswap /swapfile
-            sudo swapon -p 10 /swapfile
-            echo "✓ Sparse swap file created (0 → 8GB dynamic, lower priority)"
+            sudo mkswap /swapfile > /dev/null 2>&1
+            sudo swapon /swapfile
+            echo "✓ Sparse swap file created (16GB max, grows from 0 as needed)"
           fi
 
           # Optimize for model loading and inference
-          sudo sysctl -w vm.swappiness=40 > /dev/null           # Balance RAM/swap for builds
-          sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null   # Keep model cache longer
+          sudo sysctl -w vm.swappiness=60 > /dev/null    # Allow more swapping for large models
+          sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
 
           # Show configuration
           echo ""
-          echo "Memory configuration:"
+          echo "Memory available:"
           free -h
           echo ""
-          echo "Swap devices:"
+          echo "Swap configuration:"
           swapon --show
           echo ""
-          echo "Actual disk usage of sparse file:"
-          sudo du -h /swapfile 2>/dev/null || echo "  (will grow as needed)"
+          echo "Sparse file disk usage:"
+          sudo du -h /swapfile 2>/dev/null || echo "  0 bytes (will grow as needed)"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
