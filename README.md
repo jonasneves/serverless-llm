@@ -174,40 +174,79 @@ serverless-llm/
 - **Brief Downtime**: ~3-5 minutes during auto-restart (only with single instance; eliminated with 2+ instances)
 - **First Run**: Initial model download (~2-5 min), subsequent runs use cached models
 
+
 ## Local Development
+
+### Quick Start with Make
+
+```bash
+# Setup environment
+make setup
+
+# Start chat interface only
+make start
+
+# Start with specific models (uses Docker profiles)
+make start-qwen      # Chat + Qwen
+make start-all       # Everything
+
+# Check status
+make health
+
+# View logs
+make logs
+
+# Stop all services
+make stop
+```
+
+### Using Docker Compose Directly
+
+```bash
+# Setup
+cp .env.example .env  # Edit with your values
+
+# Start chat interface only
+docker-compose up -d
+
+# Start with specific models (profile-based)
+docker-compose --profile qwen up -d          # Chat + Qwen
+docker-compose --profile qwen --profile phi up -d  # Chat + Qwen + Phi
+docker-compose --profile all up -d           # Everything
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose --profile all down
+```
+
+### Development Without Docker
 
 ```bash
 # Install dependencies
+pip install -r app/shared/requirements.txt
 pip install -r app/chat-interface/requirements.txt
 
-# Start model server(s) - each runs on port 8000 by default
-cd app/qwen-inference && python inference_server.py      # Terminal 1
-cd app/phi-inference && python inference_server.py       # Terminal 2 (optional)
-cd app/deepseek-r1qwen-inference && python inference_server.py  # Terminal 3 (optional)
+# Terminal 1: Start a model server
+cd app/qwen-inference && python inference_server.py
 
-# Start interface (separate terminal)
+# Terminal 2: Start chat interface
 cd app/chat-interface
-export QWEN_API_URL=http://localhost:8000   # Point to your running model(s)
-# Optional: Add more model URLs if running multiple
-# export PHI_API_URL=http://localhost:8001
-# export R1QWEN_API_URL=http://localhost:8002
+export QWEN_API_URL=http://localhost:8000
 python chat_server.py
 
 # Access at http://localhost:8080
 ```
 
-**Using Docker Compose** (recommended for running all services):
+Or use Make for development mode:
 
 ```bash
-# Start everything
-docker-compose -f docker-compose.all.yml up -d
-
-# View logs
-docker-compose -f docker-compose.all.yml logs -f
-
-# Stop
-docker-compose -f docker-compose.all.yml down
+make dev-qwen       # Start Qwen locally (Terminal 1)
+make dev-interface  # Start chat interface (Terminal 2)
 ```
+
+
 
 
 

@@ -98,9 +98,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def validate_environment():
+    """
+    Validate required environment variables on startup.
+    Logs warnings for missing optional components and errors for critical issues.
+    """
+    errors = []
+    warnings = []
+    
+    # Check if at least one model endpoint is configured
+    configured_models = [
+        model_id for model_id, endpoint in MODEL_ENDPOINTS.items()
+        if endpoint and endpoint != DEFAULT_LOCAL_ENDPOINTS.get(f"{model_id.upper().replace('-', '_').replace('.', '_')}_API_URL", "")
+    ]
+    
+    if not configured_models:
+        warnings.append("No model endpoints explicitly configured - using defaults (localhost)")
+    
+    # Check GitHub token for Discussion/Agents modes
+    gh_token = os.getenv("GH_MODELS_TOKEN")
+    if not gh_token:
+        warnings.append("GH_MODELS_TOKEN not set - Discussion and Agents modes will have limited functionality")
+    
+    # Check for misconfigured URLs (common mistake)
+    for config in MODEL_CONFIG:
+        env_value = os.getenv(config["env"])
+        if env_value:
+            if not (env_value.startswith("http://") or env_value.startswith("https://")):
+                errors.append(f"{config['env']} must start with http:// or https:// (got: {env_value})")
+    
+    # Log results
+    if errors:
+        logger.error("❌ Environment validation failed:")
+        for error in errors:
+            logger.error(f"  - {error}")
+        raise RuntimeError("Invalid environment configuration. Please check your .env file.")
+    
+    if warnings:
+        logger.warning("⚠️  Environment validation warnings:")
+        for warning in warnings:
+            logger.warning(f"  - {warning}")
+    
+    logger.info("✓ Environment validation passed")
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize resources on startup."""
+    # Validate environment first
+    validate_environment()
+    
     HTTPClient.get_client()
     
     # Log configured model endpoints

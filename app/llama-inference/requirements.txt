@@ -1,5 +1,0 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-llama-cpp-python>=0.3.2
-huggingface-hub==0.23.2
-pydantic==2.10.1

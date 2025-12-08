@@ -1,0 +1,180 @@
+# =============================================================================
+# Serverless LLM - Unified Docker Compose with Profiles
+# =============================================================================
+# Usage:
+#   docker-compose up                      # Start chat interface only
+#   docker-compose --profile all up        # Start everything
+#   docker-compose --profile qwen up       # Start chat + qwen
+#   docker-compose --profile qwen --profile phi up  # Start chat + qwen + phi
+#
+# Available profiles: all, qwen, phi, llama, mistral, gemma, r1qwen, rnj
+# =============================================================================
+
+version: '3.8'
+
+# YAML anchors for DRY configuration
+x-common-env: &common-env
+  HF_TOKEN: ${HF_TOKEN}
+
+x-inference-common: &inference-common
+  networks:
+    - llm-network
+  restart: unless-stopped
+  environment:
+    <<: *common-env
+
+services:
+  # =============================================================================
+  # Chat Interface (always available)
+  # =============================================================================
+  chat-interface:
+    build:
+      context: ./app/chat-interface
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      GH_MODELS_TOKEN: ${GH_MODELS_TOKEN}
+      # Model URLs auto-configured based on service names
+      QWEN_API_URL: http://qwen:8000
+      PHI_API_URL: http://phi:8000
+      LLAMA_API_URL: http://llama:8000
+      MISTRAL_API_URL: http://mistral:8000
+      GEMMA_API_URL: http://gemma:8000
+      R1QWEN_API_URL: http://r1qwen:8000
+      RNJ_API_URL: http://rnj:8000
+    networks:
+      - llm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =============================================================================
+  # Inference Servers (activated by profiles)
+  # =============================================================================
+  
+  qwen:
+    <<: *inference-common
+    build:
+      context: ./app
+      dockerfile: shared/Dockerfile.inference
+      args:
+        MODEL_DIR: qwen-inference
+    ports:
+      - "8001:8000"
+    profiles: ["all", "qwen"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  phi:
+    <<: *inference-common
+    build:
+      context: ./app
+      dockerfile: shared/Dockerfile.inference
+      args:
+        MODEL_DIR: phi-inference
+    ports:
+      - "8002:8000"
+    profiles: ["all", "phi"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  llama:
+    <<: *inference-common
+    build:
+      context: ./app
+      dockerfile: shared/Dockerfile.inference
+      args:
+        MODEL_DIR: llama-inference
+    ports:
+      - "8003:8000"
+    profiles: ["all", "llama"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  mistral:
+    <<: *inference-common
+    build:
+      context: ./app
+      dockerfile: shared/Dockerfile.inference
+      args:
+        MODEL_DIR: mistral-inference
+    ports:
+      - "8005:8000"
+    profiles: ["all", "mistral"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  gemma:
+    <<: *inference-common
+    build:
+      context: ./app
+      dockerfile: shared/Dockerfile.inference
+      args:
+        MODEL_DIR: gemma-inference
+    ports:
+      - "8006:8000"
+    profiles: ["all", "gemma"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  r1qwen:
+    <<: *inference-common
+    build:
+      context: ./app
+      dockerfile: shared/Dockerfile.inference
+      args:
+        MODEL_DIR: deepseek-r1qwen-inference
+    ports:
+      - "8004:8000"
+    profiles: ["all", "r1qwen"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  rnj:
+    <<: *inference-common
+    build:
+      context: ./app/rnj-inference
+      dockerfile: Dockerfile
+    ports:
+      - "8007:8000"
+    profiles: ["all", "rnj"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+networks:
+  llm-network:
+    driver: bridge

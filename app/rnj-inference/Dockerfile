@@ -1,3 +1,12 @@
+# =============================================================================
+# RNJ-Specific Inference Dockerfile
+# =============================================================================
+# This model requires building llama.cpp from source (PR #17811) with specific
+# configurations (MTMD=OFF for text-only support, CURL=OFF) rather than using
+# pre-built llama-cpp-python bindings like other models.
+# DO NOT consolidate with shared Dockerfile.
+# =============================================================================
+
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
