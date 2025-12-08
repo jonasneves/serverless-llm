@@ -33,11 +33,11 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && git checkout rnj-pr \
     && git submodule update --init --recursive \
     # Disable auxiliary targets that might fail build
-    && sed -i 's/add_subdirectory(tools)/#add_subdirectory(tools)/g' CMakeLists.txt \
-    && sed -i 's/add_subdirectory(examples)/#add_subdirectory(examples)/g' CMakeLists.txt \
-    && sed -i 's/add_subdirectory(tests)/#add_subdirectory(tests)/g' CMakeLists.txt \
+    && echo "project(ignored)" > tools/CMakeLists.txt \
+    && echo "project(ignored)" > examples/CMakeLists.txt \
+    && echo "project(ignored)" > tests/CMakeLists.txt \
     && cd /tmp/llama-cpp-python \
-    && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
+    && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
     && rm -rf /tmp/llama-cpp-python
 
 COPY rnj-inference/inference_server.py .
