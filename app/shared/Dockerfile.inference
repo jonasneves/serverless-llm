@@ -35,8 +35,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy shared requirements (all models use the same dependencies)
 COPY shared/requirements.txt .
 
-# Install with OpenBLAS support for CPU acceleration
-RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" \
+# Install with OpenBLAS and ARM NEON optimizations
+# NEON provides SIMD acceleration on ARM processors (like AVX on x86)
+RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_NATIVE=ON -DGGML_NEON=ON" \
     pip3 install --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime - Minimal runtime image

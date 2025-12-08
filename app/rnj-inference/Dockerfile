@@ -30,11 +30,13 @@ RUN git clone https://github.com/ggml-org/llama.cpp.git . \
     && git fetch origin pull/17811/head:rnj-pr \
     && git checkout rnj-pr \
     && git submodule update --init --recursive \
-    # Build with OpenBLAS support (disable CURL - we download models via Python)
-    # Disable multimodal (mtmd) - RNJ-1 is text-only
+    # Build with OpenBLAS + ARM NEON optimizations for maximum ARM performance
+    # NEON provides SIMD acceleration on ARM (equivalent to AVX on x86)
     && cmake -B build \
         -DGGML_BLAS=ON \
         -DGGML_BLAS_VENDOR=OpenBLAS \
+        -DGGML_NATIVE=ON \
+        -DGGML_NEON=ON \
         -DLLAMA_CURL=OFF \
         -DLLAMA_BUILD_EXAMPLES=OFF \
         -DLLAMA_BUILD_TESTS=OFF \

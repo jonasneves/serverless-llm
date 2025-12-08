@@ -31,7 +31,7 @@ permissions:
 jobs:
   # Determine which models need to be built
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm64  # ARM64 runner
     outputs:
       models: ${{ steps.set-matrix.outputs.models }}
     steps:
@@ -88,7 +88,7 @@ jobs:
   build-and-push:
     needs: detect-changes
     if: needs.detect-changes.outputs.models != '[]'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm64  # ARM64 runners for native ARM builds
     strategy:
       matrix:
         model: ${{ fromJson(needs.detect-changes.outputs.models) }}

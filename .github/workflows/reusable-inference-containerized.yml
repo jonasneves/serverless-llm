@@ -66,7 +66,7 @@ on:
 jobs:
   inference:
     name: ${{ inputs.model_name }} #${{ matrix.instance }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm64  # ARM64 runners for ARM-optimized inference
     timeout-minutes: 350
     permissions:
       actions: write

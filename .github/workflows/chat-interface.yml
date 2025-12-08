@@ -31,7 +31,7 @@ on:
 jobs:
   chat:
     name: Chat Interface #${{ matrix.instance }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm64  # ARM64 for consistency
     timeout-minutes: 350
     permissions:
       actions: write
