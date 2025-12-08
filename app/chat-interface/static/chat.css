@@ -348,69 +348,7 @@ main {
   flex-wrap: wrap;
 }
 
-.control-group input,
-.control-group select {
-  padding: 6px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 12px;
-}
 
-/* Custom range slider - minimal robust styling */
-.control-group input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 80px;
-  height: 20px;
-  background: transparent;
-  cursor: pointer;
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-
-.control-group input[type="range"]::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 4px;
-  background: var(--border-color);
-  border-radius: 2px;
-  border: none;
-}
-
-.control-group input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  background: var(--accent-color);
-  border-radius: 50%;
-  border: none;
-  margin-top: -5px;
-  cursor: pointer;
-}
-
-.control-group input[type="range"]::-moz-range-track {
-  width: 100%;
-  height: 4px;
-  background: var(--border-color);
-  border-radius: 2px;
-  border: none;
-}
-
-.control-group input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background: var(--accent-color);
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-}
-
-.control-group input[type="range"]:focus {
-  outline: none;
-}
 
 .input-wrapper {
   position: relative;
@@ -720,9 +658,7 @@ textarea::placeholder {
     font-size: 11px;
   }
 
-  .control-group input[type="range"] {
-    width: 60px;
-  }
+
 
   .control-group input[type="number"] {
     width: 60px;
@@ -820,9 +756,7 @@ textarea::placeholder {
     flex: 1;
   }
 
-  .control-group input[type="range"] {
-    width: 50px;
-  }
+
 
   .control-group input[type="number"] {
     width: 50px;

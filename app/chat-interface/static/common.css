@@ -1564,3 +1564,69 @@ button.small {
     gap: 8px;
   }
 }
+
+/* Custom range slider - minimal robust styling */
+.control-group input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.control-group input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  border: none;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  border: none;
+  margin-top: -5px;
+  cursor: pointer;
+}
+
+.control-group input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  border: none;
+}
+
+.control-group input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.control-group input[type="range"]:focus {
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .control-group input[type="range"] {
+    width: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .control-group input[type="range"] {
+    width: 50px;
+  }
+}
