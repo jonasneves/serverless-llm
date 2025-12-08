@@ -837,6 +837,26 @@ async def stream_github_model_response(
     try:
         client = HTTPClient.get_client()
         
+        # Newer OpenAI models (o1, o3, o4, gpt-5) use max_completion_tokens instead of max_tokens
+        uses_completion_tokens = any(
+            pattern in model_id.lower() 
+            for pattern in ['o1', 'o3', 'o4', 'gpt-5']
+        )
+        
+        payload = {
+            "model": model_id,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": True,
+            "stream_options": {"include_usage": True}
+        }
+        
+        # Use correct token parameter based on model
+        if uses_completion_tokens:
+            payload["max_completion_tokens"] = max_tokens
+        else:
+            payload["max_tokens"] = max_tokens
+        
         async with client.stream(
             "POST",
             GITHUB_MODELS_API_URL,
@@ -845,14 +865,7 @@ async def stream_github_model_response(
                 "Authorization": f"Bearer {github_token}",
                 "X-GitHub-Api-Version": "2022-11-28"
             },
-            json={
-                "model": model_id,
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-                "stream": True,
-                "stream_options": {"include_usage": True}
-            },
+            json=payload,
             timeout=120.0
         ) as response:
             if response.status_code != 200:

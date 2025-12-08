@@ -20,6 +20,15 @@
           </button>
         </div>
         <div class="settings-modal-body">
+          <div class="settings-section">
+            <h3>API Models</h3>
+            <p class="settings-description">Enable cloud-based API models (GPT-4, DeepSeek, Llama 405B, etc.) in the model selector.</p>
+            <label class="toggle-row">
+              <input type="checkbox" id="enableApiModels">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Enable API Models</span>
+            </label>
+          </div>
           <div class="settings-section token-section" id="tokenSection">
             <h3>GitHub Models API Token</h3>
             <p class="settings-description">Use your own GitHub token for API models. Leave empty to use the server default when available.</p>
@@ -160,6 +169,34 @@
     });
   }
 
+  const API_MODELS_STORAGE_KEY = 'api_models_enabled';
+  let apiModelsCheckbox;
+
+  function initApiModelsToggle() {
+    apiModelsCheckbox = modal?.querySelector('#enableApiModels');
+    if (!apiModelsCheckbox) return;
+
+    // Load saved state (default: false/disabled)
+    const savedState = localStorage.getItem(API_MODELS_STORAGE_KEY) === 'true';
+    apiModelsCheckbox.checked = savedState;
+    updateTokenSectionVisibility(savedState);
+
+    apiModelsCheckbox.addEventListener('change', () => {
+      const enabled = apiModelsCheckbox.checked;
+      localStorage.setItem(API_MODELS_STORAGE_KEY, enabled ? 'true' : 'false');
+      updateTokenSectionVisibility(enabled);
+      // Dispatch event so model selector can update
+      window.dispatchEvent(new CustomEvent('api-models-toggle', { detail: { enabled } }));
+    });
+  }
+
+  function updateTokenSectionVisibility(enabled) {
+    const tokenSection = modal?.querySelector('#tokenSection');
+    if (tokenSection) {
+      tokenSection.style.display = enabled ? 'block' : 'none';
+    }
+  }
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -167,6 +204,7 @@
     initThemeToggle();
     attachSettingsTriggers();
     initTokenInput();
+    initApiModelsToggle();
     initModalBehavior();
     dispatchTokenChange(tokenInput?.value.trim() || '');
   }
@@ -189,6 +227,13 @@
       } else {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
       }
+    },
+    isApiModelsEnabled: () => localStorage.getItem(API_MODELS_STORAGE_KEY) === 'true',
+    setApiModelsEnabled: (enabled) => {
+      localStorage.setItem(API_MODELS_STORAGE_KEY, enabled ? 'true' : 'false');
+      if (apiModelsCheckbox) apiModelsCheckbox.checked = enabled;
+      updateTokenSectionVisibility(enabled);
+      window.dispatchEvent(new CustomEvent('api-models-toggle', { detail: { enabled } }));
     }
   };
 })();

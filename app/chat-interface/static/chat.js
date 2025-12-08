@@ -329,12 +329,20 @@ document.addEventListener('DOMContentLoaded', () => {
     return protectedContent;
   }
 
+  function stripThinkingTags(content) {
+    if (!content) return content;
+    // Remove <think>...</think> blocks (used by Qwen3, DeepSeek-R1, etc.)
+    return content.replace(/<think>[\s\S]*?<\/think>\s*/gi, '').trim();
+  }
+
   function formatContent(content) {
     if (!content) return '';
 
     try {
+      // Strip thinking tags from reasoning models
+      const cleaned = stripThinkingTags(content);
       // First render LaTeX
-      const withLatex = renderLatex(content);
+      const withLatex = renderLatex(cleaned);
       // Then use marked.js for markdown parsing
       return marked.parse(withLatex);
     } catch (e) {

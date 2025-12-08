@@ -42,11 +42,19 @@ class ModelSelector {
       this.models = {};
       this.selectedModels.clear();
 
+      // Check if API models are enabled in settings
+      const apiModelsEnabled = window.SettingsPanel?.isApiModelsEnabled?.() ?? false;
+
       data.models.forEach((model) => {
         // Apply type filter if configured
         const modelType = model.type || 'local';
         if (this.options.filterTypes && !this.options.filterTypes.includes(modelType)) {
           return; // Skip this model
+        }
+
+        // Skip API models if not enabled in settings
+        if (modelType === 'api' && !apiModelsEnabled) {
+          return;
         }
 
         this.models[model.id] = {
@@ -56,6 +64,12 @@ class ModelSelector {
           context_length: model.context_length || 0
         };
       });
+
+      // Listen for API models toggle changes
+      if (!this._apiToggleListener) {
+        this._apiToggleListener = () => this.loadModels();
+        window.addEventListener('api-models-toggle', this._apiToggleListener);
+      }
 
       this.render();
 
