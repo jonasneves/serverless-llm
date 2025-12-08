@@ -102,6 +102,31 @@ app.add_middleware(
 async def startup_event():
     """Initialize resources on startup."""
     HTTPClient.get_client()
+    
+    # Log configured model endpoints
+    model_env_vars = {
+        "QWEN": os.getenv("QWEN_API_URL"),
+        "PHI": os.getenv("PHI_API_URL"),
+        "LLAMA": os.getenv("LLAMA_API_URL"),
+        "MISTRAL": os.getenv("MISTRAL_API_URL"),
+        "GEMMA": os.getenv("GEMMA_API_URL"),
+        "R1QWEN": os.getenv("R1QWEN_API_URL"),
+        "RNJ": os.getenv("RNJ_API_URL"),
+    }
+    
+    configured = [k for k, v in model_env_vars.items() if v]
+    missing = [k for k, v in model_env_vars.items() if not v]
+    
+    if configured:
+        logger.info(f"✓ Configured model endpoints: {', '.join(configured)}")
+    if missing:
+        logger.info(f"○ Optional endpoints not set: {', '.join(missing)}")
+    
+    # Check for GitHub token (needed for Discussion/Agents)
+    if os.getenv("GH_MODELS_TOKEN"):
+        logger.info("✓ GitHub Models token configured")
+    else:
+        logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -838,7 +863,8 @@ async def stream_github_model_response(
         client = HTTPClient.get_client()
         
         # Newer OpenAI models (o1, o3, o4, gpt-5) use max_completion_tokens instead of max_tokens
-        uses_completion_tokens = any(
+        # They also don't support custom temperature (only default=1)
+        is_restricted_model = any(
             pattern in model_id.lower() 
             for pattern in ['o1', 'o3', 'o4', 'gpt-5']
         )
@@ -846,13 +872,16 @@ async def stream_github_model_response(
         payload = {
             "model": model_id,
             "messages": messages,
-            "temperature": temperature,
             "stream": True,
             "stream_options": {"include_usage": True}
         }
         
+        # These models don't support custom temperature
+        if not is_restricted_model:
+            payload["temperature"] = temperature
+        
         # Use correct token parameter based on model
-        if uses_completion_tokens:
+        if is_restricted_model:
             payload["max_completion_tokens"] = max_tokens
         else:
             payload["max_tokens"] = max_tokens

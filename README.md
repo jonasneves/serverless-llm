@@ -15,10 +15,12 @@ Free, serverless, multi-model chat with Qwen3, Llama, Phi, Mistral, Gemma — po
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
+> **Badge Legend**: 🟢 Online | 🔴 Offline | 🟡 Degraded
+
 ## Overview Features
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: Qwen3 (4B), DeepSeek R1 Distill Qwen (1.5B), GLM‑4.6, Phi‑3, Llama 3.2, Mistral 7B, Gemma 2 9B
+- **Multi-Model Support**: Qwen3 (4B), DeepSeek R1 Distill Qwen (1.5B), Phi‑3, Llama 3.2, Mistral 7B, Gemma 2 9B
 - **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
 - **Continuous Availability**: Auto-restart with graceful handoff
@@ -56,7 +58,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | Secret | Description |
 |--------|-------------|
 | `HF_TOKEN` | Hugging Face token for gated models |
-| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, GEMMA, R1QWEN, GLM46) |
+| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, GEMMA, R1QWEN) |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for web interface |
 | `{MODEL}_API_URL` | Public URL for each model (e.g., `https://qwen.neevs.io`) |
 | `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents modes ([create token](https://github.com/settings/personal-access-tokens/new)) |
@@ -123,14 +125,20 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 serverless-llm/
 ├── .github/workflows/          # GitHub Actions workflows
 ├── app/
-│   ├── qwen-inference/         # Qwen 7B model server
-│   ├── phi-inference/          # Phi model server
-│   ├── llama-inference/        # Llama model server
-│   ├── mistral-inference/      # Mistral model server
-│   ├── deepseek-r1qwen-inference/ # DeepSeek R1 Distill Qwen 1.5B server
-│   ├── gemma-inference/        # Gemma model server
-│   └── chat-interface/         # Web interface + proxy
-└── docs/                       # Mode-specific documentation
+│   ├── chat-interface/         # Web interface + API proxy
+│   │   ├── static/             # Frontend (HTML, CSS, JS)
+│   │   └── tools/              # Agent tools (search, code exec)
+│   ├── qwen-inference/         # Qwen3 4B model server
+│   ├── phi-inference/          # Phi-3 Mini model server
+│   ├── llama-inference/        # Llama 3.2 model server
+│   ├── mistral-inference/      # Mistral 7B model server
+│   ├── gemma-inference/        # Gemma 2 9B model server
+│   └── deepseek-r1qwen-inference/ # DeepSeek R1 Distill Qwen 1.5B
+├── docker/                     # Shared Docker images
+├── AGENTS.md                   # Agents mode documentation
+├── CONFESSIONS.md              # Confessions mode documentation
+├── DISCUSSION_MODE.md          # Discussion mode documentation
+└── VARIATIONS.md               # Variations mode documentation
 ```
 
 ## Technologies
@@ -172,22 +180,35 @@ serverless-llm/
 
 ```bash
 # Install dependencies
-pip install -r app/qwen-inference/requirements.txt
+pip install -r app/chat-interface/requirements.txt
 
-# Start model server(s)
-cd app/qwen-inference && python inference_server.py
-# Optional reasoning backend (new)
-# in another terminal:
-cd app/deepseek-r1qwen-inference && python inference_server.py
+# Start model server(s) - each runs on port 8000 by default
+cd app/qwen-inference && python inference_server.py      # Terminal 1
+cd app/phi-inference && python inference_server.py       # Terminal 2 (optional)
+cd app/deepseek-r1qwen-inference && python inference_server.py  # Terminal 3 (optional)
 
 # Start interface (separate terminal)
 cd app/chat-interface
-export QWEN_API_URL=http://localhost:8001
-export PHI_API_URL=http://localhost:8002
-export LLAMA_API_URL=http://localhost:8003
-# Only if you started the R1-Distill server
-export R1QWEN_API_URL=http://localhost:8004
+export QWEN_API_URL=http://localhost:8000   # Point to your running model(s)
+# Optional: Add more model URLs if running multiple
+# export PHI_API_URL=http://localhost:8001
+# export R1QWEN_API_URL=http://localhost:8002
 python chat_server.py
+
+# Access at http://localhost:8080
+```
+
+**Using Docker Compose** (recommended for running all services):
+
+```bash
+# Start everything
+docker-compose -f docker-compose.all.yml up -d
+
+# View logs
+docker-compose -f docker-compose.all.yml logs -f
+
+# Stop
+docker-compose -f docker-compose.all.yml down
 ```
 
 

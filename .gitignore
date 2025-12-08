@@ -1,3 +1,53 @@
+# Environment
 .env
+.env.local
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs
 *.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+*.tar
+
+# Models (large files - don't commit)
+*.gguf
+*.bin
+models/
+
+# Node (if any frontend tooling added)
+node_modules/
+npm-debug.log
+
+# Temporary
+tmp/
+temp/
+*.tmp
