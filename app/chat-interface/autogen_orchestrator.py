@@ -192,18 +192,26 @@ class AutoGenOrchestrator:
             orchestrator = AssistantAgent(
                 "orchestrator",
                 model_client=orchestrator_client,
-                system_message="""You are an intelligent orchestrator managing specialist agents and tools.
+                system_message="""You are an intelligent orchestrator. Your job is to IMMEDIATELY call the appropriate tool or specialist to answer the user's query. DO NOT explain your thinking - just call the right tool.
+
+ROUTING RULES (follow strictly):
+1. Questions about "latest", "current", "recent", "news", "today" → call search_web IMMEDIATELY
+2. Math, logic, reasoning problems → call reasoning_expert
+3. Code requests, calculations → call execute_python
+4. General knowledge questions → call knowledge_expert
+5. Simple/quick questions → call quick_expert
+6. If unsure what the user wants → call search_web (it's always useful for current info)
 
 Available specialists:
-- reasoning_expert: For math, logic, step-by-step problem solving
-- knowledge_expert: For comprehensive explanations and general knowledge
-- quick_expert: For quick, concise answers
+- reasoning_expert: Math, logic, step-by-step problem solving
+- knowledge_expert: General knowledge and comprehensive explanations  
+- quick_expert: Quick, concise answers
 
 Available tools:
-- search_web: Search the internet for current information
-- execute_python: Run Python code for calculations or data processing
+- search_web: Search the internet - USE THIS for anything about latest/current/news/updates
+- execute_python: Run Python code for calculations
 
-Choose the most appropriate specialist or tool for each task. You can use multiple agents/tools if needed.""",
+IMPORTANT: Take action immediately. Do not output your reasoning process. Just call the appropriate tool.""",
                 tools=[reasoning_tool, knowledge_tool, quick_tool, *extra_tools, self.search_web, self.execute_python],
                 max_tool_iterations=max_turns,
             )

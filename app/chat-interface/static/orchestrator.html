@@ -4,300 +4,370 @@
 {% block subtitle %}Multi-Agent Orchestration{% endblock %}
 
 {% block extra_css %}
-  <style>
-    /* Page-specific styles for AutoGen mode */
-    :root {
-      --tool-reasoning: #8B5CF6;
-      --tool-answer: #EC4899;
-      --tool-search: #14B8A6;
-      --tool-code: #F59E0B;
+<style>
+  /* Page-specific styles for AutoGen mode */
+  :root {
+    --tool-reasoning: #8B5CF6;
+    --tool-answer: #EC4899;
+    --tool-search: #14B8A6;
+    --tool-code: #F59E0B;
+  }
+
+  /* Input section styles now shared via common.css to match Chat */
+
+  .orchestration-section {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin-top: 24px;
+  }
+
+  .round {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+  }
+
+  .round-header {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--accent-color);
+  }
+
+  .tool-call {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    border-left: 3px solid var(--info-color);
+  }
+
+  .tool-call-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .tool-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+  }
+
+  .tool-enhance_reasoning {
+    background: var(--tool-reasoning);
+  }
+
+  .tool-answer {
+    background: var(--tool-answer);
+  }
+
+  .tool-search {
+    background: var(--tool-search);
+  }
+
+  .tool-code_interpreter {
+    background: var(--tool-code);
+  }
+
+  /* Agent badges - AutoGen specialist agents */
+  .tool-orchestrator {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c4f7c 100%);
+  }
+
+  .tool-user {
+    background: #6366f1;
+  }
+
+  .tool-reasoning_expert {
+    background: var(--tool-reasoning);
+  }
+
+  .tool-knowledge_expert {
+    background: #0ea5e9;
+  }
+
+  .tool-quick_expert {
+    background: #f97316;
+  }
+
+  .tool-gemma_expert {
+    background: #10b981;
+  }
+
+  .tool-mistral_expert {
+    background: #ef4444;
+  }
+
+  /* Tool badges - actual tool function names */
+  .tool-search_web {
+    background: var(--tool-search);
+  }
+
+  .tool-execute_python {
+    background: var(--tool-code);
+  }
+
+  /* Fallback for any undefined agent/tool - prevents white-on-white */
+  .tool-badge:not([class*="tool-orchestrator"]):not([class*="tool-user"]):not([class*="tool-reasoning"]):not([class*="tool-knowledge"]):not([class*="tool-quick"]):not([class*="tool-gemma"]):not([class*="tool-mistral"]):not([class*="tool-enhance"]):not([class*="tool-answer"]):not([class*="tool-search"]):not([class*="tool-code"]):not([class*="tool-execute"]) {
+    background: #64748b;
+  }
+
+  .tool-arguments {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+  }
+
+  .tool-result {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg-primary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+  }
+
+  .tool-result-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--success-color);
+    margin-bottom: 8px;
+  }
+
+  .tool-result-content {
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .final-answer {
+    background: var(--bg-secondary);
+    border: 2px solid var(--success-color);
+    border-left: 4px solid var(--success-color);
+    color: var(--text-primary);
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 24px;
+  }
+
+  .final-answer-header {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--success-color);
+  }
+
+  .final-answer-content {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .summary {
+    background: var(--bg-tertiary);
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-size: 13px;
+  }
+
+  .summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-text {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-subtext {
+    font-size: 13px;
+  }
+
+  code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 13px;
+  }
+
+  pre {
+    background: var(--bg-tertiary);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+  }
+
+  .loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
     }
+  }
 
-    /* Input section styles now shared via common.css to match Chat */
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+  }
 
-    .orchestration-section {
-      background: var(--bg-secondary);
-      border-radius: 16px;
-      padding: 24px;
-      border: 1px solid var(--border-color);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      margin-top: 24px;
-    }
+  .markdown-content ul,
+  .markdown-content ol {
+    margin-left: 20px;
+    margin-bottom: 8px;
+  }
 
-    .round {
-      margin-bottom: 24px;
-      padding: 16px;
-      background: var(--bg-primary);
-      border-radius: 10px;
-      border: 1px solid var(--border-color);
-    }
+  .markdown-content p {
+    margin-bottom: 8px;
+  }
 
-    .round-header {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: var(--accent-color);
-    }
+  /* Tools Info Card */
+  .tools-info-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 20px auto;
+    max-width: 500px;
+    text-align: left;
+  }
 
-    .tool-call {
-      margin-bottom: 16px;
-      padding: 12px;
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      border-left: 3px solid var(--info-color);
-    }
+  .tools-info-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
 
-    .tool-call-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
+  .tools-info-header svg {
+    flex-shrink: 0;
+    color: var(--info-color);
+  }
 
-    .tool-badge {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      color: white;
-    }
+  .tools-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-    .tool-enhance_reasoning { background: var(--tool-reasoning); }
-    .tool-answer { background: var(--tool-answer); }
-    .tool-search { background: var(--tool-search); }
-    .tool-code_interpreter { background: var(--tool-code); }
+  .tools-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+  }
 
-    .tool-arguments {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 8px;
-    }
+  .tool-bullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
 
-    .tool-result {
-      margin-top: 12px;
-      padding: 12px;
-      background: var(--bg-primary);
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-    }
+  .tool-bullet-reasoning {
+    background: var(--tool-reasoning);
+  }
 
-    .tool-result-header {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--success-color);
-      margin-bottom: 8px;
-    }
+  .tool-bullet-answer {
+    background: var(--tool-answer);
+  }
 
-    .tool-result-content {
-      font-size: 13px;
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
+  .tool-bullet-search {
+    background: var(--tool-search);
+  }
 
-    .final-answer {
-      background: var(--bg-secondary);
-      border: 2px solid var(--success-color);
-      border-left: 4px solid var(--success-color);
-      color: var(--text-primary);
-      padding: 20px;
-      border-radius: 12px;
-      margin-top: 24px;
-    }
+  .tool-bullet-code {
+    background: var(--tool-code);
+  }
 
-    .final-answer-header {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: var(--success-color);
-    }
+  .tool-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
 
-    .final-answer-content {
-      font-size: 14px;
-      line-height: 1.6;
-    }
+  .tool-item strong {
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+  }
 
-    .summary {
-      background: var(--bg-tertiary);
-      padding: 16px;
-      border-radius: 8px;
-      margin-top: 20px;
-      font-size: 13px;
-    }
+  .tool-desc {
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.4;
+  }
 
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
+  .tools-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
 
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text-secondary);
-    }
+  .tools-footer svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
 
-    .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-
-    .empty-state-text {
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
-
-    .empty-state-subtext {
-      font-size: 13px;
-    }
-
-    code {
-      background: var(--bg-tertiary);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'SF Mono', Monaco, monospace;
-      font-size: 13px;
-    }
-
-    pre {
-      background: var(--bg-tertiary);
-      padding: 12px;
-      border-radius: 6px;
-      overflow-x: auto;
-      margin: 8px 0;
-    }
-
-    pre code {
-      background: none;
-      padding: 0;
-    }
-
-    .loading {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--border-color);
-      border-radius: 50%;
-      border-top-color: var(--accent-color);
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .markdown-content h1, .markdown-content h2, .markdown-content h3 {
-      margin-top: 16px;
-      margin-bottom: 8px;
-    }
-
-    .markdown-content ul, .markdown-content ol {
-      margin-left: 20px;
-      margin-bottom: 8px;
-    }
-
-    .markdown-content p {
-      margin-bottom: 8px;
-    }
-
-    /* Tools Info Card */
-    .tools-info-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin: 20px auto;
-      max-width: 500px;
-      text-align: left;
-    }
-
-    .tools-info-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 12px;
-    }
-
-    .tools-info-header svg {
-      flex-shrink: 0;
-      color: var(--info-color);
-    }
-
-    .tools-list {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 12px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .tools-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-size: 12px;
-    }
-
-    .tool-bullet {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      margin-top: 6px;
-      flex-shrink: 0;
-    }
-
-    .tool-bullet-reasoning { background: var(--tool-reasoning); }
-    .tool-bullet-answer { background: var(--tool-answer); }
-    .tool-bullet-search { background: var(--tool-search); }
-    .tool-bullet-code { background: var(--tool-code); }
-
-    .tool-item {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      flex: 1;
-    }
-
-    .tool-item strong {
-      color: var(--text-primary);
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .tool-desc {
-      color: var(--text-secondary);
-      font-size: 11px;
-      line-height: 1.4;
-    }
-
-    .tools-footer {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border-color);
-      font-size: 11px;
-      color: var(--text-tertiary);
-    }
-
-    .tools-footer svg {
-      flex-shrink: 0;
-      opacity: 0.7;
-    }
-
-    .tools-footer strong {
-      color: var(--text-secondary);
-    }
-  </style>
+  .tools-footer strong {
+    color: var(--text-secondary);
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
-  <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
-  <script defer src="/static/orchestrator.js?v={{ orchestrator_js }}"></script>
+<script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
+<script defer src="/static/orchestrator.js?v={{ orchestrator_js }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -309,27 +379,34 @@
       and keeps going for multiple rounds until it can return a confident answer.
     </p>
     <p class="mode-overview-subtitle" style="margin-top: 8px;">
-      Specialist agents (Qwen, Phi, Llama) collaborate with tools to solve complex tasks using Microsoft's AutoGen framework
+      Specialist agents (Qwen, Phi, Llama) collaborate with tools to solve complex tasks using Microsoft's AutoGen
+      framework
       for intelligent multi-agent coordination.
     </p>
     <ul class="mode-overview-list">
-      <li>Available tools: reasoning models, final answer generation, DuckDuckGo search, and Python code interpreter.</li>
+      <li>Available tools: reasoning models, final answer generation, DuckDuckGo search, and Python code interpreter.
+      </li>
       <li>Control temperature, max tokens, and round budget for each run.</li>
       <li>Stream tool calls/results as they happen for full transparency.</li>
     </ul>
     <div class="example-prompts">
       <div class="example-prompts-label">Try an example:</div>
       <div class="example-chips">
-        <button class="example-chip" data-prompt="Search for the latest AI breakthroughs and summarize them">Latest AI news</button>
-        <button class="example-chip" data-prompt="Write Python code to calculate Fibonacci sequence recursively">Fibonacci code</button>
-        <button class="example-chip" data-prompt="Explain how transformers work, then write sample code">Transformers explained</button>
-        <button class="example-chip" data-prompt="Research quantum computing applications and create a summary">Quantum research</button>
+        <button class="example-chip" data-prompt="Search for the latest AI breakthroughs and summarize them">Latest AI
+          news</button>
+        <button class="example-chip"
+          data-prompt="Write Python code to calculate Fibonacci sequence recursively">Fibonacci code</button>
+        <button class="example-chip" data-prompt="Explain how transformers work, then write sample code">Transformers
+          explained</button>
+        <button class="example-chip" data-prompt="Research quantum computing applications and create a summary">Quantum
+          research</button>
       </div>
     </div>
 
     <div class="tools-info-card" style="margin-top: 20px;">
       <div class="tools-info-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="16" x2="12" y2="12"></line>
           <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -367,7 +444,8 @@
         </li>
       </ul>
       <div class="tools-footer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
         </svg>
@@ -377,44 +455,48 @@
   </div>
 </div>
 
-  <div class="input-container">
-    <div class="controls-row">
-      <div class="model-selector" id="modelSelector">
-        <!-- Model chips populated by model-selector.js -->
-      </div>
-      <div style="flex: 1;"></div>
-      <div class="controls-secondary">
-        <div class="control-group">
-          <label>Engine:</label>
-          <select id="engineSelect" style="font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
-            <option value="auto" selected>Auto</option>
-            <option value="autogen">AutoGen</option>
-            <option value="tools">ToolOrchestrator</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label>Rounds:</label>
-          <input type="number" id="maxRounds" value="5" min="1" max="10" style="width: 50px;">
-        </div>
-        <div class="control-group">
-          <label>Temp:</label>
-          <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
-          <span id="tempValue">0.7</span>
-        </div>
-        <div class="control-group">
-          <label>Tokens:</label>
-          <input type="number" id="maxTokens" value="512" min="128" max="2048" step="128" style="width: 70px;">
-        </div>
-      </div>
+<div class="input-container">
+  <div class="controls-row">
+    <div class="model-selector" id="modelSelector">
+      <!-- Model chips populated by model-selector.js -->
     </div>
-
-    <div class="input-wrapper">
-      <textarea id="userInput" placeholder="Enter your question... The orchestrator will intelligently route to the best tools and models." rows="1"></textarea>
-      <button id="sendBtn" class="send-btn" aria-label="Start orchestration">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-      </button>
+    <div style="flex: 1;"></div>
+    <div class="controls-secondary">
+      <div class="control-group">
+        <label>Engine:</label>
+        <select id="engineSelect"
+          style="font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+          <option value="auto" selected>Auto</option>
+          <option value="autogen">AutoGen</option>
+          <option value="tools">ToolOrchestrator</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Rounds:</label>
+        <input type="number" id="maxRounds" value="5" min="1" max="10" style="width: 50px;">
+      </div>
+      <div class="control-group">
+        <label>Temp:</label>
+        <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
+        <span id="tempValue">0.7</span>
+      </div>
+      <div class="control-group">
+        <label>Tokens:</label>
+        <input type="number" id="maxTokens" value="1024" min="128" max="4096" step="128" style="width: 70px;">
+      </div>
     </div>
   </div>
+
+  <div class="input-wrapper">
+    <textarea id="userInput"
+      placeholder="Enter your question... The orchestrator will intelligently route to the best tools and models."
+      rows="1"></textarea>
+    <button id="sendBtn" class="send-btn" aria-label="Start orchestration">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          stroke-linejoin="round" fill="none" />
+      </svg>
+    </button>
+  </div>
+</div>
 {% endblock %}
