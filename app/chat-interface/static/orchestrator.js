@@ -1,3 +1,78 @@
+// Helper function to render LaTeX expressions
+function renderLatex(content) {
+  if (!content || typeof katex === 'undefined') return content;
+
+  // Store code blocks to protect them from LaTeX processing
+  const codeBlocks = [];
+  let protectedContent = content.replace(/```[\s\S]*?```/g, (match) => {
+    codeBlocks.push(match);
+    return `__CODEBLOCK_${codeBlocks.length - 1}__`;
+  });
+
+  // Also protect inline code
+  const inlineCodes = [];
+  protectedContent = protectedContent.replace(/`[^`]+`/g, (match) => {
+    inlineCodes.push(match);
+    return `__INLINECODE_${inlineCodes.length - 1}__`;
+  });
+
+  // Render block math: $$...$$ or \[...\]
+  protectedContent = protectedContent.replace(/\$\$([\s\S]+?)\$\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  protectedContent = protectedContent.replace(/\\\[([\s\S]+?)\\\]/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  // Render inline math: $...$ or \(...\)
+  protectedContent = protectedContent.replace(/\$([^\s$][^$]*?[^\s$])\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  protectedContent = protectedContent.replace(/\\\(([\s\S]+?)\\\)/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  // Restore inline code
+  protectedContent = protectedContent.replace(/__INLINECODE_(\d+)__/g, (match, index) => {
+    return inlineCodes[parseInt(index)];
+  });
+
+  // Restore code blocks
+  protectedContent = protectedContent.replace(/__CODEBLOCK_(\d+)__/g, (match, index) => {
+    return codeBlocks[parseInt(index)];
+  });
+
+  return protectedContent;
+}
+
+function formatContent(content) {
+  if (!content) return '';
+  try {
+    const withLatex = renderLatex(content);
+    return marked.parse(withLatex);
+  } catch (e) {
+    return content;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize model selector (single-select mode, optional for this page)
     const modelSelector = new ModelSelector('#modelSelector', {
@@ -116,14 +191,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                   </div>
                   <div class="tool-result-content markdown-content"></div>
                 `;
-                messageDiv.querySelector('.tool-result-content').innerHTML = marked.parse(event.content);
+                messageDiv.querySelector('.tool-result-content').innerHTML = formatContent(event.content);
                 orchestrationSection.appendChild(messageDiv);
               } else if (event.event === 'message') {
                 // Generic message
                 const msgDiv = document.createElement('div');
                 msgDiv.className = 'tool-result';
                 msgDiv.innerHTML = `<div class="tool-result-content markdown-content"></div>`;
-                msgDiv.querySelector('.tool-result-content').innerHTML = marked.parse(event.content);
+                msgDiv.querySelector('.tool-result-content').innerHTML = formatContent(event.content);
                 orchestrationSection.appendChild(msgDiv);
               } else if (event.event === 'round_start') {
                 // New round
@@ -173,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <div class="tool-result-header">Orchestrator Thinking</div>
                   <div class="tool-result-content markdown-content"></div>
                 `;
-                thinkingDiv.querySelector('.tool-result-content').innerHTML = marked.parse(event.content);
+                thinkingDiv.querySelector('.tool-result-content').innerHTML = formatContent(event.content);
                 currentRound.appendChild(thinkingDiv);
               } else if (event.event === 'final_answer') {
                 // Final answer
@@ -183,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <div class="final-answer-header">Final Answer</div>
                   <div class="final-answer-content markdown-content"></div>
                 `;
-                finalDiv.querySelector('.final-answer-content').innerHTML = marked.parse(event.content);
+                finalDiv.querySelector('.final-answer-content').innerHTML = formatContent(event.content);
                 orchestrationSection.appendChild(finalDiv);
               } else if (event.event === 'complete') {
                 // Summary

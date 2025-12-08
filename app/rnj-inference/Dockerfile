@@ -47,9 +47,18 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
 
 COPY rnj-inference/inference_server.py .
 
+# Install curl for health checks  
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 ENV MODEL_NAME=EssentialAI/rnj-1-instruct-GGUF
 ENV PORT=8000
+# Set library path to find llama.cpp shared libraries
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.11/site-packages/llama_cpp/lib:$LD_LIBRARY_PATH
 
 EXPOSE 8000
+
+# Health check aligned with other inference servers
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["python3", "inference_server.py"]

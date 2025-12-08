@@ -199,6 +199,13 @@ MODEL_CONFIG = (
         "env": "LLAMA_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["LLAMA_API_URL"],
     },
+    {
+        "id": "rnj-1-instruct",
+        "name": "RNJ-1 Instruct",
+        "env": "RNJ_API_URL",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["RNJ_API_URL"],
+        "service": "rnj",
+    },
     
 )
 

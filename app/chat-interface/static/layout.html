@@ -11,10 +11,14 @@
   
   <!-- Shared Styles -->
   <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
+  <!-- KaTeX for LaTeX rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
   {% block extra_css %}{% endblock %}
 
   <!-- Shared Scripts -->
   <script defer src="/static/settings.js?v={{ settings_js }}"></script>
+  <!-- KaTeX for LaTeX rendering -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   {% block extra_js %}{% endblock %}
 </head>

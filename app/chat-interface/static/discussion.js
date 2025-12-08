@@ -30,6 +30,81 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   marked.use({ renderer });
 
+  // Helper function to render LaTeX expressions
+  function renderLatex(content) {
+    if (!content || typeof katex === 'undefined') return content;
+
+    // Store code blocks to protect them from LaTeX processing
+    const codeBlocks = [];
+    let protectedContent = content.replace(/```[\s\S]*?```/g, (match) => {
+      codeBlocks.push(match);
+      return `__CODEBLOCK_${codeBlocks.length - 1}__`;
+    });
+
+    // Also protect inline code
+    const inlineCodes = [];
+    protectedContent = protectedContent.replace(/`[^`]+`/g, (match) => {
+      inlineCodes.push(match);
+      return `__INLINECODE_${inlineCodes.length - 1}__`;
+    });
+
+    // Render block math: $$...$$ or \[...\]
+    protectedContent = protectedContent.replace(/\$\$([\s\S]+?)\$\$/g, (match, latex) => {
+      try {
+        return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
+      } catch (e) {
+        return match;
+      }
+    });
+
+    protectedContent = protectedContent.replace(/\\\[([\s\S]+?)\\\]/g, (match, latex) => {
+      try {
+        return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
+      } catch (e) {
+        return match;
+      }
+    });
+
+    // Render inline math: $...$ or \(...\)
+    protectedContent = protectedContent.replace(/\$([^\s$][^$]*?[^\s$])\$/g, (match, latex) => {
+      try {
+        return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
+      } catch (e) {
+        return match;
+      }
+    });
+
+    protectedContent = protectedContent.replace(/\\\(([\s\S]+?)\\\)/g, (match, latex) => {
+      try {
+        return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
+      } catch (e) {
+        return match;
+      }
+    });
+
+    // Restore inline code
+    protectedContent = protectedContent.replace(/__INLINECODE_(\d+)__/g, (match, index) => {
+      return inlineCodes[parseInt(index)];
+    });
+
+    // Restore code blocks
+    protectedContent = protectedContent.replace(/__CODEBLOCK_(\d+)__/g, (match, index) => {
+      return codeBlocks[parseInt(index)];
+    });
+
+    return protectedContent;
+  }
+
+  function formatContent(content) {
+    if (!content) return '';
+    try {
+      const withLatex = renderLatex(content);
+      return marked.parse(withLatex);
+    } catch (e) {
+      return content;
+    }
+  }
+
   const queryInput = document.getElementById('userInput');
   const startBtn = document.getElementById('sendBtn');
   const maxTokensInput = document.getElementById('maxTokens');
@@ -176,7 +251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Update existing turn
       const content = existing.querySelector('.turn-content');
       if (content) {
-        content.innerHTML = marked.parse(turn.content || '');
+        content.innerHTML = formatContent(turn.content || '');
       }
       existing.classList.toggle('streaming', streaming);
     } else {
@@ -190,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               </div>
               <div class="turn-badge">Round ${turn.turn_number + 1}</div>
             </div>
-            <div class="turn-content">${marked.parse(turn.content || '')}</div>
+            <div class="turn-content">${formatContent(turn.content || '')}</div>
           </div>
         `;
     }
@@ -228,7 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <strong>Source:</strong> ${synthesis.primary_source_model || 'Unknown'} ·
             <strong>Confidence:</strong> ${((synthesis.final_confidence || 0) * 100).toFixed(0)}%
           </div>
-          <div class="final-response">${marked.parse(finalResponse || 'Generating...')}</div>
+          <div class="final-response">${formatContent(finalResponse || 'Generating...')}</div>
         </div>
       `;
   }

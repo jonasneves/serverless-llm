@@ -8,6 +8,81 @@ const complianceMap = {
   unsure_complied_reported: { label: 'Uncertain (reported)', mood: 'partial' },
 };
 
+// Helper function to render LaTeX expressions
+function renderLatex(content) {
+  if (!content || typeof katex === 'undefined') return content;
+
+  // Store code blocks to protect them from LaTeX processing
+  const codeBlocks = [];
+  let protectedContent = content.replace(/```[\s\S]*?```/g, (match) => {
+    codeBlocks.push(match);
+    return `__CODEBLOCK_${codeBlocks.length - 1}__`;
+  });
+
+  // Also protect inline code
+  const inlineCodes = [];
+  protectedContent = protectedContent.replace(/`[^`]+`/g, (match) => {
+    inlineCodes.push(match);
+    return `__INLINECODE_${inlineCodes.length - 1}__`;
+  });
+
+  // Render block math: $$...$$ or \[...\]
+  protectedContent = protectedContent.replace(/\$\$([\s\S]+?)\$\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  protectedContent = protectedContent.replace(/\\\[([\s\S]+?)\\\]/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  // Render inline math: $...$ or \(...\)
+  protectedContent = protectedContent.replace(/\$([^\s$][^$]*?[^\s$])\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  protectedContent = protectedContent.replace(/\\\(([\s\S]+?)\\\)/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  // Restore inline code
+  protectedContent = protectedContent.replace(/__INLINECODE_(\d+)__/g, (match, index) => {
+    return inlineCodes[parseInt(index)];
+  });
+
+  // Restore code blocks
+  protectedContent = protectedContent.replace(/__CODEBLOCK_(\d+)__/g, (match, index) => {
+    return codeBlocks[parseInt(index)];
+  });
+
+  return protectedContent;
+}
+
+function formatContent(content) {
+  if (!content) return '';
+  try {
+    const withLatex = renderLatex(content);
+    return marked.parse(withLatex);
+  } catch (e) {
+    return content;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize model selector (multi-select mode)
   const modelSelector = new ModelSelector('#modelSelector', {
@@ -269,7 +344,7 @@ function resetAnswer(container, message) {
 function renderAnswer(container, content) {
   container.innerHTML = `
     <div class="response-item">
-      ${marked.parse(content || '')}
+      ${formatContent(content || '')}
     </div>
   `;
 }
