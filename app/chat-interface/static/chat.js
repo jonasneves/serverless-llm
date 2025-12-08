@@ -65,6 +65,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return '';
   }
 
+  function getModelContextLength(modelIdOrName) {
+    // Try direct ID access first
+    let model = modelSelector.models[modelIdOrName];
+
+    // If not found, try to find by name
+    if (!model) {
+      model = Object.values(modelSelector.models).find(m => m.name === modelIdOrName);
+    }
+
+    return model?.context_length || 0;
+  }
+
   function updateTokenUsage() {
     const selected = modelSelector.getSelected();
     // Only show token usage if exactly one model is selected
@@ -181,20 +193,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (responses.length === 1) {
       // Single model response
       const resp = responses[0];
+      const contextLength = getModelContextLength(resp.model);
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message assistant';
       messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${resp.model}</span>
-            ${getContextInfo(resp.model)}
             ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
           </div>
           <div class="message-content">${formatContent(resp.content)}</div>
           ${!resp.error ? `
           <div class="message-footer">
-            <div class="stat-item">
-              <span class="stat-label">Tokens</span>
-              <span class="stat-value">${resp.usage?.total_tokens || '-'}</span>
+            <div class="stat-item" title="Input tokens (prompt)">
+              <span class="stat-label">In</span>
+              <span class="stat-value">${resp.usage?.prompt_tokens ?? '-'}</span>
+            </div>
+            <div class="stat-item" title="Output tokens (completion)">
+              <span class="stat-label">Out</span>
+              <span class="stat-value">${resp.usage?.completion_tokens ?? '-'}</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">Time</span>
@@ -204,6 +220,12 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="stat-label">Tokens/s</span>
               <span class="stat-value">${resp.time && resp.usage ? (resp.usage.completion_tokens / resp.time).toFixed(1) : '-'}</span>
             </div>
+            ${contextLength > 0 ? `
+            <div class="stat-item stat-context" title="Model context window">
+              <span class="stat-label">Context</span>
+              <span class="stat-value">${formatContextLength(contextLength)}</span>
+            </div>
+            ` : ''}
           </div>
           ` : ''}
         `;
@@ -214,25 +236,35 @@ document.addEventListener('DOMContentLoaded', () => {
       container.className = 'model-responses';
 
       for (const resp of responses) {
+        const contextLength = getModelContextLength(resp.model);
         const responseDiv = document.createElement('div');
         responseDiv.className = 'model-response';
         responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${resp.model}</span>
-              ${getContextInfo(resp.model)}
               ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
             </div>
             <div class="message-content">${formatContent(resp.content)}</div>
             ${!resp.error ? `
             <div class="message-footer">
-              <div class="stat-item">
-                <span class="stat-label">Tokens</span>
-                <span class="stat-value">${resp.usage?.total_tokens || '-'}</span>
+              <div class="stat-item" title="Input tokens (prompt)">
+                <span class="stat-label">In</span>
+                <span class="stat-value">${resp.usage?.prompt_tokens ?? '-'}</span>
+              </div>
+              <div class="stat-item" title="Output tokens (completion)">
+                <span class="stat-label">Out</span>
+                <span class="stat-value">${resp.usage?.completion_tokens ?? '-'}</span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">Time</span>
                 <span class="stat-value">${resp.time ? resp.time.toFixed(2) + 's' : '-'}</span>
               </div>
+              ${contextLength > 0 ? `
+              <div class="stat-item stat-context" title="Model context window">
+                <span class="stat-label">Ctx</span>
+                <span class="stat-value">${formatContextLength(contextLength)}</span>
+              </div>
+              ` : ''}
             </div>
             ` : ''}
           `;
@@ -409,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         content: '',
         contentEl: element.querySelector(`[data-model-id="${modelId}"]`),
         footerEl: element.querySelector(`[data-footer-id="${modelId}"]`),
+        promptTokensEl: element.querySelector(`[data-prompt-tokens-id="${modelId}"]`),
         tokensEl: element.querySelector(`[data-tokens-id="${modelId}"]`),
         timeEl: element.querySelector(`[data-time-id="${modelId}"]`)
       };
@@ -419,24 +452,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if (models.length === 1) {
       const modelId = models[0];
       const modelName = modelSelector.models[modelId]?.name || modelId;
+      const contextLength = getModelContextLength(modelId);
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message assistant';
       messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${modelName}</span>
-            ${getContextInfo(modelId)}
             <span class="model-badge streaming-badge">Streaming...</span>
           </div>
           <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>
           <div class="message-footer" style="display: none;" data-footer-id="${modelId}">
-            <div class="stat-item">
-              <span class="stat-label">Tokens</span>
+            <div class="stat-item" title="Input tokens (prompt)">
+              <span class="stat-label">In</span>
+              <span class="stat-value" data-prompt-tokens-id="${modelId}">-</span>
+            </div>
+            <div class="stat-item" title="Output tokens (completion)">
+              <span class="stat-label">Out</span>
               <span class="stat-value" data-tokens-id="${modelId}">-</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">Time</span>
               <span class="stat-value" data-time-id="${modelId}">-</span>
             </div>
+            ${contextLength > 0 ? `
+            <div class="stat-item stat-context" title="Model context window">
+              <span class="stat-label">Context</span>
+              <span class="stat-value">${formatContextLength(contextLength)}</span>
+            </div>
+            ` : ''}
           </div>
         `;
       chatHistory.appendChild(messageDiv);
@@ -447,24 +490,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const modelId of models) {
         const modelName = modelSelector.models[modelId]?.name || modelId;
+        const contextLength = getModelContextLength(modelId);
         const responseDiv = document.createElement('div');
         responseDiv.className = 'model-response';
         responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${modelName}</span>
-              ${getContextInfo(modelId)}
               <span class="model-badge streaming-badge">Waiting...</span>
             </div>
             <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>
             <div class="message-footer" style="display: none;" data-footer-id="${modelId}">
-              <div class="stat-item">
-                <span class="stat-label">Tokens</span>
+              <div class="stat-item" title="Input tokens (prompt)">
+                <span class="stat-label">In</span>
+                <span class="stat-value" data-prompt-tokens-id="${modelId}">-</span>
+              </div>
+              <div class="stat-item" title="Output tokens (completion)">
+                <span class="stat-label">Out</span>
                 <span class="stat-value" data-tokens-id="${modelId}">-</span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">Time</span>
                 <span class="stat-value" data-time-id="${modelId}">-</span>
               </div>
+              ${contextLength > 0 ? `
+              <div class="stat-item stat-context" title="Model context window">
+                <span class="stat-label">Ctx</span>
+                <span class="stat-value">${formatContextLength(contextLength)}</span>
+              </div>
+              ` : ''}
             </div>
           `;
         container.appendChild(responseDiv);
@@ -491,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Finalize streaming for a model
-  function finalizeStreaming(modelData, modelId, time, tokenEstimate, error = false) {
+  function finalizeStreaming(modelData, modelId, time, tokenEstimate, error = false, usage = null) {
     const entry = modelData[modelId];
     if (!entry) return;
 
@@ -520,14 +573,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (entry.timeEl) {
         entry.timeEl.textContent = time.toFixed(2) + 's';
       }
-      if (entry.tokensEl) {
-        entry.tokensEl.textContent = tokenEstimate || '-';
+
+      // Display prompt tokens (input)
+      if (entry.promptTokensEl) {
+        const promptTokens = usage?.prompt_tokens;
+        entry.promptTokensEl.textContent = promptTokens != null ? promptTokens : '-';
       }
 
-      // Add tokens to usage tracker (only if one model is selected)
+      // Display completion tokens (output)
+      if (entry.tokensEl) {
+        const completionTokens = usage?.completion_tokens ?? tokenEstimate;
+        entry.tokensEl.textContent = completionTokens != null ? completionTokens : '-';
+      }
+
+      // Add total tokens to usage tracker (only if one model is selected)
       const currentSelection = modelSelector.getSelected();
-      if (currentSelection.length === 1 && tokenEstimate) {
-        addTokens(parseInt(tokenEstimate) || 0);
+      const totalTokens = usage?.total_tokens ?? tokenEstimate;
+      if (currentSelection.length === 1 && totalTokens) {
+        addTokens(parseInt(totalTokens) || 0);
       }
     }
   }
@@ -608,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!firstContent && data.total_content) {
                   firstContent = data.total_content;
                 }
-                finalizeStreaming(modelData, entryKey, data.time, data.token_estimate);
+                finalizeStreaming(modelData, entryKey, data.time, data.token_estimate, false, data.usage);
               } else if (data.error) {
                 // Error occurred
                 mappedEntry.content = data.content || 'Error occurred';

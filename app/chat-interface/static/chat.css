@@ -316,6 +316,18 @@ main {
   color: var(--text-primary);
 }
 
+/* Context stat item - subtle styling to differentiate from performance metrics */
+.stat-context {
+  opacity: 0.75;
+  margin-left: auto;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-color);
+}
+
+.stat-context .stat-value {
+  font-weight: 500;
+}
+
 .input-container {
   flex-shrink: 0;
   padding: 16px;
