@@ -164,10 +164,6 @@ jobs:
           sleep 60
 
       - name: Monitor
-        env:
-          DURATION_HOURS: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
-          AUTO_RESTART: ${{ github.event.client_payload.auto_restart != false && (inputs.auto_restart != false) }}
-          INSTANCES: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
         run: |
           cleanup() {
             docker stop chat-server cloudflared 2>/dev/null || true
@@ -177,10 +173,23 @@ jobs:
           }
           trap cleanup SIGTERM SIGINT
 
+          # Get duration from inputs/payload
+          DURATION_HOURS="${{ github.event.client_payload.duration_hours || github.event.inputs.duration_hours || '5' }}"
           DURATION=$((DURATION_HOURS * 3600))
           RESTART_THRESHOLD=$((DURATION - 360))
           START_TIME=$(date +%s)
           RESTART_TRIGGERED=false
+
+          # Auto-restart defaults to true unless explicitly set to false
+          AUTO_RESTART="${{ github.event.client_payload.auto_restart || github.event.inputs.auto_restart }}"
+          if [ -z "$AUTO_RESTART" ]; then
+            AUTO_RESTART="true"
+          fi
+
+          # Store instances count for restart trigger
+          INSTANCES="${{ github.event.client_payload.instances || github.event.inputs.instances || '1' }}"
+
+          echo "Duration: ${DURATION_HOURS}h | Auto-restart: $AUTO_RESTART | Instances: $INSTANCES"
 
           while true; do
             ELAPSED=$(($(date +%s) - START_TIME))
@@ -195,20 +204,46 @@ jobs:
             [ "$CHAT_STATUS" != "running" ] && docker start chat-server
             [ "$TUNNEL_STATUS" != "running" ] && docker start cloudflared
 
-            # Auto-restart
+            # Auto-restart (only from instance 1 to avoid multiple dispatches)
             if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ "${{ matrix.instance }}" = "1" ]; then
               if [ "$AUTO_RESTART" = "true" ]; then
-                PAT="${{ secrets.WORKFLOW_PAT }}"
-                if [ -n "$PAT" ]; then
-                  curl -sX POST \
-                    -H "Authorization: Bearer $PAT" \
-                    https://api.github.com/repos/${{ github.repository }}/dispatches \
-                    -d "{\"event_type\":\"restart-chat-interface\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$AUTO_RESTART,\"instances\":\"$INSTANCES\"}}"
+                echo ""
+                echo "=========================================="
+                echo "Triggering restart workflow..."
+                echo "=========================================="
 
-                  echo "Waiting 90s for new instance to start"
-                  sleep 90
+                PAT="${{ secrets.WORKFLOW_PAT }}"
+                if [ -z "$PAT" ]; then
+                  echo "ERROR: WORKFLOW_PAT secret is not set!"
+                  echo "Auto-restart requires a Personal Access Token with 'repo' scope"
+                  RESTART_TRIGGERED=true
+                else
+                  RESPONSE=$(curl -sX POST \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Authorization: Bearer $PAT" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    https://api.github.com/repos/${{ github.repository }}/dispatches \
+                    -d "{\"event_type\":\"restart-chat-interface\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$([ \"$AUTO_RESTART\" = \"true\" ] && echo \"true\" || echo \"false\"),\"instances\":\"$INSTANCES\"}}" \
+                    -w "\nHTTP_STATUS:%{http_code}" 2>&1)
+
+                  HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+                  BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
+
+                  if [ "$HTTP_CODE" = "204" ]; then
+                    echo "SUCCESS: Restart triggered!"
+                    echo "Waiting 90s for new instance to start..."
+                    sleep 90
+                  elif [ "$HTTP_CODE" = "401" ]; then
+                    echo "ERROR: Authentication failed (401) - Check WORKFLOW_PAT"
+                  elif [ "$HTTP_CODE" = "403" ]; then
+                    echo "ERROR: Permission denied (403) - WORKFLOW_PAT needs 'repo' scope"
+                  else
+                    echo "ERROR: Failed to trigger restart (HTTP $HTTP_CODE)"
+                    [ -n "$BODY" ] && echo "Response: $BODY"
+                  fi
+
+                  RESTART_TRIGGERED=true
                 fi
-                RESTART_TRIGGERED=true
               fi
             fi
 
