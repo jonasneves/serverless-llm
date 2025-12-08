@@ -15,8 +15,6 @@ Free, serverless, multi-model chat with Qwen3, Llama, Phi, Mistral, Gemma — po
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
-> **Badge Legend**: 🟢 Online | 🔴 Offline | 🟡 Degraded
-
 ## Overview Features
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
