@@ -38,9 +38,10 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && echo "project(ignored)" > tools/CMakeLists.txt \
     && echo "project(ignored)" > examples/CMakeLists.txt \
     && echo "project(ignored)" > tests/CMakeLists.txt \
-    # Patch llama-cpp-python's CMakeLists.txt to remove mtmd references (if any)
+    # Patch llama-cpp-python's CMakeLists.txt to remove mtmd/llava references
     && cd /tmp/llama-cpp-python \
     && sed -i '/mtmd/d' CMakeLists.txt || true \
+    && sed -i '/llava/d' CMakeLists.txt || true \
     && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
     && rm -rf /tmp/llama-cpp-python
 
