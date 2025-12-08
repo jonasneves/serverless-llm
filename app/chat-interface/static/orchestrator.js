@@ -77,7 +77,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize model selector (single-select mode, optional for this page)
   const modelSelector = new ModelSelector('#modelSelector', {
     multiSelect: false,
-    autoSelectOnline: true
+    autoSelectOnline: true,
+    filterTypes: ['local']  // Only show local models - Agents uses fixed local endpoints
   });
 
   await modelSelector.loadModels();

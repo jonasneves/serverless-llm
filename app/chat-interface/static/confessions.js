@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modelSelector = new ModelSelector('#modelSelector', {
     multiSelect: true,
     autoSelectOnline: true,
+    filterTypes: ['local'],  // Only show local models - API models don't work with this endpoint
     onSelectionChange: (selected) => {
       const runBtn = document.getElementById('sendBtn');
       const promptInput = document.getElementById('userInput');

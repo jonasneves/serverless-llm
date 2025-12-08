@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const modelSelector = new ModelSelector('#modelSelector', {
     showStatus: true,
     autoSelectOnline: true,
-    onSelectionChange: updateSendButtonState
+    onSelectionChange: updateSendButtonState,
+    filterTypes: ['local']  // Only show local models - API models don't work with streaming
   });
 
   let conversationHistory = [];

@@ -17,6 +17,7 @@ class ModelSelector {
       autoSelectOnline: options.autoSelectOnline !== false, // Default to true
       onSelectionChange: options.onSelectionChange || null,
       showStatus: options.showStatus !== false, // Default to true
+      filterTypes: options.filterTypes || null, // Filter by model type, e.g. ['local'] or ['local', 'api']
       ...options
     };
 
@@ -42,9 +43,15 @@ class ModelSelector {
       this.selectedModels.clear();
 
       data.models.forEach((model) => {
+        // Apply type filter if configured
+        const modelType = model.type || 'local';
+        if (this.options.filterTypes && !this.options.filterTypes.includes(modelType)) {
+          return; // Skip this model
+        }
+
         this.models[model.id] = {
           name: model.name,
-          type: model.type || 'local',  // 'local' or 'api'
+          type: modelType,
           status: model.type === 'api' ? 'online' : 'checking',  // API models always available/online
           context_length: model.context_length || 0
         };
