@@ -36,6 +36,7 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && echo "project(ignored)" > tools/CMakeLists.txt \
     && echo "project(ignored)" > examples/CMakeLists.txt \
     && echo "project(ignored)" > tests/CMakeLists.txt \
+    && mkdir -p tools/mtmd && echo "add_library(mtmd INTERFACE)" > tools/mtmd/CMakeLists.txt \
     && cd /tmp/llama-cpp-python \
     && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
     && rm -rf /tmp/llama-cpp-python
