@@ -24,7 +24,8 @@ RUN grep -v "llama-cpp-python" requirements.txt > requirements.no-lcp.txt \
     && pip3 install --no-cache-dir -r requirements.no-lcp.txt
 
 # Build llama-cpp-python with custom llama.cpp from PR #17811
-# Build llama-cpp-python with custom llama.cpp from PR #17811
+# Note: This PR adds RNJ-1 architecture support but has incompatible build changes.
+# We patch both llama.cpp and llama-cpp-python's CMakeLists.txt to work around this.
 RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && git clone --recursive https://github.com/abetlen/llama-cpp-python.git /tmp/llama-cpp-python \
     && cd /tmp/llama-cpp-python/vendor/llama.cpp \
@@ -32,12 +33,13 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && git fetch ggml pull/17811/head:rnj-pr \
     && git checkout rnj-pr \
     && git submodule update --init --recursive \
-    # Disable auxiliary targets that might fail build
+    # Disable auxiliary llama.cpp targets that have build issues in the PR
     && echo "project(ignored)" > tools/CMakeLists.txt \
     && echo "project(ignored)" > examples/CMakeLists.txt \
     && echo "project(ignored)" > tests/CMakeLists.txt \
-    && mkdir -p tools/mtmd && echo "add_library(mtmd INTERFACE)" > tools/mtmd/CMakeLists.txt \
+    # Patch llama-cpp-python's CMakeLists.txt to remove mtmd references
     && cd /tmp/llama-cpp-python \
+    && sed -i '/mtmd/d' CMakeLists.txt \
     && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
     && rm -rf /tmp/llama-cpp-python
 
