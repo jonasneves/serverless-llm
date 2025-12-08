@@ -126,11 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
   userInput.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    updateSendButtonState();
+  });
 
-    // Enable/disable send button based on content and model selection
-    const hasContent = this.value.trim().length > 0;
-    const hasModels = modelSelector.getSelected().length > 0;
-    sendBtn.disabled = !hasContent || !hasModels;
+  // Handle paste events (input event doesn't fire reliably for paste)
+  userInput.addEventListener('paste', () => {
+    setTimeout(updateSendButtonState, 0);
   });
 
   // Handle Enter key
@@ -708,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (prompt) {
         userInput.value = prompt;
         userInput.focus();
+        updateSendButtonState();  // Update button state after setting value
       }
     });
   });
@@ -720,6 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (prompt) {
         userInput.value = prompt;
         userInput.focus();
+        updateSendButtonState();  // Update button state after setting value
       }
     });
   });
