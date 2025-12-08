@@ -146,11 +146,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || './app' }}
-          file: ${{ 
-            matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' ||
-            matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' ||
-            './app/shared/Dockerfile.inference'
-          }}
+          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
           build-args: |
             MODEL_DIR=${{ matrix.model }}
           push: true
