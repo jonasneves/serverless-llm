@@ -22,6 +22,7 @@ RUN git clone https://github.com/ggml-org/llama.cpp.git . \
     && git checkout rnj-pr \
     && git submodule update --init --recursive \
     # Build with OpenBLAS support (disable CURL - we download models via Python)
+    # Disable multimodal (mtmd) - RNJ-1 is text-only
     && cmake -B build \
         -DGGML_BLAS=ON \
         -DGGML_BLAS_VENDOR=OpenBLAS \
@@ -29,10 +30,13 @@ RUN git clone https://github.com/ggml-org/llama.cpp.git . \
         -DLLAMA_BUILD_EXAMPLES=OFF \
         -DLLAMA_BUILD_TESTS=OFF \
         -DLLAMA_BUILD_SERVER=ON \
+        -DLLAMA_MTMD=OFF \
     && cmake --build build --target llama-server -j$(nproc) \
-    # Copy binary to standard location
+    # Copy binary and any shared libraries to standard locations
     && cp build/bin/llama-server /usr/local/bin/ \
     && chmod +x /usr/local/bin/llama-server \
+    && find build -name "*.so*" -exec cp -v {} /usr/local/lib/ \; || true \
+    && ldconfig \
     # Cleanup build files
     && rm -rf /build
 
