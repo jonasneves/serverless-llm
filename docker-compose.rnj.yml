@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  rnj-inference:
+    build:
+      context: ./app
+      dockerfile: rnj-inference/Dockerfile
+    container_name: rnj-inference
+    environment:
+      - MODEL_REPO=EssentialAI/rnj-1-instruct-GGUF
+      - MODEL_FILE=rnj-1-instruct-Q4_K_M.gguf
+      - N_CTX=2048
+      - N_THREADS=2
+      - PORT=8000
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_HOME=/app/.cache/huggingface
+    ports:
+      - "8009:8000"
+    volumes:
+      - rnj-cache:/app/.cache/huggingface
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - rnj-network
+
+  rnj-cloudflared:
+    build: ./docker/cloudflared
+    container_name: rnj-cloudflared
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN_RNJ}"]
+    depends_on:
+      rnj-inference:
+        condition: service_healthy
+    restart: unless-stopped
+    network_mode: host
+
+networks:
+  rnj-network:
+
+volumes:
+  rnj-cache:

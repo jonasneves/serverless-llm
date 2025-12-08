@@ -42,7 +42,7 @@ class ModelRouter:
         "reasoner-5": {
             "name": "RNJ-1-Instruct (GGUF)",
             "url_env": "RNJ_API_URL",
-            "description": "Experimental; requires llama.cpp RNJ support"
+            "description": "Specialized RNJ-1 model via llama.cpp"
         },
         "reasoner-6": {
             "name": "Mistral 7B Instruct",
@@ -78,7 +78,7 @@ class ModelRouter:
         "answer-5": {
             "name": "RNJ-1-Instruct (GGUF)",
             "url_env": "RNJ_API_URL",
-            "description": "Experimental; requires llama.cpp RNJ support"
+            "description": "Specialized RNJ-1 model via llama.cpp"
         },
         "answer-6": {
             "name": "Mistral 7B Instruct",

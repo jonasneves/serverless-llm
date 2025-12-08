@@ -19,5 +19,5 @@ DEFAULT_REMOTE_ENDPOINTS = {
     "PHI_API_URL": "https://phi.neevs.io",
     "LLAMA_API_URL": "https://llama.neevs.io",
     "R1QWEN_API_URL": "https://r1qwen.neevs.io",
-    # RNJ intentionally omitted from remote defaults until upstream support lands
+    "RNJ_API_URL": "https://rnj.neevs.io",
 }

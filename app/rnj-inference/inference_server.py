@@ -1,9 +1,5 @@
 """
 RNJ-1 Inference Server (GGUF) via shared base
-
-NOTE: This model requires llama.cpp support for the 'rnj1' architecture.
-Currently waiting for upstream PR to be merged.
-Once available, update llama-cpp-python to the supporting version.
 """
 
 import os
