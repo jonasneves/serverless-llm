@@ -190,6 +190,28 @@ class ModelSelector {
   }
 
   /**
+   * Select all models
+   */
+  selectAll() {
+    for (const id of Object.keys(this.models)) {
+      this.selectedModels.add(id);
+    }
+    this.updateTrigger();
+    this.renderDropdownContent();
+    this.notifySelectionChange();
+  }
+
+  /**
+   * Deselect all models
+   */
+  deselectAll() {
+    this.selectedModels.clear();
+    this.updateTrigger();
+    this.renderDropdownContent();
+    this.notifySelectionChange();
+  }
+
+  /**
    * Render the model selector
    */
   render() {
@@ -276,6 +298,25 @@ class ModelSelector {
   renderDropdownContent() {
     if (!this.dropdown) return;
     this.dropdown.innerHTML = '';
+
+    // Add Select All / Deselect All toggle in multi-select mode
+    if (this.options.multiSelect && Object.keys(this.models).length > 0) {
+      const allSelected = this.selectedModels.size === Object.keys(this.models).length;
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'model-select-all-btn';
+      toggleBtn.innerHTML = allSelected
+        ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg> Deselect All`
+        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Select All`;
+      toggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (allSelected) {
+          this.deselectAll();
+        } else {
+          this.selectAll();
+        }
+      };
+      this.dropdown.appendChild(toggleBtn);
+    }
 
     // Group models by type
     const localModels = Object.entries(this.models).filter(([id, m]) => m.type === 'local');

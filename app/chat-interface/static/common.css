@@ -1506,6 +1506,33 @@ button.small {
   opacity: 0.7;
 }
 
+.model-select-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.model-select-all-btn:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.model-select-all-btn svg {
+  flex-shrink: 0;
+}
+
 .model-check {
   margin-left: auto;
   opacity: 0;
