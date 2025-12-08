@@ -368,6 +368,8 @@ def build_completion_payload(
     }
     if stream:
         payload["stream"] = True
+        # Request usage stats (prompt_tokens, completion_tokens) in the final chunk
+        payload["stream_options"] = {"include_usage": True}
     return payload
 
 
