@@ -297,6 +297,7 @@ class ChatRequest(GenerationParams):
 class MultiChatRequest(GenerationParams):
     models: List[str]
     messages: List[ChatMessage]
+    github_token: Optional[str] = None  # User-provided token for API models
 
 class ModelStatus(BaseModel):
     model: str
@@ -814,6 +815,93 @@ async def chat_multi(request: MultiChatRequest):
     return {"responses": responses}
 
 
+# GitHub Models API Configuration
+GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
+
+async def stream_github_model_response(
+    model_id: str, 
+    messages: list, 
+    max_tokens: int, 
+    temperature: float,
+    github_token: str
+) -> AsyncGenerator[str, None]:
+    """Stream response from GitHub Models API for API models (GPT-4, DeepSeek, etc.)"""
+    display_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+    start_time = time.time()
+    total_content = ""
+    usage_data = None
+    
+    # Send initial event
+    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
+    
+    try:
+        client = HTTPClient.get_client()
+        
+        async with client.stream(
+            "POST",
+            GITHUB_MODELS_API_URL,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {github_token}",
+                "X-GitHub-Api-Version": "2022-11-28"
+            },
+            json={
+                "model": model_id,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": True,
+                "stream_options": {"include_usage": True}
+            },
+            timeout=120.0
+        ) as response:
+            if response.status_code != 200:
+                error_text = await response.aread()
+                error_msg = sanitize_error_message(error_text.decode(), GITHUB_MODELS_API_URL)
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
+                return
+            
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                    
+                data_str = line[6:]
+                if data_str.strip() == "[DONE]":
+                    break
+                    
+                try:
+                    data = json.loads(data_str)
+                    
+                    # Capture usage data if present
+                    if "usage" in data:
+                        usage_data = data["usage"]
+                    
+                    if "choices" in data and len(data["choices"]) > 0:
+                        delta = data["choices"][0].get("delta", {})
+                        content = delta.get("content", "")
+                        if content:
+                            total_content += content
+                            yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
+                except json.JSONDecodeError:
+                    pass
+        
+        # Send completion event
+        elapsed = time.time() - start_time
+        token_count = usage_data.get("total_tokens", len(total_content.split()) * 1.3) if usage_data else len(total_content.split()) * 1.3
+        
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage_data})}\n\n"
+        
+    except httpx.TimeoutException:
+        logger.error(f"Timeout connecting to GitHub Models API for {model_id}")
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Request timed out. Please try again.'})}\n\n"
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error to GitHub Models API: {e}")
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Cannot connect to GitHub Models API. Check your token.'})}\n\n"
+    except Exception as e:
+        logger.exception(f"Unexpected error streaming from GitHub Models API for {model_id}")
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'An unexpected error occurred.'})}\n\n"
+
+
 async def stream_model_response(model_id: str, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
     """Stream response from a single model using SSE format (with request queueing and keep-alives)"""
     endpoint = MODEL_ENDPOINTS[model_id]
@@ -935,32 +1023,70 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
         yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'An unexpected error occurred. Please try again.'})}\n\n"
 
 
-async def stream_multiple_models(models: list, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
-    """Stream responses from multiple models, yielding chunks in real-time as they arrive"""
-
+async def stream_multiple_models(
+    models: list, 
+    messages: list, 
+    max_tokens: int, 
+    temperature: float,
+    github_token: Optional[str] = None
+) -> AsyncGenerator[str, None]:
+    """Stream responses from multiple models, yielding chunks in real-time as they arrive.
+    Supports both local models and API models (via GitHub Models API).
+    """
+    # Categorize models
+    local_models = [m for m in models if m in MODEL_ENDPOINTS]
+    api_models = [m for m in models if m in MODEL_PROFILES and MODEL_PROFILES[m].get("model_type") == "api"]
+    
     # Use a queue to collect chunks from all models in real-time
     queue: asyncio.Queue = asyncio.Queue()
-    active_streams = len([m for m in models if m in MODEL_ENDPOINTS])
+    active_streams = len(local_models) + len(api_models)
     completed_streams = 0
+    
+    if active_streams == 0:
+        yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
+        return
 
-    async def stream_to_queue(model_id: str):
-        """Stream from a single model and put chunks into the shared queue"""
+    async def stream_local_to_queue(model_id: str):
+        """Stream from a local model and put chunks into the shared queue"""
         nonlocal completed_streams
         try:
             async for chunk in stream_model_response(model_id, messages, max_tokens, temperature):
                 await queue.put(chunk)
         finally:
             completed_streams += 1
-            # Signal completion when all streams are done
             if completed_streams >= active_streams:
-                await queue.put(None)  # Sentinel to signal completion
+                await queue.put(None)
+
+    async def stream_api_to_queue(model_id: str, token: str):
+        """Stream from an API model and put chunks into the shared queue"""
+        nonlocal completed_streams
+        try:
+            async for chunk in stream_github_model_response(model_id, messages, max_tokens, temperature, token):
+                await queue.put(chunk)
+        finally:
+            completed_streams += 1
+            if completed_streams >= active_streams:
+                await queue.put(None)
 
     # Start all streams concurrently
-    tasks = [
-        asyncio.create_task(stream_to_queue(model_id))
-        for model_id in models
-        if model_id in MODEL_ENDPOINTS
-    ]
+    tasks = []
+    
+    # Local model tasks
+    for model_id in local_models:
+        tasks.append(asyncio.create_task(stream_local_to_queue(model_id)))
+    
+    # API model tasks (only if token provided)
+    if github_token:
+        for model_id in api_models:
+            tasks.append(asyncio.create_task(stream_api_to_queue(model_id, github_token)))
+    else:
+        # No token - send error for API models
+        for model_id in api_models:
+            display_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+            yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'GitHub token required for API models. Add it in Settings.'})}\n\n"
+            completed_streams += 1
+            if completed_streams >= active_streams:
+                await queue.put(None)
 
     if not tasks:
         yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
@@ -985,11 +1111,22 @@ async def stream_multiple_models(models: list, messages: list, max_tokens: int, 
 
 @app.post("/api/chat/stream")
 async def chat_stream(request: MultiChatRequest):
-    """Stream chat responses using Server-Sent Events"""
+    """Stream chat responses using Server-Sent Events.
+    Supports both local models and API models (GPT-4, DeepSeek, etc.).
+    """
     messages = serialize_messages(request.messages)
+    
+    # Get GitHub token from request or environment
+    github_token = request.github_token or os.getenv("GH_MODELS_TOKEN")
 
     return StreamingResponse(
-        stream_multiple_models(request.models, messages, request.max_tokens, request.temperature),
+        stream_multiple_models(
+            request.models, 
+            messages, 
+            request.max_tokens, 
+            request.temperature,
+            github_token
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

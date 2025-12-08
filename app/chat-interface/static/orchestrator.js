@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modelSelector = new ModelSelector('#modelSelector', {
     multiSelect: false,
     autoSelectOnline: true,
-    filterTypes: ['local']  // Only show local models - Agents uses fixed local endpoints
   });
 
   await modelSelector.loadModels();

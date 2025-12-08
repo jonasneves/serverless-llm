@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const modelSelector = new ModelSelector('#modelSelector', {
     showStatus: true,
     autoSelectOnline: true,
-    onSelectionChange: updateSendButtonState,
-    filterTypes: ['local']  // Only show local models - API models don't work with streaming
+    onSelectionChange: updateSendButtonState
+    // Both local and API models are now supported
   });
 
   let conversationHistory = [];
@@ -500,6 +500,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let firstContent = '';
 
     try {
+      // Get GitHub token for API models (from settings panel)
+      const githubToken = window.SettingsPanel?.getToken?.() || '';
+
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -507,7 +510,8 @@ document.addEventListener('DOMContentLoaded', () => {
           models: models,
           messages: conversationHistory,
           max_tokens: parseInt(maxTokens.value),
-          temperature: parseFloat(tempSlider.value)
+          temperature: parseFloat(tempSlider.value),
+          github_token: githubToken || null  // Pass token for API models
         })
       });
 
