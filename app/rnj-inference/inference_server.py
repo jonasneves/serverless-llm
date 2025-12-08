@@ -49,6 +49,25 @@ llama_process: Optional[subprocess.Popen] = None
 http_client: Optional[httpx.AsyncClient] = None
 
 
+def check_llama_server():
+    """Check if llama-server binary exists and is executable"""
+    llama_path = "/usr/local/bin/llama-server"
+    if not os.path.exists(llama_path):
+        raise RuntimeError(f"llama-server not found at {llama_path}")
+    
+    # Try to get version
+    try:
+        result = subprocess.run(
+            [llama_path, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        logger.info(f"llama-server version: {result.stdout.strip()}")
+    except Exception as e:
+        logger.warning(f"Could not get llama-server version: {e}")
+
+
 def download_model() -> str:
     """Download model from HuggingFace Hub"""
     cache_dir = os.getenv("HF_HOME", "/app/.cache/huggingface")
@@ -75,13 +94,17 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
+        "--log-disable",  # Disable internal logging to stdout (use stderr instead)
     ]
     
     logger.info(f"Starting llama-server: {' '.join(cmd)}")
     
+    # Create log file for llama-server output
+    log_file = open("/tmp/llama-server.log", "w")
+    
     process = subprocess.Popen(
         cmd,
-        stdout=subprocess.PIPE,
+        stdout=log_file,
         stderr=subprocess.STDOUT,
         text=True,
     )
@@ -101,11 +124,28 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         
         # Check if process died
         if process.poll() is not None:
-            stdout = process.stdout.read() if process.stdout else ""
-            logger.error(f"llama-server died during startup:\n{stdout}")
-            raise RuntimeError("llama-server failed to start")
+            # Read the log file to get error output
+            log_file.flush()
+            try:
+                with open("/tmp/llama-server.log", "r") as f:
+                    output = f.read()
+                logger.error(f"llama-server died during startup. Exit code: {process.returncode}")
+                logger.error(f"Output:\n{output}")
+            except Exception as e:
+                logger.error(f"Could not read log file: {e}")
+            
+            raise RuntimeError(f"llama-server failed to start (exit code: {process.returncode})")
         
         time.sleep(1)
+    
+    # If we timeout, read what we have
+    log_file.flush()
+    try:
+        with open("/tmp/llama-server.log", "r") as f:
+            output = f.read()
+        logger.error(f"llama-server timeout. Output so far:\n{output}")
+    except Exception:
+        pass
     
     raise RuntimeError("llama-server did not become healthy in time")
 
@@ -126,6 +166,9 @@ def cleanup():
 async def startup():
     """Initialize the server"""
     global llama_process, http_client
+    
+    # Check llama-server binary
+    check_llama_server()
     
     # Download model
     model_path = download_model()
