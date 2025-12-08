@@ -24,6 +24,10 @@ class ModelSelector {
     this.selectedModels = new Set();
     this.statusIntervalId = null;
     this.initialCheckDone = false;
+    this.isOpen = false;
+    this.trigger = null;
+    this.dropdown = null;
+    this.boundClickOutside = null;
   }
 
   /**
@@ -41,7 +45,7 @@ class ModelSelector {
         this.models[model.id] = {
           name: model.name,
           type: model.type || 'local',  // 'local' or 'api'
-          status: model.type === 'api' ? 'available' : 'checking',  // API models always available
+          status: model.type === 'api' ? 'online' : 'checking',  // API models always available/online
           context_length: model.context_length || 0
         };
       });
@@ -83,7 +87,7 @@ class ModelSelector {
     }
 
     if (this.initialCheckDone) {
-      this.render();
+      this.updateStatus();
     }
   }
 
@@ -114,11 +118,11 @@ class ModelSelector {
         }
       }
       this.initialCheckDone = true;
-      this.render();
+      this.updateTrigger(); // Update trigger text after auto-select
+      this.renderDropdownContent();
       this.notifySelectionChange();
     } else if (!this.initialCheckDone) {
       this.initialCheckDone = true;
-      this.render();
     }
   }
 
@@ -130,6 +134,7 @@ class ModelSelector {
       // Single select mode - replace selection
       this.selectedModels.clear();
       this.selectedModels.add(id);
+      this.closeDropdown(); // Close on selection in single mode
     } else {
       // Multi-select mode - toggle
       if (this.selectedModels.has(id)) {
@@ -139,7 +144,8 @@ class ModelSelector {
       }
     }
 
-    this.render();
+    this.renderDropdownContent();
+    this.updateTrigger();
     this.notifySelectionChange();
   }
 
@@ -168,7 +174,8 @@ class ModelSelector {
     } else if (modelIds) {
       this.selectedModels.add(modelIds);
     }
-    this.render();
+    this.updateTrigger();
+    this.renderDropdownContent();
     this.notifySelectionChange();
   }
 
@@ -177,7 +184,8 @@ class ModelSelector {
    */
   clearSelection() {
     this.selectedModels.clear();
-    this.render();
+    this.updateTrigger();
+    this.renderDropdownContent();
     this.notifySelectionChange();
   }
 
@@ -189,52 +197,154 @@ class ModelSelector {
 
     this.container.innerHTML = '';
 
+    // Click outside listener
+    if (!this.boundClickOutside) {
+      this.boundClickOutside = (e) => {
+        if (this.dropdown && this.dropdown.classList.contains('show')) {
+          if (!this.container.contains(e.target)) {
+            this.closeDropdown();
+          }
+        }
+      };
+      document.addEventListener('click', this.boundClickOutside);
+    }
+
+    // 1. Trigger
+    this.trigger = document.createElement('div');
+    this.trigger.className = 'model-selector-trigger';
+    this.trigger.onclick = (e) => {
+      e.stopPropagation();
+      this.toggleDropdown();
+    };
+    this.container.appendChild(this.trigger);
+
+    // 2. Dropdown
+    this.dropdown = document.createElement('div');
+    this.dropdown.className = 'model-selector-dropdown';
+    this.container.appendChild(this.dropdown);
+
+    // Initial fill
+    this.updateTrigger();
+    this.renderDropdownContent();
+  }
+
+  toggleDropdown() {
+    if (!this.dropdown) return;
+    this.isOpen = !this.isOpen;
+    if (this.isOpen) {
+      this.dropdown.classList.add('show');
+    } else {
+      this.dropdown.classList.remove('show');
+    }
+  }
+
+  closeDropdown() {
+    if (this.dropdown) {
+      this.isOpen = false;
+      this.dropdown.classList.remove('show');
+    }
+  }
+
+  updateTrigger() {
+    if (!this.trigger) return;
+
+    const count = this.selectedModels.size;
+    let text = 'Select Model';
+    let badge = '';
+
+    if (count === 0) {
+      text = 'Select Model';
+    } else if (count === 1) {
+      const id = Array.from(this.selectedModels)[0];
+      text = this.models[id] ? this.models[id].name : id;
+    } else {
+      text = 'Multiple Models';
+      badge = `<span class="trigger-badge">${count}</span>`;
+    }
+
+    const chevron = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
+
+    this.trigger.innerHTML = `
+        <div class="trigger-content">
+            <span class="trigger-text">${text}</span>
+            ${badge}
+        </div>
+        ${chevron}
+      `;
+  }
+
+  renderDropdownContent() {
+    if (!this.dropdown) return;
+    this.dropdown.innerHTML = '';
+
     // Group models by type
     const localModels = Object.entries(this.models).filter(([id, m]) => m.type === 'local');
     const apiModels = Object.entries(this.models).filter(([id, m]) => m.type === 'api');
 
-    // Render local models first
-    for (const [id, model] of localModels) {
-      this.container.appendChild(this.createChip(id, model));
+    // Helper
+    const renderOption = (id, model) => {
+      const isSelected = this.selectedModels.has(id);
+      const el = document.createElement('div');
+      el.className = `model-option ${isSelected ? 'selected' : ''}`;
+
+      let statusClass = 'offline';
+      if (model.type === 'api') statusClass = 'online';
+      else if (model.status === 'online') statusClass = 'online';
+      else if (model.status === 'checking') statusClass = 'checking';
+
+      const statusDot = `<span class="status-dot status-${statusClass}"></span>`;
+      const checkIcon = `<span class="model-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+
+      el.innerHTML = `
+            ${statusDot}
+            <span class="model-name-text">${model.name}</span>
+            ${checkIcon}
+        `;
+
+      el.onclick = (e) => {
+        e.stopPropagation();
+        this.toggleModel(id);
+      };
+      return el;
+    };
+
+    if (localModels.length > 0) {
+      this.createGroupLabel('Local Models');
+      localModels.forEach(([id, model]) => {
+        this.dropdown.appendChild(renderOption(id, model));
+      });
     }
 
-    // Add separator if we have both types
-    if (localModels.length && apiModels.length) {
-      const separator = document.createElement('div');
-      separator.className = 'model-selector-separator';
-      separator.innerHTML = '<span class="separator-label">API Models</span>';
-      this.container.appendChild(separator);
+    if (apiModels.length > 0) {
+      this.createGroupLabel('API Models');
+      apiModels.forEach(([id, model]) => {
+        this.dropdown.appendChild(renderOption(id, model));
+      });
     }
 
-    // Render API models
-    for (const [id, model] of apiModels) {
-      this.container.appendChild(this.createChip(id, model));
+    if (localModels.length === 0 && apiModels.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.padding = '12px';
+      empty.style.color = 'var(--text-secondary)';
+      empty.style.fontSize = '12px';
+      empty.style.textAlign = 'center';
+      empty.textContent = 'No models found';
+      this.dropdown.appendChild(empty);
     }
   }
 
-  /**
-   * Create a model chip element
-   */
-  createChip(id, model) {
-    const chip = document.createElement('div');
-    chip.className = `model-chip ${this.selectedModels.has(id) ? 'selected' : ''} model-type-${model.type}`;
+  createGroupLabel(text) {
+    if (!this.dropdown) return;
+    const el = document.createElement('div');
+    el.className = 'model-group-label';
+    el.textContent = text;
+    this.dropdown.appendChild(el);
+  }
 
-    const statusDot = this.options.showStatus
-      ? `<span class="status-dot status-${model.status}"></span>`
-      : '';
-
-    const typeBadge = model.type === 'api'
-      ? '<span class="model-type-badge api">API</span>'
-      : '';
-
-    chip.innerHTML = `
-      ${statusDot}
-      <span class="model-name-text">${model.name}</span>
-      ${typeBadge}
-    `;
-
-    chip.onclick = () => this.toggleModel(id);
-    return chip;
+  updateStatus() {
+    this.renderDropdownContent();
+    // If we wanted to be more precise, we could select by ID and update the status dot
+    // but re-rendering the list is acceptable here.
   }
 
   /**
@@ -253,6 +363,10 @@ class ModelSelector {
     if (this.statusIntervalId) {
       clearInterval(this.statusIntervalId);
       this.statusIntervalId = null;
+    }
+    if (this.boundClickOutside) {
+      document.removeEventListener('click', this.boundClickOutside);
+      this.boundClickOutside = null;
     }
   }
 }
