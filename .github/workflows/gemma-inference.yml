@@ -5,6 +5,15 @@ run-name: Gemma 2 9B Inference Server
 on:
   workflow_dispatch:
     inputs:
+      instances:
+        description: 'Parallel instances (1-3)'
+        required: false
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
       duration_hours:
         description: 'Duration (max 5.5 hours)'
         required: false
@@ -15,15 +24,6 @@ on:
         required: false
         default: true
         type: boolean
-      instances:
-        description: 'Parallel instances (1-3)'
-        required: false
-        default: '1'
-        type: choice
-        options:
-          - '1'
-          - '2'
-          - '3'
       n_ctx:
         description: 'Context window size'
         required: false
