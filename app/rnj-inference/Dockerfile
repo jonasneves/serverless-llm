@@ -54,7 +54,7 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY rnj-inference/inference_server.py .
 
 ENV MODEL_REPO=EssentialAI/rnj-1-instruct-GGUF
-ENV MODEL_FILE=rnj-1-instruct-Q4_K_M.gguf
+ENV MODEL_FILE=rnj-1-8B-instruct-Q4_K_M.gguf
 ENV PORT=8000
 ENV N_CTX=2048
 ENV N_THREADS=2

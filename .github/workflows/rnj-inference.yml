@@ -55,7 +55,7 @@ jobs:
       model_name: "rnj"
       model_dir: "rnj-inference"
       model_repo: "EssentialAI/rnj-1-instruct-GGUF"
-      model_file: "rnj-1-instruct-Q4_K_M.gguf"
+      model_file: "rnj-1-8B-instruct-Q4_K_M.gguf"
       cache_key_prefix: "gguf-rnj-1"
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_RNJ"
       restart_event_type: "restart-rnj-inference"
