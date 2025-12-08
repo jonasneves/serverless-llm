@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       instances:
-        description: 'Number of parallel instances (1-3)'
+        description: 'Parallel instances (1-3)'
         required: false
         default: '1'
         type: choice
@@ -15,7 +15,7 @@ on:
           - '2'
           - '3'
       duration_hours:
-        description: 'How long to run (max 5.5 hours)'
+        description: 'Duration (max 5.5 hours)'
         required: false
         default: '5'
         type: string
