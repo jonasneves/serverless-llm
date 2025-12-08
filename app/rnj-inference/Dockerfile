@@ -21,10 +21,11 @@ RUN git clone https://github.com/ggml-org/llama.cpp.git . \
     && git fetch origin pull/17811/head:rnj-pr \
     && git checkout rnj-pr \
     && git submodule update --init --recursive \
-    # Build with OpenBLAS support
+    # Build with OpenBLAS support (disable CURL - we download models via Python)
     && cmake -B build \
         -DGGML_BLAS=ON \
         -DGGML_BLAS_VENDOR=OpenBLAS \
+        -DLLAMA_CURL=OFF \
         -DLLAMA_BUILD_EXAMPLES=OFF \
         -DLLAMA_BUILD_TESTS=OFF \
         -DLLAMA_BUILD_SERVER=ON \
