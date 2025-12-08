@@ -50,14 +50,18 @@ jobs:
             echo "Changed files:"
             echo "$CHANGED_FILES"
 
-            # Extract changed model directories
-            CHANGED_MODELS=$(echo "$CHANGED_FILES" | grep -E '^app/.+-inference/' | cut -d'/' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
+            # Extract changed model directories (includes -inference and chat-interface)
+            CHANGED_MODELS=$(echo "$CHANGED_FILES" | grep -E '^app/(.+-inference|chat-interface)/' | cut -d'/' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
+
+            # Check if cloudflared changed
+            CLOUDFLARED_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^docker/cloudflared/' && echo "cloudflared" || echo "")
 
             # If shared/ changed, rebuild all
             if echo "$CHANGED_FILES" | grep -q '^app/shared/'; then
               MODELS="all"
-            elif [ -n "$CHANGED_MODELS" ]; then
-              MODELS="$CHANGED_MODELS"
+            elif [ -n "$CHANGED_MODELS" ] || [ -n "$CLOUDFLARED_CHANGED" ]; then
+              # Combine changed models and cloudflared
+              MODELS=$(echo "${CHANGED_MODELS}${CHANGED_MODELS:+,}${CLOUDFLARED_CHANGED}" | sed 's/^,//' | sed 's/,$//')
             else
               MODELS=""
             fi
