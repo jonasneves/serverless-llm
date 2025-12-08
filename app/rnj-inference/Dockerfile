@@ -42,7 +42,7 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && cd /tmp/llama-cpp-python \
     && sed -i '/mtmd/d' CMakeLists.txt || true \
     && sed -i '/llava/d' CMakeLists.txt || true \
-    && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
+    && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DBUILD_SHARED_LIBS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
     && rm -rf /tmp/llama-cpp-python
 
 COPY rnj-inference/inference_server.py .
