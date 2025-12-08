@@ -74,97 +74,101 @@ function formatContent(content) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize model selector (single-select mode, optional for this page)
-    const modelSelector = new ModelSelector('#modelSelector', {
-      multiSelect: false,
-      autoSelectOnline: true
-    });
-    
-    await modelSelector.loadModels();
+  // Initialize model selector (single-select mode, optional for this page)
+  const modelSelector = new ModelSelector('#modelSelector', {
+    multiSelect: false,
+    autoSelectOnline: true
+  });
 
-    const queryInput = document.getElementById('userInput');
-    const maxRoundsInput = document.getElementById('maxRounds');
-    const engineSelect = document.getElementById('engineSelect');
-    const temperatureInput = document.getElementById('tempSlider');
-    const tempValue = document.getElementById('tempValue');
-    const maxTokensInput = document.getElementById('maxTokens');
-    const startBtn = document.getElementById('sendBtn');
-    let originalBtnHTML = null;
-    const orchestrationSection = document.getElementById('orchestrationSection');
+  await modelSelector.loadModels();
 
-    // Temperature slider
-    temperatureInput.addEventListener('input', () => {
-      tempValue.textContent = temperatureInput.value;
-    });
+  const queryInput = document.getElementById('userInput');
+  const maxRoundsInput = document.getElementById('maxRounds');
+  const engineSelect = document.getElementById('engineSelect');
+  const temperatureInput = document.getElementById('tempSlider');
+  const tempValue = document.getElementById('tempValue');
+  const maxTokensInput = document.getElementById('maxTokens');
+  const startBtn = document.getElementById('sendBtn');
+  let originalBtnHTML = null;
+  const orchestrationSection = document.getElementById('orchestrationSection');
 
-    let isRunning = false;
+  // Temperature slider
+  temperatureInput.addEventListener('input', () => {
+    tempValue.textContent = temperatureInput.value;
+  });
 
-    async function startOrchestration() {
-      const query = queryInput.value.trim();
-      if (!query) {
-        alert('Please enter a question');
-        return;
+  let isRunning = false;
+
+  async function startOrchestration() {
+    const query = queryInput.value.trim();
+    if (!query) {
+      alert('Please enter a question');
+      return;
+    }
+
+    if (isRunning) return;
+    isRunning = true;
+    startBtn.disabled = true;
+    // Preserve original content to restore later
+    if (originalBtnHTML === null) originalBtnHTML = startBtn.innerHTML;
+    startBtn.innerHTML = '<span class="loading"></span>';
+
+    // Clear input box and reset height
+    queryInput.value = '';
+    queryInput.style.height = 'auto';
+
+    // Clear previous results
+    orchestrationSection.innerHTML = '';
+
+    try {
+      const engine = engineSelect ? engineSelect.value : 'auto';
+      const response = await fetch(`/api/chat/orchestrator/stream?engine=${encodeURIComponent(engine)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: query,
+          max_rounds: parseInt(maxRoundsInput.value),
+          temperature: parseFloat(temperatureInput.value),
+          max_tokens: parseInt(maxTokensInput.value)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      if (isRunning) return;
-      isRunning = true;
-      startBtn.disabled = true;
-      // Preserve original content to restore later
-      if (originalBtnHTML === null) originalBtnHTML = startBtn.innerHTML;
-      startBtn.innerHTML = '<span class="loading"></span>';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-      // Clear previous results
-      orchestrationSection.innerHTML = '';
+      let currentRound = null;
+      let currentToolCall = null;
+      let buffer = '';  // Buffer for incomplete SSE events
 
-      try {
-        const engine = engineSelect ? engineSelect.value : 'auto';
-        const response = await fetch(`/api/chat/orchestrator/stream?engine=${encodeURIComponent(engine)}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: query,
-            max_rounds: parseInt(maxRoundsInput.value),
-            temperature: parseFloat(temperatureInput.value),
-            max_tokens: parseInt(maxTokensInput.value)
-          })
-        });
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const chunk = decoder.decode(value);
+        buffer += chunk;
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        // Split by double newline (SSE event separator)
+        const events = buffer.split('\n\n');
 
-        let currentRound = null;
-        let currentToolCall = null;
-        let buffer = '';  // Buffer for incomplete SSE events
+        // Keep the last incomplete event in the buffer
+        buffer = events.pop() || '';
 
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
+        for (const eventData of events) {
+          const lines = eventData.split('\n');
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
 
-          const chunk = decoder.decode(value);
-          buffer += chunk;
+            const jsonStr = line.slice(6);
+            if (!jsonStr.trim()) continue;
 
-          // Split by double newline (SSE event separator)
-          const events = buffer.split('\n\n');
-
-          // Keep the last incomplete event in the buffer
-          buffer = events.pop() || '';
-
-          for (const eventData of events) {
-            const lines = eventData.split('\n');
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-
-              const jsonStr = line.slice(6);
-              if (!jsonStr.trim()) continue;
-
-              try {
-                const event = JSON.parse(jsonStr);
+            try {
+              const event = JSON.parse(jsonStr);
 
               if (event.event === 'start') {
                 // Just started
@@ -302,12 +306,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {
               console.error('Failed to parse event:', e, jsonStr);
             }
-            }
           }
         }
-      } catch (error) {
-        console.error('Orchestration failed:', error);
-        orchestrationSection.innerHTML = `
+      }
+    } catch (error) {
+      console.error('Orchestration failed:', error);
+      orchestrationSection.innerHTML = `
           <div style="color: var(--warning-color); padding: 20px; text-align: center;">
             <div style="margin-bottom: 12px;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -320,54 +324,54 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="font-size: 13px; margin-top: 8px;">${error.message}</div>
           </div>
         `;
-      } finally {
-        isRunning = false;
-        startBtn.disabled = false;
-        if (originalBtnHTML !== null) {
-          startBtn.innerHTML = originalBtnHTML;
-        }
+    } finally {
+      isRunning = false;
+      startBtn.disabled = false;
+      if (originalBtnHTML !== null) {
+        startBtn.innerHTML = originalBtnHTML;
       }
     }
+  }
 
-    // Allow Enter to submit (with Shift+Enter for newlines)
-    // Auto-resize textarea similar to Chat page
-    queryInput.addEventListener('input', function() {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-    });
+  // Allow Enter to submit (with Shift+Enter for newlines)
+  // Auto-resize textarea similar to Chat page
+  queryInput.addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+  });
 
-    // Allow Enter to submit (with Shift+Enter for newlines)
-    queryInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
+  // Allow Enter to submit (with Shift+Enter for newlines)
+  queryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      startOrchestration();
+    }
+  });
+
+  startBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    startOrchestration();
+  });
+
+  // Handle Enter key
+  queryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!startBtn.disabled && queryInput.value.trim()) {
         startOrchestration();
       }
-    });
+    }
+  });
 
-    startBtn.addEventListener('click', (event) => {
-      event.preventDefault();
-      startOrchestration();
-    });
-
-    // Handle Enter key
-    queryInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (!startBtn.disabled && queryInput.value.trim()) {
-          startOrchestration();
-        }
+  // Handle example prompt clicks
+  document.querySelectorAll('.example-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      const prompt = chip.getAttribute('data-prompt');
+      if (prompt) {
+        queryInput.value = prompt;
+        queryInput.focus();
       }
     });
-
-    // Handle example prompt clicks
-    document.querySelectorAll('.example-chip').forEach(chip => {
-      chip.addEventListener('click', (e) => {
-        e.preventDefault();
-        const prompt = chip.getAttribute('data-prompt');
-        if (prompt) {
-          queryInput.value = prompt;
-          queryInput.focus();
-        }
-      });
-    });
+  });
 });
