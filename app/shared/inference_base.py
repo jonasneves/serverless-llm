@@ -94,7 +94,8 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
 
     # Model state and concurrency gate
     llm: Optional[Llama] = None
-    inference_lock = asyncio.Semaphore(1)
+    max_concurrent = int(os.getenv("MAX_CONCURRENT", "2"))
+    inference_lock = asyncio.Semaphore(max_concurrent)
 
     def _load_model():
         nonlocal llm
@@ -103,7 +104,7 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         n_threads = int(os.getenv("N_THREADS", str(config.default_n_threads)))
         n_batch = int(os.getenv("N_BATCH", str(config.n_batch)))
 
-        print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}")
+        print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}, max_concurrent={max_concurrent}")
         llm = Llama(
             model_path=model_path,
             n_ctx=n_ctx,
@@ -150,6 +151,7 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             "file": os.getenv("MODEL_FILE", config.default_file),
             "n_ctx": int(os.getenv("N_CTX", str(config.default_n_ctx))),
             "n_threads": int(os.getenv("N_THREADS", str(config.default_n_threads))),
+            "max_concurrent": max_concurrent,
             "git_sha": os.getenv("GIT_SHA", "unknown"),
         }
 

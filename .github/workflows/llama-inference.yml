@@ -27,7 +27,7 @@ on:
       n_ctx:
         description: 'Context window size'
         required: false
-        default: '33000'
+        default: '4096'
         type: string
       n_threads:
         description: 'CPU threads'
@@ -38,6 +38,11 @@ on:
         description: 'Batch size'
         required: false
         default: '512'
+        type: string
+      max_concurrent:
+        description: 'Max concurrent requests per instance'
+        required: false
+        default: '4'
         type: string
 
   repository_dispatch:
@@ -66,6 +71,7 @@ jobs:
       n_ctx: ${{ inputs.n_ctx }}
       n_threads: ${{ inputs.n_threads }}
       n_batch: ${{ inputs.n_batch }}
+      max_concurrent: ${{ inputs.max_concurrent }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_LLAMA }}

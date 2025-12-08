@@ -33,6 +33,7 @@ PORT = int(os.getenv("PORT", "8000"))
 N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "2"))
 N_BATCH = int(os.getenv("N_BATCH", "512"))
+MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "3"))
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # Internal port for llama-server (proxied through FastAPI)
@@ -73,6 +74,7 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--ctx-size", str(N_CTX),
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
+        "--parallel", str(MAX_CONCURRENT),
     ]
     
     logger.info(f"Starting llama-server: {' '.join(cmd)}")
@@ -175,6 +177,7 @@ async def health_details():
         "model": MODEL_FILE,
         "n_ctx": N_CTX,
         "n_threads": N_THREADS,
+        "max_concurrent": MAX_CONCURRENT,
     }
 
 
