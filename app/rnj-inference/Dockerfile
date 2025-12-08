@@ -24,11 +24,11 @@ RUN grep -v "llama-cpp-python" requirements.txt > requirements.no-lcp.txt \
     && pip3 install --no-cache-dir -r requirements.no-lcp.txt
 
 # Build llama-cpp-python with custom llama.cpp from PR #17811
-# Note: This PR adds RNJ-1 architecture support but is based on an older llama.cpp.
-# We must use an older llama-cpp-python version (v0.2.90) that has compatible bindings.
-# The latest v0.3.x expects newer API functions that don't exist in the PR's base.
+# Note: This PR adds RNJ-1 architecture support.
+# We use GGML_STATIC=ON to statically link GGML into libllama.so,
+# avoiding runtime dependency on libggml-base.so
 RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
-    && git clone --recursive --branch v0.2.90 https://github.com/abetlen/llama-cpp-python.git /tmp/llama-cpp-python \
+    && git clone --recursive https://github.com/abetlen/llama-cpp-python.git /tmp/llama-cpp-python \
     && cd /tmp/llama-cpp-python/vendor/llama.cpp \
     && git remote add ggml https://github.com/ggml-org/llama.cpp || true \
     && git fetch ggml pull/17811/head:rnj-pr \
@@ -42,7 +42,7 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && cd /tmp/llama-cpp-python \
     && sed -i '/mtmd/d' CMakeLists.txt || true \
     && sed -i '/llava/d' CMakeLists.txt || true \
-    && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DBUILD_SHARED_LIBS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
+    && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DGGML_STATIC=ON -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
     && rm -rf /tmp/llama-cpp-python
 
 # Copy llama.cpp shared libraries to standard location and update linker cache
