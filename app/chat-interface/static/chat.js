@@ -329,28 +329,69 @@ document.addEventListener('DOMContentLoaded', () => {
     return protectedContent;
   }
 
-  function stripThinkingTags(content) {
-    if (!content) return content;
-    // Remove <think>...</think> blocks (used by Qwen3, DeepSeek-R1, etc.)
-    return content.replace(/<think>[\s\S]*?<\/think>\s*/gi, '').trim();
+  function parseThinkingContent(content) {
+    if (!content) return { thinking: null, answer: content };
+
+    // Match <think>...</think> blocks (used by Qwen3, DeepSeek-R1, etc.)
+    const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>\s*([\s\S]*)/i);
+    if (thinkMatch && thinkMatch[1].trim().length > 0) {
+      return {
+        thinking: thinkMatch[1].trim(),
+        answer: thinkMatch[2].trim()
+      };
+    }
+
+    return { thinking: null, answer: content };
+  }
+
+  function renderThinkingSection(thinking) {
+    // Escape HTML in thinking content for safety
+    const escapedThinking = thinking
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+
+    return `
+      <details class="thinking-section">
+        <summary class="thinking-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Thinking process</span>
+        </summary>
+        <div class="thinking-content">${escapedThinking}</div>
+      </details>
+    `;
   }
 
   function formatContent(content) {
     if (!content) return '';
 
     try {
-      // Strip thinking tags from reasoning models
-      const cleaned = stripThinkingTags(content);
-      // First render LaTeX
-      const withLatex = renderLatex(cleaned);
-      // Then use marked.js for markdown parsing
-      return marked.parse(withLatex);
+      // Parse thinking blocks from reasoning models
+      const { thinking, answer } = parseThinkingContent(content);
+
+      let html = '';
+
+      // Add collapsible thinking section if present
+      if (thinking) {
+        html += renderThinkingSection(thinking);
+      }
+
+      // Format and add the answer
+      const withLatex = renderLatex(answer);
+      html += marked.parse(withLatex);
+
+      return html;
     } catch (e) {
       // Fallback: escape HTML and preserve line breaks
       return content
         .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
+        .replace(/<(?!think|\/think)/g, '&lt;')
+        .replace(/(?<!think)>/g, '&gt;')
         .replace(/\\n/g, '<br>');
     }
   }

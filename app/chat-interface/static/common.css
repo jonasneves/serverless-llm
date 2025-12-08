@@ -1707,3 +1707,81 @@ button.small {
     width: 50px;
   }
 }
+
+/* Thinking Section Styles (for reasoning models like Qwen3, DeepSeek-R1) */
+.thinking-section {
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  transition: all 0.15s ease;
+  list-style: none;
+}
+
+.thinking-header::-webkit-details-marker {
+  display: none;
+}
+
+.thinking-header::after {
+  content: '';
+  margin-left: auto;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.thinking-section[open] .thinking-header::after {
+  transform: rotate(180deg);
+}
+
+.thinking-header:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.thinking-header svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.thinking-content {
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--font-mono, 'SF Mono', Monaco, 'Courier New', monospace);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+[data-theme="dark"] .thinking-section {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .thinking-header {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .thinking-content {
+  background: rgba(0, 0, 0, 0.2);
+}
