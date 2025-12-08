@@ -21,6 +21,14 @@
         </div>
         <div class="settings-modal-body">
           <div class="settings-section">
+            <h3>Theme</h3>
+            <label class="toggle-row">
+              <input type="checkbox" id="darkModeToggle">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Dark Mode</span>
+            </label>
+          </div>
+          <div class="settings-section">
             <h3>API Models</h3>
             <p class="settings-description">Enable cloud-based API models (GPT-4, DeepSeek, Llama 405B, etc.) in the model selector.</p>
             <label class="toggle-row">
@@ -156,17 +164,21 @@
   }
 
   function initThemeToggle() {
-    const themeToggle = document.getElementById('themeToggle');
     const html = document.documentElement;
     const savedTheme = localStorage.getItem('theme') || 'light';
     html.setAttribute('data-theme', savedTheme);
 
-    themeToggle?.addEventListener('click', () => {
-      const currentTheme = html.getAttribute('data-theme');
-      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', nextTheme);
-      localStorage.setItem('theme', nextTheme);
-    });
+    // Dark mode toggle in settings modal
+    const darkModeToggle = modal?.querySelector('#darkModeToggle');
+    if (darkModeToggle) {
+      darkModeToggle.checked = savedTheme === 'dark';
+
+      darkModeToggle.addEventListener('change', () => {
+        const nextTheme = darkModeToggle.checked ? 'dark' : 'light';
+        html.setAttribute('data-theme', nextTheme);
+        localStorage.setItem('theme', nextTheme);
+      });
+    }
   }
 
   const API_MODELS_STORAGE_KEY = 'api_models_enabled';

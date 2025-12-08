@@ -4,826 +4,850 @@
 {% block subtitle %}Orchestrated Discussion{% endblock %}
 
 {% block extra_css %}
-  <style>
-    /* Page-specific styles for Discussion mode */
-    :root {
-      --qwen-color: #8B5CF6;
-      --phi-color: #EC4899;
-      --llama-color: #14B8A6;
-    }
-
-    .discussion-area {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .card-divider {
-      width: 100%;
-      height: 1px;
-      background: var(--border-color);
-      margin: 20px 0;
-    }
-
-    .overview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 20px;
-      margin-bottom: 24px;
-    }
-
-    #discussionContent {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    #discussionContent > * {
-      scroll-margin-top: 80px;
-    }
-
-    .orchestrator-bar {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 13px;
-      position: sticky;
-      top: 80px;
-      z-index: 100;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .orchestrator-bar.visible {
-      display: flex;
-    }
-
-    [data-theme="dark"] .orchestrator-bar {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .orchestrator-bar-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      background: var(--accent-color);
-      border-radius: 6px;
-      color: white;
-      flex-shrink: 0;
-    }
-
-    .orchestrator-bar-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .orchestrator-bar-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-tertiary);
-      font-weight: 600;
-    }
-
-    .orchestrator-bar-status {
-      color: var(--text-primary);
-      font-weight: 500;
-    }
-
-    .orchestrator-bar-model {
-      color: var(--accent-color);
-      font-weight: 600;
-    }
-
-    .orchestrator-bar-action {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .orchestrator-bar-spinner {
-      width: 12px;
-      height: 12px;
-      border: 2px solid var(--border-color);
-      border-top-color: var(--accent-color);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .analysis-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-left: 4px solid var(--accent-color);
-      border-radius: 8px;
-      padding: 16px 20px;
-    }
-
-    .analysis-card h3 {
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--accent-color);
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .domain-weights {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .domain-badge {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .turn-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .turn-card.streaming {
-      border-color: var(--info-color);
-      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
-    }
-
-    .turn-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .model-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .model-badge {
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .model-badge.qwen { background: var(--qwen-color); color: white; }
-    .model-badge.phi { background: var(--phi-color); color: white; }
-    .model-badge.llama { background: var(--llama-color); color: white; }
-
-    .expertise-score {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .turn-badge {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      background: var(--bg-tertiary);
-      padding: 4px 8px;
-      border-radius: 4px;
-    }
-
-    .turn-content,
-    .final-response {
-      line-height: 1.6;
-      color: var(--text-primary);
-      font-size: 14px;
-    }
-
-    .turn-content p,
-    .final-response p {
-      margin: 0 0 0.75em 0;
-    }
-
-    .turn-content p:last-child,
-    .final-response p:last-child {
-      margin-bottom: 0;
-    }
-
-    .turn-content h1,
-    .turn-content h2,
-    .final-response h1,
-    .final-response h2 {
-      font-size: 1.15em;
-      font-weight: 600;
-      margin: 1em 0 0.5em 0;
-      color: var(--text-primary);
-      padding-bottom: 0.25em;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .turn-content h3,
-    .final-response h3 {
-      font-size: 1.05em;
-      font-weight: 600;
-      margin: 0.9em 0 0.4em 0;
-      color: var(--text-primary);
-    }
-
-    .turn-content h1:first-child,
-    .turn-content h2:first-child,
-    .turn-content h3:first-child,
-    .final-response h1:first-child,
-    .final-response h2:first-child,
-    .final-response h3:first-child {
-      margin-top: 0;
-    }
-
-    .turn-content pre,
-    .final-response pre {
-      background: var(--bg-tertiary);
-      padding: 12px;
-      border-radius: 6px;
-      overflow-x: auto;
-      margin: 0.75em 0;
-      border: 1px solid var(--border-color);
-    }
-
-    .turn-content code,
-    .final-response code {
-      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
-      background: var(--bg-tertiary);
-      padding: 0.2em 0.45em;
-      border-radius: 4px;
-      font-size: 0.875em;
-      border: 1px solid var(--border-color);
-    }
-
-    .turn-content pre code,
-    .final-response pre code {
-      background: none;
-      padding: 0;
-      border: none;
-      font-size: 0.85em;
-    }
-
-    [data-theme="dark"] .turn-content code,
-    [data-theme="dark"] .final-response code {
-      color: #93c5fd;
-    }
-
-    [data-theme="dark"] .turn-content pre,
-    [data-theme="dark"] .final-response pre {
-      background-color: #0d1117;
-      border-color: #21262d;
-    }
-
-    .turn-content ul,
-    .turn-content ol,
-    .final-response ul,
-    .final-response ol {
-      margin: 0.5em 0;
-      padding-left: 1.5em;
-    }
-
-    .turn-content ul,
-    .final-response ul {
-      list-style-type: disc;
-    }
-
-    .turn-content ol,
-    .final-response ol {
-      list-style-type: decimal;
-    }
-
-    .turn-content li,
-    .final-response li {
-      margin: 0.25em 0;
-      line-height: 1.5;
-    }
-
-    .turn-content li::marker,
-    .final-response li::marker {
-      color: var(--accent-color);
-    }
-
-    .turn-content strong,
-    .final-response strong {
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .turn-content a,
-    .final-response a {
-      color: var(--accent-color);
-      text-decoration: none;
-    }
-
-    .turn-content a:hover,
-    .final-response a:hover {
-      text-decoration: underline;
-    }
-
-    .turn-content blockquote,
-    .final-response blockquote {
-      margin: 0.75em 0;
-      padding: 0.5em 1em;
-      border-left: 3px solid var(--accent-color);
-      background: var(--bg-tertiary);
-      border-radius: 0 6px 6px 0;
-      color: var(--text-secondary);
-    }
-
-    .turn-content blockquote p,
-    .final-response blockquote p {
-      margin: 0;
-    }
-
-    .turn-content table,
-    .final-response table {
-      border-collapse: collapse;
-      width: 100%;
-      margin: 0.75em 0;
-      font-size: 0.9em;
-    }
-
-    .turn-content th,
-    .turn-content td,
-    .final-response th,
-    .final-response td {
-      border: 1px solid var(--border-color);
-      padding: 0.5em 0.75em;
-      text-align: left;
-    }
-
-    .turn-content th,
-    .final-response th {
-      background: var(--bg-secondary);
-      font-weight: 600;
-    }
-
-    .evaluation-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .evaluation-badge.high { background: rgba(5, 150, 105, 0.1); color: var(--success-color); }
-    .evaluation-badge.medium { background: rgba(217, 119, 6, 0.1); color: var(--warning-color); }
-    .evaluation-badge.low { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
-
-    .synthesis-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-left: 4px solid var(--success-color);
-      border-radius: 8px;
-      padding: 16px 20px;
-    }
-
-    .synthesis-card h3 {
-      margin-bottom: 12px;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--success-color);
-    }
-
-    .synthesis-meta {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .final-response {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      color: var(--text-primary);
-      padding: 16px;
-      border-radius: 6px;
-      line-height: 1.6;
-    }
-
-    .status-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .status-indicator.analyzing {
-      background: rgba(2, 132, 199, 0.1);
-      color: var(--info-color);
-    }
-
-    .status-indicator.discussing {
-      background: rgba(5, 150, 105, 0.1);
-      color: var(--success-color);
-    }
-
-    .status-indicator.synthesizing {
-      background: rgba(139, 92, 246, 0.1);
-      color: var(--qwen-color);
-    }
-
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid currentColor;
-      border-right-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .error-card {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid #EF4444;
-      color: #EF4444;
-      padding: 16px;
-      border-radius: 8px;
-      margin: 16px 0;
-    }
-
-    .orchestrator-control {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .orchestrator-control label {
-      font-size: 14px;
-      color: var(--text-secondary);
-      white-space: nowrap;
-    }
-
-    .orchestrator-control select {
-      padding: 6px 10px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 13px;
-      min-width: 160px;
-    }
-
-    .model-type-badge {
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .model-type-badge.api {
-      background: rgba(217, 119, 6, 0.15);
-      color: var(--warning-color);
-    }
-
-    .model-type-badge.local {
-      background: rgba(5, 150, 105, 0.15);
-      color: var(--success-color);
-    }
-
-    .api-warning {
-      font-size: 11px;
-      color: var(--warning-color);
-      display: none;
-      align-items: center;
-      gap: 4px;
-      margin-top: 4px;
-    }
-
-    .api-warning.visible {
-      display: flex;
-    }
-
-    .api-warning svg {
-      flex-shrink: 0;
-    }
-
-    .example-prompts {
-      margin-top: 12px;
-    }
-
-    .example-prompts-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .example-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .example-chip {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 6px 12px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-
-    .example-chip:hover {
-      background: var(--bg-secondary);
-      border-color: var(--accent-color);
-      color: var(--text-primary);
-    }
-
-    .orchestrator-info-btn {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      cursor: pointer;
-      padding: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: all 0.2s;
-      position: relative;
-    }
-
-    .orchestrator-info-btn:hover {
-      color: var(--text-primary);
-      background: var(--bg-secondary);
-    }
-
-    .orchestrator-tooltip {
-      display: none;
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 12px;
-      width: 280px;
-      font-size: 12px;
-      line-height: 1.5;
-      color: var(--text-secondary);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      z-index: 200;
-    }
-
-    .orchestrator-info-btn:hover .orchestrator-tooltip {
-      display: block;
-    }
-
-    .orchestrator-tooltip strong {
-      color: var(--text-primary);
-    }
-
-    .token-summary {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .token-summary-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .token-summary-label {
-      color: var(--text-secondary);
-    }
-
-    .token-summary-value {
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .token-summary-value.orchestrator {
-      color: var(--accent-color);
-    }
-
-    .token-summary-value.local {
-      color: var(--success-color);
-    }
-
-    .token-summary-divider {
-      width: 1px;
-      height: 20px;
-      background: var(--border-color);
-    }
-
-    .config-section {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .config-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: flex-start;
-    }
-
-    .config-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .config-group-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .participants-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .participant-checkbox {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.15s;
-      font-size: 13px;
-    }
-
-    .participant-checkbox:hover {
-      border-color: var(--accent-color);
-    }
-
-    .participant-checkbox:has(input:checked) {
-      background: var(--accent-color);
-      border-color: var(--accent-color);
-    }
-
-    .participant-checkbox:has(input:checked) .participant-name {
-      color: white;
-    }
-
-    .participant-checkbox:has(input:checked) .participant-badge {
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-    }
-
-    .participant-checkbox input {
-      display: none;
-    }
-
-    .participant-name {
-      color: var(--text-primary);
-      white-space: nowrap;
-    }
-
-    .participant-badge {
-      font-size: 9px;
-      padding: 2px 5px;
-      border-radius: 3px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .participant-badge.local {
-      background: rgba(5, 150, 105, 0.15);
-      color: var(--success-color);
-    }
-
-    .participant-badge.api {
-      background: rgba(217, 119, 6, 0.15);
-      color: var(--warning-color);
-    }
-
-    .discussion-setup-card {
-      margin-top: 24px;
-      gap: 24px;
-    }
-
-    .setup-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-      align-items: flex-start;
-    }
-
-    .setup-header h3 {
-      margin: 0;
-      font-size: 18px;
-      color: var(--text-primary);
-    }
-
-    .setup-header p {
-      margin: 4px 0 0;
-      color: var(--text-secondary);
-      font-size: 13px;
-    }
-
-    .setup-summary {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: flex-start;
-      min-width: 220px;
-    }
-
-    .participant-count {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    .participant-count strong {
-      color: var(--text-primary);
-    }
-
-    .setup-body {
-      display: flex;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .setup-column {
-      flex: 1 1 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
+<style>
+  /* Page-specific styles for Discussion mode */
+  :root {
+    --qwen-color: #8B5CF6;
+    --phi-color: #EC4899;
+    --llama-color: #14B8A6;
+  }
+
+  .discussion-area {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .card-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color);
+    margin: 20px 0;
+  }
+
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  #discussionContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #discussionContent>* {
+    scroll-margin-top: 80px;
+  }
+
+  .orchestrator-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 13px;
+    position: sticky;
+    top: 80px;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .orchestrator-bar.visible {
+    display: flex;
+  }
+
+  [data-theme="dark"] .orchestrator-bar {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .orchestrator-bar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent-color);
+    border-radius: 6px;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .orchestrator-bar-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .orchestrator-bar-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+
+  .orchestrator-bar-status {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .orchestrator-bar-model {
+    color: var(--accent-color);
+    font-weight: 600;
+  }
+
+  .orchestrator-bar-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .orchestrator-bar-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .analysis-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+
+  .analysis-card h3 {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-color);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .domain-weights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .domain-badge {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .turn-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .turn-card.streaming {
+    border-color: var(--info-color);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+  }
+
+  .turn-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .model-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .model-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .model-badge.qwen {
+    background: var(--qwen-color);
+    color: white;
+  }
+
+  .model-badge.phi {
+    background: var(--phi-color);
+    color: white;
+  }
+
+  .model-badge.llama {
+    background: var(--llama-color);
+    color: white;
+  }
+
+  .expertise-score {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .turn-badge {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .turn-content,
+  .final-response {
+    line-height: 1.6;
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  .turn-content p,
+  .final-response p {
+    margin: 0 0 0.75em 0;
+  }
+
+  .turn-content p:last-child,
+  .final-response p:last-child {
+    margin-bottom: 0;
+  }
+
+  .turn-content h1,
+  .turn-content h2,
+  .final-response h1,
+  .final-response h2 {
+    font-size: 1.15em;
+    font-weight: 600;
+    margin: 1em 0 0.5em 0;
+    color: var(--text-primary);
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .turn-content h3,
+  .final-response h3 {
+    font-size: 1.05em;
+    font-weight: 600;
+    margin: 0.9em 0 0.4em 0;
+    color: var(--text-primary);
+  }
+
+  .turn-content h1:first-child,
+  .turn-content h2:first-child,
+  .turn-content h3:first-child,
+  .final-response h1:first-child,
+  .final-response h2:first-child,
+  .final-response h3:first-child {
+    margin-top: 0;
+  }
+
+  .turn-content pre,
+  .final-response pre {
+    background: var(--bg-tertiary);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0.75em 0;
+    border: 1px solid var(--border-color);
+  }
+
+  .turn-content code,
+  .final-response code {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+    background: var(--bg-tertiary);
+    padding: 0.2em 0.45em;
+    border-radius: 4px;
+    font-size: 0.875em;
+    border: 1px solid var(--border-color);
+  }
+
+  .turn-content pre code,
+  .final-response pre code {
+    background: none;
+    padding: 0;
+    border: none;
+    font-size: 0.85em;
+  }
+
+  [data-theme="dark"] .turn-content code,
+  [data-theme="dark"] .final-response code {
+    color: #93c5fd;
+  }
+
+  [data-theme="dark"] .turn-content pre,
+  [data-theme="dark"] .final-response pre {
+    background-color: #0d1117;
+    border-color: #21262d;
+  }
+
+  .turn-content ul,
+  .turn-content ol,
+  .final-response ul,
+  .final-response ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+  }
+
+  .turn-content ul,
+  .final-response ul {
+    list-style-type: disc;
+  }
+
+  .turn-content ol,
+  .final-response ol {
+    list-style-type: decimal;
+  }
+
+  .turn-content li,
+  .final-response li {
+    margin: 0.25em 0;
+    line-height: 1.5;
+  }
+
+  .turn-content li::marker,
+  .final-response li::marker {
+    color: var(--accent-color);
+  }
+
+  .turn-content strong,
+  .final-response strong {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .turn-content a,
+  .final-response a {
+    color: var(--accent-color);
+    text-decoration: none;
+  }
+
+  .turn-content a:hover,
+  .final-response a:hover {
+    text-decoration: underline;
+  }
+
+  .turn-content blockquote,
+  .final-response blockquote {
+    margin: 0.75em 0;
+    padding: 0.5em 1em;
+    border-left: 3px solid var(--accent-color);
+    background: var(--bg-tertiary);
+    border-radius: 0 6px 6px 0;
+    color: var(--text-secondary);
+  }
+
+  .turn-content blockquote p,
+  .final-response blockquote p {
+    margin: 0;
+  }
+
+  .turn-content table,
+  .final-response table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.75em 0;
+    font-size: 0.9em;
+  }
+
+  .turn-content th,
+  .turn-content td,
+  .final-response th,
+  .final-response td {
+    border: 1px solid var(--border-color);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+
+  .turn-content th,
+  .final-response th {
+    background: var(--bg-secondary);
+    font-weight: 600;
+  }
+
+  .evaluation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .evaluation-badge.high {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+  }
+
+  .evaluation-badge.medium {
+    background: rgba(217, 119, 6, 0.1);
+    color: var(--warning-color);
+  }
+
+  .evaluation-badge.low {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+  }
+
+  .synthesis-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--success-color);
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+
+  .synthesis-card h3 {
+    margin-bottom: 12px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--success-color);
+  }
+
+  .synthesis-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .final-response {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 16px;
+    border-radius: 6px;
+    line-height: 1.6;
+  }
+
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .status-indicator.analyzing {
+    background: rgba(2, 132, 199, 0.1);
+    color: var(--info-color);
+  }
+
+  .status-indicator.discussing {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+  }
+
+  .status-indicator.synthesizing {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--qwen-color);
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .error-card {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid #EF4444;
+    color: #EF4444;
+    padding: 16px;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+
+  .orchestrator-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .orchestrator-control label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .orchestrator-control select {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    min-width: 160px;
+  }
+
+  .model-type-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .model-type-badge.api {
+    background: rgba(217, 119, 6, 0.15);
+    color: var(--warning-color);
+  }
+
+  .model-type-badge.local {
+    background: rgba(5, 150, 105, 0.15);
+    color: var(--success-color);
+  }
+
+  .api-warning {
+    font-size: 11px;
+    color: var(--warning-color);
+    display: none;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .api-warning.visible {
+    display: flex;
+  }
+
+  .api-warning svg {
+    flex-shrink: 0;
+  }
+
+  .example-prompts {
+    margin-top: 12px;
+  }
+
+  .example-prompts-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .example-chip {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .example-chip:hover {
+    background: var(--bg-secondary);
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+  }
+
+  .orchestrator-info-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .orchestrator-info-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+
+  .orchestrator-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    width: 280px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 200;
+  }
+
+  .orchestrator-info-btn:hover .orchestrator-tooltip {
+    display: block;
+  }
+
+  .orchestrator-tooltip strong {
+    color: var(--text-primary);
+  }
+
+  .token-summary {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .token-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .token-summary-label {
+    color: var(--text-secondary);
+  }
+
+  .token-summary-value {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .token-summary-value.orchestrator {
+    color: var(--accent-color);
+  }
+
+  .token-summary-value.local {
+    color: var(--success-color);
+  }
+
+  .token-summary-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color);
+  }
+
+  .config-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .config-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .config-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .config-group-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .participants-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .participant-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 13px;
+  }
+
+  .participant-checkbox:hover {
+    border-color: var(--accent-color);
+  }
+
+  .participant-checkbox:has(input:checked) {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+
+  .participant-checkbox:has(input:checked) .participant-name {
+    color: white;
+  }
+
+  .participant-checkbox:has(input:checked) .participant-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
+  .participant-checkbox input {
+    display: none;
+  }
+
+  .participant-name {
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .participant-badge {
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .participant-badge.local {
+    background: rgba(5, 150, 105, 0.15);
+    color: var(--success-color);
+  }
+
+  .participant-badge.api {
+    background: rgba(217, 119, 6, 0.15);
+    color: var(--warning-color);
+  }
+
+  .discussion-setup-card {
+    margin-top: 24px;
+    gap: 24px;
+  }
+
+  .setup-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .setup-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-primary);
+  }
+
+  .setup-header p {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .setup-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    min-width: 220px;
+  }
+
+  .participant-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .participant-count strong {
+    color: var(--text-primary);
+  }
+
+  .setup-body {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .setup-column {
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .orchestrator-column {
+    max-width: 320px;
+    flex: 0 0 320px;
+    border-left: 1px solid var(--border-color);
+    padding-left: 24px;
+  }
+
+  @media (max-width: 900px) {
     .orchestrator-column {
-      max-width: 320px;
-      flex: 0 0 320px;
-      border-left: 1px solid var(--border-color);
-      padding-left: 24px;
+      flex: 1 1 100%;
+      border-left: none;
+      padding-left: 0;
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
     }
+  }
 
-    @media (max-width: 900px) {
-      .orchestrator-column {
-        flex: 1 1 100%;
-        border-left: none;
-        padding-left: 0;
-        border-top: 1px solid var(--border-color);
-        padding-top: 16px;
-      }
-    }
+  .orchestrator-column .config-group-label {
+    margin-bottom: 8px;
+  }
 
-    .orchestrator-column .config-group-label {
-      margin-bottom: 8px;
-    }
-
-    .setup-status {
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-  </style>
+  .setup-status {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
-  <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
-  <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
-  <script defer src="/static/discussion.js?v={{ discussion_js }}"></script>
+<script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
+<script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
+<script defer src="/static/discussion.js?v={{ discussion_js }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -831,11 +855,10 @@
   <div class="mode-overview-card">
     <div class="mode-overview-title">Let models debate before answering</div>
     <p class="mode-overview-subtitle">
-      Pick any mix of local or API models and have Qwen3 orchestrate a structured, turn-based
+      Pick any mix of local or API models and have an orchestrator coordinate a structured, turn-based
       discussion before returning the final takeaways.
     </p>
     <ul class="mode-overview-list">
-      <li>Select participants, orchestrator model, and number of rounds.</li>
       <li>Watch each turn stream in real time with reasoning from every model.</li>
       <li>Use debates to stress-test tricky problems or compare reasoning styles.</li>
     </ul>
@@ -845,68 +868,30 @@
     </div>
     <div class="card-divider"></div>
 
-    <div class="discussion-config">
-      <div class="setup-header">
-        <div>
-          <h3>Configure the roundtable</h3>
-          <p>Choose which models will participate and who orchestrates the debate.</p>
-        </div>
-        <div class="setup-summary">
-          <span id="participantCount" class="participant-count"><strong>0</strong> participants selected</span>
-          <div id="apiWarning" class="api-warning">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12.5"></line>
-              <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
-            </svg>
-            <span>API models use GitHub Models credits. Add your token in Settings.</span>
-            <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
-          </div>
-        </div>
-      </div>
-      <div class="setup-body">
-        <div class="setup-column">
-          <div class="config-group">
-            <div class="config-group-label">Participants</div>
-            <div class="model-selector" id="modelSelector">
-              <!-- Model chips populated by model-selector.js -->
-            </div>
-          </div>
-        </div>
-        <div class="setup-column orchestrator-column">
-          <label class="config-group-label">Orchestrator</label>
-          <div class="orchestrator-control">
-            <select id="orchestratorModel">
-              <option>Loading...</option>
-            </select>
-            <span id="orchestratorBadge" class="model-type-badge api">API</span>
-          </div>
-          <div class="setup-status" id="statusIndicator"></div>
-        </div>
-      </div>
-
-      <div class="card-divider"></div>
-
-      <div class="example-prompts">
-        <div class="example-prompts-label">Try an example:</div>
-        <div class="example-chips">
-          <button class="example-chip" data-prompt="How many R's are in the word 'strawberry'?">Count R's in strawberry</button>
-          <button class="example-chip" data-prompt="Which number is bigger: 9.11 or 9.9?">9.11 vs 9.9</button>
-          <button class="example-chip" data-prompt="I have 3 apples, eat 2, buy 5 more, and give away 3. How many do I have?">Apple math problem</button>
-          <button class="example-chip" data-prompt="Write a sentence where every word starts with the letter 'A'.">All A's sentence</button>
-        </div>
+    <div class="example-prompts">
+      <div class="example-prompts-label">Try an example:</div>
+      <div class="example-chips">
+        <button class="example-chip" data-prompt="How many R's are in the word 'strawberry'?">Count R's in
+          strawberry</button>
+        <button class="example-chip" data-prompt="Which number is bigger: 9.11 or 9.9?">9.11 vs 9.9</button>
+        <button class="example-chip"
+          data-prompt="I have 3 apples, eat 2, buy 5 more, and give away 3. How many do I have?">Apple math
+          problem</button>
+        <button class="example-chip" data-prompt="Write a sentence where every word starts with the letter 'A'.">All A's
+          sentence</button>
       </div>
     </div>
   </div>
 
   <div class="discussion-area">
-    <!-- Input Section -->
     <!-- Orchestrator Status Bar -->
     <div id="orchestratorBar" class="orchestrator-bar">
       <div class="orchestrator-bar-icon">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          <path
+            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
+          </path>
         </svg>
       </div>
       <div class="orchestrator-bar-content">
@@ -920,7 +905,8 @@
         </div>
       </div>
       <button class="orchestrator-info-btn" type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="16" x2="12" y2="12"></line>
           <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -943,33 +929,65 @@
   </div>
 </div>
 
-  <div class="input-container">
-    <div class="controls-row">
-      <div style="flex: 1;"></div>
-      <div class="controls-secondary">
-        <div class="control-group">
-          <label>Rounds:</label>
-          <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds" style="width: 50px;">
-        </div>
-        <div class="control-group">
-          <label>Temp:</label>
-          <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
-          <span id="tempValue">0.7</span>
-        </div>
-        <div class="control-group">
-          <label>Tokens:</label>
-          <input type="number" id="maxTokens" value="1024" min="256" max="4096" step="256" style="width: 70px;">
-        </div>
-      </div>
+<div class="input-container">
+  <div class="controls-row">
+    <!-- Participants selector -->
+    <div class="model-selector" id="modelSelector">
+      <!-- Model chips populated by model-selector.js -->
     </div>
 
-    <div class="input-wrapper">
-      <textarea id="userInput" placeholder="Enter your question... Models will discuss together before responding." rows="1"></textarea>
-      <button id="sendBtn" class="send-btn" aria-label="Start discussion">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-      </button>
+    <!-- Orchestrator selector -->
+    <div class="orchestrator-control">
+      <label>Orchestrator:</label>
+      <select id="orchestratorModel">
+        <option>Loading...</option>
+      </select>
+      <span id="orchestratorBadge" class="model-type-badge api">API</span>
+    </div>
+
+    <div style="flex: 1;"></div>
+
+    <div class="controls-secondary">
+      <span id="participantCount" class="participant-count" style="font-size: 11px;"><strong>0</strong> selected</span>
+      <div class="control-group">
+        <label>Rounds:</label>
+        <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds"
+          style="width: 50px;">
+      </div>
+      <div class="control-group">
+        <label>Temp:</label>
+        <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
+        <span id="tempValue">0.7</span>
+      </div>
+      <div class="control-group">
+        <label>Tokens:</label>
+        <input type="number" id="maxTokens" value="1024" min="256" max="4096" step="256" style="width: 70px;">
+      </div>
     </div>
   </div>
+
+  <div id="apiWarning" class="api-warning" style="margin-bottom: 8px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12.5"></line>
+      <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"></circle>
+    </svg>
+    <span>API models use GitHub Models credits. Add your token in Settings.</span>
+    <button id="apiSettingsBtn" type="button" class="settings-link-btn" data-settings-trigger>Open settings</button>
+  </div>
+
+  <div id="statusIndicator"></div>
+
+  <div class="input-wrapper">
+    <textarea id="userInput" placeholder="Enter your question... Models will discuss together before responding."
+      rows="1"></textarea>
+    <button id="sendBtn" class="send-btn" aria-label="Start discussion">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          stroke-linejoin="round" fill="none" />
+      </svg>
+    </button>
+  </div>
+</div>
 {% endblock %}
