@@ -285,7 +285,7 @@ class ChatMessage(BaseModel):
     content: str
 
 class GenerationParams(BaseModel):
-    max_tokens: int = 512
+    max_tokens: int = 1024
     temperature: float = 0.7
 
 
