@@ -45,6 +45,10 @@ RUN pip3 install --upgrade pip cmake scikit-build-core ninja \
     && CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DGGML_CCACHE=OFF -DBUILD_SHARED_LIBS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF" pip3 install --verbose . \
     && rm -rf /tmp/llama-cpp-python
 
+# Copy llama.cpp shared libraries to standard location and update linker cache
+RUN find /usr/local/lib/python3.11/site-packages/llama_cpp -name "*.so*" -exec cp -v {} /usr/local/lib/ \; \
+    && ldconfig
+
 COPY rnj-inference/inference_server.py .
 
 # Install curl for health checks  
