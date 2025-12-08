@@ -64,13 +64,6 @@ class DiscussionEngine:
     5. Synthesis: Orchestrator plans merge, engine generates final response
     """
 
-    # API models that use GitHub Models API
-    API_MODELS = {
-        'gpt-4.1', 'gpt-4o', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
-        'deepseek-v3-0324', 'cohere-command-r-plus-08-2024',
-        'llama-3.3-70b-instruct', 'llama-4-scout-17b-16e-instruct', 'meta-llama-3.1-405b-instruct'
-    }
-
     def __init__(
         self,
         orchestrator: GitHubModelsOrchestrator,
@@ -91,7 +84,8 @@ class DiscussionEngine:
 
     def is_api_model(self, model_id: str) -> bool:
         """Check if a model is an API model (uses GitHub Models API)"""
-        return model_id in self.API_MODELS
+        profile = MODEL_PROFILES.get(model_id)
+        return profile is not None and profile.get("model_type") == "api"
 
     def _build_turn_prompt(
         self,

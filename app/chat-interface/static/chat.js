@@ -1,282 +1,187 @@
 document.addEventListener('DOMContentLoaded', () => {
-// Mobile viewport height fix
-    function setViewportHeight() {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    }
-    setViewportHeight();
-    window.addEventListener('resize', setViewportHeight);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(setViewportHeight, 100);
+  // Mobile viewport height fix
+  function setViewportHeight() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  setViewportHeight();
+  window.addEventListener('resize', setViewportHeight);
+  window.addEventListener('orientationchange', () => {
+    setTimeout(setViewportHeight, 100);
+  });
+
+  // Handle virtual keyboard on mobile
+  if ('visualViewport' in window) {
+    window.visualViewport.addEventListener('resize', () => {
+      document.body.style.height = `${window.visualViewport.height}px`;
     });
+  }
 
-    // Handle virtual keyboard on mobile
-    if ('visualViewport' in window) {
-      window.visualViewport.addEventListener('resize', () => {
-        document.body.style.height = `${window.visualViewport.height}px`;
-      });
+  // State
+  const modelSelector = new ModelSelector('#modelSelector', {
+    showStatus: true,
+    autoSelectOnline: true,
+    onSelectionChange: updateSendButtonState
+  });
+
+  let conversationHistory = [];
+  let totalTokensUsed = 0;
+
+  // Elements
+  const chatHistory = document.getElementById('chatHistory');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const tempSlider = document.getElementById('tempSlider');
+  const tempValue = document.getElementById('tempValue');
+  const maxTokens = document.getElementById('maxTokens');
+  const typingIndicator = document.getElementById('typingIndicator');
+  const tokenUsageContainer = document.getElementById('tokenUsageContainer');
+  const tokenUsageFill = document.getElementById('tokenUsageFill');
+  const tokenUsageText = document.getElementById('tokenUsageText');
+
+  function formatContextLength(length) {
+    if (length >= 1000000) {
+      return `${(length / 1000000).toFixed(1)}M`;
+    } else if (length >= 1000) {
+      return `${(length / 1000).toFixed(0)}K`;
+    }
+    return length.toString();
+  }
+
+  function getContextInfo(modelIdOrName) {
+    // Try direct ID access first
+    let model = modelSelector.models[modelIdOrName];
+
+    // If not found, try to find by name
+    if (!model) {
+      model = Object.values(modelSelector.models).find(m => m.name === modelIdOrName);
     }
 
-    const MODELS = {};
-    let selectedModels = new Set();
-    let conversationHistory = [];
-    let statusIntervalId = null;
-    let initialCheckDone = false;
-    let totalTokensUsed = 0;
+    if (model && model.context_length > 0) {
+      return `<span class="context-info">${formatContextLength(model.context_length)} ctx</span>`;
+    }
+    return '';
+  }
 
-    const chatHistory = document.getElementById('chatHistory');
-    const userInput = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const modelSelector = document.getElementById('modelSelector');
-    const tempSlider = document.getElementById('tempSlider');
-    const tempValue = document.getElementById('tempValue');
-    const maxTokens = document.getElementById('maxTokens');
-    const typingIndicator = document.getElementById('typingIndicator');
-    const tokenUsageContainer = document.getElementById('tokenUsageContainer');
-    const tokenUsageFill = document.getElementById('tokenUsageFill');
-    const tokenUsageText = document.getElementById('tokenUsageText');
-
-    // Initialize model selector
-    function renderModelSelector() {
-      modelSelector.innerHTML = '';
-      for (const [id, model] of Object.entries(MODELS)) {
-        const chip = document.createElement('div');
-        chip.className = `model-chip ${selectedModels.has(id) ? 'selected' : ''}`;
-        chip.innerHTML = `
-          <span class="status-dot status-${model.status}"></span>
-          <span class="model-name-text">${model.name}</span>
-        `;
-        chip.onclick = () => toggleModel(id);
-        modelSelector.appendChild(chip);
-      }
-      updateSelectedCount();
+  function updateTokenUsage() {
+    const selected = modelSelector.getSelected();
+    // Only show token usage if exactly one model is selected
+    if (selected.length !== 1) {
+      tokenUsageContainer.style.display = 'none';
+      return;
     }
 
-    function formatContextLength(length) {
-      if (length >= 1000000) {
-        return `${(length / 1000000).toFixed(1)}M`;
-      } else if (length >= 1000) {
-        return `${(length / 1000).toFixed(0)}K`;
-      }
-      return length.toString();
+    const modelId = selected[0];
+    const model = modelSelector.models[modelId];
+
+    if (!model || !model.context_length) {
+      tokenUsageContainer.style.display = 'none';
+      return;
     }
 
-    function getModelIdByName(modelName) {
-      for (const [id, model] of Object.entries(MODELS)) {
-        if (model.name === modelName) {
-          return id;
-        }
-      }
-      return null;
+    tokenUsageContainer.style.display = 'flex';
+    const contextLength = model.context_length;
+    const percentage = Math.min((totalTokensUsed / contextLength) * 100, 100);
+
+    tokenUsageFill.style.width = `${percentage}%`;
+    tokenUsageFill.className = 'token-usage-fill';
+
+    if (percentage >= 90) {
+      tokenUsageFill.classList.add('danger');
+    } else if (percentage >= 70) {
+      tokenUsageFill.classList.add('warning');
     }
 
-    function getContextInfo(modelIdOrName) {
-      // Try as ID first
-      let model = MODELS[modelIdOrName];
-      // If not found, try to find by name
-      if (!model) {
-        const modelId = getModelIdByName(modelIdOrName);
-        model = modelId ? MODELS[modelId] : null;
-      }
-      if (model && model.context_length > 0) {
-        return `<span class="context-info">${formatContextLength(model.context_length)} ctx</span>`;
-      }
-      return '';
-    }
+    tokenUsageText.textContent = `${totalTokensUsed.toLocaleString()} / ${formatContextLength(contextLength)}`;
+  }
 
-    function updateTokenUsage() {
-      // Only show token usage if exactly one model is selected
-      if (selectedModels.size !== 1) {
-        tokenUsageContainer.style.display = 'none';
-        return;
-      }
+  function addTokens(tokens) {
+    totalTokensUsed += tokens;
+    updateTokenUsage();
+  }
 
-      const selectedModelId = Array.from(selectedModels)[0];
-      const model = MODELS[selectedModelId];
+  function resetTokenUsage() {
+    totalTokensUsed = 0;
+    updateTokenUsage();
+  }
 
-      if (!model || !model.context_length) {
-        tokenUsageContainer.style.display = 'none';
-        return;
-      }
+  // Update send button state and token usage based on selection
+  function updateSendButtonState() {
+    const selectedModels = modelSelector.getSelected();
+    const hasContent = userInput.value.trim().length > 0;
+    const count = selectedModels.length;
+    sendBtn.disabled = count === 0 || !hasContent;
 
-      tokenUsageContainer.style.display = 'flex';
-      const contextLength = model.context_length;
-      const percentage = Math.min((totalTokensUsed / contextLength) * 100, 100);
+    updateTokenUsage();
+  }
 
-      tokenUsageFill.style.width = `${percentage}%`;
-      tokenUsageFill.className = 'token-usage-fill';
+  // Temperature slider
+  tempSlider.addEventListener('input', () => {
+    tempValue.textContent = tempSlider.value;
+  });
 
-      if (percentage >= 90) {
-        tokenUsageFill.classList.add('danger');
-      } else if (percentage >= 70) {
-        tokenUsageFill.classList.add('warning');
-      }
+  // Auto-resize textarea and enable/disable send button
+  userInput.addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 200) + 'px';
 
-      tokenUsageText.textContent = `${totalTokensUsed.toLocaleString()} / ${formatContextLength(contextLength)}`;
-    }
+    // Enable/disable send button based on content and model selection
+    const hasContent = this.value.trim().length > 0;
+    const hasModels = modelSelector.getSelected().length > 0;
+    sendBtn.disabled = !hasContent || !hasModels;
+  });
 
-    function addTokens(tokens) {
-      totalTokensUsed += tokens;
-      updateTokenUsage();
-    }
-
-    function resetTokenUsage() {
-      totalTokensUsed = 0;
-      updateTokenUsage();
-    }
-
-    function toggleModel(id) {
-      if (selectedModels.has(id)) {
-        selectedModels.delete(id);
-      } else {
-        selectedModels.add(id);
-      }
-      renderModelSelector();
-      updateTokenUsage();
-    }
-
-    function updateSelectedCount() {
-      const count = selectedModels.size;
-      const hasContent = userInput.value.trim().length > 0;
-      sendBtn.disabled = count === 0 || !hasContent;
-    }
-
-    // Temperature slider
-    tempSlider.addEventListener('input', () => {
-      tempValue.textContent = tempSlider.value;
-    });
-
-    // Check model status
-    async function checkModelStatus(modelId) {
-      if (!MODELS[modelId]) return;
-      try {
-        const response = await fetch(`/api/models/${modelId}/status`);
-        const data = await response.json();
-        MODELS[modelId].status = data.status === 'online' ? 'online' : 'offline';
-      } catch {
-        MODELS[modelId].status = 'offline';
-      }
-      // Only re-render if we are not in the initial bulk check (which handles its own render)
-      if (initialCheckDone) {
-          renderModelSelector();
-      }
-    }
-
-    // Check all models
-    async function checkAllModels() {
-      if (!Object.keys(MODELS).length) return;
-      
-      const checks = [];
-      for (const id of Object.keys(MODELS)) {
-        checks.push(checkModelStatus(id));
-      }
-      
-      await Promise.all(checks);
-
-      // On initial load, auto-select online models
-      if (!initialCheckDone) {
-          selectedModels.clear();
-          for (const [id, model] of Object.entries(MODELS)) {
-              if (model.status === 'online') {
-                  selectedModels.add(id);
-              }
-          }
-          initialCheckDone = true;
-          renderModelSelector();
-      }
-    }
-
-    async function loadModels() {
-      try {
-        const response = await fetch('/api/models');
-        const data = await response.json();
-        Object.keys(MODELS).forEach((id) => delete MODELS[id]);
-        selectedModels.clear();
-
-        data.models.forEach((model) => {
-          MODELS[model.id] = {
-            name: model.name,
-            status: 'checking',
-            context_length: model.context_length || 0
-          };
-          // Do not select all by default; wait for status check
-        });
-
-        renderModelSelector();
-        if (Object.keys(MODELS).length) {
-          await checkAllModels();
-          if (!statusIntervalId) {
-            statusIntervalId = setInterval(checkAllModels, 30000);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load models', error);
-        renderModelSelector();
-      }
-    }
-
-    // Auto-resize textarea and enable/disable send button
-    userInput.addEventListener('input', function() {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-
-      // Enable/disable send button based on content and model selection
-      const hasContent = this.value.trim().length > 0;
-      const hasModels = selectedModels.size > 0;
-      sendBtn.disabled = !hasContent || !hasModels;
-    });
-
-    // Handle Enter key
-    userInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (userInput.value.trim() && selectedModels.size > 0) {
-          sendMessage();
-        }
-      }
-    });
-
-    // Handle send button click (works on both desktop and mobile)
-    sendBtn.addEventListener('click', (e) => {
+  // Handle Enter key
+  userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
-    });
-
-    // Also handle touch events for better mobile responsiveness
-    sendBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      sendMessage();
-    });
-
-    if (clearBtn) {
-      clearBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        clearChat();
-      });
-      clearBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        clearChat();
-      });
+      if (userInput.value.trim() && modelSelector.getSelected().length > 0) {
+        sendMessage();
+      }
     }
+  });
 
-    // Add user message
-    function addUserMessage(content) {
+  // Handle send button click (works on both desktop and mobile)
+  sendBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    sendMessage();
+  });
+
+  // Also handle touch events for better mobile responsiveness
+  sendBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    sendMessage();
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearChat();
+    });
+    clearBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      clearChat();
+    });
+  }
+
+  // Add user message
+  function addUserMessage(content) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message user';
+    messageDiv.textContent = content;
+    chatHistory.appendChild(messageDiv);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }
+
+  // Add model responses
+  function addModelResponses(responses) {
+    if (responses.length === 1) {
+      // Single model response
+      const resp = responses[0];
       const messageDiv = document.createElement('div');
-      messageDiv.className = 'message user';
-      messageDiv.textContent = content;
-      chatHistory.appendChild(messageDiv);
-      chatHistory.scrollTop = chatHistory.scrollHeight;
-    }
-
-    // Add model responses
-    function addModelResponses(responses) {
-      if (responses.length === 1) {
-        // Single model response
-        const resp = responses[0];
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message assistant';
-        messageDiv.innerHTML = `
+      messageDiv.className = 'message assistant';
+      messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${resp.model}</span>
             ${getContextInfo(resp.model)}
@@ -300,16 +205,16 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           ` : ''}
         `;
-        chatHistory.appendChild(messageDiv);
-      } else {
-        // Multiple model responses
-        const container = document.createElement('div');
-        container.className = 'model-responses';
+      chatHistory.appendChild(messageDiv);
+    } else {
+      // Multiple model responses
+      const container = document.createElement('div');
+      container.className = 'model-responses';
 
-        for (const resp of responses) {
-          const responseDiv = document.createElement('div');
-          responseDiv.className = 'model-response';
-          responseDiv.innerHTML = `
+      for (const resp of responses) {
+        const responseDiv = document.createElement('div');
+        responseDiv.className = 'model-response';
+        responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${resp.model}</span>
               ${getContextInfo(resp.model)}
@@ -329,75 +234,75 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             ` : ''}
           `;
-          container.appendChild(responseDiv);
-        }
-
-        chatHistory.appendChild(container);
+        container.appendChild(responseDiv);
       }
 
-      chatHistory.scrollTop = chatHistory.scrollHeight;
+      chatHistory.appendChild(container);
     }
 
-    // Configure marked.js
-    marked.setOptions({
-      breaks: true,
-      gfm: true,
-      headerIds: false,
-      mangle: false
-    });
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }
 
-    // Custom renderer for better styling
-    const renderer = new marked.Renderer();
+  // Configure marked.js
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+    headerIds: false,
+    mangle: false
+  });
 
-    // Make links open in new tab
-    renderer.link = function(href, title, text) {
-      const titleAttr = title ? ` title="${title}"` : '';
-      return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+  // Custom renderer for better styling
+  const renderer = new marked.Renderer();
+
+  // Make links open in new tab
+  renderer.link = function (href, title, text) {
+    const titleAttr = title ? ` title="${title}"` : '';
+    return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+  };
+
+  marked.use({ renderer });
+
+  function formatContent(content) {
+    if (!content) return '';
+
+    try {
+      // Use marked.js for proper markdown parsing
+      return marked.parse(content);
+    } catch (e) {
+      // Fallback: escape HTML and preserve line breaks
+      return content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\\n/g, '<br>');
+    }
+  }
+
+  // Create streaming response container
+  function createStreamingContainer(models) {
+    const modelData = {};
+
+    const registerEntry = (modelId, modelName, element) => {
+      const entry = {
+        id: modelId,
+        name: modelName,
+        element,
+        content: '',
+        contentEl: element.querySelector(`[data-model-id="${modelId}"]`),
+        footerEl: element.querySelector(`[data-footer-id="${modelId}"]`),
+        tokensEl: element.querySelector(`[data-tokens-id="${modelId}"]`),
+        timeEl: element.querySelector(`[data-time-id="${modelId}"]`)
+      };
+      modelData[modelId] = entry;
+      modelData[modelName] = entry;
     };
 
-    marked.use({ renderer });
-
-    function formatContent(content) {
-      if (!content) return '';
-
-      try {
-        // Use marked.js for proper markdown parsing
-        return marked.parse(content);
-      } catch (e) {
-        // Fallback: escape HTML and preserve line breaks
-        return content
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/\\n/g, '<br>');
-      }
-    }
-
-    // Create streaming response container
-    function createStreamingContainer(models) {
-      const modelData = {};
-
-      const registerEntry = (modelId, modelName, element) => {
-        const entry = {
-          id: modelId,
-          name: modelName,
-          element,
-          content: '',
-          contentEl: element.querySelector(`[data-model-id="${modelId}"]`),
-          footerEl: element.querySelector(`[data-footer-id="${modelId}"]`),
-          tokensEl: element.querySelector(`[data-tokens-id="${modelId}"]`),
-          timeEl: element.querySelector(`[data-time-id="${modelId}"]`)
-        };
-        modelData[modelId] = entry;
-        modelData[modelName] = entry;
-      };
-
-      if (models.length === 1) {
-        const modelId = models[0];
-        const modelName = MODELS[modelId]?.name || modelId;
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message assistant';
-        messageDiv.innerHTML = `
+    if (models.length === 1) {
+      const modelId = models[0];
+      const modelName = modelSelector.models[modelId]?.name || modelId;
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message assistant';
+      messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${modelName}</span>
             ${getContextInfo(modelId)}
@@ -415,17 +320,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
         `;
-        chatHistory.appendChild(messageDiv);
-        registerEntry(modelId, modelName, messageDiv);
-      } else {
-        const container = document.createElement('div');
-        container.className = 'model-responses';
+      chatHistory.appendChild(messageDiv);
+      registerEntry(modelId, modelName, messageDiv);
+    } else {
+      const container = document.createElement('div');
+      container.className = 'model-responses';
 
-        for (const modelId of models) {
-          const modelName = MODELS[modelId]?.name || modelId;
-          const responseDiv = document.createElement('div');
-          responseDiv.className = 'model-response';
-          responseDiv.innerHTML = `
+      for (const modelId of models) {
+        const modelName = modelSelector.models[modelId]?.name || modelId;
+        const responseDiv = document.createElement('div');
+        responseDiv.className = 'model-response';
+        responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${modelName}</span>
               ${getContextInfo(modelId)}
@@ -443,182 +348,183 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
           `;
-          container.appendChild(responseDiv);
-          registerEntry(modelId, modelName, responseDiv);
-        }
-        chatHistory.appendChild(container);
+        container.appendChild(responseDiv);
+        registerEntry(modelId, modelName, responseDiv);
       }
-
-      chatHistory.scrollTop = chatHistory.scrollHeight;
-      return modelData;
+      chatHistory.appendChild(container);
     }
 
-    // Update streaming content for a model
-    function updateStreamingContent(modelData, modelId, content, isToken = true) {
-      const entry = modelData[modelId];
-      if (!entry || !entry.contentEl) return;
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    return modelData;
+  }
 
-      if (isToken) {
-        entry.content += content;
-      }
+  // Update streaming content for a model
+  function updateStreamingContent(modelData, modelId, content, isToken = true) {
+    const entry = modelData[modelId];
+    if (!entry || !entry.contentEl) return;
 
-      entry.contentEl.innerHTML = formatContent(entry.content) + '<span class="cursor">▋</span>';
-      chatHistory.scrollTop = chatHistory.scrollHeight;
+    if (isToken) {
+      entry.content += content;
     }
 
-    // Finalize streaming for a model
-    function finalizeStreaming(modelData, modelId, time, tokenEstimate, error = false) {
-      const entry = modelData[modelId];
-      if (!entry) return;
+    entry.contentEl.innerHTML = formatContent(entry.content) + '<span class="cursor">▋</span>';
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }
 
-      const el = entry.element;
+  // Finalize streaming for a model
+  function finalizeStreaming(modelData, modelId, time, tokenEstimate, error = false) {
+    const entry = modelData[modelId];
+    if (!entry) return;
 
-      // Remove streaming badge
-      const badge = el.querySelector('.streaming-badge');
-      if (badge) {
-        if (error) {
-          badge.textContent = 'Error';
-          badge.style.background = '#fecaca';
-          badge.style.color = '#dc2626';
-        } else {
-          badge.remove();
-        }
-      }
+    const el = entry.element;
 
-      // Remove cursor
-      if (entry.contentEl) {
-        entry.contentEl.innerHTML = formatContent(entry.content);
-      }
-
-      // Show footer with stats
-      if (!error && time && entry.footerEl) {
-        entry.footerEl.style.display = 'flex';
-        if (entry.timeEl) {
-          entry.timeEl.textContent = time.toFixed(2) + 's';
-        }
-        if (entry.tokensEl) {
-          entry.tokensEl.textContent = tokenEstimate || '-';
-        }
-
-        // Add tokens to usage tracker (only if one model is selected)
-        if (selectedModels.size === 1 && tokenEstimate) {
-          addTokens(parseInt(tokenEstimate) || 0);
-        }
+    // Remove streaming badge
+    const badge = el.querySelector('.streaming-badge');
+    if (badge) {
+      if (error) {
+        badge.textContent = 'Error';
+        badge.style.background = '#fecaca';
+        badge.style.color = '#dc2626';
+      } else {
+        badge.remove();
       }
     }
 
-    async function sendMessage() {
-      const message = userInput.value.trim();
-      if (!message || selectedModels.size === 0) return;
+    // Remove cursor
+    if (entry.contentEl) {
+      entry.contentEl.innerHTML = formatContent(entry.content);
+    }
 
-      addUserMessage(message);
-      conversationHistory.push({ role: 'user', content: message });
-      userInput.value = '';
-      userInput.style.height = 'auto';
+    // Show footer with stats
+    if (!error && time && entry.footerEl) {
+      entry.footerEl.style.display = 'flex';
+      if (entry.timeEl) {
+        entry.timeEl.textContent = time.toFixed(2) + 's';
+      }
+      if (entry.tokensEl) {
+        entry.tokensEl.textContent = tokenEstimate || '-';
+      }
 
-      sendBtn.disabled = true;
-      userInput.disabled = true;
-      typingIndicator.classList.add('active');
+      // Add tokens to usage tracker (only if one model is selected)
+      const currentSelection = modelSelector.getSelected();
+      if (currentSelection.length === 1 && tokenEstimate) {
+        addTokens(parseInt(tokenEstimate) || 0);
+      }
+    }
+  }
 
-      const models = Array.from(selectedModels);
-      const modelData = createStreamingContainer(models);
-      let firstContent = '';
+  async function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message || modelSelector.getSelected().length === 0) return;
 
-      try {
-        const response = await fetch('/api/chat/stream', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            models: models,
-            messages: conversationHistory,
-            max_tokens: parseInt(maxTokens.value),
-            temperature: parseFloat(tempSlider.value)
-          })
-        });
+    addUserMessage(message);
+    conversationHistory.push({ role: 'user', content: message });
+    userInput.value = '';
+    userInput.style.height = 'auto';
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+    sendBtn.disabled = true;
+    userInput.disabled = true;
+    typingIndicator.classList.add('active');
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+    const models = modelSelector.getSelected();
+    const modelData = createStreamingContainer(models);
+    let firstContent = '';
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+    try {
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          models: models,
+          messages: conversationHistory,
+          max_tokens: parseInt(maxTokens.value),
+          temperature: parseFloat(tempSlider.value)
+        })
+      });
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-                if (data.event === 'all_done') {
-                  typingIndicator.classList.remove('active');
-                  continue;
-                }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-                const mappedEntry =
-                  (data.model_id && modelData[data.model_id]) ? modelData[data.model_id] :
-                  (data.model && modelData[data.model]) ? modelData[data.model] : null;
-                if (!mappedEntry) {
-                  continue;
-                }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-                const entryKey = mappedEntry.id;
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
 
-                if (data.event === 'start') {
-                  // Model started streaming
-                  const badge = mappedEntry.element.querySelector('.streaming-badge');
-                  if (badge) badge.textContent = 'Streaming...';
-                } else if (data.event === 'token' && data.content) {
-                  // Received a token
-                  updateStreamingContent(modelData, entryKey, data.content);
-                } else if (data.event === 'done') {
-                  // Model finished
-                  if (!firstContent && data.total_content) {
-                    firstContent = data.total_content;
-                  }
-                  finalizeStreaming(modelData, entryKey, data.time, data.token_estimate);
-                } else if (data.error) {
-                  // Error occurred
-                  mappedEntry.content = data.content || 'Error occurred';
-                  updateStreamingContent(modelData, entryKey, '', false);
-                  finalizeStreaming(modelData, entryKey, null, null, true);
-                }
-              } catch (e) {
-                console.error('Parse error:', e);
+              if (data.event === 'all_done') {
+                typingIndicator.classList.remove('active');
+                continue;
               }
+
+              const mappedEntry =
+                (data.model_id && modelData[data.model_id]) ? modelData[data.model_id] :
+                  (data.model && modelData[data.model]) ? modelData[data.model] : null;
+              if (!mappedEntry) {
+                continue;
+              }
+
+              const entryKey = mappedEntry.id;
+
+              if (data.event === 'start') {
+                // Model started streaming
+                const badge = mappedEntry.element.querySelector('.streaming-badge');
+                if (badge) badge.textContent = 'Streaming...';
+              } else if (data.event === 'token' && data.content) {
+                // Received a token
+                updateStreamingContent(modelData, entryKey, data.content);
+              } else if (data.event === 'done') {
+                // Model finished
+                if (!firstContent && data.total_content) {
+                  firstContent = data.total_content;
+                }
+                finalizeStreaming(modelData, entryKey, data.time, data.token_estimate);
+              } else if (data.error) {
+                // Error occurred
+                mappedEntry.content = data.content || 'Error occurred';
+                updateStreamingContent(modelData, entryKey, '', false);
+                finalizeStreaming(modelData, entryKey, null, null, true);
+              }
+            } catch (e) {
+              console.error('Parse error:', e);
             }
           }
         }
-
-        // Add first successful response to conversation history
-        if (firstContent) {
-          conversationHistory.push({ role: 'assistant', content: firstContent });
-        }
-
-      } catch (error) {
-        // Handle connection errors
-        const handled = new Set();
-        for (const entry of Object.values(modelData)) {
-          if (!entry || handled.has(entry.id)) continue;
-          handled.add(entry.id);
-          entry.content = `Connection error: ${error.message}`;
-          updateStreamingContent(modelData, entry.id, '', false);
-          finalizeStreaming(modelData, entry.id, null, null, true);
-        }
-      } finally {
-        sendBtn.disabled = selectedModels.size === 0;
-        userInput.disabled = false;
-        typingIndicator.classList.remove('active');
-        userInput.focus();
       }
-    }
 
-    function clearChat() {
-      conversationHistory = [];
-      chatHistory.innerHTML = `
+      // Add first successful response to conversation history
+      if (firstContent) {
+        conversationHistory.push({ role: 'assistant', content: firstContent });
+      }
+
+    } catch (error) {
+      // Handle connection errors
+      const handled = new Set();
+      for (const entry of Object.values(modelData)) {
+        if (!entry || handled.has(entry.id)) continue;
+        handled.add(entry.id);
+        entry.content = `Connection error: ${error.message}`;
+        updateStreamingContent(modelData, entry.id, '', false);
+        finalizeStreaming(modelData, entry.id, null, null, true);
+      }
+    } finally {
+      sendBtn.disabled = modelSelector.getSelected().length === 0;
+      userInput.disabled = false;
+      typingIndicator.classList.remove('active');
+      userInput.focus();
+    }
+  }
+
+  function clearChat() {
+    conversationHistory = [];
+    chatHistory.innerHTML = `
         <div class="welcome-card">
           <div class="welcome-title">Compare AI Model Responses</div>
           <div class="welcome-subtitle">
@@ -641,39 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      // Re-attach event listeners to example chips
-      document.querySelectorAll('.example-chip').forEach(chip => {
-        chip.addEventListener('click', (e) => {
-          e.preventDefault();
-          const prompt = chip.getAttribute('data-prompt');
-          if (prompt) {
-            userInput.value = prompt;
-            userInput.focus();
-          }
-        });
-      });
-
-      resetTokenUsage();
-    }
-
-    // Initialize
-    renderModelSelector();
-    loadModels();
-
-    // Auto-focus the input field on page load
-    // Use a small delay to ensure the page is fully rendered
-    setTimeout(() => {
-      userInput.focus();
-    }, 100);
-
-    // Re-focus input when clicking anywhere in the chat area (for convenience)
-    chatHistory.addEventListener('click', () => {
-      if (!window.getSelection().toString()) {
-        userInput.focus();
-      }
-    });
-
-    // Handle example prompt clicks
+    // Re-attach event listeners to example chips
     document.querySelectorAll('.example-chip').forEach(chip => {
       chip.addEventListener('click', (e) => {
         e.preventDefault();
@@ -685,15 +559,46 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Handle example-prompt class buttons (static HTML examples)
-    document.querySelectorAll('.example-prompt').forEach(button => {
-      button.addEventListener('click', (e) => {
-        e.preventDefault();
-        const prompt = button.getAttribute('data-prompt');
-        if (prompt) {
-          userInput.value = prompt;
-          userInput.focus();
-        }
-      });
+    resetTokenUsage();
+  }
+
+  // Initialize
+  modelSelector.loadModels();
+
+  // Auto-focus the input field on page load
+  // Use a small delay to ensure the page is fully rendered
+  setTimeout(() => {
+    userInput.focus();
+  }, 100);
+
+  // Re-focus input when clicking anywhere in the chat area (for convenience)
+  chatHistory.addEventListener('click', () => {
+    if (!window.getSelection().toString()) {
+      userInput.focus();
+    }
+  });
+
+  // Handle example prompt clicks
+  document.querySelectorAll('.example-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      const prompt = chip.getAttribute('data-prompt');
+      if (prompt) {
+        userInput.value = prompt;
+        userInput.focus();
+      }
     });
+  });
+
+  // Handle example-prompt class buttons (static HTML examples)
+  document.querySelectorAll('.example-prompt').forEach(button => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      const prompt = button.getAttribute('data-prompt');
+      if (prompt) {
+        userInput.value = prompt;
+        userInput.focus();
+      }
+    });
+  });
 });

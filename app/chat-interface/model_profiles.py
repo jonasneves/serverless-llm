@@ -19,6 +19,7 @@ from typing import Dict, List, Any
 QWEN_PROFILE = {
     "model_id": "qwen3-4b",
     "display_name": "Qwen3 4B",
+    "model_type": "local",
     "creator": "Alibaba Cloud",
     "size": "4B parameters",
     "quantization": "Q4_K_M",
@@ -71,6 +72,7 @@ QWEN_PROFILE = {
 PHI_PROFILE = {
     "model_id": "phi-3-mini",
     "display_name": "Phi-3 Mini",
+    "model_type": "local",
     "creator": "Microsoft",
     "size": "3.8B parameters",
     "quantization": "Q4_K_M",
@@ -120,7 +122,8 @@ PHI_PROFILE = {
 
 LLAMA_PROFILE = {
     "model_id": "llama-3.2-3b",
-    "display_name": "Llama 3.2 3B",
+    "display_name": "Llama 3.2-3B",
+    "model_type": "local",
     "creator": "Meta",
     "size": "3B parameters",
     "quantization": "Q4_K_M",
@@ -175,6 +178,7 @@ LLAMA_PROFILE = {
 GPT4_1_PROFILE = {
     "model_id": "gpt-4.1",
     "display_name": "GPT-4.1",
+    "model_type": "api",
     "creator": "OpenAI",
     "size": "~1.76T parameters (estimated)",
     "quantization": None,
@@ -200,6 +204,7 @@ GPT4_1_PROFILE = {
 GPT4O_PROFILE = {
     "model_id": "gpt-4o",
     "display_name": "GPT-4o",
+    "model_type": "api",
     "creator": "OpenAI",
     "size": "~200B parameters (estimated)",
     "quantization": None,
@@ -222,9 +227,118 @@ GPT4O_PROFILE = {
     "description": "OpenAI's optimized multimodal model, fast and capable"
 }
 
+GPT5_PROFILE = {
+    "model_id": "gpt-5",
+    "display_name": "GPT-5",
+    "model_type": "api",
+    "creator": "OpenAI",
+    "size": "Unknown",
+    "quantization": None,
+    "primary_strengths": ["reasoning", "creativity", "multimodal"],
+    "expertise_domains": {
+        "reasoning": 0.99,
+        "coding": 0.99,
+        "mathematics": 0.99,
+        "creative_writing": 0.98,
+        "scientific_knowledge": 0.98,
+        "conversation": 0.98,
+    },
+    "context_length": 200000,
+    "description": "Next-generation flagship model with state-of-the-art capabilities across all domains"
+}
+
+GPT5_MINI_PROFILE = {
+    "model_id": "gpt-5-mini",
+    "display_name": "GPT-5 Mini",
+    "model_type": "api",
+    "creator": "OpenAI",
+    "size": "Unknown",
+    "quantization": None,
+    "primary_strengths": ["speed", "efficiency", "reasoning"],
+    "expertise_domains": {
+        "reasoning": 0.95,
+        "coding": 0.94,
+        "mathematics": 0.92,
+        "conversation": 0.95,
+    },
+    "context_length": 128000,
+    "description": "Efficient version of GPT-5, balancing speed and high intelligence"
+}
+
+GPT5_NANO_PROFILE = {
+    "model_id": "gpt-5-nano",
+    "display_name": "GPT-5 Nano",
+    "model_type": "api",
+    "creator": "OpenAI",
+    "size": "Unknown",
+    "quantization": None,
+    "primary_strengths": ["speed", "cost", "simple_tasks"],
+    "expertise_domains": {
+        "reasoning": 0.88,
+        "conversation": 0.90,
+        "summarization": 0.90,
+    },
+    "context_length": 64000,
+    "description": "Ultra-fast, lightweight model for high-volume simple tasks"
+}
+
+COHERE_COMMAND_R_PLUS_PROFILE = {
+    "model_id": "cohere-command-r-plus-08-2024",
+    "display_name": "Cohere Command R+",
+    "model_type": "api",
+    "creator": "Cohere",
+    "size": "104B",
+    "quantization": None,
+    "primary_strengths": ["rag", "tool_use", "business_writing"],
+    "expertise_domains": {
+        "technical_writing": 0.95,
+        "summarization": 0.95,
+        "conversation": 0.90,
+        "reasoning": 0.90,
+    },
+    "context_length": 128000,
+    "description": "Optimized for RAG, tool use, and enterprise tasks"
+}
+
+LLAMA_4_SCOUT_PROFILE = {
+    "model_id": "llama-4-scout-17b-16e-instruct",
+    "display_name": "Llama 4 Scout 17B",
+    "model_type": "api",
+    "creator": "Meta",
+    "size": "17B",
+    "quantization": None,
+    "primary_strengths": ["reasoning", "planning", "agentic_flow"],
+    "expertise_domains": {
+        "reasoning": 0.92,
+        "problem_solving": 0.90,
+        "logical_reasoning": 0.93,
+    },
+    "context_length": 128000,
+    "description": "Specialized reasoning model designed for agentic workflows and planning"
+}
+
+LLAMA_3_1_405B_PROFILE = {
+    "model_id": "meta-llama-3.1-405b-instruct",
+    "display_name": "Llama 3.1 405B",
+    "model_type": "api",
+    "creator": "Meta",
+    "size": "405B",
+    "quantization": None,
+    "primary_strengths": ["general_knowledge", "reasoning", "multilingual"],
+    "expertise_domains": {
+        "scientific_knowledge": 0.96,
+        "reasoning": 0.95,
+        "coding": 0.92,
+        "creative_writing": 0.94,
+    },
+    "context_length": 128000,
+    "description": "A massive open-weights model with frontier-class performance"
+}
+
 DEEPSEEK_V3_PROFILE = {
     "model_id": "deepseek-v3-0324",
     "display_name": "DeepSeek V3",
+    "model_type": "api",
     "creator": "DeepSeek",
     "size": "671B parameters (MoE)",
     "quantization": None,
@@ -250,6 +364,7 @@ DEEPSEEK_V3_PROFILE = {
 LLAMA_33_70B_PROFILE = {
     "model_id": "llama-3.3-70b-instruct",
     "display_name": "Llama 3.3 70B",
+    "model_type": "api",
     "creator": "Meta",
     "size": "70B parameters",
     "quantization": None,
@@ -278,6 +393,7 @@ LLAMA_33_70B_PROFILE = {
 MISTRAL_7B_PROFILE = {
     "model_id": "mistral-7b-instruct-v0.3",
     "display_name": "Mistral 7B v0.3",
+    "model_type": "local",
     "creator": "Mistral AI",
     "size": "7B parameters",
     "quantization": "Q4_K_M",
@@ -328,6 +444,7 @@ MISTRAL_7B_PROFILE = {
 GEMMA2_9B_PROFILE = {
     "model_id": "gemma-2-9b-instruct",
     "display_name": "Gemma 2 9B",
+    "model_type": "local",
     "creator": "Google",
     "size": "9B parameters",
     "quantization": "Q4_K_M",
@@ -378,6 +495,7 @@ GEMMA2_9B_PROFILE = {
 DEEPSEEK_R1_QWEN15B_PROFILE = {
     "model_id": "deepseek-r1-distill-qwen-1.5b",
     "display_name": "DeepSeek R1 Distill Qwen 1.5B",
+    "model_type": "local",
     "creator": "DeepSeek x Alibaba",
     "size": "1.5B parameters",
     "quantization": "Q4_K_M",
@@ -432,8 +550,14 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # API models
     "gpt-4.1": GPT4_1_PROFILE,
     "gpt-4o": GPT4O_PROFILE,
+    "gpt-5": GPT5_PROFILE,
+    "gpt-5-mini": GPT5_MINI_PROFILE,
+    "gpt-5-nano": GPT5_NANO_PROFILE,
     "deepseek-v3-0324": DEEPSEEK_V3_PROFILE,
+    "cohere-command-r-plus-08-2024": COHERE_COMMAND_R_PLUS_PROFILE,
     "llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
+    "llama-4-scout-17b-16e-instruct": LLAMA_4_SCOUT_PROFILE,
+    "meta-llama-3.1-405b-instruct": LLAMA_3_1_405B_PROFILE,
 }
 
 

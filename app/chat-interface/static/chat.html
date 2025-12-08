@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
 <script defer src="/static/chat.js?v={{ chat_js }}"></script>
 {% endblock %}
 
@@ -22,8 +23,10 @@
     <div style="margin-top: 16px;">
       <div class="welcome-subtitle">Try these examples:</div>
       <div class="examples-container">
-        <button class="example-prompt" data-prompt="How many times does the letter 'r' appear in the word 'irregularity'?">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="example-prompt"
+          data-prompt="How many times does the letter 'r' appear in the word 'irregularity'?">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -31,23 +34,30 @@
           <span>Count how many times 'r' appears in irregularity</span>
         </button>
         <button class="example-prompt" data-prompt="Which number is larger: 7.09 or 7.9?">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 20V10"></path>
             <path d="M12 20V4"></path>
             <path d="M6 20v-6"></path>
           </svg>
           <span>Compare decimal numbers and identify the larger one</span>
         </button>
-        <button class="example-prompt" data-prompt="Alice has 4 brothers and 5 sisters. How many sisters does Alice's brother have?">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <button class="example-prompt"
+          data-prompt="Alice has 4 brothers and 5 sisters. How many sisters does Alice's brother have?">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+            </path>
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
           </svg>
           <span>Solve logical reasoning puzzles about relationships</span>
         </button>
-        <button class="example-prompt" data-prompt="A shipping company has 48 boxes and each pallet holds 6 boxes. How many pallets are needed? Do we need an extra pallet?">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="example-prompt"
+          data-prompt="A shipping company has 48 boxes and each pallet holds 6 boxes. How many pallets are needed? Do we need an extra pallet?">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <polyline points="16 18 22 12 16 6"></polyline>
             <polyline points="8 6 2 12 8 18"></polyline>
           </svg>
@@ -96,7 +106,8 @@
     <textarea id="userInput" placeholder="Ask a question to compare model responses..." rows="1"></textarea>
     <button id="sendBtn" class="send-btn" disabled aria-label="Send message">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          stroke-linejoin="round" fill="none" />
       </svg>
     </button>
   </div>

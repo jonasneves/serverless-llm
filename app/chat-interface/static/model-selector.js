@@ -33,25 +33,31 @@ class ModelSelector {
     try {
       const response = await fetch('/api/models');
       const data = await response.json();
-      
+
       this.models = {};
       this.selectedModels.clear();
 
       data.models.forEach((model) => {
         this.models[model.id] = {
           name: model.name,
-          status: 'checking',
+          type: model.type || 'local',  // 'local' or 'api'
+          status: model.type === 'api' ? 'available' : 'checking',  // API models always available
           context_length: model.context_length || 0
         };
       });
 
       this.render();
-      
-      if (Object.keys(this.models).length) {
+
+      // Only check status for local models
+      const localModels = Object.entries(this.models).filter(([id, m]) => m.type === 'local');
+      if (localModels.length) {
         await this.checkAllModels();
         if (!this.statusIntervalId) {
           this.statusIntervalId = setInterval(() => this.checkAllModels(), 30000);
         }
+      } else {
+        // If no local models, mark as done
+        this.initialCheckDone = true;
       }
     } catch (error) {
       console.error('[ModelSelector] Failed to load models:', error);
@@ -60,11 +66,14 @@ class ModelSelector {
   }
 
   /**
-   * Check status of a single model
+   * Check status of a single model (local models only)
    */
   async checkModelStatus(modelId) {
     if (!this.models[modelId]) return;
-    
+
+    // Skip API models - they don't have local health endpoints
+    if (this.models[modelId].type === 'api') return;
+
     try {
       const response = await fetch(`/api/models/${modelId}/status`);
       const data = await response.json();
@@ -72,31 +81,36 @@ class ModelSelector {
     } catch {
       this.models[modelId].status = 'offline';
     }
-    
+
     if (this.initialCheckDone) {
       this.render();
     }
   }
 
   /**
-   * Check status of all models
+   * Check status of all local models
    */
   async checkAllModels() {
     if (!Object.keys(this.models).length) return;
-    
-    const checks = [];
-    for (const id of Object.keys(this.models)) {
-      checks.push(this.checkModelStatus(id));
-    }
-    
+
+    // Only check local models
+    const localModelIds = Object.entries(this.models)
+      .filter(([id, m]) => m.type === 'local')
+      .map(([id]) => id);
+
+    const checks = localModelIds.map(id => this.checkModelStatus(id));
     await Promise.all(checks);
 
-    // On initial load, auto-select online models if enabled
+    // On initial load, auto-select online/available models if enabled
     if (!this.initialCheckDone && this.options.autoSelectOnline) {
       this.selectedModels.clear();
       for (const [id, model] of Object.entries(this.models)) {
-        if (model.status === 'online') {
-          this.selectedModels.add(id);
+        // Select online local models AND available API models
+        if (model.status === 'online' || model.status === 'available') {
+          // Only auto-select local models by default (API models require token)
+          if (model.type === 'local') {
+            this.selectedModels.add(id);
+          }
         }
       }
       this.initialCheckDone = true;
@@ -124,7 +138,7 @@ class ModelSelector {
         this.selectedModels.add(id);
       }
     }
-    
+
     this.render();
     this.notifySelectionChange();
   }
@@ -172,25 +186,55 @@ class ModelSelector {
    */
   render() {
     if (!this.container) return;
-    
+
     this.container.innerHTML = '';
-    
-    for (const [id, model] of Object.entries(this.models)) {
-      const chip = document.createElement('div');
-      chip.className = `model-chip ${this.selectedModels.has(id) ? 'selected' : ''}`;
-      
-      const statusDot = this.options.showStatus 
-        ? `<span class="status-dot status-${model.status}"></span>`
-        : '';
-      
-      chip.innerHTML = `
-        ${statusDot}
-        <span class="model-name-text">${model.name}</span>
-      `;
-      
-      chip.onclick = () => this.toggleModel(id);
-      this.container.appendChild(chip);
+
+    // Group models by type
+    const localModels = Object.entries(this.models).filter(([id, m]) => m.type === 'local');
+    const apiModels = Object.entries(this.models).filter(([id, m]) => m.type === 'api');
+
+    // Render local models first
+    for (const [id, model] of localModels) {
+      this.container.appendChild(this.createChip(id, model));
     }
+
+    // Add separator if we have both types
+    if (localModels.length && apiModels.length) {
+      const separator = document.createElement('div');
+      separator.className = 'model-selector-separator';
+      separator.innerHTML = '<span class="separator-label">API Models</span>';
+      this.container.appendChild(separator);
+    }
+
+    // Render API models
+    for (const [id, model] of apiModels) {
+      this.container.appendChild(this.createChip(id, model));
+    }
+  }
+
+  /**
+   * Create a model chip element
+   */
+  createChip(id, model) {
+    const chip = document.createElement('div');
+    chip.className = `model-chip ${this.selectedModels.has(id) ? 'selected' : ''} model-type-${model.type}`;
+
+    const statusDot = this.options.showStatus
+      ? `<span class="status-dot status-${model.status}"></span>`
+      : '';
+
+    const typeBadge = model.type === 'api'
+      ? '<span class="model-type-badge api">API</span>'
+      : '';
+
+    chip.innerHTML = `
+      ${statusDot}
+      <span class="model-name-text">${model.name}</span>
+      ${typeBadge}
+    `;
+
+    chip.onclick = () => this.toggleModel(id);
+    return chip;
   }
 
   /**

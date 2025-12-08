@@ -38,112 +38,47 @@ class ModelLoader {
   }
 
   /**
-   * Get all local models (non-API)
+   * Get all local models
    */
   getLocalModels() {
-    // Local models are those with localhost or custom domain endpoints
-    // API models would be identified differently (e.g., github.com endpoints)
-    return this.models.filter(model => {
-      const endpoint = this.endpoints[model.id] || '';
-      return !endpoint.includes('models.github.com') &&
-             !endpoint.includes('openai.com');
-    });
+    return this.models.filter(model => model.type === 'local');
   }
 
   /**
    * Get all API models
    */
   getAPIModels() {
-    // For now, we'll need to maintain a list of known API models
-    // In the future, this could be a flag in MODEL_CONFIG
-    const knownAPIModels = [
-      'gpt-4.1', 'gpt-4o', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
-      'deepseek-v3-0324', 'llama-3.3-70b-instruct',
-      'llama-4-scout-17b-16e-instruct', 'meta-llama-3.1-405b-instruct',
-      'cohere-command-r-plus-08-2024'
-    ];
-    return knownAPIModels;
+    return this.models.filter(model => model.type === 'api');
   }
 
   /**
    * Build participant checkboxes for Discussion mode
-   * Supports both single container (legacy) and separate containers for local/API
    */
   buildParticipantCheckboxes(containerSelector) {
-    // Check if separate containers exist
-    const localContainer = document.querySelector('#localParticipantsContainer');
-    const apiContainer = document.querySelector('#apiParticipantsContainer');
-    
-    if (localContainer && apiContainer) {
-      // New format: separate containers
-      localContainer.innerHTML = '';
-      apiContainer.innerHTML = '';
-
-      // Add local models
-      const localModels = this.getLocalModels();
-      localModels.forEach(model => {
-        const label = this.createParticipantCheckbox(
-          model.id,
-          model.name,
-          'local',
-          true // checked by default
-        );
-        localContainer.appendChild(label);
-      });
-
-      // Add API models
-      const apiModels = this.getAPIModels();
-      apiModels.forEach(modelId => {
-        const displayName = this.getDisplayName(modelId);
-        const label = this.createParticipantCheckbox(
-          modelId,
-          displayName,
-          'api',
-          false // not checked by default
-        );
-        apiContainer.appendChild(label);
-      });
-
-      console.log('[ModelLoader] Built participant checkboxes (separate):',
-        `${localModels.length} local, ${apiModels.length} API`);
-    } else {
-      // Legacy format: single container
+    // Legacy support - not used if using ModelSelector
+    // But kept for backward compatibility if needed
     const container = document.querySelector(containerSelector);
-    if (!container) {
-      console.error('[ModelLoader] Container not found:', containerSelector);
-      return;
-    }
+    if (!container) return;
 
     container.innerHTML = '';
 
-    // Add local models
+    // Group models
     const localModels = this.getLocalModels();
-    localModels.forEach(model => {
+    const apiModels = this.getAPIModels();
+
+    // Helper to add checkbox
+    const addCheckbox = (model, type) => {
       const label = this.createParticipantCheckbox(
         model.id,
         model.name,
-        'local',
-        true // checked by default
+        type,
+        type === 'local' // Default check local only
       );
       container.appendChild(label);
-    });
+    };
 
-    // Add API models
-    const apiModels = this.getAPIModels();
-    apiModels.forEach(modelId => {
-      const displayName = this.getDisplayName(modelId);
-      const label = this.createParticipantCheckbox(
-        modelId,
-        displayName,
-        'api',
-        false // not checked by default
-      );
-      container.appendChild(label);
-    });
-
-      console.log('[ModelLoader] Built participant checkboxes (single):',
-      `${localModels.length} local, ${apiModels.length} API`);
-    }
+    localModels.forEach(m => addCheckbox(m, 'local'));
+    apiModels.forEach(m => addCheckbox(m, 'api'));
   }
 
   /**
@@ -190,62 +125,40 @@ class ModelLoader {
 
     select.innerHTML = '';
 
-    // API Models group
-    const apiGroup = document.createElement('optgroup');
-    apiGroup.label = 'API - High Rate Limit';
-
-    const apiHighRate = [
-      { id: 'gpt-4.1', name: 'GPT-4.1 (Recommended)' },
-      { id: 'gpt-4o', name: 'GPT-4o', selected: true },
-      { id: 'deepseek-v3-0324', name: 'DeepSeek V3' },
-      { id: 'cohere-command-r-plus-08-2024', name: 'Cohere Command R+' },
-      { id: 'llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
-      { id: 'llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B' },
-      { id: 'meta-llama-3.1-405b-instruct', name: 'Llama 3.1 405B' }
-    ];
-
-    apiHighRate.forEach(model => {
-      const option = document.createElement('option');
-      option.value = model.id;
-      option.textContent = model.name;
-      if (model.selected) option.selected = true;
-      apiGroup.appendChild(option);
-    });
-    select.appendChild(apiGroup);
-
-    // GPT-5 group
-    const gpt5Group = document.createElement('optgroup');
-    gpt5Group.label = 'API - GPT-5 (Custom Limits)';
-
-    const gpt5Models = [
-      { id: 'gpt-5', name: 'GPT-5' },
-      { id: 'gpt-5-mini', name: 'GPT-5 Mini' },
-      { id: 'gpt-5-nano', name: 'GPT-5 Nano' }
-    ];
-
-    gpt5Models.forEach(model => {
-      const option = document.createElement('option');
-      option.value = model.id;
-      option.textContent = model.name;
-      gpt5Group.appendChild(option);
-    });
-    select.appendChild(gpt5Group);
-
-    // Local Models group (dynamic from loaded models)
-    const localGroup = document.createElement('optgroup');
-    localGroup.label = 'Local Models';
-
+    // Group API models
+    const apiModels = this.getAPIModels();
     const localModels = this.getLocalModels();
-    localModels.forEach(model => {
-      const option = document.createElement('option');
-      option.value = model.id;
-      option.textContent = model.name;
-      localGroup.appendChild(option);
-    });
-    select.appendChild(localGroup);
+
+    if (apiModels.length > 0) {
+      const apiGroup = document.createElement('optgroup');
+      apiGroup.label = 'API Models';
+
+      apiModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        if (model.id === 'gpt-4o') option.selected = true; // Default preferred
+        apiGroup.appendChild(option);
+      });
+      select.appendChild(apiGroup);
+    }
+
+    // Local Models group
+    if (localModels.length > 0) {
+      const localGroup = document.createElement('optgroup');
+      localGroup.label = 'Local Models';
+
+      localModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        localGroup.appendChild(option);
+      });
+      select.appendChild(localGroup);
+    }
 
     console.log('[ModelLoader] Built orchestrator dropdown:',
-      `${localModels.length} local models`);
+      `${localModels.length} local, ${apiModels.length} API`);
   }
 
   /**
@@ -253,24 +166,51 @@ class ModelLoader {
    */
   buildModelSelector(selectSelector) {
     const select = document.querySelector(selectSelector);
-    if (!select) {
-      console.error('[ModelLoader] Select not found:', selectSelector);
-      return;
-    }
+    if (!select) return;
 
     select.innerHTML = '';
 
-    const localModels = this.getLocalModels();
-    localModels.forEach((model, index) => {
-      const option = document.createElement('option');
-      option.value = model.id;
-      option.textContent = model.name;
-      if (index === 0 || model.default) option.selected = true;
-      select.appendChild(option);
-    });
+    // Show all allowed models (local used to be only option, now maybe support API too?)
+    // For now, verbalized sampling might only support local models if it relies on local features
+    // But let's expose all consistent with other UIs
 
-    console.log('[ModelLoader] Built model selector:',
-      `${localModels.length} models`);
+    // Use optgroups if mixed
+    const localModels = this.getLocalModels();
+    const apiModels = this.getAPIModels();
+
+    if (localModels.length && apiModels.length) {
+      const localGroup = document.createElement('optgroup');
+      localGroup.label = 'Local Models';
+      localModels.forEach((model, i) => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        if (i === 0) option.selected = true;
+        localGroup.appendChild(option);
+      });
+      select.appendChild(localGroup);
+
+      const apiGroup = document.createElement('optgroup');
+      apiGroup.label = 'API Models';
+      apiModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        apiGroup.appendChild(option);
+      });
+      select.appendChild(apiGroup);
+    } else {
+      // Just flat list
+      [...localModels, ...apiModels].forEach((model, i) => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        if (i === 0) option.selected = true;
+        select.appendChild(option);
+      });
+    }
+
+    console.log('[ModelLoader] Built model selector');
   }
 
   /**
@@ -278,25 +218,12 @@ class ModelLoader {
    */
   getDisplayName(modelId) {
     const model = this.models.find(m => m.id === modelId);
-    if (model) return model.name;
-
-    // Fallback display names for API models
-    const fallbackNames = {
-      'gpt-4.1': 'GPT-4.1',
-      'gpt-4o': 'GPT-4o',
-      'gpt-5': 'GPT-5',
-      'gpt-5-mini': 'GPT-5 Mini',
-      'gpt-5-nano': 'GPT-5 Nano',
-      'deepseek-v3-0324': 'DeepSeek V3',
-      'llama-3.3-70b-instruct': 'Llama 3.3 70B',
-      'llama-4-scout-17b-16e-instruct': 'Llama 4 Scout 17B',
-      'meta-llama-3.1-405b-instruct': 'Llama 3.1 405B',
-      'cohere-command-r-plus-08-2024': 'Cohere Command R+'
-    };
-
-    return fallbackNames[modelId] || modelId;
+    return model ? model.name : modelId;
   }
 }
+// Remove duplicate class definition/module export hack if present, keep simple
+class ModelLoader_Export { }
+
 
 // Global instance
 const modelLoader = new ModelLoader();

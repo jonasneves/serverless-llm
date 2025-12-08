@@ -633,17 +633,35 @@ async def list_models():
             return LIVE_CONTEXT_LENGTHS[model_id]
         return MODEL_PROFILES.get(model_id, {}).get("context_length", 0)
     
+    # Build list of local models from MODEL_CONFIG
+    local_models = [
+        {
+            "id": config["id"],
+            "name": config["name"],
+            "type": "local",
+            "endpoint": MODEL_ENDPOINTS.get(config["id"]),
+            "default": config.get("default", False),
+            "context_length": get_context_length(config["id"]),
+        }
+        for config in MODEL_CONFIG
+    ]
+    
+    # Build list of API models from MODEL_PROFILES
+    api_models = [
+        {
+            "id": model_id,
+            "name": profile.get("display_name", model_id),
+            "type": "api",
+            "endpoint": None,  # API models use GitHub Models endpoint
+            "default": False,
+            "context_length": profile.get("context_length", 128000),
+        }
+        for model_id, profile in MODEL_PROFILES.items()
+        if profile.get("model_type") == "api"
+    ]
+    
     return {
-        "models": [
-            {
-                "id": config["id"],
-                "name": config["name"],
-                "endpoint": MODEL_ENDPOINTS[config["id"]],
-                "default": config.get("default", False),
-                "context_length": get_context_length(config["id"]),
-            }
-            for config in MODEL_CONFIG
-        ],
+        "models": local_models + api_models,
         "endpoints": MODEL_ENDPOINTS,
         "default_model": DEFAULT_MODEL_ID,
     }
