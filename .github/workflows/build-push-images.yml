@@ -117,6 +117,26 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
 
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          # For cloudflared, use its dockerfile; for others use app/{model}/Dockerfile
+          if [ "${{ matrix.model }}" = "cloudflared" ]; then
+            DOCKERFILE="./docker/cloudflared/Dockerfile"
+          else
+            DOCKERFILE="./app/${{ matrix.model }}/Dockerfile"
+          fi
+          
+          # Create a short hash of the Dockerfile for cache scoping
+          if [ -f "$DOCKERFILE" ]; then
+            HASH=$(sha256sum "$DOCKERFILE" | cut -c1-8)
+          else
+            HASH="missing"
+          fi
+          
+          echo "scope=${{ matrix.model }}-$HASH" >> $GITHUB_OUTPUT
+          echo "Cache scope: ${{ matrix.model }}-$HASH"
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -125,8 +145,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.model }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.model }}
+          # Cache scope includes Dockerfile hash - auto-invalidates when Dockerfile changes
+          cache-from: type=gha,scope=${{ steps.cache-key.outputs.scope }}
+          cache-to: type=gha,mode=max,scope=${{ steps.cache-key.outputs.scope }}
 
       - name: Image summary
         run: |
