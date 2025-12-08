@@ -341,6 +341,57 @@ main {
   color: var(--text-secondary);
 }
 
+/* Token/Context Usage Display */
+.token-usage-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.token-usage-label {
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.token-usage-bar {
+  width: 60px;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.token-usage-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 3px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.token-usage-fill.warning {
+  background: var(--warning-color);
+}
+
+.token-usage-fill.danger {
+  background: var(--danger-color);
+}
+
+.token-usage-text {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  font-size: 11px;
+}
+
 .controls-secondary {
   display: flex;
   align-items: center;
