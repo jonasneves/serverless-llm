@@ -113,7 +113,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusIndicator = document.getElementById('statusIndicator');
   const discussionContent = document.getElementById('discussionContent');
   const orchestratorModel = document.getElementById('orchestratorModel');
-  const orchestratorBadge = document.getElementById('orchestratorBadge');
   const apiWarning = document.getElementById('apiWarning');
   const tokenSection = document.getElementById('tokenSection');
   const githubToken = document.getElementById('githubToken');
@@ -172,10 +171,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const hasApiParticipants = apiParticipantCount > 0;
     const needsToken = isApiOrchestrator || hasApiParticipants;
-
-    // Update orchestrator badge
-    orchestratorBadge.textContent = isApiOrchestrator ? 'API' : 'Local';
-    orchestratorBadge.className = `model-type-badge ${isApiOrchestrator ? 'api' : 'local'}`;
 
     // Show API warning if any API models are used
     apiWarning.classList.toggle('visible', needsToken);
