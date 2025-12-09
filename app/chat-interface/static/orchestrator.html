@@ -270,9 +270,9 @@
   .tools-info-card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 14px 16px;
-    margin: 20px auto;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin: var(--space-5) auto 0 auto;
     max-width: 500px;
     text-align: left;
   }
@@ -369,6 +369,10 @@
   .tools-footer strong {
     color: var(--text-secondary);
   }
+
+  .input-narrow {
+    width: 50px;
+  }
 </style>
 {% endblock %}
 
@@ -385,22 +389,8 @@
       An intelligent orchestrator routes your task to specialist models and tools, running multiple rounds until it
       finds a confident answer.
     </p>
-    <div class="card-divider"></div>
-    <div class="example-prompts">
-      <div class="example-prompts-label">Try an example:</div>
-      <div class="example-chips">
-        <button class="example-chip" data-prompt="Search for the latest AI breakthroughs and summarize them">Latest AI
-          news</button>
-        <button class="example-chip"
-          data-prompt="Write Python code to calculate Fibonacci sequence recursively">Fibonacci code</button>
-        <button class="example-chip" data-prompt="Explain how transformers work, then write sample code">Transformers
-          explained</button>
-        <button class="example-chip" data-prompt="Research quantum computing applications and create a summary">Quantum
-          research</button>
-      </div>
-    </div>
 
-    <div class="tools-info-card" style="margin-top: 20px;">
+    <div class="tools-info-card">
       <div class="tools-info-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
@@ -451,6 +441,21 @@
         <span>Powered by <strong>Microsoft AutoGen</strong></span>
       </div>
     </div>
+
+    <div class="card-divider"></div>
+    <div class="example-prompts">
+      <div class="example-prompts-label">Try an example:</div>
+      <div class="example-chips">
+        <button class="example-chip" data-prompt="Search for the latest AI breakthroughs and summarize them">Latest AI
+          news</button>
+        <button class="example-chip"
+          data-prompt="Write Python code to calculate Fibonacci sequence recursively">Fibonacci code</button>
+        <button class="example-chip" data-prompt="Explain how transformers work, then write sample code">Transformers
+          explained</button>
+        <button class="example-chip" data-prompt="Research quantum computing applications and create a summary">Quantum
+          research</button>
+      </div>
+    </div>
   </div>
 
   <!-- Orchestration results appear here, outside the info card -->
@@ -462,12 +467,11 @@
     <div class="model-selector" id="modelSelector">
       <!-- Model chips populated by model-selector.js -->
     </div>
-    <div style="flex: 1;"></div>
+    <div class="flex-spacer"></div>
     <div class="controls-secondary">
       <div class="control-group">
         <label>Engine:</label>
-        <select id="engineSelect"
-          style="font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+        <select id="engineSelect">
           <option value="auto" selected>Auto</option>
           <option value="autogen">AutoGen</option>
           <option value="tools">ToolOrchestrator</option>
@@ -475,7 +479,7 @@
       </div>
       <div class="control-group">
         <label>Rounds:</label>
-        <input type="number" id="maxRounds" value="5" min="1" max="10" style="width: 50px;">
+        <input type="number" id="maxRounds" value="5" min="1" max="10" class="input-narrow">
       </div>
       <div class="control-group">
         <label>Temp:</label>
@@ -484,7 +488,7 @@
       </div>
       <div class="control-group">
         <label>Tokens:</label>
-        <input type="number" id="maxTokens" value="2048" min="128" max="4096" step="128" style="width: 70px;">
+        <input type="number" id="maxTokens" value="2048" min="128" max="4096" step="128">
       </div>
     </div>
   </div>
