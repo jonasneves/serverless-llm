@@ -173,6 +173,9 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
 
         client = HTTPClient.get_client()
         
+        # Detect if using local model (not GitHub Models API)
+        is_local_model = "github.ai" not in self.api_url
+        
         payload = {
             "model": self.model_id,
             "messages": [
@@ -185,9 +188,14 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                     "content": structured_prompt
                 }
             ],
-            "max_completion_tokens": self.max_tokens,
             "stream": False
         }
+        
+        # Local models use max_tokens, OpenAI/GitHub models use max_completion_tokens
+        if is_local_model:
+            payload["max_tokens"] = min(self.max_tokens, 2048)  # Cap for local models
+        else:
+            payload["max_completion_tokens"] = self.max_tokens
 
         try:
             response = await client.post(
@@ -202,7 +210,10 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
 
             if response.status_code != 200:
                 error_text = response.text
-                raise Exception(f"GitHub Models API error {response.status_code}: {error_text}")
+                # Detect if this is a context length error
+                if "context window" in error_text.lower() or "exceed" in error_text.lower():
+                    raise Exception(f"Orchestrator model context limit exceeded. Try using an API orchestrator (like GPT-4o) or increase the local model's N_CTX. Details: {error_text}")
+                raise Exception(f"Orchestrator API error {response.status_code}: {error_text}")
 
             data = response.json()
 

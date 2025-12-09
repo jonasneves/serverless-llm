@@ -18,9 +18,9 @@ config = ModelConfig(
     owned_by="mistralai",
     default_repo="bartowski/Mistral-7B-Instruct-v0.3-GGUF",
     default_file="Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
-    default_n_ctx=1024,  # Reduced from 2048 for GitHub Actions 7GB RAM limit
+    default_n_ctx=4096,
     default_n_threads=2,
-    n_batch=256,  # Reduced from 512 to lower memory usage
+    n_batch=256,
 )
 
 app = create_inference_app(config)

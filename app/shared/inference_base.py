@@ -40,7 +40,7 @@ class ModelConfig:
     default_file: str
 
     # llama.cpp tuning
-    default_n_ctx: int = 2048
+    default_n_ctx: int = 4096
     default_n_threads: int = 2
     n_batch: int = 256
     last_n_tokens_size: int = 64

@@ -18,7 +18,7 @@ config = ModelConfig(
     owned_by="meta",
     default_repo="bartowski/Llama-3.2-3B-Instruct-GGUF",
     default_file="Llama-3.2-3B-Instruct-Q4_K_M.gguf",
-    default_n_ctx=2048,
+    default_n_ctx=4096,
     default_n_threads=2,
     n_batch=256,
 )
