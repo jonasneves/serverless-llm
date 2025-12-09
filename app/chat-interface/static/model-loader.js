@@ -129,6 +129,23 @@ class ModelLoader {
     const apiModels = this.getAPIModels();
     const localModels = this.getLocalModels();
 
+    // Local Models group (show first, default to local)
+    if (localModels.length > 0) {
+      const localGroup = document.createElement('optgroup');
+      localGroup.label = 'Local Models';
+
+      localModels.forEach((model, index) => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        // Default to first local model (qwen3-4b)
+        if (index === 0) option.selected = true;
+        localGroup.appendChild(option);
+      });
+      select.appendChild(localGroup);
+    }
+
+    // API Models group
     if (apiModels.length > 0) {
       const apiGroup = document.createElement('optgroup');
       apiGroup.label = 'API Models';
@@ -137,24 +154,9 @@ class ModelLoader {
         const option = document.createElement('option');
         option.value = model.id;
         option.textContent = model.name;
-        if (model.id === 'gpt-4o') option.selected = true; // Default preferred
         apiGroup.appendChild(option);
       });
       select.appendChild(apiGroup);
-    }
-
-    // Local Models group
-    if (localModels.length > 0) {
-      const localGroup = document.createElement('optgroup');
-      localGroup.label = 'Local Models';
-
-      localModels.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.id;
-        option.textContent = model.name;
-        localGroup.appendChild(option);
-      });
-      select.appendChild(localGroup);
     }
 
     console.log('[ModelLoader] Built orchestrator dropdown:',
