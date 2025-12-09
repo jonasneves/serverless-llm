@@ -1,0 +1,235 @@
+/**
+ * Model Selector Component
+ * Reusable model selection chips and dropdown
+ */
+
+/* Model selector container */
+.model-selector {
+    display: flex;
+    gap: var(--chip-gap);
+    flex-wrap: wrap;
+}
+
+/* Model chips */
+.model-chip {
+    padding: var(--chip-padding-sm-y) var(--chip-padding-x);
+    border-radius: var(--radius-chip);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    transition: var(--transition-all);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--button-height);
+}
+
+.model-chip:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.model-chip.selected {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.model-chip .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.model-chip .model-name-text {
+    white-space: nowrap;
+}
+
+/* Status dots */
+.status-online {
+    background: var(--success-color);
+}
+
+.status-offline {
+    background: var(--danger-color);
+}
+
+.status-checking {
+    background: var(--warning-color);
+}
+
+.status-available {
+    background: var(--info-color);
+}
+
+/* Separator between local and API models */
+.model-selector-separator {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) 0 var(--space-1);
+}
+
+.model-selector-separator .separator-label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    font-weight: var(--font-semibold);
+    white-space: nowrap;
+}
+
+.model-selector-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+
+/* API model chip styling */
+.model-chip.model-type-api {
+    border-style: dashed;
+}
+
+/* Model selector dropdown (alternative style) */
+.model-selector-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: var(--transition-all);
+    min-width: 180px;
+    justify-content: space-between;
+    user-select: none;
+    min-height: var(--input-height-sm);
+}
+
+.model-selector-trigger:hover {
+    border-color: var(--accent-color);
+    background: var(--bg-tertiary);
+}
+
+.model-selector-dropdown {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: var(--z-dropdown);
+    display: none;
+}
+
+.model-selector-dropdown.open {
+    display: block;
+}
+
+.model-selector-option {
+    padding: var(--space-3);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition-colors);
+}
+
+.model-selector-option:last-child {
+    border-bottom: none;
+}
+
+.model-selector-option:hover {
+    background: var(--bg-secondary);
+}
+
+.model-selector-option.selected {
+    background: rgba(30, 58, 95, 0.08);
+    font-weight: var(--font-semibold);
+}
+
+[data-theme="dark"] .model-selector-option.selected {
+    background: rgba(30, 58, 95, 0.3);
+}
+
+/* Token usage display */
+.token-usage-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
+.token-usage-label {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.token-usage-bar {
+    width: 100px;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+}
+
+.token-usage-fill {
+    height: 100%;
+    background: var(--accent-color);
+    border-radius: var(--radius-full);
+    transition: width var(--transition-base);
+}
+
+.token-usage-text {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .model-selector {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: var(--space-1);
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .model-selector::-webkit-scrollbar {
+        display: none;
+    }
+
+    .model-chip {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-xs);
+        flex-shrink: 0;
+        min-height: var(--desktop-target-min);
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .model-chip {
+        min-height: var(--touch-target-min);
+        padding: var(--chip-padding-y) var(--chip-padding-x);
+    }
+}

@@ -1,0 +1,123 @@
+/**
+ * Modal Components
+ * Settings modal and modal overlays
+ */
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.settings-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: var(--card-padding);
+    z-index: var(--z-modal);
+}
+
+.settings-modal.open {
+    display: flex;
+}
+
+.settings-modal-content {
+    width: min(480px, 100%);
+    background: var(--bg-primary);
+    border-radius: var(--radius-modal);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-2xl);
+    overflow: hidden;
+    animation: slideUp var(--transition-base);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(var(--space-4));
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.settings-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5) var(--card-padding);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.settings-modal-header h2 {
+    margin: 0;
+    font-size: var(--text-xl);
+    color: var(--text-primary);
+}
+
+.settings-modal-body {
+    padding: var(--space-5) var(--card-padding) var(--card-padding);
+    display: flex;
+    flex-direction: column;
+    gap: var(--card-gap);
+    background: var(--bg-primary);
+}
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.settings-section.highlight {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--accent-color);
+    background: rgba(30, 58, 95, 0.08);
+}
+
+[data-theme="dark"] .settings-section.highlight {
+    background: rgba(30, 58, 95, 0.25);
+}
+
+.settings-section.token-section {
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-color);
+}
+
+.settings-section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.settings-section.token-section.highlight {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.settings-description {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+}
+
+.settings-link-btn {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-weight: var(--font-semibold);
+    padding: 0;
+    font-size: var(--text-xs);
+    margin-left: var(--space-1);
+}
+
+.settings-link-btn:hover {
+    text-decoration: underline;
+}

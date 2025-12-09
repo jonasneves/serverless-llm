@@ -1,0 +1,342 @@
+/**
+ * Design Tokens
+ * Central source of truth for all design values
+ * Last updated: 2025-12-09
+ */
+
+:root {
+    /* ========================================
+     COLOR TOKENS
+     ======================================== */
+
+    /* Background Colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #FAFAFA;
+    --bg-tertiary: #F3F4F6;
+
+    /* Text Colors */
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
+    --text-tertiary: #9CA3AF;
+
+    /* Border Colors */
+    --border-color: #E5E7EB;
+    --border-color-light: #F3F4F6;
+    --border-color-dark: #D1D5DB;
+
+    /* Brand Colors */
+    --accent-color: #1e3a5f;
+    --accent-hover: #2c4f7c;
+    --accent-active: #152a45;
+    --accent-text: #ffffff;
+
+    /* Semantic Colors */
+    --danger-color: #DC2626;
+    --danger-bg: #FEE2E2;
+    --warning-color: #D97706;
+    --warning-bg: #FEF3C7;
+    --success-color: #059669;
+    --success-bg: #D1FAE5;
+    --info-color: #0284C7;
+    --info-bg: #E0F2FE;
+
+    /* Legacy aliases */
+    --error-color: var(--danger-color);
+    --error-bg: var(--danger-bg);
+
+    /* Feature-specific colors */
+    --direct-color: #64748b;
+    --vs-color: #7c3aed;
+    --prob-badge: #0284C7;
+    --grade-pass: #3DB08B;
+    --grade-fail: #E57373;
+    --grade-warn: #FFB74D;
+    --answer-color: #6366f1;
+    --confession-color: #f59e0b;
+
+    /* Roundtable colors */
+    --qwen-color: #8B5CF6;
+    --phi-color: #EC4899;
+    --llama-color: #14B8A6;
+
+    /* ========================================
+     SPACING TOKENS
+     ======================================== */
+
+    --space-0: 0;
+    --space-1: 4px;
+    /* Micro spacing */
+    --space-2: 8px;
+    /* xs */
+    --space-3: 12px;
+    /* sm */
+    --space-4: 16px;
+    /* md - base unit */
+    --space-5: 20px;
+    /* lg */
+    --space-6: 24px;
+    /* xl */
+    --space-8: 32px;
+    /* 2xl */
+    --space-10: 40px;
+    /* 3xl */
+    --space-12: 48px;
+    /* 4xl */
+    --space-16: 64px;
+    /* 5xl */
+
+    /* Semantic spacing aliases */
+    --space-xs: var(--space-2);
+    --space-sm: var(--space-3);
+    --space-md: var(--space-4);
+    --space-lg: var(--space-5);
+    --space-xl: var(--space-6);
+    --space-2xl: var(--space-8);
+    --space-3xl: var(--space-10);
+    --space-4xl: var(--space-12);
+    --space-5xl: var(--space-16);
+
+    /* ========================================
+     COMPONENT SPACING
+     ======================================== */
+
+    /* Card spacing */
+    --card-padding: var(--space-6);
+    /* 24px */
+    --card-padding-sm: var(--space-4);
+    /* 16px */
+    --card-padding-lg: var(--space-8);
+    /* 32px */
+    --card-gap: var(--space-6);
+    /* 24px */
+    --card-gap-sm: var(--space-4);
+    /* 16px */
+
+    /* Input spacing */
+    --input-padding-x: var(--space-5);
+    /* 20px */
+    --input-padding-y: var(--space-3);
+    /* 12px */
+    --input-padding-sm-x: var(--space-3);
+    /* 12px */
+    --input-padding-sm-y: var(--space-2);
+    /* 8px */
+
+    /* Header spacing */
+    --header-padding-x: var(--space-5);
+    /* 20px */
+    --header-padding-y: var(--space-4);
+    /* 16px */
+
+    /* Control spacing */
+    --control-gap: var(--space-4);
+    /* 16px */
+    --control-gap-sm: var(--space-3);
+    /* 12px */
+    --control-gap-xs: var(--space-2);
+    /* 8px */
+
+    /* Badge/chip spacing */
+    --chip-padding-x: var(--space-4);
+    /* 16px */
+    --chip-padding-y: var(--space-3);
+    /* 12px */
+    --chip-padding-sm-x: var(--space-3);
+    /* 12px */
+    --chip-padding-sm-y: var(--space-2);
+    /* 8px */
+    --chip-gap: var(--space-2);
+    /* 8px */
+
+    /* Section spacing */
+    --section-gap: var(--space-6);
+    /* 24px */
+    --section-gap-lg: var(--space-8);
+    /* 32px */
+
+    /* ========================================
+     SIZING TOKENS
+     ======================================== */
+
+    /* Touch targets */
+    --touch-target-min: 44px;
+    --desktop-target-min: 36px;
+    --compact-target-min: 32px;
+
+    /* Icon sizes */
+    --icon-xs: 12px;
+    --icon-sm: 16px;
+    --icon-md: 20px;
+    --icon-lg: 24px;
+    --icon-xl: 32px;
+
+    /* Button heights */
+    --button-height: var(--touch-target-min);
+    --button-height-sm: var(--desktop-target-min);
+    --button-height-xs: var(--compact-target-min);
+
+    /* Input heights */
+    --input-height: var(--touch-target-min);
+    --input-height-sm: var(--desktop-target-min);
+
+    /* ========================================
+     TYPOGRAPHY TOKENS
+     ======================================== */
+
+    /* Font families */
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+
+    /* Font sizes */
+    --text-xs: 11px;
+    --text-sm: 12px;
+    --text-base: 13px;
+    --text-md: 14px;
+    --text-lg: 15px;
+    --text-xl: 18px;
+    --text-2xl: 20px;
+    --text-3xl: 24px;
+    --text-4xl: 30px;
+
+    /* Font weights */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+
+    /* Line heights */
+    --leading-none: 1;
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+    --leading-loose: 2;
+
+    /* Letter spacing */
+    --tracking-tighter: -0.05em;
+    --tracking-tight: -0.025em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.025em;
+    --tracking-wider: 0.05em;
+    --tracking-widest: 0.1em;
+
+    /* ========================================
+     BORDER RADIUS TOKENS
+     ======================================== */
+
+    --radius-none: 0;
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    --radius-full: 9999px;
+
+    /* Component-specific radius */
+    --radius-button: var(--radius-md);
+    --radius-input: var(--radius-lg);
+    --radius-card: var(--radius-lg);
+    --radius-modal: var(--radius-xl);
+    --radius-chip: var(--radius-md);
+    --radius-pill: var(--radius-full);
+
+    /* ========================================
+     SHADOW TOKENS
+     ======================================== */
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+
+    /* ========================================
+     TRANSITION TOKENS
+     ======================================== */
+
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Transition properties */
+    --transition-all: all var(--transition-base);
+    --transition-colors: color var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
+    --transition-transform: transform var(--transition-base);
+    --transition-opacity: opacity var(--transition-base);
+
+    /* ========================================
+     Z-INDEX TOKENS
+     ======================================== */
+
+    --z-base: 0;
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-fixed: 300;
+    --z-modal-backdrop: 400;
+    --z-modal: 500;
+    --z-popover: 600;
+    --z-tooltip: 700;
+
+    /* ========================================
+     BREAKPOINT TOKENS
+     ======================================== */
+
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
+}
+
+/* ========================================
+   DARK MODE TOKENS
+   ======================================== */
+
+[data-theme="dark"] {
+    /* Background Colors */
+    --bg-primary: #0a0e14;
+    --bg-secondary: #12161e;
+    --bg-tertiary: #1a1f2b;
+
+    /* Text Colors */
+    --text-primary: #e4e7eb;
+    --text-secondary: #9ca3af;
+    --text-tertiary: #6b7280;
+
+    /* Border Colors */
+    --border-color: #1f2937;
+    --border-color-light: #374151;
+    --border-color-dark: #111827;
+
+    /* Brand Colors - slightly adjusted for dark mode */
+    --accent-color: #2c5282;
+    --accent-hover: #3d6ba3;
+    --accent-active: #1e3a5f;
+
+    /* Semantic Colors - adjusted for dark mode */
+    --danger-color: #EF4444;
+    --danger-bg: #450a0a;
+    --warning-color: #F59E0B;
+    --warning-bg: #451a03;
+    --success-color: #10B981;
+    --success-bg: #064e3b;
+    --info-color: #3B82F6;
+    --info-bg: #1e3a8a;
+
+    /* Feature-specific colors */
+    --direct-color: #94a3b8;
+    --vs-color: #8b5cf6;
+    --prob-badge: #3B82F6;
+
+    /* Shadows - stronger for dark mode */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}

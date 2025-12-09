@@ -1,0 +1,362 @@
+/**
+ * Form Components
+ * Input fields, selects, textareas, and form controls
+ */
+
+/* Shared input wrapper */
+.input-wrapper {
+    position: relative;
+    background: var(--bg-primary);
+    border-radius: var(--radius-input);
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+    padding: var(--space-3) 60px var(--space-3) var(--input-padding-x);
+    transition: border-color var(--transition-base);
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper:focus-within {
+    border-color: var(--accent-color);
+    box-shadow: none;
+}
+
+.input-wrapper textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    padding: var(--space-2) 0;
+    font-family: inherit;
+    font-size: var(--text-md);
+    line-height: var(--leading-normal);
+    resize: none;
+    min-height: 24px;
+    max-height: 200px;
+    outline: none;
+}
+
+.input-wrapper textarea::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* Controls row and groups */
+.controls-row {
+    display: flex;
+    gap: var(--control-gap);
+    margin-bottom: var(--space-3);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: var(--control-gap-xs);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.controls-secondary {
+    display: flex;
+    align-items: center;
+    gap: var(--control-gap);
+    flex-wrap: wrap;
+}
+
+.control-group input,
+.control-group select {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    min-height: var(--button-height-sm);
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 140px;
+}
+
+.control-item input,
+.control-item select {
+    padding: var(--space-3) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: var(--text-md);
+    min-height: var(--input-height-sm);
+}
+
+/* Input section */
+.input-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: var(--card-padding);
+    margin-bottom: var(--card-gap);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+/* Token inputs */
+.token-input-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+.token-input {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    min-height: var(--input-height-sm);
+}
+
+.token-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.token-visibility-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2);
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--input-height-sm);
+    min-width: var(--input-height-sm);
+}
+
+.token-visibility-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.token-hint {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--space-1);
+}
+
+.token-hint a {
+    color: var(--info-color);
+    text-decoration: none;
+    font-weight: var(--font-semibold);
+}
+
+.token-hint a:hover {
+    text-decoration: underline;
+}
+
+/* Toggle switches */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+    margin-top: var(--space-3);
+}
+
+.toggle-row input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--border-color);
+    border-radius: var(--radius-pill);
+    transition: background var(--transition-base);
+    flex-shrink: 0;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: var(--radius-full);
+    transition: transform var(--transition-base);
+    box-shadow: var(--shadow-sm);
+}
+
+.toggle-row input[type="checkbox"]:checked+.toggle-slider {
+    background: var(--accent-color);
+}
+
+.toggle-row input[type="checkbox"]:checked+.toggle-slider::before {
+    transform: translateX(20px);
+}
+
+.toggle-label {
+    font-size: var(--text-md);
+    color: var(--text-primary);
+    font-weight: var(--font-medium);
+}
+
+/* Orchestrator controls */
+.orchestrator-control {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.orchestrator-control label {
+    font-size: var(--text-md);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.orchestrator-control select {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    min-width: 160px;
+    min-height: var(--input-height-sm);
+}
+
+/* Config sections */
+.config-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.config-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: flex-start;
+}
+
+.config-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.config-group-label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+}
+
+/* Participant checkboxes */
+.participants-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.participant-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-all);
+    font-size: var(--text-base);
+    min-height: var(--button-height-sm);
+}
+
+.participant-checkbox:hover {
+    border-color: var(--accent-color);
+}
+
+.participant-checkbox:has(input:checked) {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.participant-checkbox:has(input:checked) .participant-name {
+    color: white;
+}
+
+.participant-checkbox:has(input:checked) .participant-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.participant-checkbox input {
+    display: none;
+}
+
+.participant-name {
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.participant-badge {
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-xs);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+}
+
+.participant-badge.local {
+    background: rgba(5, 150, 105, 0.15);
+    color: var(--success-color);
+}
+
+.participant-badge.api {
+    background: rgba(217, 119, 6, 0.15);
+    color: var(--warning-color);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .input-wrapper textarea {
+        font-size: var(--text-md);
+        /* Prevents zoom on iOS */
+        padding: var(--space-2) 0;
+        min-height: 24px;
+    }
+
+    .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .control-item {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .input-wrapper {
+        border-radius: var(--radius-md);
+    }
+
+    .input-wrapper textarea {
+        padding: var(--space-2) 0;
+    }
+}

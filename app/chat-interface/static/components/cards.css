@@ -1,0 +1,274 @@
+/**
+ * Card Components
+ * Reusable card layouts and containers
+ */
+
+/* Base card */
+.card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: var(--card-padding-sm);
+    transition: var(--transition-all);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* Card sizes */
+.card-sm {
+    padding: var(--space-3);
+}
+
+.card-lg {
+    padding: var(--card-padding);
+}
+
+/* Page section cards */
+.page-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: var(--card-padding);
+    box-shadow: var(--shadow-xs);
+}
+
+/* Mode overview / welcome cards */
+.mode-overview-card,
+.welcome-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: var(--card-padding);
+    transition: var(--transition-all);
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.mode-overview-card:hover,
+.welcome-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.mode-overview-title,
+.welcome-title {
+    font-weight: var(--font-semibold);
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+.mode-overview-subtitle,
+.welcome-subtitle {
+    font-size: var(--text-md);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+}
+
+.mode-overview-actions {
+    margin-top: var(--space-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.mode-overview-chip {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-color);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+}
+
+.mode-overview-list {
+    margin: var(--space-3) 0 0;
+    padding-left: var(--space-5);
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+}
+
+.mode-overview-list li {
+    margin-bottom: var(--space-2);
+}
+
+/* Card divider */
+.card-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color);
+    margin: var(--space-5) 0;
+}
+
+/* Explainer card (confessions page) */
+.explainer-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: var(--card-padding);
+    margin-bottom: var(--card-gap);
+}
+
+.explainer-card h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-3);
+    color: var(--text-primary);
+}
+
+.explainer-card p {
+    margin-bottom: var(--space-3);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+}
+
+.explainer-card .paper-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: var(--font-semibold);
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.explainer-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-3);
+}
+
+/* Empty state */
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: var(--card-padding);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-card);
+}
+
+.empty-state svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-4);
+    opacity: 0.5;
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+    font-size: var(--text-md);
+}
+
+.empty-state-container {
+    padding: calc(var(--space-8) + var(--space-2));
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+/* Comparison containers */
+.comparison-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-5);
+    margin-bottom: var(--card-gap);
+}
+
+.comparison-side {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    background: var(--bg-secondary);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+    box-shadow: var(--shadow-xs);
+}
+
+.comparison-side.answer {
+    border-top: 4px solid var(--answer-color);
+}
+
+.comparison-side.confession {
+    border-top: 4px solid var(--confession-color);
+}
+
+/* Results grid */
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-5);
+}
+
+.result-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    background: var(--bg-secondary);
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+}
+
+.result-card h3 {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.result-content {
+    flex: 1;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    overflow-y: auto;
+    line-height: var(--leading-relaxed);
+    color: var(--text-primary);
+    white-space: normal;
+}
+
+.result-content.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-style: italic;
+    color: var(--text-tertiary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .comparison-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .mode-overview-card,
+    .welcome-card {
+        padding: var(--space-4);
+    }
+
+    .mode-overview-title,
+    .welcome-title {
+        font-size: var(--text-lg);
+    }
+
+    .mode-overview-subtitle,
+    .welcome-subtitle {
+        font-size: var(--text-base);
+    }
+}

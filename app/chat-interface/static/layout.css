@@ -1,0 +1,265 @@
+/**
+ * Layout Styles
+ * Grid, flex, and core page layout
+ */
+
+/* Main layout structure */
+header {
+    padding: var(--header-padding-y) var(--header-padding-x);
+    background: var(--accent-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    z-index: var(--z-fixed);
+    position: relative;
+}
+
+main,
+.container {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-primary);
+}
+
+/* Scrollable content wrapper */
+main:not(:has(.chat-history)):not(:has(.scrollable-content)),
+.container:not(:has(.chat-history)):not(:has(.scrollable-content)) {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.scrollable-content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-gap);
+}
+
+/* Content padding */
+main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+.container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
+    padding: 0 var(--space-4);
+}
+
+main> :not(.mode-input-container):not(.input-container):first-child,
+.container> :not(.mode-input-container):not(.input-container):first-child {
+    padding-top: var(--space-4);
+}
+
+main> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator),
+.container> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator) {
+    padding-bottom: var(--space-4);
+}
+
+/* Mode overview cards */
+.mode-overview-card {
+    margin-top: var(--space-4);
+    margin-bottom: 0;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Input containers */
+.mode-input-container,
+.input-container {
+    flex-shrink: 0;
+}
+
+.mode-input-container {
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-sm);
+}
+
+.input-container {
+    padding: var(--space-4);
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Safe area inset for devices with notches */
+@supports (padding: env(safe-area-inset-bottom)) {
+    .input-container {
+        padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+.mode-input-container .input-section,
+.mode-input-container section {
+    margin-bottom: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: var(--card-padding-sm);
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: none;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    width: fit-content;
+    margin: var(--space-2) var(--space-4);
+    flex-shrink: 0;
+}
+
+.typing-indicator.active {
+    display: flex;
+}
+
+.typing-indicator .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-color);
+    border-radius: var(--radius-full);
+    animation: typingBounce 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator .dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-indicator .dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typingBounce {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Grid layouts */
+.grid {
+    display: grid;
+    gap: var(--space-5);
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-auto-fit {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* Flex utilities */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-xs {
+    gap: var(--space-xs);
+}
+
+.gap-sm {
+    gap: var(--space-sm);
+}
+
+.gap-md {
+    gap: var(--space-md);
+}
+
+.gap-lg {
+    gap: var(--space-lg);
+}
+
+.gap-xl {
+    gap: var(--space-xl);
+}
+
+/* Spacing utilities */
+.m-0 {
+    margin: 0;
+}
+
+.p-0 {
+    padding: 0;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+    header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .mode-input-container {
+        padding: var(--space-3);
+    }
+
+    .mode-input-container .input-section,
+    .mode-input-container section {
+        padding: var(--space-4);
+    }
+
+    main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+    .container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
+        padding: 0 var(--space-3);
+    }
+
+    .mode-overview-card {
+        margin-top: var(--space-3);
+    }
+
+    .grid-cols-2,
+    .grid-cols-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+    .container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
+        padding: 0 var(--space-2);
+    }
+
+    .mode-overview-card {
+        margin-top: var(--space-2);
+    }
+}
