@@ -20,27 +20,47 @@
           </button>
         </div>
         <div class="settings-modal-body">
-          <div class="settings-section">
+          <div class="settings-section theme-section">
             <h3>Theme</h3>
-            <label class="toggle-row">
-              <input type="checkbox" id="darkModeToggle">
-              <span class="toggle-slider"></span>
+            <label class="toggle-row theme-toggle">
               <span class="toggle-label">Dark Mode</span>
+              <div class="toggle-with-icons">
+                <svg class="theme-icon sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="5"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <input type="checkbox" id="darkModeToggle">
+                <span class="toggle-slider"></span>
+                <svg class="theme-icon moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+              </div>
             </label>
           </div>
-          <div class="settings-section">
+
+          <div class="settings-card">
             <h3>API Models (Large Language Models)</h3>
             <p class="settings-description">
               Enable large cloud-based models (GPT-4, DeepSeek R1, Llama 3.1 405B, etc.) in addition to the local small models (3-4B parameters).<br>
-              <strong>Local:</strong> Unlimited, private (3-4B params) | <strong>API:</strong> Free quota via GitHub Models, powerful (70B+ params)
+              <br>
+              <strong>Local:</strong> Unlimited, private (3-4B params) <br>
+              <strong>API:</strong> Free quota via GitHub Models, powerful (70B+ params)
             </p>
             <label class="toggle-row">
+              <span class="toggle-label">Enable API Models</span>
               <input type="checkbox" id="enableApiModels">
               <span class="toggle-slider"></span>
-              <span class="toggle-label">Enable API Models</span>
             </label>
           </div>
-          <div class="settings-section token-section" id="tokenSection">
+
+          <div class="settings-card token-card" id="tokenSection">
             <h3>GitHub Models API Token</h3>
             <p class="settings-description">Use your GitHub token to access large language models (GPT-4, DeepSeek R1, Llama 405B). Free quota with rate limits.</p>
             <div class="token-input-row">
@@ -58,11 +78,15 @@
                 </svg>
               </button>
             </div>
-            <div class="token-hint">
-              <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Chat&user_models=read" target="_blank" rel="noopener">Create a token</a> (pre-filled, opens in new tab)
-            </div>
-            <div class="token-hint" style="margin-top: 8px; opacity: 0.75;">
-              🔒 Token is saved in your browser only and injected per request. We never store it on our servers.
+            <a href="https://github.com/settings/personal-access-tokens/new?description=GitHub+Models+API+token&name=GitHub+Models+Chat&user_models=read" target="_blank" rel="noopener" class="create-token-btn">
+              Create a token
+            </a>
+            <div class="token-security-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span>Token is saved in your browser only and injected per request. We never store it on our servers.</span>
             </div>
           </div>
         </div>
@@ -208,7 +232,11 @@
   function updateTokenSectionVisibility(enabled) {
     const tokenSection = modal?.querySelector('#tokenSection');
     if (tokenSection) {
-      tokenSection.style.display = enabled ? 'block' : 'none';
+      if (enabled) {
+        tokenSection.classList.add('show');
+      } else {
+        tokenSection.classList.remove('show');
+      }
     }
   }
 

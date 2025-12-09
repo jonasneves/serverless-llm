@@ -107,7 +107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Listen for orchestrator changes
   orchestratorModel.addEventListener('change', updateParticipantUI);
-  // Initial update will be called after models load
+
+  // Initial update after models and orchestrator are loaded
+  updateParticipantUI();
 
   function setStatus(status, text) {
     statusIndicator.innerHTML = `
