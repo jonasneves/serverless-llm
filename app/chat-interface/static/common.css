@@ -190,19 +190,43 @@ header {
 .mode-dropdown {
   position: relative;
   display: inline-block;
+  vertical-align: top;
 }
 
 .dropdown-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  vertical-align: top;
+  /* Match mode-link exactly */
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.dropdown-trigger:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.dropdown-trigger.active {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 600;
 }
 
 .dropdown-trigger svg {
   display: inline-block;
-  flex-shrink: 0;
-  margin-top: 1px;
+  vertical-align: middle;
+  margin-left: 2px;
+  margin-top: -2px;
 }
 
 .dropdown-menu {
