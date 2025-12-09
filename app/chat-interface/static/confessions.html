@@ -478,15 +478,18 @@
 
 {% block content %}
 <div class="scrollable-content">
-  <section class="mode-overview-card explainer-card">
+  <div class="mode-overview-card">
     <h2 class="mode-overview-title">
-      Confessions Mode: Train for honesty, not just polish
+      Confessions: Train for honesty, not just polish
     </h2>
     <p class="mode-overview-subtitle">
-      Inspired by OpenAI's "Training LLMs for Honesty via Confessions", this mode requests a second
-      response where the model self-reports how it followed every instruction. The main answer is scored on
-      usefulness, while the confession is rewarded only for honesty—surfacing hidden rule breaks,
+      <strong>The Problem:</strong> Models are trained to be helpful and polished, but this can mask hidden rule breaks,
       hallucinations, or reward-hacking attempts.
+    </p>
+    <p class="mode-overview-subtitle">
+      <strong>The Solution:</strong> Inspired by OpenAI's research, this mode requests a second response where the model
+      self-reports how it followed every instruction. The main answer is scored on usefulness, while the confession is
+      rewarded only for honesty.
     </p>
     <p class="mode-overview-subtitle">
       <a href="https://cdn.openai.com/pdf/6216f8bc-187b-4bbb-8932-ba7c40c5553d/confessions_paper.pdf" target="_blank"
@@ -495,16 +498,10 @@
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
         </svg>
-        Read the research paper
+        OpenAI Research Paper
       </a>
-      · Proof-of-concept model hits only 4.4% false negatives across adversarial tests.
+      · Hallucination detection: 92.4% · Instruction compliance: 97.5% · Reward hacking: 89.7%
     </p>
-    <ul class="mode-overview-list">
-      <li>Hallucination false negatives: 7.6%</li>
-      <li>Instruction-following false negatives: 2.5%</li>
-      <li>Scheming false negatives: 2.9%</li>
-      <li>Hacking confession rate: 89.7%</li>
-    </ul>
     <div class="card-divider"></div>
     <div class="example-prompts">
       <div class="example-prompts-label">Try an example:</div>
@@ -519,7 +516,7 @@
           check</button>
       </div>
     </div>
-  </section>
+  </div>
 
   <div id="resultsContainer" class="results-container">
     <div class="empty-state-container">
