@@ -103,44 +103,43 @@
     margin: var(--space-5) 0;
 }
 
-/* Explainer card (confessions page) */
-.explainer-card {
+
+/* Lab pages explainer card (Variations, Confessions, etc.) */
+.technique-explainer {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     padding: var(--card-padding);
     margin-bottom: var(--card-gap);
 }
 
-.explainer-card h2 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+.technique-explainer h2 {
     font-size: var(--text-xl);
     margin-bottom: var(--space-3);
     color: var(--text-primary);
-}
-
-.explainer-card p {
-    margin-bottom: var(--space-3);
-    color: var(--text-secondary);
-    line-height: var(--leading-relaxed);
-}
-
-.explainer-card .paper-link {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-weight: var(--font-semibold);
-    color: var(--accent-color);
-    text-decoration: none;
 }
 
-.explainer-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    margin-top: var(--space-3);
+.technique-explainer p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-2);
+    font-size: var(--text-md);
+}
+
+.technique-explainer .paper-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: var(--font-semibold);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.technique-explainer .paper-link:hover {
+    text-decoration: underline;
 }
 
 /* Empty state */
