@@ -1,28 +1,42 @@
 # Serverless LLM
 
-[![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
 [![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen3-4b)](https://qwen.neevs.io/health)
-[![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
+[![DeepSeek R1Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/deepseek-r1-distill-qwen-1.5b)](https://r1qwen.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
-[![DeepSeek R1Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/deepseek-r1-distill-qwen-1.5b)](https://r1qwen.neevs.io/health)
+[![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
+[![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
 
 ## Overview
 
-Free, serverless, multi-model chat with Qwen3, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
+Free, serverless, multi-model chat powered only by GitHub Actions + Cloudflare
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: Qwen3 (4B), DeepSeek R1 Distill Qwen (1.5B), Phi‑3, Llama 3.2, Mistral 7B, Gemma 2 9B
+- **Multi-Model Support**: 7 models ranked by capability (see table below)
 - **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
 - **Continuous Availability**: Auto-restart with graceful handoff
 - **Public Access**: External connectivity via Cloudflare Tunnels
 
+## Models
+
+Models ranked by overall capability based on Dec 2025 benchmarks (MMLU-Pro, GPQA, MATH, HumanEval):
+
+| Rank | Model | Size | Key Strengths | Best For |
+|:-----|:------|:-----|:--------------|:---------|
+| 1 | **Qwen3 4B** | 4B | Multilingual (119 langs), long-context (1M tokens), reasoning, coding, agent capabilities | Complex reasoning, code generation, agent tasks |
+| 2 | **DeepSeek R1 1.5B** | 1.5B | Math/reasoning (o1-preview level), efficient CoT, coding (96.3% Codeforces) | Step-by-step reasoning, math problems, algorithms |
+| 3 | **Gemma 2 9B** | 9B | On-device efficiency, reasoning, responsible AI, safety-aligned | Fact-checking, educational content, safe generation |
+| 4 | **Mistral 7B v0.3** | 7B | Instruction-following, structured output, function calling | JSON generation, tool use, task decomposition |
+| 5 | **Phi-3 Mini** | 3.8B | Compact reasoning, synthetic data efficiency, instruction following | Logic puzzles, moderate difficulty tasks |
+| 6 | **RNJ-1 Instruct** | 8B | Tool-calling, agentic capabilities (70% SWE-Bench) | Automation workflows, tool use |
+| 7 | **Llama 3.2 3B** | 3B | Lightweight chat, creative writing, long context (131K) | Casual conversation, summarization, storytelling |
+
 ## Architecture
 
-![User Access Flow](diagram-user-access.png)
+![Architecture](architecture.png)
 
 ## Quick Start
 

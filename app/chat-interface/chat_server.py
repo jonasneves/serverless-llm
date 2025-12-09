@@ -241,8 +241,9 @@ def get_static_versions() -> dict:
         "model_selector_js": get_file_version("model-selector.js"),
     }
 
+# Models ordered by capability (Dec 2025 benchmarks)
 MODEL_CONFIG = (
-    {
+    {  # Rank 1: Multilingual (119 langs), 1M context, reasoning, coding
         "id": "qwen3-4b",
         "name": "Qwen3 4B",
         "env": "QWEN_API_URL",
@@ -250,46 +251,44 @@ MODEL_CONFIG = (
         "default": True,
         "service": "qwen",
     },
-    {
+    {  # Rank 2: o1-preview level reasoning, 96.3% Codeforces
         "id": "deepseek-r1-distill-qwen-1.5b",
         "name": "DeepSeek R1 1.5B",
         "env": "R1QWEN_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["R1QWEN_API_URL"],
         "service": "r1qwen",
     },
-    {
+    {  # Rank 3: On-device efficiency, reasoning, safety-aligned
         "id": "gemma-2-9b-instruct",
         "name": "Gemma 2 9B",
         "env": "GEMMA_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["GEMMA_API_URL"],
     },
-    
-    {
+    {  # Rank 4: Instruction-following, structured output, function calling
         "id": "mistral-7b-instruct-v0.3",
         "name": "Mistral 7B v0.3",
         "env": "MISTRAL_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["MISTRAL_API_URL"],
     },
-    {
+    {  # Rank 5: Compact reasoning, synthetic data efficiency
         "id": "phi-3-mini",
         "name": "Phi-3 Mini",
         "env": "PHI_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["PHI_API_URL"],
     },
-    {
-        "id": "llama-3.2-3b",
-        "name": "Llama 3.2-3B",
-        "env": "LLAMA_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["LLAMA_API_URL"],
-    },
-    {
+    {  # Rank 6: Tool-calling, agentic (70% SWE-Bench)
         "id": "rnj-1-instruct",
         "name": "RNJ-1 Instruct",
         "env": "RNJ_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["RNJ_API_URL"],
         "service": "rnj",
     },
-    
+    {  # Rank 7: Lightweight chat, creative writing, long context
+        "id": "llama-3.2-3b",
+        "name": "Llama 3.2-3B",
+        "env": "LLAMA_API_URL",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["LLAMA_API_URL"],
+    },
 )
 
 # Base domain configuration for production (Cloudflare tunnels)

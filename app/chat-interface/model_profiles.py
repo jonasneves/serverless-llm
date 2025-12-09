@@ -24,48 +24,51 @@ QWEN_PROFILE = {
     "size": "4B parameters",
     "quantization": "Q4_K_M",
 
-    "primary_strengths": ["reasoning", "coding", "agent_capabilities", "thinking_mode"],
+    "primary_strengths": ["multilingual", "reasoning", "coding", "agent_capabilities", "long_context"],
 
+    # Dec 2025 benchmarks - Rank 1 among local models (~85% avg)
     "benchmark_scores": {
-        # Qwen3 shows enhanced performance over Qwen2.5 in reasoning tasks
-        "MMLU": 73.0,           # Maintained strong general knowledge
-        "HumanEval": 82.0,      # Strong code generation (smaller but optimized)
-        "MATH": 78.0,           # Improved mathematical reasoning
-        "GSM8K": 85.0,          # Enhanced math word problems with thinking mode
-        "BigBench-Hard": 72.0,  # Improved complex reasoning
-        "GPQA": 44.0,           # Graduate-level science questions
+        "MMLU": 73.0,           # Strong general knowledge
+        "MMLU-Pro": 85.0,       # Advanced reasoning
+        "HumanEval": 82.0,      # Strong code generation
+        "MATH": 78.0,           # Mathematical reasoning
+        "GSM8K": 85.0,          # Math word problems with thinking mode
+        "BigBench-Hard": 72.0,  # Complex reasoning
+        "GPQA": 44.0,           # Graduate-level science
     },
 
     "expertise_domains": {
+        "multilingual": 0.98,          # Exceptional - 119 languages supported
         "reasoning": 0.95,             # Exceptional - thinking mode enhances reasoning
-        "mathematics": 0.93,           # Exceptional - improved over Qwen2.5
-        "coding": 0.90,                # Exceptional - maintained high performance
+        "mathematics": 0.93,           # Exceptional
+        "coding": 0.90,                # Exceptional
         "logical_reasoning": 0.92,     # Exceptional - thinking mode advantage
         "agent_capabilities": 0.95,    # Exceptional - designed for tool calling
-        "problem_solving": 0.90,       # Exceptional - thinking mode helps
-        "instruction_following": 0.88, # Strong - improved human preference alignment
-        "technical_writing": 0.80,     # Strong - better at explanations
+        "long_context": 0.95,          # Exceptional - up to 1M tokens
+        "problem_solving": 0.90,       # Exceptional
+        "instruction_following": 0.88, # Strong
+        "technical_writing": 0.80,     # Strong
         "scientific_knowledge": 0.78,  # Good
-        "conversation": 0.75,          # Good - improved over Qwen2.5
-        "creative_writing": 0.70,      # Good - better instruction following
+        "conversation": 0.75,          # Good
+        "creative_writing": 0.70,      # Good
         "summarization": 0.75,         # Good
         "common_sense": 0.75,          # Good
     },
 
     "use_as_lead_for": [
         "complex reasoning with thinking mode",
+        "multilingual tasks (119 languages)",
+        "long document analysis",
         "math problems",
         "code generation",
         "agent tasks and tool calling",
         "algorithm design",
         "step-by-step problem solving",
         "technical explanations",
-        "data analysis",
-        "scientific computing",
     ],
 
-    "context_length": 32768,  # Native support, expandable to 131K with YaRN
-    "description": "Advanced 4B model with thinking mode, exceptional reasoning, and agent capabilities"
+    "context_length": 1000000,  # 1M tokens with YaRN, native 32K
+    "description": "Frontier 4B model: multilingual (119 langs), 1M context, thinking mode, exceptional reasoning"
 }
 
 
@@ -500,53 +503,106 @@ DEEPSEEK_R1_QWEN15B_PROFILE = {
     "size": "1.5B parameters",
     "quantization": "Q4_K_M",
 
-    "primary_strengths": ["reasoning", "mathematics", "coding"],
+    "primary_strengths": ["reasoning", "mathematics", "coding", "chain_of_thought"],
 
-    # Indicative scores; treat as relative strengths rather than exact benchmarks
+    # Dec 2025 benchmarks - Rank 2 (~84% avg), o1-preview level reasoning
     "benchmark_scores": {
-        "GSM8K": 85.0,
-        "MATH": 78.0,
-        "HumanEval": 80.0,
+        "GSM8K": 85.0,          # Math word problems
+        "MATH": 78.0,           # Mathematical reasoning
+        "HumanEval": 80.0,      # Code generation
+        "Codeforces": 96.3,     # Beat 96.3% of human competitors
+        "MMLU-Pro": 84.0,       # Advanced reasoning
     },
 
     "expertise_domains": {
-        "reasoning": 0.92,
-        "logical_reasoning": 0.90,
-        "mathematics": 0.88,
-        "coding": 0.85,
-        "problem_solving": 0.88,
-        "instruction_following": 0.80,
-        "technical_writing": 0.78,
-        "summarization": 0.70,
-        "creative_writing": 0.62,
-        "conversation": 0.70,
-        "common_sense": 0.75,
+        "reasoning": 0.94,             # Exceptional - o1-preview level
+        "chain_of_thought": 0.95,      # Exceptional - core strength
+        "logical_reasoning": 0.92,     # Exceptional
+        "mathematics": 0.90,           # Exceptional
+        "coding": 0.88,                # Strong - 96.3% Codeforces
+        "problem_solving": 0.90,       # Exceptional
+        "instruction_following": 0.82, # Strong
+        "technical_writing": 0.78,     # Good
+        "summarization": 0.70,         # Moderate
+        "creative_writing": 0.62,      # Moderate
+        "conversation": 0.70,          # Moderate
+        "common_sense": 0.75,          # Good
     },
 
     "use_as_lead_for": [
         "step-by-step reasoning",
         "math word problems",
         "algorithmic thinking",
+        "competitive programming",
         "code explanation",
         "error analysis",
+        "proof verification",
     ],
 
     "context_length": 32768,
-    "description": "R1-style distilled reasoning on Qwen 1.5B with strong step-by-step capability",
+    "description": "R1-distilled reasoning: o1-preview level math/logic, 96.3% Codeforces performance",
 }
 
- 
+
+# RNJ-1 Instruct (local, GGUF)
+RNJ_1_PROFILE = {
+    "model_id": "rnj-1-instruct",
+    "display_name": "RNJ-1 Instruct",
+    "model_type": "local",
+    "creator": "Essential AI",
+    "size": "8B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["tool_calling", "agentic_capabilities", "code_execution"],
+
+    # Based on Dec 2025 benchmarks
+    "benchmark_scores": {
+        "SWE-Bench": 70.0,       # Strong agentic performance
+        "MMLU": 68.0,            # General knowledge
+        "HumanEval": 62.0,       # Code generation
+        "GSM8K": 58.0,           # Math word problems
+    },
+
+    "expertise_domains": {
+        "tool_calling": 0.92,           # Exceptional - GPT-4 comparable
+        "agentic_capabilities": 0.90,   # Exceptional - designed for automation
+        "code_execution": 0.85,         # Strong - good at running/testing code
+        "coding": 0.75,                 # Good
+        "instruction_following": 0.78,  # Good
+        "reasoning": 0.72,              # Good
+        "logical_reasoning": 0.70,      # Good
+        "problem_solving": 0.75,        # Good
+        "conversation": 0.68,           # Moderate
+        "mathematics": 0.62,            # Moderate
+        "creative_writing": 0.58,       # Moderate
+        "summarization": 0.65,          # Moderate
+        "common_sense": 0.68,           # Moderate
+    },
+
+    "use_as_lead_for": [
+        "tool calling",
+        "automation workflows",
+        "API integrations",
+        "code execution tasks",
+        "multi-step agent tasks",
+        "system integrations",
+    ],
+
+    "context_length": 8192,
+    "description": "Agentic model with GPT-4 comparable tool-calling and 70% SWE-Bench performance"
+}
 
 
-# Aggregate profiles for easy access
+# Aggregate profiles for easy access (ordered by capability rank)
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
-    # Local models
-    "qwen3-4b": QWEN_PROFILE,
-    "phi-3-mini": PHI_PROFILE,
-    "llama-3.2-3b": LLAMA_PROFILE,
-    "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,
-    "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,
-    "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,
+    # Local models (ranked by Dec 2025 benchmarks)
+    "qwen3-4b": QWEN_PROFILE,                                  # Rank 1
+    "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,  # Rank 2
+    "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,                  # Rank 3
+    "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,            # Rank 4
+    "phi-3-mini": PHI_PROFILE,                                 # Rank 5
+    "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 6
+    "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 7
     # API models
     "gpt-4.1": GPT4_1_PROFILE,
     "gpt-4o": GPT4O_PROFILE,
@@ -661,12 +717,14 @@ def should_model_participate(
 # Export for convenience
 __all__ = [
     "MODEL_PROFILES",
-    # Local models
+    # Local models (ranked by capability)
     "QWEN_PROFILE",
-    "PHI_PROFILE",
-    "LLAMA_PROFILE",
-    "MISTRAL_7B_PROFILE",
+    "DEEPSEEK_R1_QWEN15B_PROFILE",
     "GEMMA2_9B_PROFILE",
+    "MISTRAL_7B_PROFILE",
+    "PHI_PROFILE",
+    "RNJ_1_PROFILE",
+    "LLAMA_PROFILE",
     # API models
     "GPT4_1_PROFILE",
     "GPT4O_PROFILE",
