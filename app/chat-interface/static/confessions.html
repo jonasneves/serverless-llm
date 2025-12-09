@@ -3,23 +3,13 @@
 {% block title %}Confessions Mode - Honesty Reports for LLMs{% endblock %}
 {% block subtitle %}Audit model honesty{% endblock %}
 
-{% block extra_css %}
 <style>
-  :root {
-    --grade-pass: #3DB08B;
-    --grade-fail: #E57373;
-    --grade-warn: #FFB74D;
-    --answer-color: #6366f1;
-    --confession-color: #f59e0b;
-  }
+  /* ========================================
+     CONFESSIONS MODE STYLES
+     Using semantic design tokens for maintainability
+     ======================================== */
 
-  .card-divider {
-    width: 100%;
-    height: 1px;
-    background: var(--border-color);
-    margin: var(--space-5) 0;
-  }
-
+  /* Explainer Card */
   .explainer-card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -33,12 +23,12 @@
     align-items: center;
     gap: var(--space-3);
     font-size: var(--text-xl);
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
     color: var(--text-primary);
   }
 
   .explainer-card p {
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
     color: var(--text-secondary);
     line-height: var(--leading-relaxed);
   }
@@ -50,56 +40,56 @@
     font-weight: var(--font-semibold);
     color: var(--accent-color);
     text-decoration: none;
+    transition: var(--transition-colors);
   }
 
-  .explainer-stats {
+  .explainer-card .paper-link:hover {
+    color: var(--accent-hover);
+  }
+
+  .explainer-card ul {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-4);
-    margin-top: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .input-section {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
-    padding: var(--card-padding);
-    margin-bottom: var(--card-gap);
+  .explainer-card ul li {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    align-items: flex-end;
-  }
-
-  .control-item {
-    display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: var(--space-2);
-    min-width: 140px;
-  }
-
-  .control-item input,
-  .control-item select {
-    padding: var(--space-3) var(--space-3);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    color: var(--text-secondary);
     font-size: var(--text-md);
-    min-height: var(--input-height-sm);
   }
 
-  /* Comparison container matching Variations style */
+  .explainer-card ul li::before {
+    content: "✓";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--confession-positive-bg);
+    color: var(--confession-positive);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+  }
+
+  .card-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color);
+    margin: var(--space-6) 0;
+  }
+
+  /* Comparison Container - Answer vs Confession */
   .comparison-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: var(--space-5);
+    gap: var(--space-6);
     margin-bottom: var(--card-gap);
   }
 
@@ -107,19 +97,27 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-xl);
     background: var(--bg-secondary);
-    padding: var(--space-5);
+    padding: var(--space-6);
     display: flex;
     flex-direction: column;
     min-height: 420px;
     box-shadow: var(--shadow-xs);
+    transition: var(--transition-all);
   }
 
+  .comparison-side:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Semantic border accents */
   .comparison-side.answer {
-    border-top: 4px solid var(--answer-color);
+    border-top: 3px solid var(--confession-answer-primary);
+    background: linear-gradient(to bottom, var(--confession-answer-surface) 0%, var(--bg-secondary) 60px);
   }
 
   .comparison-side.confession {
-    border-top: 4px solid var(--confession-color);
+    border-top: 3px solid var(--confession-truth-primary);
+    background: linear-gradient(to bottom, var(--confession-truth-surface) 0%, var(--bg-secondary) 60px);
   }
 
   .side-header {
@@ -137,35 +135,46 @@
     align-items: center;
     gap: var(--space-2);
     margin: 0;
-  }
-
-  .side-header.answer {
     color: var(--text-primary);
   }
 
-  .side-header.confession {
-    color: var(--text-primary);
-  }
-
+  /* Status Badges - Improved visual distinction */
   .badge {
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-lg);
     font-size: var(--text-sm);
     font-weight: var(--font-semibold);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .badge.streaming {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    background: var(--confession-streaming-bg);
+    color: var(--confession-streaming);
+    border: 1px solid var(--confession-streaming);
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
   .badge.audit {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    background: var(--confession-audit-bg);
+    color: var(--confession-audit);
+    border: 1px solid var(--confession-audit);
   }
 
+  @keyframes pulse {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Response Containers */
   .responses-container {
     flex: 1;
     display: flex;
@@ -188,19 +197,20 @@
 
   .response-item:hover {
     box-shadow: var(--shadow-sm);
+    border-color: var(--border-color-dark);
   }
 
-  /* Legacy styles for backwards compatibility */
+  /* Legacy Results Grid - Maintained for backwards compatibility */
   .results-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 20px;
+    gap: var(--space-6);
   }
 
   .result-card {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-xl);
-    padding: var(--space-5);
+    padding: var(--space-6);
     background: var(--bg-secondary);
     min-height: 420px;
     display: flex;
@@ -208,7 +218,7 @@
   }
 
   .result-card h3 {
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-3);
     font-size: var(--text-xl);
     display: flex;
     align-items: center;
@@ -224,7 +234,7 @@
     overflow-y: auto;
     line-height: var(--leading-relaxed);
     color: var(--text-primary);
-    white-space: normal;
+    white-space: pre-wrap;
   }
 
   .result-content.placeholder {
@@ -236,6 +246,7 @@
     color: var(--text-tertiary);
   }
 
+  /* Empty State */
   .empty-state {
     flex: 1;
     display: flex;
@@ -261,17 +272,23 @@
     font-size: var(--text-md);
   }
 
+  .empty-state-icon {
+    margin-bottom: var(--space-4);
+    opacity: 0.5;
+  }
+
+  /* Confession Grading */
   .confession-grade {
     border-radius: var(--radius-lg);
     padding: var(--space-4);
     margin-bottom: var(--space-4);
-    background: rgba(61, 176, 139, 0.1);
-    border: 1px solid rgba(61, 176, 139, 0.3);
+    background: var(--confession-positive-bg);
+    border: 1px solid var(--confession-positive);
   }
 
   .confession-grade.fail {
-    background: rgba(229, 115, 115, 0.1);
-    border-color: rgba(229, 115, 115, 0.4);
+    background: var(--confession-negative-bg);
+    border-color: var(--confession-negative);
   }
 
   .confession-grade h4 {
@@ -279,6 +296,7 @@
     font-size: var(--text-xl);
   }
 
+  /* Compliance List */
   .compliance-list {
     display: flex;
     flex-direction: column;
@@ -288,13 +306,14 @@
   .objective-item {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: var(--space-3);
+    padding: var(--space-4);
     background: var(--bg-primary);
     transition: var(--transition-all);
   }
 
   .objective-item:hover {
     box-shadow: var(--shadow-sm);
+    border-color: var(--border-color-dark);
   }
 
   .objective-header {
@@ -305,34 +324,33 @@
     margin-bottom: var(--space-2);
   }
 
+  /* Compliance Pills - Using semantic tokens */
   .compliance-pill {
     font-size: var(--text-sm);
-    padding: var(--space-1) var(--space-2);
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pill);
     font-weight: var(--font-semibold);
     text-transform: capitalize;
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
   }
 
   .compliance-pill.negative {
-    background: rgba(229, 115, 115, 0.15);
-    color: #e57373;
+    background: var(--confession-negative-bg);
+    color: var(--confession-negative);
   }
 
   .compliance-pill.partial {
-    background: rgba(255, 183, 77, 0.2);
-    color: #ffb74d;
+    background: var(--confession-partial-bg);
+    color: var(--confession-partial);
   }
 
   .compliance-pill.positive {
-    background: rgba(61, 176, 139, 0.2);
-    color: #3db08b;
+    background: var(--confession-positive-bg);
+    color: var(--confession-positive);
   }
 
   .uncertainty-list {
     margin-top: var(--space-4);
-    padding-left: var(--space-5);
+    padding-left: var(--space-6);
     color: var(--text-secondary);
   }
 
@@ -353,13 +371,13 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
-  /* Model group header */
+  /* Model Group Header */
   .model-group-header {
     margin-bottom: var(--space-4);
-    padding-bottom: var(--space-2);
+    padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--border-color);
     font-size: var(--text-xl);
     color: var(--text-primary);
@@ -370,31 +388,71 @@
 
   .model-badge {
     background: var(--accent-color);
-    color: white;
+    color: var(--accent-text);
     padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     font-size: var(--text-sm);
     font-weight: var(--font-semibold);
   }
 
-  @media (max-width: 1024px) {
+  /* ========================================
+     RESPONSIVE DESIGN
+     ======================================== */
+
+  /* Tablet: Horizontal scroll for comparison */
+  @media (max-width: 1024px) and (min-width: 768px) {
     .comparison-container {
       grid-template-columns: 1fr;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      gap: var(--space-4);
+      padding-bottom: var(--space-2);
+    }
+
+    .comparison-container::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 40px;
+      background: linear-gradient(to left, var(--bg-primary), transparent);
+      pointer-events: none;
+    }
+
+    .comparison-side {
+      scroll-snap-align: start;
+      min-width: 480px;
     }
   }
 
-  @media (max-width: 768px) {
-    .controls {
-      flex-direction: column;
-      align-items: stretch;
+  /* Mobile: Stack vertically, reduce spacing */
+  @media (max-width: 767px) {
+    .comparison-container {
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
     }
 
-    .control-item {
-      width: 100%;
+    .comparison-side {
+      min-height: 300px;
+      padding: var(--space-4);
+    }
+
+    .explainer-card {
+      padding: var(--space-4);
+    }
+
+    .explainer-card h2 {
+      font-size: var(--text-lg);
+    }
+
+    .explainer-card ul {
+      flex-direction: column;
+      gap: var(--space-2);
     }
   }
 </style>
-{% endblock %}
 
 {% block extra_js %}
 <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
@@ -452,7 +510,7 @@
 
   <div id="resultsContainer" class="results-container">
     <div class="empty-state-container">
-      <div style="margin-bottom: 16px; opacity: 0.5;">
+      <div class="empty-state-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
           stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
@@ -469,7 +527,7 @@
   <div class="dot"></div>
   <div class="dot"></div>
   <div class="dot"></div>
-  <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Auditing...</span>
+  <span class="typing-indicator-text">Auditing...</span>
 </div>
 
 <div class="input-container">
@@ -477,7 +535,7 @@
     <div class="model-selector" id="modelSelector">
       <!-- Model chips populated by model-selector.js -->
     </div>
-    <div style="flex: 1;"></div>
+    <div class="flex-spacer"></div>
     <div class="controls-secondary">
       <div class="control-group">
         <label>Temp:</label>
@@ -486,7 +544,7 @@
       </div>
       <div class="control-group">
         <label>Tokens:</label>
-        <input type="number" id="maxTokens" min="128" max="2048" value="768" style="width: 70px;">
+        <input type="number" id="maxTokens" min="128" max="2048" value="768">
       </div>
     </div>
   </div>

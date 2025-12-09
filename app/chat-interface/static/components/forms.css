@@ -75,6 +75,20 @@
     min-height: var(--button-height-sm);
 }
 
+.control-group input[type="number"] {
+    width: 70px;
+}
+
+.control-group span {
+    min-width: 24px;
+    text-align: left;
+}
+
+.flex-spacer {
+    flex: 1;
+}
+
+
 .control-item {
     display: flex;
     flex-direction: column;

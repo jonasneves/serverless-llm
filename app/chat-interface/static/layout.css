@@ -136,6 +136,12 @@ main> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing
     animation-delay: -0.16s;
 }
 
+.typing-indicator-text {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin-left: var(--space-2);
+}
+
 @keyframes typingBounce {
 
     0%,

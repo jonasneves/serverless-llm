@@ -51,8 +51,37 @@
     --grade-pass: #3DB08B;
     --grade-fail: #E57373;
     --grade-warn: #FFB74D;
-    --answer-color: #6366f1;
-    --confession-color: #f59e0b;
+
+    /* Confessions feature - Semantic color system */
+    /* Answer (neutral, polished output) */
+    --confession-answer-primary: #64748b;
+    --confession-answer-secondary: #94a3b8;
+    --confession-answer-surface: rgba(100, 116, 139, 0.08);
+    --confession-answer-border: rgba(100, 116, 139, 0.2);
+
+    /* Confession (warm, revealing truth) */
+    --confession-truth-primary: #f59e0b;
+    --confession-truth-secondary: #fbbf24;
+    --confession-truth-surface: #fffbeb;
+    --confession-truth-border: rgba(245, 158, 11, 0.3);
+
+    /* Compliance states */
+    --confession-positive: #10b981;
+    --confession-positive-bg: rgba(16, 185, 129, 0.12);
+    --confession-negative: #ef4444;
+    --confession-negative-bg: rgba(239, 68, 68, 0.12);
+    --confession-partial: #f59e0b;
+    --confession-partial-bg: rgba(245, 158, 11, 0.12);
+
+    /* Status indicators */
+    --confession-streaming: var(--info-color);
+    --confession-streaming-bg: var(--info-bg);
+    --confession-audit: var(--warning-color);
+    --confession-audit-bg: var(--warning-bg);
+
+    /* Legacy support (deprecated - use semantic tokens above) */
+    --answer-color: var(--confession-answer-primary);
+    --confession-color: var(--confession-truth-primary);
 
     /* Roundtable colors */
     --qwen-color: #8B5CF6;
@@ -331,6 +360,24 @@
     --direct-color: #94a3b8;
     --vs-color: #8b5cf6;
     --prob-badge: #3B82F6;
+
+    /* Confessions feature - Dark mode adjustments */
+    --confession-answer-primary: #94a3b8;
+    --confession-answer-secondary: #cbd5e1;
+    --confession-answer-surface: rgba(148, 163, 184, 0.1);
+    --confession-answer-border: rgba(148, 163, 184, 0.25);
+
+    --confession-truth-primary: #fbbf24;
+    --confession-truth-secondary: #fcd34d;
+    --confession-truth-surface: rgba(251, 191, 36, 0.08);
+    --confession-truth-border: rgba(251, 191, 36, 0.25);
+
+    --confession-positive: #34d399;
+    --confession-positive-bg: rgba(52, 211, 153, 0.1);
+    --confession-negative: #f87171;
+    --confession-negative-bg: rgba(248, 113, 113, 0.1);
+    --confession-partial: #fbbf24;
+    --confession-partial-bg: rgba(251, 191, 36, 0.1);
 
     /* Shadows - stronger for dark mode */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
