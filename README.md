@@ -7,10 +7,6 @@
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
 [![DeepSeek R1Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/deepseek-r1-distill-qwen-1.5b)](https://r1qwen.neevs.io/health)
 
-
-<!-- Live API Health Status -->
-[![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
-
 ## Overview
 
 Free, serverless, multi-model chat with Qwen3, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
