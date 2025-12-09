@@ -19,7 +19,7 @@
     align-items: center;
   }
 
-  .discussion-area > #discussionContent {
+  .discussion-area>#discussionContent {
     width: 100%;
   }
 
@@ -165,7 +165,8 @@
   }
 
   .orchestrator-bar-label {
-    display: none; /* Hide label to save space */
+    display: none;
+    /* Hide label to save space */
   }
 
   .orchestrator-bar-status {
@@ -1045,7 +1046,9 @@
       <div class="orchestrator-bar-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          <path
+            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
+          </path>
         </svg>
       </div>
       <div class="orchestrator-bar-content">
@@ -1058,7 +1061,8 @@
         </div>
       </div>
       <button class="orchestrator-info-btn" type="button" aria-label="What does the orchestrator do?">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="16" x2="12" y2="12"></line>
           <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -1069,9 +1073,10 @@
           <ul class="orchestrator-tooltip-list">
             <li><strong>Analyzes</strong> your query and scores model expertise</li>
             <li><strong>Evaluates</strong> each response for quality</li>
-            <li><strong>Synthesizes</strong> the final answer</li>
+            <li><strong>Synthesizes</strong> a plan for combining responses</li>
           </ul>
-          <p class="orchestrator-tooltip-text">It doesn't generate content—just directs traffic between local models.</p>
+          <p class="orchestrator-tooltip-text">The orchestrator creates a synthesis plan that determines how to merge
+            the best parts of each model's response into the final answer.</p>
         </div>
       </button>
     </div>
