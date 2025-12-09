@@ -203,10 +203,6 @@
 
 /* Clear button */
 .clear-btn {
-    position: absolute;
-    right: calc(var(--desktop-target-min) + var(--space-3) * 2);
-    top: 50%;
-    transform: translateY(-50%);
     padding: var(--space-2) var(--space-3);
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
