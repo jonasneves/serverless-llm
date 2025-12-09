@@ -241,7 +241,7 @@ MODEL_CONFIG = (
     },
     {
         "id": "deepseek-r1-distill-qwen-1.5b",
-        "name": "DeepSeek R1 Distill Qwen 1.5B",
+        "name": "DeepSeek R1 1.5B",
         "env": "R1QWEN_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["R1QWEN_API_URL"],
         "service": "r1qwen",

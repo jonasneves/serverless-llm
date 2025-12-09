@@ -30,30 +30,31 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 
 ## Modes
 
+The platform provides three primary interaction modes and additional advanced features for specialized use cases.
+
 ### Primary Modes
 
-#### 💬 Chat
-Compare model responses side-by-side with performance metrics (default mode).
+**Chat**  
+Compare model responses side-by-side with performance metrics. Best for quick comparisons and model evaluation.
 
-#### 🤝 Discussion
-Models collaborate through orchestrated turn-based discussions. [→ Docs](DISCUSSION_MODE.md)
+**Discussion**  
+Models collaborate through orchestrated turn-based discussions. Best for complex analysis requiring multiple perspectives. [→ Documentation](DISCUSSION_MODE.md)
 
-#### 🛠️ Agents
-Multi-agent orchestration with tool calling (web search, code execution). [→ Docs](AGENTS.md)
+**Agents**  
+Multi-agent orchestration with tool calling capabilities including web search and code execution. Best for research and development tasks. [→ Documentation](AGENTS.md)
 
 ### Advanced Features
 
-Available in the **⚡ Advanced** dropdown menu:
+Access via the Advanced menu for specialized workflows:
 
-#### 🎲 Variations
-Compare direct prompting vs. verbalized sampling to explore output diversity. [→ Docs](VARIATIONS.md)
+**Variations**  
+Implementation of verbalized sampling for exploring output diversity. Compares direct prompting with distribution-based sampling. [→ Documentation](VARIATIONS.md)
 
-#### 🔍 Confessions
-Stream a structured honesty report after every answer to surface hidden instruction breaks. [→ Docs](CONFESSIONS.md)
+**Confessions**  
+Structured honesty reporting to surface model instruction breaks and decision-making processes. [→ Documentation](CONFESSIONS.md)
 
-#### 📊 Status  
-Real-time system health monitoring and detailed model status checks.
-
+**Status**  
+Real-time system health monitoring and detailed model availability checks.
 
 ## Quick Start
 

@@ -49,20 +49,20 @@
     <div class="header-actions">
       <nav class="modes">
         <a href="/" class="mode-link {% if request.url.path == '/' %}active{% endif %}">
-          <span>💬</span> Chat
+          Chat
         </a>
         <a href="/discussion" class="mode-link {% if request.url.path == '/discussion' %}active{% endif %}">
-          <span>🤝</span> Discussion
+          Discussion
         </a>
         <a href="/autogen" class="mode-link {% if request.url.path == '/autogen' %}active{% endif %}">
-          <span>🛠️</span> Agents
+          Agents
         </a>
 
         <!-- Advanced Features Dropdown -->
         <div class="mode-dropdown">
           <button
             class="mode-link dropdown-trigger {% if request.url.path in ['/variations', '/confessions'] %}active{% endif %}">
-            <span>⚡</span> Advanced
+            Advanced
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               style="margin-left: 4px;">
               <polyline points="6 9 12 15 18 9"></polyline>
@@ -70,16 +70,22 @@
           </button>
           <div class="dropdown-menu">
             <a href="/variations" class="dropdown-item {% if request.url.path == '/variations' %}active{% endif %}">
-              <span>🎲</span> Variations
-              <small>Verbalized sampling</small>
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Variations</span>
+                <span class="dropdown-item-desc">Verbalized sampling</span>
+              </div>
             </a>
             <a href="/confessions" class="dropdown-item {% if request.url.path == '/confessions' %}active{% endif %}">
-              <span>🔍</span> Confessions
-              <small>Honesty reports</small>
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Confessions</span>
+                <span class="dropdown-item-desc">Honesty reports</span>
+              </div>
             </a>
             <a href="/status" class="dropdown-item {% if request.url.path == '/status' %}active{% endif %}">
-              <span>📊</span> Status
-              <small>System health</small>
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Status</span>
+                <span class="dropdown-item-desc">System health</span>
+              </div>
             </a>
           </div>
         </div>

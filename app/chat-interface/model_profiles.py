@@ -494,7 +494,7 @@ GEMMA2_9B_PROFILE = {
 # DeepSeek R1 Distill Qwen 1.5B (local, GGUF)
 DEEPSEEK_R1_QWEN15B_PROFILE = {
     "model_id": "deepseek-r1-distill-qwen-1.5b",
-    "display_name": "DeepSeek R1 Distill Qwen 1.5B",
+    "display_name": "DeepSeek R1 1.5B",
     "model_type": "local",
     "creator": "DeepSeek x Alibaba",
     "size": "1.5B parameters",
