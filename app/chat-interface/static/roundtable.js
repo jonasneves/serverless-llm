@@ -364,6 +364,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     queryInput.disabled = true;
 
     try {
+      // Clear input immediately for better UX
+      queryInput.value = '';
+      queryInput.style.height = 'auto';
+
       showOrchestratorBar(orchestrator);
       updateOrchestratorStatus('Analyzing query...');
 
