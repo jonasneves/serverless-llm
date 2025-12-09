@@ -1,50 +1,6 @@
 /**
- * Common Styles - Unified Design System
- * 
- * This file imports all design system modules in the correct order.
- * Each module is focused on a specific concern for better maintainability.
- * 
- * Import Order:
- * 1. Design Tokens - Variables and constants
- * 2. Reset - Browser normalization
- * 3. Typography - Text styles
- * 4. Layout - Grid, flex, page structure
- * 5. Components - Reusable UI components
- * 
- * Version: 2.0
- * Last Updated: 2025-12-09
+ * Common Styles
  */
-
-/* ========================================
-   DESIGN TOKENS
-   ======================================== */
-@import url('design-tokens.css');
-
-/* ========================================
-   FOUNDATION
-   ======================================== */
-@import url('reset.css');
-@import url('typography.css');
-@import url('layout.css');
-
-/* ========================================
-   COMPONENTS
-   ======================================== */
-@import url('components/navigation.css');
-@import url('components/buttons.css');
-@import url('components/cards.css');
-@import url('components/forms.css');
-@import url('components/badges.css');
-@import url('components/model-selector.css');
-@import url('components/modals.css');
-
-/* ========================================
-   LEGACY COMPATIBILITY
-   These styles ensure backward compatibility
-   with existing pages. Will be phased out.
-   ======================================== */
-
-/* Legacy button styles */
 button.primary {
     background: var(--accent-color);
     color: white;
@@ -129,7 +85,7 @@ button.small {
     font-size: var(--text-sm);
 }
 
-/* Legacy table styles */
+/* Table styles */
 .table {
     width: 100%;
     border-collapse: collapse;
@@ -148,9 +104,7 @@ button.small {
     font-weight: var(--font-semibold);
 }
 
-/* ========================================
-   UTILITY CLASSES
-   ======================================== */
+/* Utility classes */
 
 /* Display utilities */
 .hidden {

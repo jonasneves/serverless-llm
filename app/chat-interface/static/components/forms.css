@@ -60,8 +60,20 @@
 .controls-secondary {
     display: flex;
     align-items: center;
-    gap: var(--control-gap);
+    gap: var(--space-3);
     flex-wrap: wrap;
+    font-size: var(--text-xs);
+}
+
+.controls-secondary .control-group {
+    gap: var(--space-1);
+}
+
+.controls-secondary input,
+.controls-secondary select {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+    min-height: 32px;
 }
 
 .control-group input,

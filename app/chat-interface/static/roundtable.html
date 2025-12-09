@@ -25,6 +25,74 @@
     margin: 20px 0;
   }
 
+  .features-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin: var(--space-5) auto;
+    max-width: 500px;
+  }
+
+  .features-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+
+  .features-header svg {
+    flex-shrink: 0;
+    color: var(--info-color);
+  }
+
+  .features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .features-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .feature-bullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+    background: var(--accent-color);
+  }
+
+  .feature-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
+
+  .feature-item strong {
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .feature-desc {
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
   .overview-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -885,14 +953,43 @@
       Pick any mix of local or API models and have an orchestrator coordinate a structured, turn-based
       discussion before returning the final takeaways.
     </p>
-    <ul class="mode-overview-list">
-      <li>Watch each turn stream in real time with reasoning from every model.</li>
-      <li>Use debates to stress-test tricky problems or compare reasoning styles.</li>
-    </ul>
-    <div class="mode-overview-actions">
-      <span class="mode-overview-chip">Turn-based facilitation</span>
-      <span class="mode-overview-chip">Model diversity</span>
+
+    <div class="features-card">
+      <div class="features-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span>Discussion Features</span>
+      </div>
+      <ul class="features-list">
+        <li>
+          <span class="feature-bullet"></span>
+          <div class="feature-item">
+            <strong>Real-time Streaming</strong>
+            <span class="feature-desc">Watch each model's reasoning unfold turn by turn</span>
+          </div>
+        </li>
+        <li>
+          <span class="feature-bullet"></span>
+          <div class="feature-item">
+            <strong>Model Diversity</strong>
+            <span class="feature-desc">Mix local and API models for varied perspectives</span>
+          </div>
+        </li>
+        <li>
+          <span class="feature-bullet"></span>
+          <div class="feature-item">
+            <strong>Turn-based Coordination</strong>
+            <span class="feature-desc">Orchestrator facilitates structured debate rounds</span>
+          </div>
+        </li>
+      </ul>
     </div>
+
     <div class="card-divider"></div>
 
     <div class="example-prompts">
