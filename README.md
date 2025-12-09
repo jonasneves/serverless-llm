@@ -11,11 +11,11 @@
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
 
+## Overview
+
 Free, serverless, multi-model chat with Qwen3, Llama, Phi, Mistral, Gemma — powered only by GitHub Actions + Cloudflare
 
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
-
-## Overview Features
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
 - **Multi-Model Support**: Qwen3 (4B), DeepSeek R1 Distill Qwen (1.5B), Phi‑3, Llama 3.2, Mistral 7B, Gemma 2 9B
