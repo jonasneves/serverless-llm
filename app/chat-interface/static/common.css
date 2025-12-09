@@ -189,17 +189,20 @@ header {
 /* Dropdown Navigation */
 .mode-dropdown {
   position: relative;
+  display: inline-block;
 }
 
 .dropdown-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  vertical-align: top;
 }
 
 .dropdown-trigger svg {
-  opacity: 0.8;
-  vertical-align: middle;
+  display: inline-block;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .dropdown-menu {
