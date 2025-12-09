@@ -192,9 +192,14 @@ header {
 }
 
 .dropdown-trigger {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+}
+
+.dropdown-trigger svg {
+  opacity: 0.8;
+  vertical-align: middle;
 }
 
 .dropdown-menu {
