@@ -717,30 +717,63 @@ document.addEventListener('DOMContentLoaded', () => {
             Select one or multiple models to compare their responses side-by-side.
             Each response includes metrics like tokens and response time.
           </div>
-          <div class="example-prompts" style="margin-top: 20px;">
-            <div class="example-prompts-label">Try an example:</div>
-            <div class="example-chips">
-              <button class="example-chip" data-prompt="How many times does the letter 'r' appear in the word 'irregularity'?">Count 'r' in irregularity</button>
-              <button class="example-chip" data-prompt="Count how many 's' letters are in the word 'assassination'.">Count 's' in assassination</button>
-              <button class="example-chip" data-prompt="Which number is larger: 7.09 or 7.9?">7.09 vs 7.9</button>
-              <button class="example-chip" data-prompt="Which number is bigger: 10.12 or 10.9?">10.12 vs 10.9</button>
-              <button class="example-chip" data-prompt="Alice has 4 brothers and 5 sisters. How many sisters does Alice's brother have?">Alice sibling puzzle</button>
-              <button class="example-chip" data-prompt="If architect I. M. Pei designed the Louvre Pyramid, who designed the Louvre Pyramid?">Louvre designer reversal</button>
-              <button class="example-chip" data-prompt="The Apollo 11 landing was in July 1969 and Apollo 12 in November 1969. Which mission happened second?">Apollo chronology</button>
-              <button class="example-chip" data-prompt="A shipping company has 48 boxes and each pallet holds 6 boxes. How many pallets are needed? Do we need an extra pallet?">48 boxes / pallet sanity</button>
+          <div class="tools-demo-section">
+            <div class="welcome-subtitle">Try these examples:</div>
+            <div class="examples-container">
+              <button class="example-prompt"
+                data-prompt="How many times does the letter 'r' appear in the word 'irregularity'?">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>Count how many times 'r' appears in irregularity</span>
+              </button>
+              <button class="example-prompt" data-prompt="Which number is larger: 7.09 or 7.9?">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 20V10"></path>
+                  <path d="M12 20V4"></path>
+                  <path d="M6 20v-6"></path>
+                </svg>
+                <span>Compare decimal numbers and identify the larger one</span>
+              </button>
+              <button class="example-prompt"
+                data-prompt="Alice has 4 brothers and 5 sisters. How many sisters does Alice's brother have?">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                  </path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span>Solve logical reasoning puzzles about relationships</span>
+              </button>
+              <button class="example-prompt"
+                data-prompt="A shipping company has 48 boxes and each pallet holds 6 boxes. How many pallets are needed? Do we need an extra pallet?">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                <span>Calculate division problems and check edge cases</span>
+              </button>
             </div>
           </div>
         </div>
       `;
 
-    // Re-attach event listeners to example chips
-    document.querySelectorAll('.example-chip').forEach(chip => {
-      chip.addEventListener('click', (e) => {
+    // Re-attach event listeners to example prompts
+    document.querySelectorAll('.example-prompt').forEach(button => {
+      button.addEventListener('click', (e) => {
         e.preventDefault();
-        const prompt = chip.getAttribute('data-prompt');
+        const prompt = button.getAttribute('data-prompt');
         if (prompt) {
           userInput.value = prompt;
           userInput.focus();
+          updateSendButtonState();
         }
       });
     });
