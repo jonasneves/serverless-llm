@@ -36,6 +36,56 @@
     integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8"
     crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    // Smart dropdown positioning utility
+    document.addEventListener('DOMContentLoaded', function() {
+      const dropdowns = document.querySelectorAll('.mode-dropdown');
+      
+      dropdowns.forEach(dropdown => {
+        const trigger = dropdown.querySelector('.dropdown-trigger');
+        const menu = dropdown.querySelector('.dropdown-menu');
+        
+        if (!trigger || !menu) return;
+
+        // Position dropdown intelligently based on available space
+        const positionDropdown = () => {
+          // Reset positioning class
+          menu.classList.remove('open-above');
+
+          // Use requestAnimationFrame to ensure accurate measurements
+          requestAnimationFrame(() => {
+            const triggerRect = trigger.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            
+            // Get actual menu height if visible, otherwise estimate
+            let menuHeight = menu.offsetHeight || 200;
+            
+            // Calculate space above and below the trigger
+            const spaceBelow = viewportHeight - triggerRect.bottom - 8; // 8px margin
+            const spaceAbove = triggerRect.top - 8; // 8px margin
+
+            // If not enough space below but more space above, open above
+            if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+              menu.classList.add('open-above');
+            }
+          });
+        };
+
+        // Trigger positioning on interaction events
+        dropdown.addEventListener('mouseenter', positionDropdown);
+        dropdown.addEventListener('focusin', positionDropdown);
+        
+        // Reposition on window resize/scroll
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(positionDropdown, 100);
+        });
+        
+        window.addEventListener('scroll', positionDropdown, { passive: true });
+      });
+    });
+  </script>
   {% block extra_js %}{% endblock %}
 </head>
 

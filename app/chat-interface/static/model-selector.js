@@ -29,6 +29,7 @@ class ModelSelector {
     this.trigger = null;
     this.dropdown = null;
     this.boundClickOutside = null;
+    this.boundRepositionOnScroll = null;
   }
 
   /**
@@ -252,6 +253,17 @@ class ModelSelector {
       document.addEventListener('click', this.boundClickOutside);
     }
 
+    // Reposition on scroll/resize
+    if (!this.boundRepositionOnScroll) {
+      this.boundRepositionOnScroll = () => {
+        if (this.isOpen && this.dropdown) {
+          this.positionDropdown();
+        }
+      };
+      window.addEventListener('scroll', this.boundRepositionOnScroll, { passive: true });
+      window.addEventListener('resize', this.boundRepositionOnScroll);
+    }
+
     // 1. Trigger
     this.trigger = document.createElement('div');
     this.trigger.className = 'model-selector-trigger';
@@ -457,6 +469,15 @@ class ModelSelector {
     if (this.boundClickOutside) {
       document.removeEventListener('click', this.boundClickOutside);
       this.boundClickOutside = null;
+    }
+    if (this.boundRepositionOnScroll) {
+      window.removeEventListener('scroll', this.boundRepositionOnScroll);
+      window.removeEventListener('resize', this.boundRepositionOnScroll);
+      this.boundRepositionOnScroll = null;
+    }
+    if (this._apiToggleListener) {
+      window.removeEventListener('api-models-toggle', this._apiToggleListener);
+      this._apiToggleListener = null;
     }
   }
 }
