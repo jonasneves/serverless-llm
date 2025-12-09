@@ -203,6 +203,15 @@
 
 /* Clear button */
 .clear-btn {
+    /* Reset browser default button styles */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+
+    /* Positioning */
+    margin-left: auto;
+
+    /* Styling */
     padding: var(--space-2) var(--space-3);
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
@@ -214,6 +223,10 @@
     min-height: var(--button-height-sm);
     font-weight: var(--font-medium);
     font-family: inherit;
+
+    /* Ensure consistent text rendering */
+    text-align: center;
+    line-height: normal;
 }
 
 .clear-btn:hover {
