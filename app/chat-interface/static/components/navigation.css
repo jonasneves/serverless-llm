@@ -144,6 +144,18 @@
     overflow: hidden;
 }
 
+/* Open above when at bottom of screen */
+.dropdown-menu.open-above {
+    top: auto;
+    bottom: calc(100% + var(--space-2));
+    transform: translateY(8px);
+}
+
+.mode-dropdown:hover .dropdown-menu.open-above,
+.mode-dropdown:focus-within .dropdown-menu.open-above {
+    transform: translateY(0);
+}
+
 [data-theme="dark"] .dropdown-menu {
     background: var(--bg-tertiary);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);

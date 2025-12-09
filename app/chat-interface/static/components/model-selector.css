@@ -142,6 +142,12 @@
     display: block;
 }
 
+/* Open above when at bottom of screen */
+.model-selector-dropdown.open-above {
+    top: auto;
+    bottom: calc(100% + var(--space-2));
+}
+
 /* Trigger content */
 .trigger-content {
     display: flex;
