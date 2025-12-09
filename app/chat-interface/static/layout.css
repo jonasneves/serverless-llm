@@ -45,18 +45,18 @@ main:not(:has(.chat-history)):not(:has(.scrollable-content)),
 }
 
 /* Content padding */
-main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card):not(.chat-history),
-.container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card):not(.chat-history) {
+main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+.container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
     padding: 0 var(--space-4);
 }
 
-main> :not(.mode-input-container):not(.input-container):not(.chat-history):first-child,
-.container> :not(.mode-input-container):not(.input-container):not(.chat-history):first-child {
+main> :not(.mode-input-container):not(.input-container):first-child,
+.container> :not(.mode-input-container):not(.input-container):first-child {
     padding-top: var(--space-4);
 }
 
-main> :not(.mode-input-container):not(.input-container):not(.chat-history):last-of-type:not(.typing-indicator),
-.container> :not(.mode-input-container):not(.input-container):not(.chat-history):last-of-type:not(.typing-indicator) {
+main> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator),
+.container> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing-indicator) {
     padding-bottom: var(--space-4);
 }
 
@@ -240,8 +240,8 @@ main> :not(.mode-input-container):not(.input-container):not(.chat-history):last-
         padding: var(--space-4);
     }
 
-    main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card):not(.chat-history),
-    .container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card):not(.chat-history) {
+    main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+    .container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
         padding: 0 var(--space-3);
     }
 
@@ -260,8 +260,8 @@ main> :not(.mode-input-container):not(.input-container):not(.chat-history):last-
         padding: var(--space-3) var(--space-4);
     }
 
-    main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card):not(.chat-history),
-    .container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card):not(.chat-history) {
+    main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
+    .container> :not(.mode-input-container):not(.input-container):not(.mode-overview-card) {
         padding: 0 var(--space-2);
     }
 
