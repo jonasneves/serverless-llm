@@ -29,8 +29,11 @@
             </label>
           </div>
           <div class="settings-section">
-            <h3>API Models</h3>
-            <p class="settings-description">Enable cloud-based API models (GPT-4, DeepSeek, Llama 405B, etc.) in the model selector.</p>
+            <h3>API Models (Large Language Models)</h3>
+            <p class="settings-description">
+              Enable large cloud-based models (GPT-4, DeepSeek R1, Llama 3.1 405B, etc.) in addition to the local small models (3-4B parameters).<br>
+              <strong>Local:</strong> Unlimited, private, fast (3-4B params) | <strong>API:</strong> Free quota via GitHub Models, powerful (70B+ params)
+            </p>
             <label class="toggle-row">
               <input type="checkbox" id="enableApiModels">
               <span class="toggle-slider"></span>
@@ -39,7 +42,7 @@
           </div>
           <div class="settings-section token-section" id="tokenSection">
             <h3>GitHub Models API Token</h3>
-            <p class="settings-description">Use your own GitHub token for API models. Leave empty to use the server default when available.</p>
+            <p class="settings-description">Use your GitHub token to access large language models (GPT-4, DeepSeek R1, Llama 405B). Free quota with rate limits.</p>
             <div class="token-input-row">
               <input
                 type="password"
