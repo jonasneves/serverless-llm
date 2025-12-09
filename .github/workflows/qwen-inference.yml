@@ -66,7 +66,7 @@ jobs:
       restart_event_type: "restart-qwen-inference"
       workflow_file: "qwen-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
-      auto_restart: ${{ github.event.client_payload.auto_restart != false && (inputs.auto_restart != false) }}
+      auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
       instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
       n_ctx: ${{ inputs.n_ctx }}
       n_threads: ${{ inputs.n_threads }}
