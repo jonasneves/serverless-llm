@@ -484,10 +484,53 @@
       rows="1"></textarea>
     <button id="sendBtn" class="send-btn" aria-label="Start orchestration">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-          stroke-linejoin="round" fill="none" />
-      </svg>
-    </button>
+
+        <div class="input-container">
+          <div class="controls-row">
+            <div class="model-selector" id="modelSelector">
+              <!-- Model chips populated by model-selector.js -->
+            </div>
+            <div style="flex: 1;"></div>
+            <div class="controls-secondary">
+              <div class="control-group">
+                <label>Engine:</label>
+                <select id="engineSelect"
+                  style="font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+                  <option value="auto" selected>Auto</option>
+                  <option value="autogen">AutoGen</option>
+                  <option value="tools">ToolOrchestrator</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label>Rounds:</label>
+                <input type="number" id="maxRounds" value="5" min="1" max="10" style="width: 50px;">
+              </div>
+              <div class="control-group">
+                <label>Temp:</label>
+                <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
+                <span id="tempValue">0.7</span>
+              </div>
+              <div class="control-group">
+                <label>Tokens:</label>
+                <input type="number" id="maxTokens" value="2048" min="128" max="4096" step="128" style="width: 70px;">
+              </div>
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <textarea id="userInput"
+              placeholder="Enter your question... The orchestrator will intelligently route to the best tools and models."
+              rows="1"></textarea>
+            <button id="sendBtn" class="send-btn" aria-label="Start orchestration">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Orchestration results appear here, outside the info card -->
+        <div id="orchestrationResults"></div>
   </div>
-</div>
-{% endblock %}
+  {% endblock %}
