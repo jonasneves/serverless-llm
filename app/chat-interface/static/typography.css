@@ -68,10 +68,6 @@ a {
     transition: var(--transition-colors);
 }
 
-a:hover {
-    text-decoration: underline;
-}
-
 /* Lists */
 ul,
 ol {
