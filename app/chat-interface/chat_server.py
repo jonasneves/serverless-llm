@@ -191,10 +191,61 @@ FILE_VERSIONS = {}
 def get_file_version(filename: str) -> str:
     """
     Generate a cache-busting version string for a file based on its content hash.
+    For CSS files with @import statements, includes imported files in the hash.
     Automatically updates when file content changes - no manual version incrementing needed!
     """
     file_path = static_dir / filename
 
+    # For CSS files, calculate composite hash including imported files
+    if filename.endswith('.css'):
+        try:
+            # Get modification times of main file and all imported files
+            import_pattern = re.compile(r"@import\s+url\(['\"]?([^'\"]+)['\"]?\)|@import\s+['\"]([^'\"]+)['\"]")
+            content = file_path.read_text()
+
+            # Find all imported files
+            imported_files = []
+            for match in import_pattern.finditer(content):
+                import_path = match.group(1) or match.group(2)
+                # Resolve relative paths
+                if not import_path.startswith('/'):
+                    imported_file = (file_path.parent / import_path).resolve()
+                    if imported_file.exists():
+                        imported_files.append(imported_file)
+
+            # Calculate max modification time across main file and imports
+            max_mtime = file_path.stat().st_mtime
+            for imported_file in imported_files:
+                try:
+                    imported_mtime = imported_file.stat().st_mtime
+                    max_mtime = max(max_mtime, imported_mtime)
+                except FileNotFoundError:
+                    pass
+
+            # Check cache with composite mtime
+            if filename in FILE_VERSIONS:
+                cached_mtime, cached_version = FILE_VERSIONS[filename]
+                if cached_mtime == max_mtime:
+                    return cached_version
+
+            # Calculate composite hash from main file + all imports
+            hasher = hashlib.md5()
+            hasher.update(content.encode())
+            for imported_file in imported_files:
+                try:
+                    hasher.update(imported_file.read_bytes())
+                except FileNotFoundError:
+                    pass
+
+            file_hash = hasher.hexdigest()[:8]
+            FILE_VERSIONS[filename] = (max_mtime, file_hash)
+            return file_hash
+
+        except Exception as e:
+            logger.warning(f"Error calculating CSS hash for {filename}: {e}")
+            # Fallback to simple hash
+
+    # Simple hash for non-CSS files or on error
     # Return cached version if file hasn't changed
     if filename in FILE_VERSIONS:
         cached_mtime, cached_version = FILE_VERSIONS[filename]
