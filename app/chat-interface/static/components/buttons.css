@@ -212,7 +212,7 @@
     margin-left: auto;
 
     /* Styling */
-    padding: var(--space-1) var(--space-2);
+    padding: 5px var(--space-2);
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
@@ -220,7 +220,7 @@
     font-size: var(--text-xs);
     cursor: pointer;
     transition: var(--transition-all);
-    min-height: 28px;
+    min-height: 26px;
     font-weight: var(--font-medium);
     font-family: inherit;
 

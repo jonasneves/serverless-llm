@@ -82,7 +82,7 @@ main> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing
 }
 
 .input-container {
-    padding: var(--space-4);
+    padding: 14px var(--space-4);
     background-color: var(--bg-primary);
     border-top: 1px solid var(--border-color);
 }

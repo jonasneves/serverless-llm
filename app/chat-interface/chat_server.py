@@ -1282,7 +1282,8 @@ async def stream_discussion_events(
 
             orchestrator = GitHubModelsOrchestrator(
                 github_token=token,
-                model_id=selected_orchestrator
+                model_id=selected_orchestrator,
+                temperature=temperature
             )
         elif selected_orchestrator in local_models:
             # Initialize local model orchestrator
@@ -1290,10 +1291,9 @@ async def stream_discussion_events(
             orchestrator = GitHubModelsOrchestrator(
                 github_token="local",  # Placeholder, won't be used
                 model_id=selected_orchestrator,
-                api_url=f"{local_endpoint}/v1/chat/completions"
+                api_url=f"{local_endpoint}/v1/chat/completions",
+                temperature=temperature
             )
-            # Override the headers method for local models
-            orchestrator._get_headers = lambda: {"Content-Type": "application/json"}
         else:
             yield f"data: {json.dumps({'event': 'error', 'error': f'Unknown orchestrator model: {selected_orchestrator}'})}\n\n"
             return

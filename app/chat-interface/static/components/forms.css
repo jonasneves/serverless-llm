@@ -10,7 +10,7 @@
     border-radius: var(--radius-input);
     border: 1px solid var(--border-color);
     box-shadow: none;
-    padding: var(--space-3) 60px var(--space-3) var(--input-padding-x);
+    padding: 10px 60px 10px var(--input-padding-x);
     transition: border-color var(--transition-base);
     display: flex;
     align-items: center;
@@ -43,8 +43,8 @@
 /* Controls row and groups */
 .controls-row {
     display: flex;
-    gap: var(--control-gap);
-    margin-bottom: var(--space-2);
+    gap: var(--space-3);
+    margin-bottom: 6px;
     flex-wrap: wrap;
     align-items: center;
 }
@@ -52,7 +52,7 @@
 .control-group {
     display: flex;
     align-items: center;
-    gap: var(--space-1);
+    gap: 6px;
     font-size: var(--text-xs);
     color: var(--text-secondary);
 }
@@ -66,14 +66,14 @@
 }
 
 .controls-secondary .control-group {
-    gap: var(--space-1);
+    gap: 6px;
 }
 
 .controls-secondary input,
 .controls-secondary select {
-    padding: var(--space-1) var(--space-2);
+    padding: 6px var(--space-2);
     font-size: var(--text-xs);
-    min-height: 28px;
+    min-height: 26px;
 }
 
 .control-group input,
