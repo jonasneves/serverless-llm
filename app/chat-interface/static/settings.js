@@ -32,7 +32,7 @@
             <h3>API Models (Large Language Models)</h3>
             <p class="settings-description">
               Enable large cloud-based models (GPT-4, DeepSeek R1, Llama 3.1 405B, etc.) in addition to the local small models (3-4B parameters).<br>
-              <strong>Local:</strong> Unlimited, private, fast (3-4B params) | <strong>API:</strong> Free quota via GitHub Models, powerful (70B+ params)
+              <strong>Local:</strong> Unlimited, private (3-4B params) | <strong>API:</strong> Free quota via GitHub Models, powerful (70B+ params)
             </p>
             <label class="toggle-row">
               <input type="checkbox" id="enableApiModels">
