@@ -48,22 +48,23 @@ body.modal-open {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-5) var(--card-padding);
+    padding: var(--space-4) var(--space-5);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-primary);
 }
 
 .settings-modal-header h2 {
     margin: 0;
-    font-size: var(--text-xl);
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
     color: var(--text-primary);
 }
 
 .settings-modal-body {
-    padding: var(--space-5) var(--card-padding) var(--card-padding);
+    padding: var(--space-4) var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: var(--card-gap);
+    gap: var(--space-5);
     background: var(--bg-primary);
 }
 
@@ -75,7 +76,7 @@ body.modal-open {
 
 .settings-section.highlight {
     padding: var(--space-4);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     border: 1px solid var(--accent-color);
     background: rgba(30, 58, 95, 0.08);
 }
@@ -103,8 +104,9 @@ body.modal-open {
 }
 
 .settings-description {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
 }
 
 .settings-link-btn {
