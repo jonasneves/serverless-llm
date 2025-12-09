@@ -373,22 +373,11 @@
 {% block content %}
 <div class="scrollable-content">
   <div class="mode-overview-card" id="orchestrationSection">
-    <div class="mode-overview-title">Agents Mode: Multi-Agent Orchestration System</div>
+    <div class="mode-overview-title">Research Assistant with Tools</div>
     <p class="mode-overview-subtitle">
-      A Qwen3-4B orchestrator plans the conversation, decides which specialist tool to call,
-      and keeps going for multiple rounds until it can return a confident answer.
+      An intelligent orchestrator routes your task to specialist models and tools, running multiple rounds until it
+      finds a confident answer.
     </p>
-    <p class="mode-overview-subtitle" style="margin-top: 8px;">
-      Specialist agents (Qwen, Phi, Llama) collaborate with tools to solve complex tasks using Microsoft's AutoGen
-      framework
-      for intelligent multi-agent coordination.
-    </p>
-    <ul class="mode-overview-list">
-      <li>Available tools: reasoning models, final answer generation, DuckDuckGo search, and Python code interpreter.
-      </li>
-      <li>Control temperature, max tokens, and round budget for each run.</li>
-      <li>Stream tool calls/results as they happen for full transparency.</li>
-    </ul>
     <div class="example-prompts">
       <div class="example-prompts-label">Try an example:</div>
       <div class="example-chips">
@@ -407,9 +396,11 @@
       <div class="tools-info-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          <path
+            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+          </path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
         </svg>
         <span>Available Tools</span>
       </div>
@@ -417,29 +408,29 @@
         <li>
           <span class="tool-bullet tool-bullet-reasoning"></span>
           <div class="tool-item">
-            <strong>enhance_reasoning</strong>
-            <span class="tool-desc">Route to specialized reasoning models</span>
-          </div>
-        </li>
-        <li>
-          <span class="tool-bullet tool-bullet-answer"></span>
-          <div class="tool-item">
-            <strong>answer</strong>
-            <span class="tool-desc">Generate final answers using best-fit model</span>
+            <strong>Reasoning Models</strong>
+            <span class="tool-desc">Route to Qwen, Phi, or Llama for specialized thinking</span>
           </div>
         </li>
         <li>
           <span class="tool-bullet tool-bullet-search"></span>
           <div class="tool-item">
-            <strong>search</strong>
-            <span class="tool-desc">Web search via DuckDuckGo API</span>
+            <strong>Web Search</strong>
+            <span class="tool-desc">Real-time information via DuckDuckGo</span>
           </div>
         </li>
         <li>
           <span class="tool-bullet tool-bullet-code"></span>
           <div class="tool-item">
-            <strong>code_interpreter</strong>
-            <span class="tool-desc">Execute Python code in sandboxed environment</span>
+            <strong>Code Interpreter</strong>
+            <span class="tool-desc">Execute Python in secure sandbox</span>
+          </div>
+        </li>
+        <li>
+          <span class="tool-bullet tool-bullet-answer"></span>
+          <div class="tool-item">
+            <strong>Answer Generation</strong>
+            <span class="tool-desc">Synthesize final response from best model</span>
           </div>
         </li>
       </ul>
@@ -449,7 +440,7 @@
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
         </svg>
-        <span>Powered by <strong>Microsoft AutoGen</strong> framework</span>
+        <span>Powered by <strong>Microsoft AutoGen</strong></span>
       </div>
     </div>
   </div>
