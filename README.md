@@ -28,34 +28,6 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 
 ![User Access Flow](diagram-user-access.png)
 
-## Modes
-
-The platform provides three primary interaction modes and additional advanced features for specialized use cases.
-
-### Primary Modes
-
-**Chat**  
-Compare model responses side-by-side with performance metrics. Best for quick comparisons and model evaluation.
-
-**Discussion**  
-Models collaborate through orchestrated turn-based discussions. Best for complex analysis requiring multiple perspectives. [→ Documentation](DISCUSSION_MODE.md)
-
-**Agents**  
-Multi-agent orchestration with tool calling capabilities including web search and code execution. Best for research and development tasks. [→ Documentation](AGENTS.md)
-
-### Advanced Features
-
-Access via the Advanced menu for specialized workflows:
-
-**Variations**  
-Implementation of verbalized sampling for exploring output diversity. Compares direct prompting with distribution-based sampling. [→ Documentation](VARIATIONS.md)
-
-**Confessions**  
-Structured honesty reporting to surface model instruction breaks and decision-making processes. [→ Documentation](CONFESSIONS.md)
-
-**Status**  
-Real-time system health monitoring and detailed model availability checks.
-
 ## Quick Start
 
 **Setup overview**: Fork this repo, configure GitHub secrets and Cloudflare Tunnels, then trigger the workflows.
@@ -79,21 +51,6 @@ Add to **Settings > Secrets and variables > Actions**:
 3. Create tunnels for each model and the interface (route to `localhost:8000` for models and `localhost:8080` for the interface)
 4. Copy tokens to GitHub secrets
 
-### 3. Run Workflows
-
-```bash
-# Start each model server (single instance)
-gh workflow run {model}-inference.yml  # qwen, phi, llama, mistral, gemma, r1qwen
-
-# Or start with multiple instances for high availability
-gh workflow run qwen-inference.yml -f instances=3
-
-# Start web interface
-gh workflow run chat-interface.yml
-
-
-```
-
 ## OpenAI-Compatible API
 
 Each model exposes standard endpoints:
@@ -107,47 +64,6 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
     "temperature": 0.7,
     "stream": true
   }'
-```
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/health/details` | GET | Detailed info (repo/file, context) |
-| `/v1/models` | GET | List available models |
-| `/v1/chat/completions` | POST | Chat completion (streaming supported) |
-
-## Models
-
-| Model | Parameters | Quantization | Strengths |
-|-------|------------|--------------|-----------|
-| Qwen3 | 4B | Q4_K_M | Thinking mode, advanced reasoning, agent capabilities, code generation |
-| DeepSeek R1 Distill Qwen | 1.5B | Q4_K_M | Step-by-step reasoning, math, analysis |
-| Phi-3 Mini | 3.8B | Q4_K_M | Efficient reasoning, instruction following |
-| Llama 3.2 | 3B | Q4_K_M | Conversational AI, creative writing |
-| Mistral 7B v0.3 | 7B | Q4_K_M | Structured output, function calling |
-| Gemma 2 | 9B | Q4_K_M | Fact-checking, safety-aligned responses |
-
-
-## Project Structure
-
-```
-serverless-llm/
-├── .github/workflows/          # GitHub Actions workflows
-├── app/
-│   ├── chat-interface/         # Web interface + API proxy
-│   │   ├── static/             # Frontend (HTML, CSS, JS)
-│   │   └── tools/              # Agent tools (search, code exec)
-│   ├── qwen-inference/         # Qwen3 4B model server
-│   ├── phi-inference/          # Phi-3 Mini model server
-│   ├── llama-inference/        # Llama 3.2 model server
-│   ├── mistral-inference/      # Mistral 7B model server
-│   ├── gemma-inference/        # Gemma 2 9B model server
-│   └── deepseek-r1qwen-inference/ # DeepSeek R1 Distill Qwen 1.5B
-├── docker/                     # Shared Docker images
-├── AGENTS.md                   # Agents mode documentation
-├── CONFESSIONS.md              # Confessions mode documentation
-├── DISCUSSION_MODE.md          # Discussion mode documentation
-└── VARIATIONS.md               # Variations mode documentation
 ```
 
 ## Technologies
@@ -174,93 +90,8 @@ serverless-llm/
 - Auto-restart triggers new workflow via repository dispatch
 - New instance starts before old one stops (graceful handoff)
 
-**Workflow Inputs**:
-- `instances`: Number of parallel instances (1-3, default: 1)
-- `duration_hours`: Runtime before auto-restart (default: 5.5)
-- `auto_restart`: Enable auto-restart (default: true)
-
 ## Limitations
 
 - **CPU Inference**: No GPU on GitHub-hosted runners (slower generation)
 - **Brief Downtime**: ~3-5 minutes during auto-restart (only with single instance; eliminated with 2+ instances)
 - **First Run**: Initial model download (~2-5 min), subsequent runs use cached models
-
-
-## Local Development
-
-### Quick Start with Make
-
-```bash
-# Setup environment
-make setup
-
-# Start chat interface only
-make start
-
-# Start with specific models (uses Docker profiles)
-make start-qwen      # Chat + Qwen
-make start-all       # Everything
-
-# Check status
-make health
-
-# View logs
-make logs
-
-# Stop all services
-make stop
-```
-
-### Using Docker Compose Directly
-
-```bash
-# Setup
-cp .env.example .env  # Edit with your values
-
-# Start chat interface only
-docker-compose up -d
-
-# Start with specific models (profile-based)
-docker-compose --profile qwen up -d          # Chat + Qwen
-docker-compose --profile qwen --profile phi up -d  # Chat + Qwen + Phi
-docker-compose --profile all up -d           # Everything
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose --profile all down
-```
-
-### Development Without Docker
-
-```bash
-# Install dependencies
-pip install -r app/shared/requirements.txt
-pip install -r app/chat-interface/requirements.txt
-
-# Terminal 1: Start a model server
-cd app/qwen-inference && python inference_server.py
-
-# Terminal 2: Start chat interface
-cd app/chat-interface
-export QWEN_API_URL=http://localhost:8000
-python chat_server.py
-
-# Access at http://localhost:8080
-```
-
-Or use Make for development mode:
-
-```bash
-make dev-qwen       # Start Qwen locally (Terminal 1)
-make dev-interface  # Start chat interface (Terminal 2)
-```
-
-
-
-
-
-## License
-
-MIT License - see [LICENSE](LICENSE)

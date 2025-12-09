@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="model-name">${resp.model}</span>
             ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
           </div>
-          <div class="message-content">${formatContent(resp.content)}</div>
+          <div class="message-content">${formatContentWithThinking(resp.content)}</div>
           ${!resp.error ? `
           <div class="message-footer">
             <div class="stat-item" title="Input tokens (prompt)">
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="model-name">${resp.model}</span>
               ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
             </div>
-            <div class="message-content">${formatContent(resp.content)}</div>
+            <div class="message-content">${formatContentWithThinking(resp.content)}</div>
             ${!resp.error ? `
             <div class="message-footer">
               <div class="stat-item" title="Input tokens (prompt)">
@@ -277,155 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
 
-  // Configure marked.js
-  marked.setOptions({
-    breaks: true,
-    gfm: true,
-    headerIds: false,
-    mangle: false
-  });
-
-  // Custom renderer for better styling
-  const renderer = new marked.Renderer();
-
-  // Make links open in new tab
-  renderer.link = function (href, title, text) {
-    const titleAttr = title ? ` title="${title}"` : '';
-    return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
-  };
-
-  marked.use({ renderer });
-
-  // Helper function to render LaTeX expressions
-  function renderLatex(content) {
-    if (!content || typeof katex === 'undefined') return content;
-
-    // Store code blocks to protect them from LaTeX processing
-    const codeBlocks = [];
-    let protectedContent = content.replace(/```[\s\S]*?```/g, (match) => {
-      codeBlocks.push(match);
-      return `__CODEBLOCK_${codeBlocks.length - 1}__`;
-    });
-
-    // Also protect inline code
-    const inlineCodes = [];
-    protectedContent = protectedContent.replace(/`[^`]+`/g, (match) => {
-      inlineCodes.push(match);
-      return `__INLINECODE_${inlineCodes.length - 1}__`;
-    });
-
-    // Render block math: $$...$$ or \[...\]
-    protectedContent = protectedContent.replace(/\$\$([\s\S]+?)\$\$/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
-      } catch (e) {
-        return match;
-      }
-    });
-
-    protectedContent = protectedContent.replace(/\\\[([\s\S]+?)\\\]/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex.trim(), { displayMode: true, throwOnError: false });
-      } catch (e) {
-        return match;
-      }
-    });
-
-    // Render inline math: $...$ or \(...\)
-    // More careful with $...$ to avoid matching regular dollar amounts
-    protectedContent = protectedContent.replace(/\$([^\s$][^$]*?[^\s$])\$/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
-      } catch (e) {
-        return match;
-      }
-    });
-
-    protectedContent = protectedContent.replace(/\\\(([\s\S]+?)\\\)/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex.trim(), { displayMode: false, throwOnError: false });
-      } catch (e) {
-        return match;
-      }
-    });
-
-    // Restore inline code
-    protectedContent = protectedContent.replace(/__INLINECODE_(\d+)__/g, (match, index) => {
-      return inlineCodes[parseInt(index)];
-    });
-
-    // Restore code blocks
-    protectedContent = protectedContent.replace(/__CODEBLOCK_(\d+)__/g, (match, index) => {
-      return codeBlocks[parseInt(index)];
-    });
-
-    return protectedContent;
-  }
-
-  function parseThinkingContent(content) {
-    if (!content) return { thinking: null, answer: content };
-
-    // Match <think>...</think> blocks (used by Qwen3, DeepSeek-R1, etc.)
-    const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>\s*([\s\S]*)/i);
-    if (thinkMatch && thinkMatch[1].trim().length > 0) {
-      return {
-        thinking: thinkMatch[1].trim(),
-        answer: thinkMatch[2].trim()
-      };
-    }
-
-    return { thinking: null, answer: content };
-  }
-
-  function renderThinkingSection(thinking) {
-    // Escape HTML in thinking content for safety
-    const escapedThinking = thinking
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
-
-    return `
-      <details class="thinking-section">
-        <summary class="thinking-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-          <span>Thinking process</span>
-        </summary>
-        <div class="thinking-content">${escapedThinking}</div>
-      </details>
-    `;
-  }
-
-  function formatContent(content) {
-    if (!content) return '';
-
-    try {
-      // Parse thinking blocks from reasoning models
-      const { thinking, answer } = parseThinkingContent(content);
-
-      let html = '';
-
-      // Add collapsible thinking section if present
-      if (thinking) {
-        html += renderThinkingSection(thinking);
-      }
-
-      // Format and add the answer
-      const withLatex = renderLatex(answer);
-      html += marked.parse(withLatex);
-
-      return html;
-    } catch (e) {
-      // Fallback: escape HTML and preserve line breaks
-      return content
-        .replace(/&/g, '&amp;')
-        .replace(/<(?!think|\/think)/g, '&lt;')
-        .replace(/(?<!think)>/g, '&gt;')
-        .replace(/\\n/g, '<br>');
-    }
-  }
+  // Configure marked.js via shared module
+  configureMarked();
 
   // Create streaming response container
   function createStreamingContainer(models) {
@@ -537,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
       entry.content += content;
     }
 
-    entry.contentEl.innerHTML = formatContent(entry.content) + '<span class="cursor">▋</span>';
+    entry.contentEl.innerHTML = formatContentWithThinking(entry.content) + '<span class="cursor">▋</span>';
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
 
@@ -562,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Remove cursor
     if (entry.contentEl) {
-      entry.contentEl.innerHTML = formatContent(entry.content);
+      entry.contentEl.innerHTML = formatContentWithThinking(entry.content);
     }
 
     // Show footer with stats

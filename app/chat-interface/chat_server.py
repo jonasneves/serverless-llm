@@ -231,6 +231,7 @@ def get_static_versions() -> dict:
         "common_css": get_file_version("common.css"),
         "chat_css": get_file_version("chat.css"),
         "settings_js": get_file_version("settings.js"),
+        "content_formatter_js": get_file_version("content-formatter.js"),
         "chat_js": get_file_version("chat.js"),
         "roundtable_js": get_file_version("roundtable.js"),
         "orchestrator_js": get_file_version("orchestrator.js"),
