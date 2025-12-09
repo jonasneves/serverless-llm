@@ -198,10 +198,12 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
             payload["max_completion_tokens"] = self.max_tokens
 
         try:
+            # Use a reasonable timeout (60s) instead of the default 600s
             response = await client.post(
                 self.api_url,
                 headers=self._get_headers(),
-                json=payload
+                json=payload,
+                timeout=60.0
             )
             
             if response.status_code == 429:
@@ -265,8 +267,12 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                 logger.error(f"Failed to parse JSON. Content: {content[:500]}")
                 raise Exception(f"Failed to parse structured output: {e}\nContent preview: {content[:500]}")
                 
+        except httpx.TimeoutException:
+            raise Exception(f"Orchestrator request timed out after 60s. The model server ({self.api_url}) may be down or overloaded.")
+        except httpx.ConnectError as e:
+            raise Exception(f"Cannot connect to orchestrator model at {self.api_url}. Is the server running? Error: {str(e)}")
         except httpx.HTTPError as e:
-            raise Exception(f"Connection error to GitHub Models API: {str(e)}")
+            raise Exception(f"Connection error to orchestrator: {str(e)}")
 
     async def analyze_query(self, query: str, model_profiles: Dict[str, Dict]) -> tuple[QueryAnalysis, TokenUsage]:
         """
