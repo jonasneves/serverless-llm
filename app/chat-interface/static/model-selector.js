@@ -276,9 +276,37 @@ class ModelSelector {
     this.isOpen = !this.isOpen;
     if (this.isOpen) {
       this.dropdown.classList.add('show');
+      this.positionDropdown();
     } else {
       this.dropdown.classList.remove('show');
+      this.dropdown.classList.remove('open-above');
     }
+  }
+
+  /**
+   * Position dropdown intelligently based on available space
+   */
+  positionDropdown() {
+    if (!this.dropdown || !this.trigger) return;
+
+    // Reset positioning class
+    this.dropdown.classList.remove('open-above');
+
+    // Wait for next frame to ensure dropdown is rendered with correct dimensions
+    requestAnimationFrame(() => {
+      const triggerRect = this.trigger.getBoundingClientRect();
+      const dropdownRect = this.dropdown.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      // Calculate space above and below the trigger
+      const spaceBelow = viewportHeight - triggerRect.bottom;
+      const spaceAbove = triggerRect.top;
+
+      // If not enough space below but more space above, open above
+      if (spaceBelow < dropdownRect.height && spaceAbove > spaceBelow) {
+        this.dropdown.classList.add('open-above');
+      }
+    });
   }
 
   closeDropdown() {
