@@ -188,37 +188,87 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                     "content": structured_prompt
                 }
             ],
-            "stream": False
+            # Use streaming for local models (much faster and more reliable)
+            "stream": is_local_model
         }
         
         # Local models use max_tokens, OpenAI/GitHub models use max_completion_tokens
-        # Local models need much smaller max_tokens - orchestrator JSON responses are ~500-1000 tokens
+        # Local models need smaller max_tokens - orchestrator JSON responses are ~300-500 tokens
         if is_local_model:
-            payload["max_tokens"] = min(self.max_tokens, 1024)  # Cap at 1024 for local models
+            payload["max_tokens"] = min(self.max_tokens, 512)  # Cap at 512 for local orchestrator responses
         else:
             payload["max_completion_tokens"] = self.max_tokens
 
         try:
-            # Use a reasonable timeout (60s) instead of the default 600s
-            response = await client.post(
-                self.api_url,
-                headers=self._get_headers(),
-                json=payload,
-                timeout=60.0
-            )
-            
-            if response.status_code == 429:
-                rate_limit_reset = response.headers.get("x-ratelimit-reset")
-                raise Exception(f"Rate limit exceeded. Reset at: {rate_limit_reset}")
+            if is_local_model:
+                # Use streaming for local models and collect the response
+                collected_content = ""
+                usage_data = None
+                
+                async with client.stream(
+                    "POST",
+                    self.api_url,
+                    headers=self._get_headers(),
+                    json=payload,
+                    timeout=120.0  # Longer timeout for streaming
+                ) as response:
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        error_text = error_text.decode()
+                        if "context window" in error_text.lower() or "exceed" in error_text.lower():
+                            raise Exception(f"Orchestrator model context limit exceeded. Try using an API orchestrator (like GPT-4o) or increase the local model's N_CTX. Details: {error_text}")
+                        raise Exception(f"Orchestrator API error {response.status_code}: {error_text}")
+                    
+                    async for line in response.aiter_lines():
+                        if not line or not line.startswith("data: "):
+                            continue
+                        
+                        data_str = line[6:]  # Remove "data: " prefix
+                        if data_str == "[DONE]":
+                            break
+                        
+                        try:
+                            chunk = json.loads(data_str)
+                            
+                            # Collect content from delta
+                            if "choices" in chunk and len(chunk["choices"]) > 0:
+                                delta = chunk["choices"][0].get("delta", {})
+                                if "content" in delta:
+                                    collected_content += delta["content"]
+                            
+                            # Capture usage data (usually in the last chunk)
+                            if "usage" in chunk:
+                                usage_data = chunk["usage"]
+                        except json.JSONDecodeError:
+                            continue
+                
+                # Build response data similar to non-streaming format
+                data = {
+                    "choices": [{"message": {"content": collected_content}}],
+                    "usage": usage_data or {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+                }
+                
+                logger.info(f"Local orchestrator streaming response collected: {len(collected_content)} chars")
+            else:
+                # Use non-streaming for API models (faster for them)
+                response = await client.post(
+                    self.api_url,
+                    headers=self._get_headers(),
+                    json=payload,
+                    timeout=60.0
+                )
+                
+                if response.status_code == 429:
+                    rate_limit_reset = response.headers.get("x-ratelimit-reset")
+                    raise Exception(f"Rate limit exceeded. Reset at: {rate_limit_reset}")
 
-            if response.status_code != 200:
-                error_text = response.text
-                # Detect if this is a context length error
-                if "context window" in error_text.lower() or "exceed" in error_text.lower():
-                    raise Exception(f"Orchestrator model context limit exceeded. Try using an API orchestrator (like GPT-4o) or increase the local model's N_CTX. Details: {error_text}")
-                raise Exception(f"Orchestrator API error {response.status_code}: {error_text}")
+                if response.status_code != 200:
+                    error_text = response.text
+                    if "context window" in error_text.lower() or "exceed" in error_text.lower():
+                        raise Exception(f"Orchestrator model context limit exceeded. Try using an API orchestrator (like GPT-4o) or increase the local model's N_CTX. Details: {error_text}")
+                    raise Exception(f"Orchestrator API error {response.status_code}: {error_text}")
 
-            data = response.json()
+                data = response.json()
 
             # Log the full response for debugging
             logger.info(f"Orchestrator API response: {json.dumps(data, indent=2)}")

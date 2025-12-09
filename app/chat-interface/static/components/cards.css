@@ -41,11 +41,10 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-card);
     padding: var(--card-padding);
-    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.4s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.4s ease, overflow 0s 0.3s;
     max-width: 500px;
     margin-left: auto;
     margin-right: auto;
-    overflow: hidden;
 }
 
 .mode-overview-card:hover,
@@ -65,6 +64,7 @@
     border: none;
     pointer-events: none;
     transform: translateY(-10px);
+    overflow: hidden;
 }
 
 /* Also hide example prompts, card dividers, etc. */
