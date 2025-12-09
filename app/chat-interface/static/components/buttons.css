@@ -213,6 +213,7 @@
     transition: var(--transition-all);
     min-height: var(--button-height-sm);
     font-weight: var(--font-medium);
+    font-family: inherit;
 }
 
 .clear-btn:hover {

@@ -797,18 +797,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Handle example prompt clicks
-  document.querySelectorAll('.example-chip').forEach(chip => {
-    chip.addEventListener('click', (e) => {
-      e.preventDefault();
-      const prompt = chip.getAttribute('data-prompt');
-      if (prompt) {
-        userInput.value = prompt;
-        userInput.focus();
-        updateSendButtonState();  // Update button state after setting value
-      }
-    });
-  });
 
   // Handle example-prompt class buttons (static HTML examples)
   document.querySelectorAll('.example-prompt').forEach(button => {

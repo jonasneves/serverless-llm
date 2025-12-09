@@ -305,18 +305,6 @@
 
 {% block content %}
 <div class="status-dashboard">
-    <div class="mode-overview-card">
-        <div class="mode-overview-title">Local Inference Server Status</div>
-        <p class="mode-overview-subtitle">
-            Monitor health for self-hosted GGUF model servers. API-based models (GitHub Models) are not tracked here.
-        </p>
-        <ul class="mode-overview-list">
-            <li>Fetches status from each local inference server's `/health` endpoint</li>
-            <li>Runs mini completion test to verify generation capability</li>
-            <li>Shows response times and overall system health</li>
-        </ul>
-    </div>
-
     <div id="overall-status" class="overall-status loading">
         <div class="status-icon loading"></div>
         <div class="status-text">
