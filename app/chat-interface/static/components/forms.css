@@ -10,7 +10,7 @@
     border-radius: var(--radius-input);
     border: 1px solid var(--border-color);
     box-shadow: none;
-    padding: var(--space-3) 60px var(--space-3) var(--input-padding-x);
+    padding: var(--space-3) 150px var(--space-3) var(--input-padding-x);
     transition: border-color var(--transition-base);
     display: flex;
     align-items: center;
