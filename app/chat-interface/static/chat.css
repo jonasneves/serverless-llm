@@ -270,6 +270,10 @@
   font-family: var(--font-mono);
 }
 
+.tools-demo-section {
+  margin-top: var(--space-4);
+}
+
 .stat-item {
   display: flex;
   flex-direction: column;
@@ -418,7 +422,7 @@
     gap: var(--space-3);
   }
 
-  .controls-row>div[style="flex: 1;"] {
+  .flex-spacer {
     display: none;
   }
 
