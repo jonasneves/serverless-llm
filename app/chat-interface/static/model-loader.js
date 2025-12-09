@@ -129,23 +129,24 @@ class ModelLoader {
     const apiModels = this.getAPIModels();
     const localModels = this.getLocalModels();
 
-    // Local Models group (show first, default to local)
+    // Track if we found the default model
+    let defaultFound = false;
+
+    // Local Models group (show first, but don't default to local)
     if (localModels.length > 0) {
       const localGroup = document.createElement('optgroup');
       localGroup.label = 'Local Models';
 
-      localModels.forEach((model, index) => {
+      localModels.forEach((model) => {
         const option = document.createElement('option');
         option.value = model.id;
         option.textContent = model.name;
-        // Default to first local model (qwen3-4b)
-        if (index === 0) option.selected = true;
         localGroup.appendChild(option);
       });
       select.appendChild(localGroup);
     }
 
-    // API Models group
+    // API Models group (default to gpt-5-nano)
     if (apiModels.length > 0) {
       const apiGroup = document.createElement('optgroup');
       apiGroup.label = 'API Models';
@@ -154,13 +155,27 @@ class ModelLoader {
         const option = document.createElement('option');
         option.value = model.id;
         option.textContent = model.name;
+        // Default to gpt-5-nano if available
+        if (model.id === 'gpt-5-nano') {
+          option.selected = true;
+          defaultFound = true;
+        }
         apiGroup.appendChild(option);
       });
       select.appendChild(apiGroup);
     }
 
+    // Fallback: if gpt-5-nano not found, select first API model, then first local model
+    if (!defaultFound) {
+      if (apiModels.length > 0) {
+        select.options[localModels.length].selected = true; // First API model
+      } else if (localModels.length > 0) {
+        select.options[0].selected = true; // First local model
+      }
+    }
+
     console.log('[ModelLoader] Built orchestrator dropdown:',
-      `${localModels.length} local, ${apiModels.length} API`);
+      `${localModels.length} local, ${apiModels.length} API, default: ${select.value}`);
   }
 
   /**
