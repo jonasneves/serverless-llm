@@ -913,13 +913,14 @@
         </svg>
         <div class="orchestrator-tooltip">
           <strong>What does the orchestrator do?</strong>
-          <p style="margin: 8px 0 6px 0;">Coordinates discussion via small API calls (~300 tokens each):</p>
-          <ul style="margin: 0; padding-left: 16px;">
+          <p class="orchestrator-tooltip-text">Coordinates discussion via small API calls (~300 tokens each):</p>
+          <ul class="orchestrator-tooltip-list">
             <li><strong>Analyzes</strong> your query and scores model expertise</li>
             <li><strong>Evaluates</strong> each response for quality</li>
             <li><strong>Synthesizes</strong> the final answer</li>
           </ul>
-          <p style="margin: 8px 0 0 0;">It doesn't generate content—just directs traffic between local models.</p>
+          <p class="orchestrator-tooltip-text">It doesn't generate content—just directs traffic between local models.
+          </p>
         </div>
       </button>
     </div>
@@ -944,14 +945,14 @@
       </select>
     </div>
 
-    <div style="flex: 1;"></div>
+    <div class="flex-spacer"></div>
 
     <div class="controls-secondary">
-      <span id="participantCount" class="participant-count" style="font-size: 11px;"><strong>0</strong> selected</span>
+      <span id="participantCount" class="participant-count"><strong>0</strong> selected</span>
       <div class="control-group">
         <label>Rounds:</label>
         <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds"
-          style="width: 50px;">
+          class="input-narrow">
       </div>
       <div class="control-group">
         <label>Temp:</label>
@@ -960,12 +961,12 @@
       </div>
       <div class="control-group">
         <label>Tokens:</label>
-        <input type="number" id="maxTokens" value="2048" min="256" max="4096" step="256" style="width: 70px;">
+        <input type="number" id="maxTokens" value="2048" min="256" max="4096" step="256">
       </div>
     </div>
   </div>
 
-  <div id="apiWarning" class="api-warning" style="margin-bottom: 8px;">
+  <div id="apiWarning" class="api-warning">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="10"></circle>
