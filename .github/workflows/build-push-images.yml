@@ -155,8 +155,7 @@ jobs:
         with:
           context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || matrix.model == 'chat-interface' && './app/chat-interface' || './app' }}
           file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat-interface' && './app/chat-interface/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
-          build-args: |
-            MODEL_DIR=${{ matrix.model }}
+          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat-interface' && format('MODEL_DIR={0}', matrix.model) || '' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
