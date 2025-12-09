@@ -53,11 +53,9 @@
         </a>
         <a href="/roundtable" class="mode-link {% if request.url.path == '/roundtable' %}active{% endif %}">
           Roundtable
-          <span class="beta-badge">Beta</span>
         </a>
         <a href="/autogen" class="mode-link {% if request.url.path == '/autogen' %}active{% endif %}">
           Agents
-          <span class="beta-badge">Beta</span>
         </a>
 
         <!-- Lab (Experimental Modes) Dropdown -->
@@ -65,7 +63,6 @@
           <button
             class="mode-link dropdown-trigger {% if request.url.path in ['/variations', '/confessions'] %}active{% endif %}">
             Lab
-            <span class="beta-badge">Experimental</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               style="margin-left: 4px;">
               <polyline points="6 9 12 15 18 9"></polyline>
