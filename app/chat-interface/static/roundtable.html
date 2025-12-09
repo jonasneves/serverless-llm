@@ -15,7 +15,12 @@
   .discussion-area {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .discussion-area > #discussionContent {
+    width: 100%;
   }
 
   .card-divider {
@@ -113,23 +118,26 @@
   .orchestrator-bar {
     display: none;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: var(--bg-tertiary);
+    gap: 10px;
+    padding: 8px 14px;
+    background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-full);
     font-size: 13px;
     position: sticky;
     top: 80px;
     z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
+    width: fit-content;
+    margin: 0 auto;
   }
 
   .orchestrator-bar.visible {
-    display: flex;
+    display: inline-flex;
   }
 
   [data-theme="dark"] .orchestrator-bar {
+    background: var(--bg-tertiary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
@@ -137,32 +145,36 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     background: var(--accent-color);
-    border-radius: 6px;
+    border-radius: var(--radius-full);
     color: white;
     flex-shrink: 0;
   }
 
+  .orchestrator-bar-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
   .orchestrator-bar-content {
-    flex: 1;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 6px;
   }
 
   .orchestrator-bar-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-tertiary);
-    font-weight: 600;
+    display: none; /* Hide label to save space */
   }
 
   .orchestrator-bar-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     color: var(--text-primary);
     font-weight: 500;
+    font-size: 13px;
   }
 
   .orchestrator-bar-model {
@@ -174,15 +186,16 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    color: var(--text-secondary);
   }
 
   .orchestrator-bar-spinner {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border: 2px solid var(--border-color);
     border-top-color: var(--accent-color);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s linear infinite;
   }
 
   .analysis-card {
@@ -654,37 +667,56 @@
   .orchestrator-info-btn {
     background: none;
     border: none;
-    color: var(--text-secondary);
+    color: var(--text-tertiary);
     cursor: pointer;
     padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     transition: all 0.2s;
     position: relative;
+    margin-left: 2px;
+  }
+
+  .orchestrator-info-btn svg {
+    width: 14px;
+    height: 14px;
   }
 
   .orchestrator-info-btn:hover {
     color: var(--text-primary);
-    background: var(--bg-secondary);
+    background: var(--bg-tertiary);
   }
 
   .orchestrator-tooltip {
     display: none;
     position: absolute;
     top: calc(100% + 8px);
-    right: 0;
+    right: -8px;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px;
+    border-radius: var(--radius-lg);
+    padding: 14px;
     width: 280px;
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-secondary);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-xl);
     z-index: 200;
+  }
+
+  .orchestrator-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    width: 10px;
+    height: 10px;
+    background: var(--bg-primary);
+    border-left: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+    transform: rotate(45deg);
   }
 
   .orchestrator-info-btn:hover .orchestrator-tooltip {
@@ -1008,18 +1040,15 @@
   </div>
 
   <div class="discussion-area">
-    <!-- Orchestrator Status Bar -->
+    <!-- Orchestrator Status Bar (compact pill) -->
     <div id="orchestratorBar" class="orchestrator-bar">
       <div class="orchestrator-bar-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <circle cx="12" cy="12" r="3"></circle>
-          <path
-            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
-          </path>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
         </svg>
       </div>
       <div class="orchestrator-bar-content">
-        <div class="orchestrator-bar-label">Orchestrator</div>
         <div class="orchestrator-bar-status">
           <span class="orchestrator-bar-model" id="orchestratorModelName">Loading...</span>
           <span class="orchestrator-bar-action" id="orchestratorAction">
@@ -1028,23 +1057,21 @@
           </span>
         </div>
       </div>
-      <button class="orchestrator-info-btn" type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
+      <button class="orchestrator-info-btn" type="button" aria-label="What does the orchestrator do?">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="16" x2="12" y2="12"></line>
           <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
         <div class="orchestrator-tooltip">
           <strong>What does the orchestrator do?</strong>
-          <p class="orchestrator-tooltip-text">Coordinates discussion via small API calls (~300 tokens each):</p>
+          <p class="orchestrator-tooltip-text">Coordinates the discussion via small API calls (~300 tokens each):</p>
           <ul class="orchestrator-tooltip-list">
             <li><strong>Analyzes</strong> your query and scores model expertise</li>
             <li><strong>Evaluates</strong> each response for quality</li>
             <li><strong>Synthesizes</strong> the final answer</li>
           </ul>
-          <p class="orchestrator-tooltip-text">It doesn't generate content—just directs traffic between local models.
-          </p>
+          <p class="orchestrator-tooltip-text">It doesn't generate content—just directs traffic between local models.</p>
         </div>
       </button>
     </div>
