@@ -30,20 +30,30 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 
 ## Modes
 
-### Chat
+### Primary Modes
+
+#### 💬 Chat
 Compare model responses side-by-side with performance metrics (default mode).
 
-### Discussion
+#### 🤝 Discussion
 Models collaborate through orchestrated turn-based discussions. [→ Docs](DISCUSSION_MODE.md)
 
-### Agents
+#### 🛠️ Agents
 Multi-agent orchestration with tool calling (web search, code execution). [→ Docs](AGENTS.md)
 
-### Variations
+### Advanced Features
+
+Available in the **⚡ Advanced** dropdown menu:
+
+#### 🎲 Variations
 Compare direct prompting vs. verbalized sampling to explore output diversity. [→ Docs](VARIATIONS.md)
 
-### Confessions
+#### 🔍 Confessions
 Stream a structured honesty report after every answer to surface hidden instruction breaks. [→ Docs](CONFESSIONS.md)
+
+#### 📊 Status  
+Real-time system health monitoring and detailed model status checks.
+
 
 ## Quick Start
 
