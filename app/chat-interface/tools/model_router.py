@@ -16,79 +16,79 @@ logger = logging.getLogger(__name__)
 class ModelRouter:
     """Routes tool calls to specialized models"""
 
-    # Map ToolOrchestra model names to your API endpoints
+    # Map ToolOrchestra model names to API endpoints (Dec 2025 capability ranking)
     MODEL_MAPPING = {
-        # Reasoning models
-        "reasoner-1": {
-            "name": "Qwen 2.5-7B",
+        # Reasoning models (ranked by capability)
+        "reasoner-1": {  # Rank 1
+            "name": "Qwen3 4B",
             "url_env": "QWEN_API_URL",
-            "description": "Strong reasoning and coding"
+            "description": "Best overall: multilingual (119 langs), 1M context, reasoning/coding"
         },
-        "reasoner-2": {
+        "reasoner-2": {  # Rank 2
+            "name": "DeepSeek R1 1.5B",
+            "url_env": "R1QWEN_API_URL",
+            "description": "o1-preview level reasoning, 96.3% Codeforces, step-by-step"
+        },
+        "reasoner-3": {  # Rank 3
+            "name": "Gemma 2 9B",
+            "url_env": "GEMMA_API_URL",
+            "description": "Strong reasoning, safety-aligned, fact-checking"
+        },
+        "reasoner-4": {  # Rank 4
+            "name": "Mistral 7B v0.3",
+            "url_env": "MISTRAL_API_URL",
+            "description": "Fast instruction-following, structured output"
+        },
+        "reasoner-5": {  # Rank 5
             "name": "Phi-3 Mini",
             "url_env": "PHI_API_URL",
-            "description": "Good reasoning, instruction following"
+            "description": "Compact reasoning, good instruction following"
         },
-        "reasoner-3": {
-            "name": "Llama 3.2-3B",
-            "url_env": "LLAMA_API_URL",
-            "description": "Fast, basic reasoning"
-        },
-        "reasoner-4": {
-            "name": "DeepSeek-R1-Distill-Qwen-1.5B",
-            "url_env": "R1QWEN_API_URL",
-            "description": "Reasoning-optimized (R1 distill)"
-        },
-        "reasoner-5": {
-            "name": "RNJ-1-Instruct (GGUF)",
+        "reasoner-6": {  # Rank 6
+            "name": "RNJ-1 Instruct",
             "url_env": "RNJ_API_URL",
-            "description": "Specialized RNJ-1 model via llama.cpp"
+            "description": "70% SWE-Bench, strong tool-calling/agentic"
         },
-        "reasoner-6": {
-            "name": "Mistral 7B Instruct",
-            "url_env": "MISTRAL_API_URL",
-            "description": "Fast, instruction-tuned"
+        "reasoner-7": {  # Rank 7
+            "name": "Llama 3.2 3B",
+            "url_env": "LLAMA_API_URL",
+            "description": "Lightweight, 131K context, creative writing"
         },
-        "reasoner-7": {
-            "name": "Gemma 2 9B Instruct",
-            "url_env": "GEMMA_API_URL",
-            "description": "Strong generalist, instruction following"
-        },
-        # Answer models
-        "answer-1": {
-            "name": "Qwen 2.5-7B",
+        # Answer models (same ranking)
+        "answer-1": {  # Rank 1
+            "name": "Qwen3 4B",
             "url_env": "QWEN_API_URL",
-            "description": "Comprehensive answers"
+            "description": "Comprehensive multilingual answers"
         },
-        "answer-2": {
+        "answer-2": {  # Rank 2
+            "name": "DeepSeek R1 1.5B",
+            "url_env": "R1QWEN_API_URL",
+            "description": "Thoughtful chain-of-thought answers"
+        },
+        "answer-3": {  # Rank 3
+            "name": "Gemma 2 9B",
+            "url_env": "GEMMA_API_URL",
+            "description": "Balanced, safe responses"
+        },
+        "answer-4": {  # Rank 4
+            "name": "Mistral 7B v0.3",
+            "url_env": "MISTRAL_API_URL",
+            "description": "Fast, structured responses"
+        },
+        "answer-5": {  # Rank 5
             "name": "Phi-3 Mini",
             "url_env": "PHI_API_URL",
-            "description": "Moderate complexity"
+            "description": "Concise instruction-following"
         },
-        "answer-3": {
-            "name": "Llama 3.2-3B",
-            "url_env": "LLAMA_API_URL",
-            "description": "Simple queries, conversational"
-        },
-        "answer-4": {
-            "name": "DeepSeek-R1-Distill-Qwen-1.5B",
-            "url_env": "R1QWEN_API_URL",
-            "description": "Thoughtful answers with explicit reasoning"
-        },
-        "answer-5": {
-            "name": "RNJ-1-Instruct (GGUF)",
+        "answer-6": {  # Rank 6
+            "name": "RNJ-1 Instruct",
             "url_env": "RNJ_API_URL",
-            "description": "Specialized RNJ-1 model via llama.cpp"
+            "description": "Technical answers, code-focused"
         },
-        "answer-6": {
-            "name": "Mistral 7B Instruct",
-            "url_env": "MISTRAL_API_URL",
-            "description": "Fast, instruction-tuned"
-        },
-        "answer-7": {
-            "name": "Gemma 2 9B Instruct",
-            "url_env": "GEMMA_API_URL",
-            "description": "Strong generalist, instruction following"
+        "answer-7": {  # Rank 7
+            "name": "Llama 3.2 3B",
+            "url_env": "LLAMA_API_URL",
+            "description": "Conversational, creative writing"
         },
     }
 
