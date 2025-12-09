@@ -286,9 +286,9 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
         Returns:
             Tuple of (QueryAnalysis with domain classification and model scores, TokenUsage)
         """
-        # Build model capabilities summary
+        # Build model capabilities summary (limit to top 5 domains per model for conciseness)
         capabilities_summary = "\n".join([
-            f"- {model_id}: {', '.join([f'{domain}({score:.2f})' for domain, score in profile['expertise_domains'].items() if score >= 0.70])}"
+            f"- {model_id}: {', '.join([f'{domain}({score:.2f})' for domain, score in sorted(profile['expertise_domains'].items(), key=lambda x: x[1], reverse=True)[:5]])}"
             for model_id, profile in model_profiles.items()
         ])
 

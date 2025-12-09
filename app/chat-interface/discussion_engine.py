@@ -525,7 +525,19 @@ Be direct and specific. Refer to other models by name when agreeing or disagreei
             # Phase 1: Orchestrator analyzes query
             yield {"type": "analysis_start"}
 
-            analysis, usage = await self.orchestrator.analyze_query(query, MODEL_PROFILES)
+            # For local orchestrators, only include models that have endpoints (keeps prompt smaller)
+            is_local_orchestrator = "github.ai" not in self.orchestrator.api_url
+            if is_local_orchestrator:
+                # Filter to only local models (those with endpoints)
+                relevant_profiles = {
+                    model_id: profile 
+                    for model_id, profile in MODEL_PROFILES.items() 
+                    if model_id in self.model_endpoints
+                }
+            else:
+                relevant_profiles = MODEL_PROFILES
+
+            analysis, usage = await self.orchestrator.analyze_query(query, relevant_profiles)
             orchestrator_tokens["prompt"] += usage.prompt_tokens
             orchestrator_tokens["completion"] += usage.completion_tokens
             orchestrator_tokens["total"] += usage.total_tokens
