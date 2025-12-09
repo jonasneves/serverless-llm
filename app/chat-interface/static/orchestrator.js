@@ -44,6 +44,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     queryInput.value = '';
     queryInput.style.height = 'auto';
 
+    // Hide intro cards when orchestration starts
+    const scrollableContent = document.querySelector('.scrollable-content');
+    if (scrollableContent) {
+      scrollableContent.classList.add('has-content');
+    }
+
     // Clear previous results
     orchestrationResults.innerHTML = '';
 

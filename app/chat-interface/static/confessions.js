@@ -80,6 +80,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     typingIndicator.classList.add('active');
     resultsContainer.innerHTML = ''; // Clear previous results
 
+    // Hide intro cards when run starts
+    const scrollableContent = document.querySelector('.scrollable-content');
+    if (scrollableContent) {
+      scrollableContent.classList.add('has-content');
+    }
+
     // Clear input immediately for better UX
     promptInput.value = '';
     promptInput.style.height = 'auto';

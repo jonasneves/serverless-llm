@@ -275,6 +275,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     startBtn.disabled = true;
     queryInput.disabled = true;
 
+    // Hide intro cards when discussion starts
+    const scrollableContent = document.querySelector('.scrollable-content');
+    if (scrollableContent) {
+      scrollableContent.classList.add('has-content');
+    }
+
     try {
       // Clear input immediately for better UX
       queryInput.value = '';

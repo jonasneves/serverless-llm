@@ -41,15 +41,38 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-card);
     padding: var(--card-padding);
-    transition: var(--transition-all);
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.4s ease;
     max-width: 500px;
     margin-left: auto;
     margin-right: auto;
+    overflow: hidden;
 }
 
 .mode-overview-card:hover,
 .welcome-card:hover {
     box-shadow: var(--shadow-md);
+}
+
+/* Hide intro cards when conversation has started */
+.has-content .mode-overview-card,
+.has-content .welcome-card,
+.has-content .features-card,
+.has-content .technique-explainer {
+    opacity: 0;
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    pointer-events: none;
+    transform: translateY(-10px);
+}
+
+/* Also hide example prompts, card dividers, etc. */
+.has-content .example-prompts,
+.has-content .card-divider,
+.has-content .examples-container,
+.has-content .tools-demo-section {
+    display: none;
 }
 
 .mode-overview-title,

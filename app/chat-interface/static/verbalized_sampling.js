@@ -48,6 +48,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     generateBtn.disabled = true;
     typingIndicator.classList.add('active');
 
+    // Hide intro cards when generation starts
+    const scrollableContent = document.querySelector('.scrollable-content');
+    if (scrollableContent) {
+      scrollableContent.classList.add('has-content');
+    }
+
     // Clear previous results
     directResponsesContainer.innerHTML = '';
     verbalizedResponsesContainer.innerHTML = '';

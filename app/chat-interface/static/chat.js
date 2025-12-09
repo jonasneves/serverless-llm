@@ -181,6 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add user message
   function addUserMessage(content) {
+    // Hide welcome card when conversation starts
+    chatHistory.classList.add('has-content');
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message user';
     messageDiv.textContent = content;
@@ -561,6 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearChat() {
     conversationHistory = [];
+    chatHistory.classList.remove('has-content');
     chatHistory.innerHTML = `
         <div class="welcome-card">
           <div class="welcome-title">Compare AI Model Responses</div>

@@ -192,8 +192,9 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
         }
         
         # Local models use max_tokens, OpenAI/GitHub models use max_completion_tokens
+        # Local models need much smaller max_tokens - orchestrator JSON responses are ~500-1000 tokens
         if is_local_model:
-            payload["max_tokens"] = self.max_tokens
+            payload["max_tokens"] = min(self.max_tokens, 1024)  # Cap at 1024 for local models
         else:
             payload["max_completion_tokens"] = self.max_tokens
 
