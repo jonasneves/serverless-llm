@@ -153,6 +153,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     typingIndicator.classList.add('active');
     resultsContainer.innerHTML = ''; // Clear previous results
 
+    // Clear input immediately for better UX
+    promptInput.value = '';
+    promptInput.style.height = 'auto';
+
     const promises = models.map(modelId => runAuditForModel(modelId, query, temperature, maxTokens));
 
     try {
