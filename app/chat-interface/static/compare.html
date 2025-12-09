@@ -1,15 +1,15 @@
 {% extends "layout.html" %}
 
-{% block title %}LLM Chat{% endblock %}
-{% block subtitle %}Compare AI Models{% endblock %}
+{% block title %}Compare Models{% endblock %}
+{% block subtitle %}Side-by-side response comparison{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/chat.css?v={{ chat_css }}">
+<link rel="stylesheet" href="/static/compare.css?v={{ compare_css }}">
 {% endblock %}
 
 {% block extra_js %}
 <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
-<script defer src="/static/chat.js?v={{ chat_js }}"></script>
+<script defer src="/static/compare.js?v={{ compare_js }}"></script>
 {% endblock %}
 
 {% block content %}

@@ -219,9 +219,9 @@ def get_static_versions() -> dict:
     return {
         "common_css": get_file_version("common.css"),
         "settings_js": get_file_version("settings.js"),
-        "chat_css": get_file_version("chat.css"),
-        "chat_js": get_file_version("chat.js"),
-        "discussion_js": get_file_version("discussion.js"),
+        "compare_css": get_file_version("compare.css"),
+        "compare_js": get_file_version("compare.js"),
+        "roundtable_js": get_file_version("roundtable.js"),
         "orchestrator_js": get_file_version("orchestrator.js"),
         "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
         "confessions_js": get_file_version("confessions.js"),
@@ -431,18 +431,18 @@ def get_model_endpoint_or_error(model_id: str, *, status_code: int = 400) -> str
 
 
 @app.get("/")
-async def chat_interface(request: Request):
-    """Serve chat interface with automatic cache busting"""
+async def compare_interface(request: Request):
+    """Serve compare interface with automatic cache busting"""
     return templates.TemplateResponse(
-        "chat.html",
+        "compare.html",
         {"request": request, **get_static_versions()}
     )
 
-@app.get("/discussion")
-async def discussion_interface(request: Request):
-    """Serve discussion mode interface with automatic cache busting"""
+@app.get("/roundtable")
+async def roundtable_interface(request: Request):
+    """Serve roundtable mode interface with automatic cache busting"""
     return templates.TemplateResponse(
-        "discussion.html",
+        "roundtable.html",
         {"request": request, **get_static_versions()}
     )
 
