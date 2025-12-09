@@ -5,6 +5,13 @@
 
 {% block extra_css %}
 <style>
+  .card-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color);
+    margin: 20px 0;
+  }
+
   /* Page-specific styles for AutoGen mode */
   :root {
     --tool-reasoning: #8B5CF6;
@@ -443,7 +450,11 @@
         <span>Powered by <strong>Microsoft AutoGen</strong></span>
       </div>
     </div>
+    <div class="card-divider"></div>
   </div>
+
+  <!-- Orchestration results appear here, outside the info card -->
+  <div id="orchestrationResults"></div>
 </div>
 
 <div class="input-container">

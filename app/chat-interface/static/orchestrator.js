@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const maxTokensInput = document.getElementById('maxTokens');
   const startBtn = document.getElementById('sendBtn');
   let originalBtnHTML = null;
-  const orchestrationSection = document.getElementById('orchestrationSection');
+  const orchestrationResults = document.getElementById('orchestrationResults');
 
   // Temperature slider
   temperatureInput.addEventListener('input', () => {
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     queryInput.style.height = 'auto';
 
     // Clear previous results
-    orchestrationSection.innerHTML = '';
+    orchestrationResults.innerHTML = '';
 
     try {
       const engine = engineSelect ? engineSelect.value : 'auto';
@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <strong>Tools:</strong> ${event.tools.join(', ')}
                   </div>
                 `;
-                orchestrationSection.appendChild(agentsDiv);
+                orchestrationResults.appendChild(agentsDiv);
                 currentRound = agentsDiv;
               } else if (event.event === 'agent_message') {
                 // Agent sent a message
@@ -196,20 +196,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <div class="tool-result-content markdown-content"></div>
                 `;
                 messageDiv.querySelector('.tool-result-content').innerHTML = formatContent(event.content);
-                orchestrationSection.appendChild(messageDiv);
+                orchestrationResults.appendChild(messageDiv);
               } else if (event.event === 'message') {
                 // Generic message
                 const msgDiv = document.createElement('div');
                 msgDiv.className = 'tool-result';
                 msgDiv.innerHTML = `<div class="tool-result-content markdown-content"></div>`;
                 msgDiv.querySelector('.tool-result-content').innerHTML = formatContent(event.content);
-                orchestrationSection.appendChild(msgDiv);
+                orchestrationResults.appendChild(msgDiv);
               } else if (event.event === 'round_start') {
                 // New round
                 currentRound = document.createElement('div');
                 currentRound.className = 'round';
                 currentRound.innerHTML = `<div class="round-header">Round ${event.round}</div>`;
-                orchestrationSection.appendChild(currentRound);
+                orchestrationResults.appendChild(currentRound);
               } else if (event.event === 'tool_call') {
                 // Tool being called
                 currentToolCall = document.createElement('div');
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <div class="final-answer-content markdown-content"></div>
                 `;
                 finalDiv.querySelector('.final-answer-content').innerHTML = formatContent(event.content);
-                orchestrationSection.appendChild(finalDiv);
+                orchestrationResults.appendChild(finalDiv);
               } else if (event.event === 'complete') {
                 // Summary
                 const summaryDiv = document.createElement('div');
@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   ${event.summary.total_rounds ? `<div class="summary-item"><span>Rounds:</span><span>${event.summary.total_rounds}</span></div>` : ''}
                   ${event.summary.agents_used ? `<div class="summary-item"><span>Agents:</span><span>${event.summary.agents_used.join(', ')}</span></div>` : ''}
                 `;
-                orchestrationSection.appendChild(summaryDiv);
+                orchestrationResults.appendChild(summaryDiv);
               } else if (event.event === 'error') {
                 console.error('Orchestration error:', event.error);
                 const errorDiv = document.createElement('div');
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 errorDiv.innerHTML = errorHtml;
-                orchestrationSection.appendChild(errorDiv);
+                orchestrationResults.appendChild(errorDiv);
               }
 
               orchestrationSection.scrollTop = orchestrationSection.scrollHeight;
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (error) {
       console.error('Orchestration failed:', error);
-      orchestrationSection.innerHTML = `
+      orchestrationResults.innerHTML = `
           <div style="color: var(--warning-color); padding: 20px; text-align: center;">
             <div style="margin-bottom: 12px;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
