@@ -152,10 +152,10 @@
     /* 8px */
 
     /* Header spacing */
-    --header-padding-x: var(--space-5);
-    /* 20px */
-    --header-padding-y: var(--space-4);
+    --header-padding-x: var(--space-4);
     /* 16px */
+    --header-padding-y: var(--space-3);
+    /* 12px */
 
     /* Control spacing */
     --control-gap: var(--space-4);

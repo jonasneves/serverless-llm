@@ -176,25 +176,27 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
         # Detect if using local model (not GitHub Models API)
         is_local_model = "github.ai" not in self.api_url
         
+        # Build payload matching the Chat page's working format
+        # Combine system instruction into user message for better local model compatibility
+        combined_prompt = f"IMPORTANT: Respond with valid JSON only, no other text.\n\n{structured_prompt}"
+        
         payload = {
-            "model": self.model_id,
             "messages": [
                 {
-                    "role": "system",
-                    "content": "You are a precise analytical assistant. Always respond with valid JSON only."
-                },
-                {
                     "role": "user",
-                    "content": structured_prompt
+                    "content": combined_prompt
                 }
             ],
-            "stream": True  # Always use streaming - more resilient and consistent
+            "temperature": 0.3,  # Lower temp for more consistent JSON output
+            "stream": True,
+            "stream_options": {"include_usage": True}  # Request usage in final chunk
         }
         
         # Local models use max_tokens, API models use max_completion_tokens
         if is_local_model:
             payload["max_tokens"] = min(self.max_tokens, 512)  # Cap for local orchestrator responses
         else:
+            payload["model"] = self.model_id  # Only needed for API models
             payload["max_completion_tokens"] = self.max_tokens
 
         try:
@@ -202,10 +204,13 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
             collected_content = ""
             usage_data = None
             
+            # Only send auth headers to API models, local models don't need them
+            headers = self._get_headers() if not is_local_model else None
+            
             async with client.stream(
                 "POST",
                 self.api_url,
-                headers=self._get_headers(),
+                headers=headers,
                 json=payload,
                 timeout=120.0
             ) as response:
