@@ -43,6 +43,7 @@ export default function Playground() {
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
+  const rootContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const suppressClickRef = useRef(false);
 
@@ -103,7 +104,7 @@ export default function Playground() {
     };
   };
 
-  // Calculate selection rectangle
+  // Calculate selection rectangle (relative to root container)
   const selectionRect = dragSelection && dragSelection.active
     ? (() => {
         const rect = normalizeRect(dragSelection.origin, dragSelection.current);
@@ -123,26 +124,32 @@ export default function Playground() {
   useEffect(() => {
     const handleMouseDown = (event: MouseEvent) => {
       if (event.button !== 0) return; // Only left mouse button
-      if (!visualizationAreaRef.current) return;
+      if (!rootContainerRef.current || !visualizationAreaRef.current) return;
       
       const target = event.target as HTMLElement | null;
       if (!target) return;
       
-      // Don't start selection if clicking on cards or interactive elements
+      // Don't start selection if clicking on cards, buttons, inputs, or other interactive elements
       const clickedOnCard = target.closest('[data-card]');
-      if (clickedOnCard) return;
+      const clickedOnInteractive = target.closest('button, a, input, textarea, select, [role="button"]');
+      if (clickedOnCard || clickedOnInteractive) return;
       
-      const clickedOnDashboard = visualizationAreaRef.current.contains(target);
-      if (!clickedOnDashboard) return;
+      // Only allow selection within the root container
+      const clickedOnContainer = rootContainerRef.current.contains(target);
+      if (!clickedOnContainer) return;
       
-      const bounds = visualizationAreaRef.current.getBoundingClientRect();
+      const rootBounds = rootContainerRef.current.getBoundingClientRect();
       const point = {
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top
+        x: event.clientX - rootBounds.left,
+        y: event.clientY - rootBounds.top
       };
       
       suppressClickRef.current = false;
-      setDragSelection({ origin: point, current: point, active: false });
+      setDragSelection({ 
+        origin: point, 
+        current: point, 
+        active: false
+      });
     };
 
     window.addEventListener('mousedown', handleMouseDown, true);
@@ -151,35 +158,29 @@ export default function Playground() {
 
   // Handle mouse move and mouse up for selection box
   useEffect(() => {
-    if (!dragSelection) return;
+    if (!dragSelection || !rootContainerRef.current || !visualizationAreaRef.current) return;
 
     const handleMouseMove = (event: MouseEvent) => {
-      if (!visualizationAreaRef.current) return;
-      
-      const bounds = visualizationAreaRef.current.getBoundingClientRect();
+      const rootBounds = rootContainerRef.current!.getBoundingClientRect();
       const point = {
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top
+        x: event.clientX - rootBounds.left,
+        y: event.clientY - rootBounds.top
       };
       
       setDragSelection((state) => {
         if (!state) return state;
         const rect = normalizeRect(state.origin, point);
         const active = state.active || rect.width > 4 || rect.height > 4;
-        return { origin: state.origin, current: point, active };
+        return { ...state, current: point, active };
       });
     };
 
     const handleMouseUp = (event: MouseEvent) => {
-      if (!visualizationAreaRef.current) {
-        setDragSelection(null);
-        return;
-      }
-
-      const bounds = visualizationAreaRef.current.getBoundingClientRect();
+      const rootBounds = rootContainerRef.current!.getBoundingClientRect();
+      const vizBounds = visualizationAreaRef.current!.getBoundingClientRect();
       const point = {
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top
+        x: event.clientX - rootBounds.left,
+        y: event.clientY - rootBounds.top
       };
 
       const upTarget = event.target as HTMLElement | null;
@@ -192,25 +193,27 @@ export default function Playground() {
         if (state.active && rect.width > 0 && rect.height > 0) {
           const matched: number[] = [];
           
+          // Convert selection rect from root container coordinates to screen coordinates
+          const rootBounds = rootContainerRef.current!.getBoundingClientRect();
+          const selectionRectScreen = {
+            left: rootBounds.left + rect.left,
+            right: rootBounds.left + rect.right,
+            top: rootBounds.top + rect.top,
+            bottom: rootBounds.top + rect.bottom
+          };
+          
           // Check all model cards
           for (const model of selectedModels) {
             const cardElement = cardRefs.current.get(model.id);
-            if (!cardElement || !visualizationAreaRef.current) continue;
+            if (!cardElement) continue;
             
             const cardBounds = cardElement.getBoundingClientRect();
-            const containerBounds = visualizationAreaRef.current.getBoundingClientRect();
-            const cardRect = {
-              left: cardBounds.left - containerBounds.left,
-              right: cardBounds.right - containerBounds.left,
-              top: cardBounds.top - containerBounds.top,
-              bottom: cardBounds.bottom - containerBounds.top
-            };
             
             const intersects = !(
-              cardRect.right < rect.left ||
-              cardRect.left > rect.right ||
-              cardRect.bottom < rect.top ||
-              cardRect.top > rect.bottom
+              cardBounds.right < selectionRectScreen.left ||
+              cardBounds.left > selectionRectScreen.right ||
+              cardBounds.bottom < selectionRectScreen.top ||
+              cardBounds.top > selectionRectScreen.bottom
             );
             
             if (intersects) {
@@ -240,8 +243,12 @@ export default function Playground() {
 
   return (
     <div
+      ref={rootContainerRef}
       className={`min-h-screen text-white p-6 relative ${bgClass}`}
-      style={bgStyle === 'none' ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' } : {}}
+      style={{
+        ...(bgStyle === 'none' ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' } : {}),
+        ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})
+      }}
       onClick={(e) => {
         // Only deselect if clicking directly on the background
         if (e.target === e.currentTarget) {
@@ -679,13 +686,13 @@ export default function Playground() {
           );
         })}
 
-        {/* Selection rectangle overlay */}
-        {selectionRect && (
+        {/* Selection rectangle overlay - positioned relative to root container */}
+        {selectionRect && rootContainerRef.current && (
           <div
-            className="absolute pointer-events-none border-2 border-blue-400 bg-blue-400/10 z-50"
+            className="fixed pointer-events-none border-2 border-blue-400 bg-blue-400/10 z-50"
             style={{
-              left: `${selectionRect.left}px`,
-              top: `${selectionRect.top}px`,
+              left: `${selectionRect.left + rootContainerRef.current.getBoundingClientRect().left}px`,
+              top: `${selectionRect.top + rootContainerRef.current.getBoundingClientRect().top}px`,
               width: `${selectionRect.width}px`,
               height: `${selectionRect.height}px`,
             }}
@@ -788,9 +795,17 @@ export default function Playground() {
       `}</style>
       {dragSelection && (
         <style>{`
-          * {
-            user-select: none;
-            -webkit-user-select: none;
+          body {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            cursor: crosshair !important;
+          }
+          input, textarea {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            cursor: text !important;
           }
         `}</style>
       )}
