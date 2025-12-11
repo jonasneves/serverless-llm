@@ -21,21 +21,18 @@ export default function PromptInput({
       className="fixed bottom-0 right-0 z-[100] pb-6 px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
       style={{
         left: '0', // Static left, independent of dock
-        background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <div className="max-w-2xl w-full pointer-events-auto">
+      <div className="max-w-xl w-full pointer-events-auto">
         {/* Scenarios Ticker */}
         <div 
-          className="mb-4 relative overflow-hidden h-6 w-full"
+          className="mb-4 relative overflow-hidden h-6 w-full backdrop-blur-md bg-slate-900/40 rounded-lg border border-white/5"
           style={{
             maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
             WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)'
           }}
         >
-          <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-400 font-medium">
+          <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-300 font-medium h-full px-4">
             {[...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS].map((s, i) => ( // Repeat for infinite scroll effect
               <div key={i} className="flex items-center gap-2">
                 <button 
@@ -47,14 +44,14 @@ export default function PromptInput({
                 >
                   {s.label}
                 </button>
-                <span className="text-slate-700">•</span>
+                <span className="text-slate-600">•</span>
               </div>
             ))}
           </div>
         </div>
 
         <div
-          className="rounded-xl p-4 transition-all duration-300"
+          className="rounded-xl p-4 transition-all duration-300 flex items-center gap-2"
           style={{
             background: 'rgba(30, 41, 59, 0.95)',
             backdropFilter: 'blur(12px)',
@@ -82,9 +79,23 @@ export default function PromptInput({
               }
             }}
           />
+          <button
+            onClick={() => {
+              if (inputRef.current?.value) {
+                onSendMessage(inputRef.current.value);
+                inputRef.current.value = '';
+              }
+            }}
+            className="p-2 -mr-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Send message"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+          </button>
         </div>
         {/* Footer hint */}
-        <div className="text-center mt-2 text-[10px] text-slate-600">
+        <div className="mt-2 text-[10px] text-slate-400 w-fit mx-auto px-3 py-1 rounded-full backdrop-blur-md bg-slate-900/40 border border-white/5">
           {mode !== 'compare' ? "Click on models to expand their responses" : "Showing all model responses"}
         </div>
       </div>
