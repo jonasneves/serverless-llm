@@ -193,7 +193,15 @@ class ModelLoader {
 
     const apiModels = this.getAPIModels();
     const localModels = this.getLocalModels();
-    let defaultFound = false;
+
+    // Prefer backend default, then common OpenAI defaults, then first available
+    const preferredIds = [
+      this.defaultModel,
+      'openai/gpt-4o',
+      'openai/gpt-4.1',
+      'openai/gpt-4o-mini'
+    ].filter(Boolean);
+    let selectedId = null;
 
     if (localModels.length > 0) {
       const localGroup = document.createElement('optgroup');
@@ -214,25 +222,29 @@ class ModelLoader {
         const option = document.createElement('option');
         option.value = model.id;
         option.textContent = model.name;
-        if (model.id === 'openai/gpt-4o') {
+        if (!selectedId && preferredIds.includes(model.id)) {
           option.selected = true;
-          defaultFound = true;
+          selectedId = model.id;
         }
         apiGroup.appendChild(option);
       });
       select.appendChild(apiGroup);
     }
 
-    if (!defaultFound) {
+    if (!selectedId) {
       if (apiModels.length > 0) {
-        select.value = apiModels[0].id;
+        selectedId = apiModels[0].id;
       } else if (localModels.length > 0) {
-        select.value = localModels[0].id;
+        selectedId = localModels[0].id;
       }
     }
 
+    if (selectedId) {
+      select.value = selectedId;
+    }
+
     console.log('[ModelLoader] Built orchestrator dropdown:',
-      `${localModels.length} local, ${apiModels.length} API, default: ${select.value}`);
+      `${localModels.length} local, ${apiModels.length} API, default: ${select.value || 'none'}`);
   }
 
   /**
