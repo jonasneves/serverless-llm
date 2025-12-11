@@ -5,6 +5,7 @@ interface Model {
   name: string;
   color: string;
   response: string;
+  type?: 'local' | 'api';
 }
 
 interface Scenario {
@@ -13,13 +14,13 @@ interface Scenario {
 }
 
 // 1. Static Configuration (The "Source of Truth" for Model Identity)
-const MODEL_CONFIG = [
-  { id: 1, name: 'QWEN3 4B', color: '#3b82f6' },
-  { id: 2, name: 'CLAUDE 3.5', color: '#f97316' },
-  { id: 3, name: 'GEMMA 2 9B', color: '#22c55e' },
-  { id: 4, name: 'MISTRAL 7B', color: '#a855f7' },
-  { id: 5, name: 'DEEPSEEK R1', color: '#06b6d4' },
-  { id: 6, name: 'LLAMA 3.2', color: '#ec4899' },
+const MODEL_CONFIG: Omit<Model, 'response'>[] = [
+  { id: 1, name: 'QWEN3 4B', color: '#3b82f6', type: 'local' },
+  { id: 2, name: 'CLAUDE 3.5', color: '#f97316', type: 'api' },
+  { id: 3, name: 'GEMMA 2 9B', color: '#22c55e', type: 'local' },
+  { id: 4, name: 'MISTRAL 7B', color: '#a855f7', type: 'local' },
+  { id: 5, name: 'DEEPSEEK R1', color: '#06b6d4', type: 'api' },
+  { id: 6, name: 'LLAMA 3.2', color: '#ec4899', type: 'local' },
 ];
 
 // 2. Content / Scenarios
@@ -128,8 +129,55 @@ export default function Playground() {
     }));
   });
   const [mode, setMode] = useState<Mode>('compare');
-  const [selected] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [selected, setSelected] = useState<number[]>([1, 2, 3]); // Start with a few active
   const [chairman, setChairman] = useState<number>(2);
+  const [draggedModelId, setDraggedModelId] = useState<number | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  const [showDock, setShowDock] = useState(false);
+
+  // Available models are those in CONFIG but NOT in selected
+  const availableModels = MODEL_CONFIG.filter(m => !selected.includes(m.id));
+
+  const handleDragStart = (e: React.DragEvent, modelId: number) => {
+    setDraggedModelId(modelId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (draggedModelId) {
+      if (!selected.includes(draggedModelId)) {
+        setSelected(prev => [...prev, draggedModelId]);
+      }
+      setDraggedModelId(null);
+    }
+  };
+
+  const handleModelToggle = (modelId: number) => {
+    if (selected.includes(modelId)) {
+      setSelected(prev => prev.filter(id => id !== modelId));
+    } else {
+      setSelected(prev => [...prev, modelId]);
+    }
+  };
+
+  const handleAddGroup = (type: 'local' | 'api') => {
+    const modelsToAdd = availableModels
+      .filter(m => m.type === type)
+      .map(m => m.id);
+    setSelected(prev => [...prev, ...modelsToAdd]);
+  };
   const [expanded, setExpanded] = useState<number | string | null>(null);
   const [speaking, setSpeaking] = useState<number | null>(null);
   const [inputFocused, setInputFocused] = useState<boolean>(false);
@@ -378,12 +426,12 @@ export default function Playground() {
   return (
     <div
       ref={rootContainerRef}
-      className={`min-h-screen text-white p-6 pb-32 relative ${bgClass}`}
+      className={`min-h-screen text-white relative overflow-hidden ${bgClass}`}
       style={{
         backgroundColor: MODE_COLORS[mode],
         transition: 'background-color 1s ease',
         ...(bgStyle === 'none' ? { background: MODE_COLORS[mode] } : {}),
-        ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})
+        ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}),
       }}
       onClick={(e) => {
         // Only deselect if clicking directly on the background
@@ -394,17 +442,25 @@ export default function Playground() {
       }}
     >
       {/* Header */}
-      <div className="relative flex items-center justify-between mb-6">
+      <div className="relative flex items-center justify-between mb-6 px-6 pt-6 z-50">
         {/* Left: Logo */}
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-slate-600/50">
+          <button
+            onClick={() => setShowDock(!showDock)}
+            className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-slate-600/50 hover:border-slate-500 transition-all active:scale-95"
+            title={showDock ? "Close Dock" : "Open Dock"}
+          >
             <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-          </div>
+          </button>
           <div>
-            <h1 className="text-lg font-semibold text-slate-100">Serverless LLM</h1>
-            <p className="text-xs text-slate-500">Side-by-side response comparison</p>
+            <h1 className="text-lg font-semibold text-slate-100">Model Arena</h1>
+            <p className="text-xs text-slate-500">
+              {mode === 'compare' && 'Side-by-side response comparison'}
+              {mode === 'council' && 'Anonymous peer review & consensus'}
+              {mode === 'roundtable' && 'Multi-model collaborative discussion'}
+            </p>
           </div>
         </div>
 
@@ -430,7 +486,7 @@ export default function Playground() {
             {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
               <button
                 key={m}
-                onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(null); }}
+                onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(null); setDragSelection(null); }}
                 className={`relative z-10 py-2 text-sm font-medium transition-colors duration-200 ${
                   mode === m.toLowerCase()
                     ? 'text-white'
@@ -488,18 +544,110 @@ export default function Playground() {
         </div>
       </div>
 
+      {/* Content Wrapper with Sidebar Offset */}
+      <div 
+        style={{ 
+          paddingLeft: '1.5rem', // Static padding, sidebar will overlay
+          paddingRight: '1.5rem',
+        }}
+      >
+              {/* Model Dock (Left) */}
+              <div className="fixed left-6 top-24 bottom-24 w-64 rounded-2xl p-4 flex flex-col gap-6 z-[60] transition-all duration-300"           style={{
+             background: 'rgba(15, 23, 42, 0.6)',
+             backdropFilter: 'blur(12px)',
+             border: '1px solid rgba(255, 255, 255, 0.1)',
+             transform: showDock ? 'translateX(0)' : 'translateX(-150%)',
+             opacity: showDock ? 1 : 0,
+             pointerEvents: showDock ? 'auto' : 'none',
+           }}>
+        
+        {/* Local Models Section */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-400 tracking-wider">LOCAL MODELS</h3>
+            <button 
+              onClick={() => handleAddGroup('local')}
+              className="text-[10px] text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              + ALL
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {availableModels.filter(m => m.type === 'local').map(model => (
+              <div
+                key={model.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, model.id)}
+                onClick={() => handleModelToggle(model.id)}
+                className="group flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent hover:border-emerald-500/30"
+              >
+                <div className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)] bg-emerald-500" />
+                <span className="text-xs font-medium text-slate-300 group-hover:text-white">{model.name}</span>
+              </div>
+            ))}
+            {availableModels.filter(m => m.type === 'local').length === 0 && (
+              <div className="text-[10px] text-slate-600 italic px-2">All active</div>
+            )}
+          </div>
+        </div>
+
+        {/* API Models Section */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-400 tracking-wider">API MODELS</h3>
+            <button 
+              onClick={() => handleAddGroup('api')}
+              className="text-[10px] text-orange-400 hover:text-orange-300 transition-colors"
+            >
+              + ALL
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {availableModels.filter(m => m.type === 'api').map(model => (
+              <div
+                key={model.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, model.id)}
+                onClick={() => handleModelToggle(model.id)}
+                className="group flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent hover:border-orange-500/30"
+              >
+                <div className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] bg-orange-500" />
+                <span className="text-xs font-medium text-slate-300 group-hover:text-white">{model.name}</span>
+              </div>
+            ))}
+            {availableModels.filter(m => m.type === 'api').length === 0 && (
+              <div className="text-[10px] text-slate-600 italic px-2">All active</div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Main visualization area */}
       <div 
         ref={visualizationAreaRef}
-        className={`relative w-full ${mode === 'compare' ? 'min-h-[480px] py-8' : ''}`}
-        style={mode === 'compare' ? {} : { 
-          height: '480px', 
-          minHeight: '480px', 
-          maxHeight: '100vh',
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative w-full z-[40] transition-all duration-300 ${mode === 'compare' ? 'min-h-[480px] py-8' : ''} ${isDraggingOver ? 'scale-[1.02]' : ''}`}
+        style={{
+          // Base styles for all modes
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
+          borderRadius: isDraggingOver ? '24px' : '0px',
+          
+          // Mode-specific styles override base
+          ...(mode === 'compare' ? {} : { 
+            height: '480px', 
+            minHeight: '480px', 
+            maxHeight: '100vh',
+          }),
+          
+          ...(isDraggingOver ? {
+            background: 'rgba(59, 130, 246, 0.05)',
+          } : {})
         }}
         onClick={(e) => {
           // Deselect if clicking on the background (cards use stopPropagation to prevent this)
@@ -525,7 +673,7 @@ export default function Playground() {
           const isSelected = selectedCardIds.has(model.id);
 
           // Calculate grid position for compare mode
-          const cols = 3;
+          const cols = 2; // Reduced to 2 cols to fit sidebar
           const cardWidth = 256;
           const cardHeight = 200;
           const gapX = 24;
@@ -533,7 +681,7 @@ export default function Playground() {
           const row = Math.floor(index / cols);
           const col = index % cols;
           const totalWidth = (cardWidth + gapX) * cols - gapX;
-          const totalHeight = (cardHeight + gapY) * 2;
+          const totalHeight = (cardHeight + gapY) * Math.ceil(selectedModels.length / cols); // Dynamic total height
           const gridX = mode === 'compare' ? col * (cardWidth + gapX) - totalWidth / 2 + cardWidth / 2 : 0;
           const gridY = mode === 'compare' ? row * (cardHeight + gapY) - totalHeight / 2 + cardHeight / 2 : 0;
 
@@ -603,22 +751,36 @@ export default function Playground() {
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
                   border: isSelected 
-                    ? `2px solid ${model.color}` 
+                    ? `1px solid ${model.color}d0` 
                     : isCircle && isSpeaking
                     ? `1px solid ${model.color}`
                     : '1px solid rgba(71, 85, 105, 0.5)',
                   boxShadow: isSelected
-                    ? `0 0 30px ${model.color}50, inset 0 1px 1px rgba(255,255,255,0.1)`
+                    ? `0 0 20px ${model.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
                     : isCircle && isSpeaking
                     ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
                     : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
-                  transform: isSelected || (isCircle && isSpeaking) ? 'scale(1.1)' : 'scale(1)',
+                  transform: isSelected || (isCircle && isSpeaking) ? 'scale(1.05)' : 'scale(1)',
                   width: isCircle ? '96px' : '256px',
                   height: isCircle ? '96px' : '200px',
                   borderRadius: isCircle ? '50%' : '12px',
                   transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.7s cubic-bezier(0.4, 0, 0.2, 1), width 0.7s cubic-bezier(0.4, 0, 0.2, 1), height 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
+                {/* Remove Button (Top Right) */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleModelToggle(model.id);
+                  }}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all opacity-0 group-hover:opacity-100 z-50"
+                  style={{ opacity: isSelected || isExpanded ? 1 : undefined }}
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
                 {/* Grid mode content */}
                 {!isCircle && (
                   <div style={{ 
@@ -799,7 +961,9 @@ export default function Playground() {
                 }}
               >
                 <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Synthesis</div>
-                <p className="text-sm text-slate-300 leading-relaxed">{chairmanSynthesis}</p>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  <Typewriter text={chairmanSynthesis} speed={20} />
+                </p>
               </div>
             )}
           </div>
@@ -871,13 +1035,16 @@ export default function Playground() {
         </div>
       )}
 
+      </div>
+
       {/* Prompt input - Sticky at bottom center */}
       <div 
-        className="fixed bottom-0 left-0 right-0 z-[100] pb-6 px-4 flex justify-center items-end pointer-events-none"
+        className="fixed bottom-0 right-0 z-[100] pb-6 px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
         style={{
+          left: '0', // Static left, independent of dock
           background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)',
           backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(8px)',
         }}
       >
         <div className="max-w-2xl w-full pointer-events-auto">
