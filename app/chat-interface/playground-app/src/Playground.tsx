@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Model {
   id: number;
@@ -34,6 +34,14 @@ export default function Playground() {
   const [chairman, setChairman] = useState<number>(2);
   const [expanded, setExpanded] = useState<number | string | null>(null);
   const [speaking, setSpeaking] = useState<number | null>(null);
+  const [inputValue, setInputValue] = useState<string>('');
+  const [inputFocused, setInputFocused] = useState<boolean>(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Autofocus input on mount and mode change
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [mode]);
 
   // Load background style from localStorage or use default
   const [bgStyle, setBgStyle] = useState<BackgroundStyle>(() => {
@@ -89,7 +97,17 @@ export default function Playground() {
   const bgClass = bgStyle === 'none' ? '' : `bg-${bgStyle}`;
 
   return (
-    <div className={`min-h-screen text-white p-6 relative ${bgClass}`} style={bgStyle === 'none' ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' } : {}}>
+    <div
+      className={`min-h-screen text-white p-6 relative ${bgClass}`}
+      style={bgStyle === 'none' ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' } : {}}
+      onClick={(e) => {
+        // Only deselect if clicking directly on the background
+        if (e.target === e.currentTarget) {
+          setExpanded(null);
+          setSpeaking(null);
+        }
+      }}
+    >
       {/* Header */}
       <div className="relative flex items-center justify-between mb-6">
         {/* Left: Logo */}
@@ -460,18 +478,24 @@ export default function Playground() {
       {/* Prompt input */}
       <div className="mt-6 max-w-2xl mx-auto">
         <div
-          className="rounded-xl p-4 transition-all"
+          className="rounded-xl p-4 transition-all duration-300"
           style={{
             background: 'rgba(30, 41, 59, 0.6)',
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(71, 85, 105, 0.4)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+            border: inputFocused ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(71, 85, 105, 0.4)',
+            boxShadow: inputFocused
+              ? '0 4px 20px rgba(0,0,0,0.2), 0 0 20px rgba(59, 130, 246, 0.15)'
+              : '0 4px 20px rgba(0,0,0,0.2)'
           }}
         >
           <input
+            ref={inputRef}
             type="text"
             placeholder="Ask a question to compare model responses..."
             className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
+            style={{ caretColor: 'transparent' }}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
           />
         </div>
       </div>
