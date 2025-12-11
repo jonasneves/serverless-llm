@@ -138,29 +138,54 @@
     scroll-margin-top: 80px;
   }
 
-  /* Chairman status bar - top sticky */
+  /* Chairman status bar - pill style with icon and tooltip (matches orchestrator) */
   .chairman-status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    font-size: 13px;
     position: sticky;
     top: 64px;
     z-index: 100;
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-    padding: 10px 20px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    font-size: 13px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
+    width: fit-content;
+    margin: 0 auto;
   }
 
   .chairman-status-bar.active {
-    display: flex;
+    display: inline-flex;
   }
 
   [data-theme="dark"] .chairman-status-bar {
-    background: rgba(30, 30, 40, 0.95);
-    backdrop-filter: blur(8px);
+    background: var(--bg-tertiary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .chairman-bar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--accent-color);
+    border-radius: var(--radius-full);
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .chairman-bar-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .chairman-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .chairman-label {
@@ -168,12 +193,12 @@
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .chairman-model {
     color: var(--accent-color);
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .chairman-separator {
@@ -194,6 +219,64 @@
     border-top-color: var(--accent-color);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
+  }
+
+  .chairman-info-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .chairman-info-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .chairman-info-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
+
+  .chairman-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: -8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    width: 260px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-xl);
+    z-index: 200;
+  }
+
+  .chairman-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    width: 10px;
+    height: 10px;
+    background: var(--bg-primary);
+    border-left: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+    transform: rotate(45deg);
+  }
+
+  .chairman-info-btn:hover .chairman-tooltip {
+    display: block;
   }
 
   /* Stage status in stage header */
@@ -1361,13 +1444,42 @@
   <div class="discussion-area">
     <!-- Chairman Status Bar - Top Sticky -->
     <div id="chairmanStatusBar" class="chairman-status-bar">
-      <span class="chairman-label">Chairman</span>
-      <span class="chairman-model" id="chairmanModelDisplay">...</span>
-      <span class="chairman-separator">·</span>
-      <span class="chairman-action">
-        <span class="chairman-spinner"></span>
-        <span id="chairmanActionText">Initializing...</span>
-      </span>
+      <div class="chairman-bar-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M14 4.5l5.5 5.5-2 2L12 6.5z"></path>
+          <path d="M5 13l7-7"></path>
+          <path d="M2 21h9"></path>
+          <path d="M3 17h9"></path>
+        </svg>
+      </div>
+      <div class="chairman-bar-content">
+        <span class="chairman-label">Chairman</span>
+        <span class="chairman-separator">·</span>
+        <span class="chairman-model" id="chairmanModelDisplay">...</span>
+        <span class="chairman-separator">·</span>
+        <span class="chairman-action">
+          <span class="chairman-spinner"></span>
+          <span id="chairmanActionText">Initializing...</span>
+        </span>
+      </div>
+      <button class="chairman-info-btn" type="button" aria-label="What does the chairman do?">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="chairman-tooltip">
+          <strong>What does the chairman do?</strong>
+          <p style="margin: 6px 0;">Guides the council phases with small API calls (~300 tokens):</p>
+          <ul style="margin: 0; padding-left: 16px;">
+            <li><strong>Orchestrates</strong> Stage 1 independent responses</li>
+            <li><strong>Collects</strong> and anonymizes rankings</li>
+            <li><strong>Synthesizes</strong> the final aggregated answer</li>
+          </ul>
+        </div>
+      </button>
     </div>
 
     <!-- Discussion Content -->

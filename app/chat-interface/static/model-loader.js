@@ -179,6 +179,63 @@ class ModelLoader {
   }
 
   /**
+   * Build orchestrator dropdown for Roundtable mode
+   * Mirrors chairman dropdown behavior (groups by type, defaults to API if available)
+   */
+  buildOrchestratorDropdown(selectSelector) {
+    const select = document.querySelector(selectSelector);
+    if (!select) {
+      console.error('[ModelLoader] Select not found:', selectSelector);
+      return;
+    }
+
+    select.innerHTML = '';
+
+    const apiModels = this.getAPIModels();
+    const localModels = this.getLocalModels();
+    let defaultFound = false;
+
+    if (localModels.length > 0) {
+      const localGroup = document.createElement('optgroup');
+      localGroup.label = 'Local Models';
+      localModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        localGroup.appendChild(option);
+      });
+      select.appendChild(localGroup);
+    }
+
+    if (apiModels.length > 0) {
+      const apiGroup = document.createElement('optgroup');
+      apiGroup.label = 'API Models';
+      apiModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        if (model.id === 'openai/gpt-4o') {
+          option.selected = true;
+          defaultFound = true;
+        }
+        apiGroup.appendChild(option);
+      });
+      select.appendChild(apiGroup);
+    }
+
+    if (!defaultFound) {
+      if (apiModels.length > 0) {
+        select.value = apiModels[0].id;
+      } else if (localModels.length > 0) {
+        select.value = localModels[0].id;
+      }
+    }
+
+    console.log('[ModelLoader] Built orchestrator dropdown:',
+      `${localModels.length} local, ${apiModels.length} API, default: ${select.value}`);
+  }
+
+  /**
    * Build model selector for Verbalized Sampling mode
    */
   buildModelSelector(selectSelector) {
