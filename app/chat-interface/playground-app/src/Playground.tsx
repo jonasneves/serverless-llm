@@ -120,7 +120,7 @@ export default function Playground() {
     setSelected(prev => [...prev, ...modelsToAdd]);
   };
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [speaking, setSpeaking] = useState<string | null>(null);
+  const [speaking, setSpeaking] = useState<Set<string>>(new Set());
   const [inputFocused, setInputFocused] = useState<boolean>(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [dragSelection, setDragSelection] = useState<{
@@ -149,17 +149,16 @@ export default function Playground() {
 
     setIsGenerating(true);
     setExpanded(null);
-    setSpeaking(null);
+    setSpeaking(new Set(selected)); // Mark all selected models as speaking
 
     // Reset responses for selected models
     setModelsData(prev => prev.map(m => 
       selected.includes(m.id) ? { ...m, response: '' } : m
     ));
 
-    // Determine first active model for visualization
+    // Determine first active model for visualization if needed (optional)
     const firstActive = selected[0];
     if (firstActive) {
-      setSpeaking(firstActive);
       setExpanded(firstActive);
     }
 
@@ -204,9 +203,6 @@ export default function Playground() {
                   }
                   return m;
                 }));
-                
-                // Switch visualization focus to the currently generating model (optional, maybe too jumpy)
-                // setSpeaking(data.model_id); 
               }
             } catch (e) {
               console.error('Error parsing SSE:', e);
@@ -221,7 +217,7 @@ export default function Playground() {
       ));
     } finally {
       setIsGenerating(false);
-      setSpeaking(null);
+      setSpeaking(new Set()); // Clear speaking state
     }
   };
 
@@ -464,7 +460,7 @@ export default function Playground() {
         // Only deselect if clicking directly on the background
         if (e.target === e.currentTarget) {
           setExpanded(null);
-          setSpeaking(null);
+          setSpeaking(new Set());
         }
       }}
     >
@@ -485,7 +481,7 @@ export default function Playground() {
               style={{ 
                 paddingLeft: '1.5rem', // Static padding, sidebar will overlay
                 paddingRight: '1.5rem',
-                paddingTop: '2rem', // Reduced from 4rem
+                paddingTop: '4rem', // Reverted to 4rem
               }}
             >
         {/* Dock Backdrop */}
@@ -512,14 +508,14 @@ export default function Playground() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative w-full z-[40] transition-all duration-300 ${mode === 'compare' ? 'min-h-[480px] py-8' : ''} ${isDraggingOver ? 'scale-[1.02]' : ''}`}
+        className={`relative w-full z-[40] transition-all duration-300 ${mode === 'compare' ? '' : ''} ${isDraggingOver ? 'scale-[1.02]' : ''}`}
         style={{
           // Base styles for all modes
           position: 'relative',
           display: 'flex',
           alignItems: mode === 'compare' ? 'flex-start' : 'center', // Top-align for grid to prevent upward growth
           justifyContent: 'center',
-          // marginTop removed to pull content up
+          marginTop: '0', // Reverted from -2rem to prevent overlap with header
           border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
           borderRadius: isDraggingOver ? '24px' : '0px',
           
@@ -541,7 +537,7 @@ export default function Playground() {
           const isSVG = target.tagName === 'svg' || target.closest('svg');
           if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
             setExpanded(null);
-            setSpeaking(null);
+            setSpeaking(new Set());
             if (!suppressClickRef.current) {
               setSelectedCardIds(new Set());
             }
@@ -553,7 +549,7 @@ export default function Playground() {
         {selectedModels.map((model, index) => {
           const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
           const isCircle = mode !== 'compare';
-          const isSpeaking = speaking === model.id;
+          const isSpeaking = speaking.has(model.id); // Check set membership
           const isExpanded = expanded === model.id;
           const isSelected = selectedCardIds.has(model.id);
 
@@ -635,7 +631,12 @@ export default function Playground() {
                       if (cardElement) {
                         (cardElement as HTMLElement).style.zIndex = '100';
                       }
-                      setSpeaking(speaking === model.id ? null : model.id);
+                      setSpeaking(prev => {
+                        const next = new Set(prev);
+                        if (next.has(model.id)) next.delete(model.id);
+                        else next.add(model.id);
+                        return next;
+                      });
                       setExpanded(isExpanded ? null : model.id);
                     }
                     setSelectedCardIds(new Set([model.id]));
@@ -837,9 +838,9 @@ export default function Playground() {
                 <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Chairman</div>
                 <div className="text-sm font-semibold">{chairmanModel.name}</div>
                 <div className="flex items-center justify-center gap-1 mt-1">
-                  <div className={`w-1.5 h-1.5 rounded-full ${speaking === chairmanModel.id ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full ${speaking.has(chairmanModel.id) ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
                   <span className="text-[10px] text-slate-500">
-                    {speaking === chairmanModel.id ? "Synthesizing" : isGenerating ? "Observing" : "Presiding"}
+                    {speaking.has(chairmanModel.id) ? "Synthesizing" : isGenerating ? "Observing" : "Presiding"}
                   </span>
                 </div>
               </div>

@@ -4,7 +4,7 @@ interface HeaderProps {
   mode: Mode;
   setMode: (mode: Mode) => void;
   setExpanded: (expanded: string | null) => void;
-  setSpeaking: (speaking: string | null) => void;
+  setSpeaking: (speaking: Set<string>) => void;
   setDragSelection: (selection: any) => void;
   cycleBgStyle: (direction: 'prev' | 'next') => void;
   showDock: boolean;
@@ -22,7 +22,7 @@ export default function Header({
   setShowDock
 }: HeaderProps) {
   return (
-    <div className="relative flex items-center justify-between mb-6 px-6 pt-6 z-50">
+    <div className="relative flex items-center justify-between mb-2 px-6 pt-6 z-50">
       {/* Left: Logo */}
       <div className="flex items-center gap-3 flex-1">
         <button
@@ -67,7 +67,7 @@ export default function Header({
           {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
             <button
               key={m}
-              onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(null); setDragSelection(null); }}
+              onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(new Set()); setDragSelection(null); }}
               className={`relative z-10 py-2 text-sm font-medium transition-colors duration-200 ${
                 mode === m.toLowerCase()
                   ? 'text-white'
