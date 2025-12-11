@@ -1,5 +1,9 @@
 .PHONY: help setup install build-chat build-qwen build-phi build-llama start-qwen start-phi start-llama stop logs-chat logs-qwen logs-phi health ps clean clean-all dev-remote dev-local dev-qwen dev-phi dev-llama dev-interface-local lint format
 
+# Load .env file if it exists
+-include .env
+export
+
 # =============================================================================
 # Serverless LLM - Enhanced Makefile
 # =============================================================================
@@ -54,13 +58,31 @@ setup:
 	fi
 
 install:
-	@echo "Installing Python dependencies for local development..."
-	@if command -v pip3 >/dev/null 2>&1; then \
-		pip3 install -r app/chat-interface/requirements.txt; \
-		pip3 install -r app/shared/requirements.txt; \
-		echo "✓ Dependencies installed"; \
+	@echo "Setting up Python 3.11 virtual environment..."
+	@if command -v python3.11 >/dev/null 2>&1; then \
+		if [ ! -d venv ]; then \
+			echo "Creating venv with Python 3.11..."; \
+			python3.11 -m venv venv; \
+		fi; \
+		echo "Installing dependencies..."; \
+		./venv/bin/pip install --upgrade pip; \
+		./venv/bin/pip install -r app/chat-interface/requirements.txt; \
+		./venv/bin/pip install -r app/shared/requirements.txt; \
+		echo ""; \
+		echo "✓ Dependencies installed in venv"; \
+		echo ""; \
+		echo "To activate: source venv/bin/activate"; \
+	elif command -v python3 >/dev/null 2>&1; then \
+		PYVER=$$(python3 --version | grep -oE '[0-9]+\.[0-9]+'); \
+		echo "⚠️  Python 3.11 not found (found Python $$PYVER)"; \
+		echo ""; \
+		echo "Install Python 3.11:"; \
+		echo "  macOS:  brew install python@3.11"; \
+		echo "  Linux:  sudo apt install python3.11 python3.11-venv"; \
+		echo ""; \
+		exit 1; \
 	else \
-		echo "❌ Error: pip3 not found. Please install Python 3 first."; \
+		echo "❌ Error: Python 3 not found. Please install Python 3.11."; \
 		exit 1; \
 	fi
 
@@ -106,13 +128,17 @@ start-r1qwen:
 
 dev-remote:
 	@echo "Starting chat interface with remote models..."
+	@if [ ! -d venv ]; then \
+		echo "❌ Error: venv not found. Run 'make install' first."; \
+		exit 1; \
+	fi
 	@if [ -z "$$BASE_DOMAIN" ]; then \
 		echo "❌ Error: BASE_DOMAIN not set in .env"; \
 		echo "Set BASE_DOMAIN=your-domain.com to use remote Cloudflare tunnel models"; \
 		exit 1; \
 	fi
 	@echo "✓ Using remote models at $$BASE_DOMAIN"
-	cd app/chat-interface && python chat_server.py
+	cd app/chat-interface && ../../venv/bin/python chat_server.py
 
 dev-local:
 	@if [ -z "$(MODEL)" ]; then \
@@ -131,22 +157,34 @@ dev-interface-local:
 		QWEN_API_URL=http://localhost:8001 \
 		PHI_API_URL=http://localhost:8002 \
 		LLAMA_API_URL=http://localhost:8003 \
-		python chat_server.py
+		../../venv/bin/python chat_server.py
 
 dev-qwen:
 	@echo "Starting Qwen inference server on :8001..."
+	@if [ ! -d venv ]; then \
+		echo "❌ Error: venv not found. Run 'make install' first."; \
+		exit 1; \
+	fi
 	@if [ -z "$$HF_TOKEN" ]; then \
 		echo "⚠️  Warning: HF_TOKEN not set. Model download may fail."; \
 	fi
-	cd app/qwen-inference && PORT=8001 python inference_server.py
+	cd app/qwen-inference && PORT=8001 ../../venv/bin/python inference_server.py
 
 dev-phi:
 	@echo "Starting Phi inference server on :8002..."
-	cd app/phi-inference && PORT=8002 python inference_server.py
+	@if [ ! -d venv ]; then \
+		echo "❌ Error: venv not found. Run 'make install' first."; \
+		exit 1; \
+	fi
+	cd app/phi-inference && PORT=8002 ../../venv/bin/python inference_server.py
 
 dev-llama:
 	@echo "Starting Llama inference server on :8003..."
-	cd app/llama-inference && PORT=8003 python inference_server.py
+	@if [ ! -d venv ]; then \
+		echo "❌ Error: venv not found. Run 'make install' first."; \
+		exit 1; \
+	fi
+	cd app/llama-inference && PORT=8003 ../../venv/bin/python inference_server.py
 
 # =============================================================================
 # Stop Commands
