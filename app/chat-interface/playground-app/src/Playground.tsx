@@ -203,17 +203,34 @@ export default function Playground() {
       </div>
 
       {/* Main visualization area */}
-      <div className="relative flex items-center justify-center" style={{ height: '480px' }}>
+      <div 
+        className="relative flex items-center justify-center" 
+        style={{ height: '480px' }}
+        onClick={(e) => {
+          // Deselect if clicking on the background (cards use stopPropagation to prevent this)
+          const target = e.target as HTMLElement;
+          // Check if click is on background container or SVG elements (connection lines)
+          const isSVG = target.tagName === 'svg' || target.closest('svg');
+          if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
+            setExpanded(null);
+            setSpeaking(null);
+          }
+        }}
+      >
 
         {/* Chairman in center */}
         {mode !== 'compare' && chairmanModel && (
           <div
+            data-card
             className="absolute z-20 transition-all duration-700 ease-out cursor-pointer"
             style={{
               opacity: 1,
               transform: 'scale(1)',
             }}
-            onClick={() => setExpanded(expanded === 'chairman' ? null : 'chairman')}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent background click handler from firing
+              setExpanded(expanded === 'chairman' ? null : 'chairman');
+            }}
           >
             {/* Outer glow rings */}
             <div className="absolute inset-0 rounded-full animate-pulse" style={{
@@ -255,6 +272,8 @@ export default function Playground() {
             {/* Expanded synthesis */}
             {expanded === 'chairman' && (
               <div
+                data-card
+                onClick={(e) => e.stopPropagation()}
                 className="absolute top-full mt-4 left-1/2 -translate-x-1/2 w-80 p-4 rounded-xl z-30 transition-all duration-300"
                 style={{
                   background: 'rgba(15, 23, 42, 0.95)',
@@ -302,7 +321,9 @@ export default function Playground() {
 
               {/* Card */}
               <div
-                onClick={() => {
+                data-card
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent background click handler from firing
                   if (isCircle) {
                     setSpeaking(speaking === model.id ? null : model.id);
                     setExpanded(isExpanded ? null : model.id);
@@ -312,7 +333,9 @@ export default function Playground() {
                   isCircle ? 'w-24 h-24 rounded-full' : 'w-64 rounded-xl'
                 }`}
                 style={{
-                  background: 'rgba(30, 41, 59, 0.95)',
+                  background: 'rgba(30, 41, 59, 0.85)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   border: `1px solid ${isSpeaking ? model.color : 'rgba(71, 85, 105, 0.5)'}`,
                   boxShadow: isSpeaking
                     ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
@@ -339,7 +362,9 @@ export default function Playground() {
                     height: '100%', 
                     display: 'flex', 
                     flexDirection: 'column',
+                    isolation: 'isolate',
                     WebkitFontSmoothing: 'antialiased',
+                    MozOsxFontSmoothing: 'grayscale',
                     textRendering: 'optimizeLegibility'
                   }}>
                     <div className="flex items-center justify-between mb-3">
@@ -375,6 +400,8 @@ export default function Playground() {
               {/* Expanded response panel */}
               {isExpanded && isCircle && (
                 <div
+                  data-card
+                  onClick={(e) => e.stopPropagation()}
                   className="absolute w-64 p-4 rounded-xl z-40 transition-all duration-300"
                   style={{
                     top: pos.y > 0 ? 'auto' : '100%',
