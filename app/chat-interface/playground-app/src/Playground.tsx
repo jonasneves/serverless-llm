@@ -312,9 +312,7 @@ export default function Playground() {
                   isCircle ? 'w-24 h-24 rounded-full' : 'w-64 rounded-xl'
                 }`}
                 style={{
-                  background: 'rgba(30, 41, 59, 0.85)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  background: 'rgba(30, 41, 59, 0.95)',
                   border: `1px solid ${isSpeaking ? model.color : 'rgba(71, 85, 105, 0.5)'}`,
                   boxShadow: isSpeaking
                     ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
@@ -341,9 +339,7 @@ export default function Playground() {
                     height: '100%', 
                     display: 'flex', 
                     flexDirection: 'column',
-                    isolation: 'isolate',
                     WebkitFontSmoothing: 'antialiased',
-                    MozOsxFontSmoothing: 'grayscale',
                     textRendering: 'optimizeLegibility'
                   }}>
                     <div className="flex items-center justify-between mb-3">
