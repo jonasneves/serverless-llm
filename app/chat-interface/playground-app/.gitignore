@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output (already in ../static/playground/)
+dist/
+
+# Environment
+.env
+.env.local
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store

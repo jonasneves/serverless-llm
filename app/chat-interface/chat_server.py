@@ -537,6 +537,12 @@ async def confessions_interface(request: Request):
         {"request": request, **get_static_versions()}
     )
 
+@app.get("/playground")
+async def playground_interface():
+    """Serve React Playground SPA"""
+    playground_html = static_dir / "playground" / "index.html"
+    return FileResponse(playground_html)
+
 @app.get("/status")
 async def status_page(request: Request):
     """Serve health status dashboard with automatic cache busting"""
