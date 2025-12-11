@@ -396,7 +396,7 @@ class ChatMessage(BaseModel):
     content: str
 
 class GenerationParams(BaseModel):
-    max_tokens: int = 1024
+    max_tokens: int = 2048
     temperature: float = 0.7
 
 
@@ -1676,7 +1676,7 @@ async def verbalized_sampling_stream(
     model: str = "qwen3-4b",
     num_responses: int = 5,
     temperature: float = 0.8,
-    max_tokens: int = 1024
+    max_tokens: int = 2048
 ):
     """
     Stream Verbalized Sampling responses using Server-Sent Events
@@ -1688,7 +1688,7 @@ async def verbalized_sampling_stream(
     - model: Model to use (default: qwen3-4b)
     - num_responses: Number of diverse responses (default: 5)
     - temperature: Sampling temperature for diversity (default: 0.8)
-    - max_tokens: Max tokens per response (default: 1024)
+    - max_tokens: Max tokens per response (default: 2048)
     
     Request body:
     - query: User's question or prompt

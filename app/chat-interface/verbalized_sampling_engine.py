@@ -32,7 +32,7 @@ class VerbalizedSamplingEngine:
         query: str,
         num_responses: int = 5,
         temperature: float = 0.8,
-        max_tokens: int = 1024
+        max_tokens: int = 2048
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Generate diverse responses using Verbalized Sampling technique

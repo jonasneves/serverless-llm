@@ -316,7 +316,7 @@ class ToolOrchestrator:
         payload = {
             "messages": messages,
             "tools": tools,
-            "max_tokens": 1024,
+            "max_tokens": 2048,
             "temperature": temperature
         }
 

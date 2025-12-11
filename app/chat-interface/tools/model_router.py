@@ -112,7 +112,7 @@ class ModelRouter:
         self,
         model_id: str,
         prompt: str,
-        max_tokens: int = 1024,
+        max_tokens: int = 2048,
         temperature: float = 0.7,
         system_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
