@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Model {
   id: number;
@@ -26,14 +26,35 @@ interface Position {
 
 type BackgroundStyle = 'dots' | 'dots-fade' | 'grid' | 'mesh' | 'dots-mesh' | 'animated-mesh' | 'none';
 
+const BG_STYLES: BackgroundStyle[] = ['dots-mesh', 'dots', 'dots-fade', 'grid', 'mesh', 'animated-mesh', 'none'];
+
 export default function Playground() {
   const [mode, setMode] = useState<Mode>('compare');
   const [selected] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [chairman, setChairman] = useState<number>(2);
   const [expanded, setExpanded] = useState<number | string | null>(null);
   const [speaking, setSpeaking] = useState<number | null>(null);
-  const [bgStyle, setBgStyle] = useState<BackgroundStyle>('dots-mesh');
-  const [showBgMenu, setShowBgMenu] = useState(false);
+
+  // Load background style from localStorage or use default
+  const [bgStyle, setBgStyle] = useState<BackgroundStyle>(() => {
+    const saved = localStorage.getItem('playground-bg-style');
+    return (saved && BG_STYLES.includes(saved as BackgroundStyle))
+      ? (saved as BackgroundStyle)
+      : 'dots-mesh';
+  });
+
+  // Save background style to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('playground-bg-style', bgStyle);
+  }, [bgStyle]);
+
+  const cycleBgStyle = (direction: 'prev' | 'next') => {
+    const currentIndex = BG_STYLES.indexOf(bgStyle);
+    const newIndex = direction === 'next'
+      ? (currentIndex + 1) % BG_STYLES.length
+      : (currentIndex - 1 + BG_STYLES.length) % BG_STYLES.length;
+    setBgStyle(BG_STYLES[newIndex]);
+  };
 
   const selectedModels = models.filter(m => selected.includes(m.id) && m.id !== chairman);
   const chairmanModel = models.find(m => m.id === chairman);
@@ -94,10 +115,9 @@ export default function Playground() {
                 left: mode === 'compare'
                   ? '4px'
                   : mode === 'council'
-                  ? '33.33%'
-                  : '66.66%',
-                width: '33.33%',
-                transform: 'translateX(0)',
+                  ? 'calc((100% + 4px) / 3)'
+                  : 'calc((200% - 4px) / 3)',
+                width: 'calc((100% - 8px) / 3)',
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3))',
                 boxShadow: '0 4px 20px rgba(59, 130, 246, 0.2)',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -122,54 +142,39 @@ export default function Playground() {
         </div>
 
         {/* Right: Settings */}
-        <div className="flex items-center gap-3 flex-1 justify-end">
-          <div className="text-xs text-slate-500">
-            <span className="text-slate-400">Temp:</span> 0.7
-          </div>
-
-          {/* Background Style Selector */}
-          <div className="relative">
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          {/* Background Style Cycler */}
+          <div className="flex items-center rounded-lg bg-slate-800/30 border border-slate-700/50">
             <button
-              onClick={() => setShowBgMenu(!showBgMenu)}
-              className="w-8 h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors"
-              title="Change background style"
+              onClick={() => cycleBgStyle('prev')}
+              className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
+              title="Previous background"
             >
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-
-            {showBgMenu && (
-              <div
-                className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-slate-700/50 overflow-hidden z-50"
-                style={{
-                  background: 'rgba(15, 23, 42, 0.95)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-                }}
-              >
-                {(['dots-mesh', 'dots', 'dots-fade', 'grid', 'mesh', 'animated-mesh', 'none'] as BackgroundStyle[]).map(style => (
-                  <button
-                    key={style}
-                    onClick={() => { setBgStyle(style); setShowBgMenu(false); }}
-                    className={`w-full px-3 py-2 text-left text-xs transition-colors ${
-                      bgStyle === style
-                        ? 'bg-slate-700/50 text-white'
-                        : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'
-                    }`}
-                  >
-                    {style === 'dots-mesh' && '✨ Dots + Mesh'}
-                    {style === 'dots' && '• Dot Grid'}
-                    {style === 'dots-fade' && '•• Radial Dots'}
-                    {style === 'grid' && '# Grid Lines'}
-                    {style === 'mesh' && '🌈 Mesh Gradient'}
-                    {style === 'animated-mesh' && '🌊 Animated Mesh'}
-                    {style === 'none' && '— Simple Gradient'}
-                  </button>
-                ))}
-              </div>
-            )}
+            <button
+              onClick={() => cycleBgStyle('next')}
+              className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
+              title="Next background"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
+
+          {/* Settings */}
+          <button
+            className="w-8 h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors"
+            title="Settings"
+          >
+            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
       </div>
 
