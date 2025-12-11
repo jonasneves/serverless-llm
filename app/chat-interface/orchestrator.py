@@ -104,8 +104,7 @@ class GitHubModelsOrchestrator:
         github_token: Optional[str] = None,
         model_id: Optional[str] = None,
         api_url: str = "https://models.github.ai/inference/chat/completions",
-        max_tokens: int = 16384,
-        temperature: float = 0.7
+        max_tokens: int = 16384
     ):
         """
         Initialize orchestrator with GitHub Models API credentials
@@ -115,13 +114,11 @@ class GitHubModelsOrchestrator:
             model_id: Model to use (env: ORCHESTRATOR_MODEL, default: gpt-4o)
             api_url: GitHub Models API endpoint
             max_tokens: Maximum tokens per response (includes reasoning tokens for GPT-5 models)
-            temperature: Sampling temperature for orchestrator responses
         """
         self.github_token = github_token or os.getenv("GH_MODELS_TOKEN")
         self.model_id = model_id or os.getenv("ORCHESTRATOR_MODEL", "gpt-4o")
         self.api_url = api_url
         self.max_tokens = max_tokens
-        self.temperature = temperature
 
         if not self.github_token:
             raise ValueError("GitHub token required. Set GH_MODELS_TOKEN env var or pass github_token parameter.")
@@ -182,7 +179,7 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
         # Build payload matching the Chat page's working format
         # Combine system instruction into user message for better local model compatibility
         combined_prompt = f"IMPORTANT: Respond with valid JSON only, no other text.\n\n{structured_prompt}"
-        
+
         payload = {
             "messages": [
                 {
@@ -190,7 +187,6 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                     "content": combined_prompt
                 }
             ],
-            "temperature": self.temperature,
             "stream": True,
             "stream_options": {"include_usage": True}  # Request usage in final chunk
         }

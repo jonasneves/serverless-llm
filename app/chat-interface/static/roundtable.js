@@ -20,8 +20,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const queryInput = document.getElementById('userInput');
   const startBtn = document.getElementById('sendBtn');
   const maxTokensInput = document.getElementById('maxTokens');
-  const temperatureInput = document.getElementById('tempSlider');
-  const tempValue = document.getElementById('tempValue');
   const statusIndicator = document.getElementById('statusIndicator');
   const discussionContent = document.getElementById('discussionContent');
   const orchestratorModel = document.getElementById('orchestratorModel');
@@ -34,11 +32,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const orchestratorActionText = document.getElementById('orchestratorActionText');
   const participantCount = document.getElementById('participantCount');
   const settingsBtn = document.getElementById('settingsBtn');
-
-  // Temperature slider
-  temperatureInput.addEventListener('input', () => {
-    tempValue.textContent = temperatureInput.value;
-  });
 
   let currentDiscussion = null;
 
@@ -267,7 +260,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const maxTokens = parseInt(maxTokensInput.value);
-    const temperature = parseFloat(temperatureInput.value);
     const orchestrator = orchestratorModel.value;
     const userToken = (githubToken?.value || '').trim();
     const turns = parseInt(document.getElementById('discussionRounds').value);
@@ -294,7 +286,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const requestBody = {
         query,
         max_tokens: maxTokens,
-        temperature,
         orchestrator_model: orchestrator,
         turns: turns,
         participants: selectedParticipants
