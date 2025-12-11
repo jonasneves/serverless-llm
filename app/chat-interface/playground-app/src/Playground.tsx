@@ -177,7 +177,6 @@ export default function Playground() {
 
     const handleMouseUp = (event: MouseEvent) => {
       const rootBounds = rootContainerRef.current!.getBoundingClientRect();
-      const vizBounds = visualizationAreaRef.current!.getBoundingClientRect();
       const point = {
         x: event.clientX - rootBounds.left,
         y: event.clientY - rootBounds.top
