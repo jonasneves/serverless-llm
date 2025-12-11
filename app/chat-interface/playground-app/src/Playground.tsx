@@ -74,23 +74,6 @@ export default function Playground() {
     return { x, y, angle };
   };
 
-  const getGridPosition = (index: number): Position => {
-    const cols = 3;
-    const cardWidth = 256; // w-64 = 16rem = 256px
-    const cardHeight = 200;
-    const gapX = 24; // Consistent spacing between cards
-    const gapY = 24; // Same as gapX for consistent vertical spacing
-    const row = Math.floor(index / cols);
-    const col = index % cols;
-    const totalWidth = (cardWidth + gapX) * cols - gapX;
-    const totalHeight = (cardHeight + gapY) * 2;
-    return {
-      x: col * (cardWidth + gapX) - totalWidth / 2 + cardWidth / 2,
-      y: row * (cardHeight + gapY) - totalHeight / 2 + cardHeight / 2,
-      angle: 0
-    };
-  };
-
   const chairmanSynthesis = "After considering all perspectives, the consensus emerges: model efficiency isn't just about size—it's about the intersection of architecture, data quality, and deployment constraints. Each approach offers valid trade-offs depending on use case requirements.";
 
   const bgClass = bgStyle === 'none' ? '' : `bg-${bgStyle}`;
@@ -204,8 +187,8 @@ export default function Playground() {
 
       {/* Main visualization area */}
       <div 
-        className="relative flex items-center justify-center" 
-        style={{ height: '480px' }}
+        className={`relative ${mode === 'compare' ? 'min-h-[480px] py-8' : 'flex items-center justify-center'}`}
+        style={mode === 'compare' ? {} : { height: '480px', minHeight: '480px', maxHeight: '100vh' }}
         onClick={(e) => {
           // Deselect if clicking on the background (cards use stopPropagation to prevent this)
           const target = e.target as HTMLElement;
@@ -217,6 +200,69 @@ export default function Playground() {
           }
         }}
       >
+        {/* Compare mode - Responsive Grid */}
+        {mode === 'compare' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
+            {selectedModels.map((model) => {
+              const isExpanded = expanded === model.id;
+              return (
+                <div
+                  key={model.id}
+                  className="relative transition-all duration-300 ease-out"
+                  style={{
+                    zIndex: isExpanded ? 30 : 1,
+                  }}
+                >
+                  {/* Card */}
+                  <div
+                    data-card
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    className="relative cursor-pointer transition-all duration-300 ease-out w-full rounded-xl"
+                    style={{
+                      background: 'rgba(30, 41, 59, 0.85)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(71, 85, 105, 0.5)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
+                      height: '200px',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                  >
+                    {/* Grid mode content */}
+                    <div style={{ 
+                      padding: '16px', 
+                      height: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      isolation: 'isolate',
+                      WebkitFontSmoothing: 'antialiased',
+                      MozOsxFontSmoothing: 'grayscale',
+                      textRendering: 'optimizeLegibility'
+                    }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-slate-200">{model.name}</span>
+                        <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">{model.response.slice(0, 100)}...</p>
+                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
+                        <div className="text-[10px] text-slate-500"><span className="text-slate-400">IN</span> 4</div>
+                        <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
+                        <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Chairman in center */}
         {mode !== 'compare' && chairmanModel && (
@@ -274,7 +320,7 @@ export default function Playground() {
               <div
                 data-card
                 onClick={(e) => e.stopPropagation()}
-                className="absolute top-full mt-4 left-1/2 -translate-x-1/2 w-80 p-4 rounded-xl z-30 transition-all duration-300"
+                className="absolute top-full mt-4 left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-30 transition-all duration-300"
                 style={{
                   background: 'rgba(15, 23, 42, 0.95)',
                   backdropFilter: 'blur(16px)',
@@ -289,12 +335,9 @@ export default function Playground() {
           </div>
         )}
 
-        {/* Model cards */}
-        {selectedModels.map((model, index) => {
+        {/* Model cards - Circle mode only (Compare mode handled above) */}
+        {mode !== 'compare' && selectedModels.map((model, index) => {
           const circlePos = getCirclePosition(index, selectedModels.length);
-          const gridPos = getGridPosition(index);
-          const isCircle = mode !== 'compare';
-          const pos = isCircle ? circlePos : gridPos;
           const isSpeaking = speaking === model.id;
           const isExpanded = expanded === model.id;
 
@@ -303,12 +346,12 @@ export default function Playground() {
               key={model.id}
               className="absolute transition-all duration-700 ease-out"
               style={{
-                transform: `translate(${pos.x}px, ${pos.y}px)`,
+                transform: `translate(${circlePos.x}px, ${circlePos.y}px)`,
                 zIndex: isExpanded ? 30 : isSpeaking ? 10 : 1,
               }}
             >
               {/* Speaking glow effect */}
-              {isSpeaking && isCircle && (
+              {isSpeaking && (
                 <div
                   className="absolute inset-0 rounded-full animate-pulse"
                   style={{
@@ -324,14 +367,10 @@ export default function Playground() {
                 data-card
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent background click handler from firing
-                  if (isCircle) {
-                    setSpeaking(speaking === model.id ? null : model.id);
-                    setExpanded(isExpanded ? null : model.id);
-                  }
+                  setSpeaking(speaking === model.id ? null : model.id);
+                  setExpanded(isExpanded ? null : model.id);
                 }}
-                className={`relative cursor-pointer transition-all duration-300 ease-out ${
-                  isCircle ? 'w-24 h-24 rounded-full' : 'w-64 rounded-xl'
-                }`}
+                className="relative cursor-pointer transition-all duration-300 ease-out w-24 h-24 rounded-full"
                 style={{
                   background: 'rgba(30, 41, 59, 0.85)',
                   backdropFilter: 'blur(8px)',
@@ -342,74 +381,36 @@ export default function Playground() {
                     : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
                   transform: isSpeaking ? 'scale(1.1)' : 'scale(1)',
                   willChange: 'transform',
-                  ...(!isCircle && { height: '200px' }),
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSpeaking && !isCircle) {
-                    e.currentTarget.style.transform = 'scale(1.02)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSpeaking) {
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }
                 }}
               >
-                {/* Grid mode content */}
-                {!isCircle && (
-                  <div style={{ 
-                    padding: '16px', 
-                    height: '100%', 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    isolation: 'isolate',
-                    WebkitFontSmoothing: 'antialiased',
-                    MozOsxFontSmoothing: 'grayscale',
-                    textRendering: 'optimizeLegibility'
-                  }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-200">{model.name}</span>
-                      <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
-                    </div>
-                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">{model.response.slice(0, 100)}...</p>
-                    <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">IN</span> 4</div>
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Circle mode content */}
-                {isCircle && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center px-2">
-                      <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-                      {isSpeaking && (
-                        <div className="flex items-center justify-center gap-1 mt-1">
-                          <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
-                          <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
-                          <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
-                        </div>
-                      )}
-                    </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center px-2">
+                    <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
+                    {isSpeaking && (
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
+                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
+                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Expanded response panel */}
-              {isExpanded && isCircle && (
+              {isExpanded && (
                 <div
                   data-card
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute w-64 p-4 rounded-xl z-40 transition-all duration-300"
+                  className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-40 transition-all duration-300"
                   style={{
-                    top: pos.y > 0 ? 'auto' : '100%',
-                    bottom: pos.y > 0 ? '100%' : 'auto',
+                    top: circlePos.y > 0 ? 'auto' : '100%',
+                    bottom: circlePos.y > 0 ? '100%' : 'auto',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    marginTop: pos.y > 0 ? 0 : '12px',
-                    marginBottom: pos.y > 0 ? '12px' : 0,
+                    marginTop: circlePos.y > 0 ? 0 : '12px',
+                    marginBottom: circlePos.y > 0 ? '12px' : 0,
                     background: 'rgba(15, 23, 42, 0.95)',
                     backdropFilter: 'blur(16px)',
                     border: `1px solid ${model.color}40`,
@@ -429,7 +430,7 @@ export default function Playground() {
               )}
 
               {/* Connection line to chairman */}
-              {isSpeaking && isCircle && (
+              {isSpeaking && (
                 <svg
                   className="absolute pointer-events-none"
                   style={{
@@ -450,8 +451,8 @@ export default function Playground() {
                   <line
                     x1="200"
                     y1="200"
-                    x2={200 - pos.x}
-                    y2={200 - pos.y}
+                    x2={200 - circlePos.x}
+                    y2={200 - circlePos.y}
                     stroke={`url(#grad-${model.id})`}
                     strokeWidth="2"
                     strokeDasharray="6,4"
