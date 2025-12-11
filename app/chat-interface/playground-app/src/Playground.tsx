@@ -16,6 +16,7 @@ export default function Playground() {
 
   const [showDock, setShowDock] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
+  const [arenaOffsetY, setArenaOffsetY] = useState(0); // Vertical scroll offset for arena
   const dockRef = useRef<HTMLDivElement>(null); // Ref for the Model Dock
 
   // Dynamic grid column calculation
@@ -234,6 +235,24 @@ export default function Playground() {
     };
   }, [showDock]);
 
+  // Handle wheel scroll to move arena up/down
+  useEffect(() => {
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      setArenaOffsetY(prev => {
+        const delta = event.deltaY * 0.5; // Adjust sensitivity
+        const newOffset = prev - delta;
+        // Clamp between -200 and 200 to prevent scrolling too far
+        return Math.max(-200, Math.min(200, newOffset));
+      });
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   // Load background style from localStorage or use default
   const [bgStyle, setBgStyle] = useState<BackgroundStyle>(() => {
     const saved = localStorage.getItem('playground-bg-style');
@@ -347,7 +366,7 @@ export default function Playground() {
         x: event.clientX - rootBounds.left,
         y: event.clientY - rootBounds.top
       };
-      
+
       suppressClickRef.current = false;
       setDragSelection({ 
         origin: point, 
@@ -515,17 +534,18 @@ export default function Playground() {
           display: 'flex',
           alignItems: mode === 'compare' ? 'flex-start' : 'center', // Top-align for grid to prevent upward growth
           justifyContent: 'center',
-          marginTop: '0', // Reverted from -2rem to prevent overlap with header
+          marginTop: `${arenaOffsetY}px`,
           border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
           borderRadius: isDraggingOver ? '24px' : '0px',
-          
+          transition: 'margin-top 0.1s ease-out',
+
           // Mode-specific styles override base
-          ...(mode === 'compare' ? {} : { 
-            height: '480px', 
-            minHeight: '480px', 
+          ...(mode === 'compare' ? {} : {
+            height: '480px',
+            minHeight: '480px',
             maxHeight: '100vh',
           }),
-          
+
           ...(isDraggingOver ? {
             background: 'rgba(59, 130, 246, 0.05)',
           } : {})
