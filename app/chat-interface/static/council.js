@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chairmanActionText = document.getElementById('chairmanActionText');
   const participantCount = document.getElementById('participantCount');
   const settingsBtn = document.getElementById('settingsBtn');
+  const participantStatusStrip = document.getElementById('participantStatusStrip');
 
   let currentDiscussion = null;
   let modelSelector = null; // Will be initialized after functions are defined
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let aggregateRankings = [];
   let userHasScrolled = false; // Track if user manually scrolled
   let autoScrollEnabled = true; // Auto-scroll only for first card
+  let modelStatusMap = {}; // Track status of each model (waiting, generating, complete)
 
   // Chairman status bar controls
   function showChairmanBar(modelId) {
@@ -37,6 +39,84 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function updateChairmanStatus(statusText) {
     if (chairmanActionText) chairmanActionText.textContent = statusText;
+  }
+
+  // Show a witty chairman quip with animation
+  function showChairmanQuip(quip) {
+    const quipArea = document.getElementById('chairmanQuipArea');
+    if (!quipArea) return;
+
+    // Clear any existing quip
+    quipArea.innerHTML = '';
+    quipArea.classList.remove('visible');
+
+    // Create quip element
+    const quipEl = document.createElement('div');
+    quipEl.className = 'chairman-quip';
+    quipEl.innerHTML = `
+      <span class="quip-icon">💬</span>
+      <span class="quip-text">${quip}</span>
+    `;
+    quipArea.appendChild(quipEl);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+      quipArea.classList.add('visible');
+    });
+
+    // Auto-hide after a few seconds
+    setTimeout(() => {
+      quipArea.classList.remove('visible');
+    }, 4500);
+  }
+
+  // Initialize participant status strip with selected models
+  function initParticipantStatusStrip(participants) {
+    if (!participantStatusStrip) return;
+
+    modelStatusMap = {};
+    participantStatusStrip.innerHTML = '';
+
+    participants.forEach(modelId => {
+      const modelName = modelLoader.getDisplayName(modelId) || modelId;
+      modelStatusMap[modelId] = 'waiting';
+
+      const badge = document.createElement('div');
+      badge.className = 'participant-status-badge waiting';
+      badge.id = `status-badge-${modelId}`;
+      badge.innerHTML = `
+        <span class="status-indicator-dot"></span>
+        <span class="model-name">${modelName}</span>
+      `;
+      participantStatusStrip.appendChild(badge);
+    });
+
+    participantStatusStrip.classList.add('active');
+  }
+
+  // Update a specific model's status in the strip
+  function updateModelStatus(modelId, status) {
+    const badge = document.getElementById(`status-badge-${modelId}`);
+    if (!badge) return;
+
+    modelStatusMap[modelId] = status;
+    badge.className = `participant-status-badge ${status}`;
+  }
+
+  // Hide the participant status strip
+  function hideParticipantStatusStrip() {
+    if (participantStatusStrip) {
+      participantStatusStrip.classList.remove('active');
+    }
+  }
+
+  // Get count of models in each status
+  function getModelStatusCounts() {
+    const counts = { waiting: 0, generating: 0, complete: 0 };
+    Object.values(modelStatusMap).forEach(status => {
+      if (counts[status] !== undefined) counts[status]++;
+    });
+    return counts;
   }
 
   // Update stage status in header
@@ -203,7 +283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Scroll stage content left/right
-  window.scrollStage = function(stageId, direction) {
+  window.scrollStage = function (stageId, direction) {
     const content = document.getElementById(`${stageId}-content`);
     if (!content) return;
 
@@ -532,10 +612,12 @@ document.addEventListener('DOMContentLoaded', async () => {
               case 'stage1_start':
                 updateChairmanStatus(`Stage 1: ${event.participants.length} models responding...`);
                 updateStageStatus('stage1', `${event.participants.length} models responding...`);
+                initParticipantStatusStrip(event.participants);
                 break;
 
               case 'model_start':
                 createModelCard(event.model_id, event.model_name);
+                updateModelStatus(event.model_id, 'generating');
                 break;
 
               case 'model_chunk':
@@ -544,6 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
               case 'model_response':
                 completeModelResponse(event.model_id, event.model_name, event.response);
+                updateModelStatus(event.model_id, 'complete');
                 break;
 
               case 'model_error':
@@ -552,6 +635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
               case 'stage1_complete':
                 clearStageStatus('stage1');
+                hideParticipantStatusStrip();
                 // Build label_to_model mapping for de-anonymization
                 currentLabelToModel = {};
                 event.results.forEach((result, index) => {
@@ -598,6 +682,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                   document.getElementById('discussion-container').prepend(infoDiv);
                   setTimeout(() => infoDiv.remove(), 10000);
                 }
+                break;
+
+              case 'chairman_quip':
+                showChairmanQuip(event.quip);
                 break;
 
               case 'error':
