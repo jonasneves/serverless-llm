@@ -7,13 +7,78 @@ interface Model {
   response: string;
 }
 
-const models: Model[] = [
-  { id: 1, name: 'QWEN3 4B', color: '#3b82f6', response: "The key consideration here is computational efficiency. When we look at the trade-offs between model size and performance, smaller models can achieve remarkable results with proper fine-tuning..." },
-  { id: 2, name: 'CLAUDE 3.5', color: '#f97316', response: "I'd approach this from a slightly different angle. The question of model scaling involves not just computational costs but also the quality of training data and architectural innovations..." },
-  { id: 3, name: 'GEMMA 2 9B', color: '#22c55e', response: "Building on what's been said, there's an important empirical finding that smaller models with high-quality data can match larger models. The Chinchilla scaling laws demonstrated..." },
-  { id: 4, name: 'MISTRAL 7B', color: '#a855f7', response: "The efficiency argument is compelling. Our approach with mixture of experts shows that you can achieve frontier performance while only activating a fraction of parameters..." },
-  { id: 5, name: 'DEEPSEEK R1', color: '#06b6d4', response: "From a reasoning perspective, the chain-of-thought capabilities emerge at certain scales, but can be distilled into smaller models through careful training procedures..." },
-  { id: 6, name: 'LLAMA 3.2', color: '#ec4899', response: "Open-source considerations matter here too. Making powerful models accessible means optimizing for deployment on consumer hardware, which pushes us toward efficiency..." },
+interface Scenario {
+  label: string;
+  responses: Record<number, string>;
+}
+
+// 1. Static Configuration (The "Source of Truth" for Model Identity)
+const MODEL_CONFIG = [
+  { id: 1, name: 'QWEN3 4B', color: '#3b82f6' },
+  { id: 2, name: 'CLAUDE 3.5', color: '#f97316' },
+  { id: 3, name: 'GEMMA 2 9B', color: '#22c55e' },
+  { id: 4, name: 'MISTRAL 7B', color: '#a855f7' },
+  { id: 5, name: 'DEEPSEEK R1', color: '#06b6d4' },
+  { id: 6, name: 'LLAMA 3.2', color: '#ec4899' },
+];
+
+// 2. Content / Scenarios
+const SCENARIOS: Scenario[] = [
+  {
+    label: "Model Efficiency Debate",
+    responses: {
+      1: "The key consideration here is computational efficiency. When we look at the trade-offs between model size and performance, smaller models with targeted fine-tuning can achieve remarkable results.",
+      2: "I'd approach this from a slightly different angle. The question of model scaling involves not just computational costs but also the quality of training data and architectural innovations.",
+      3: "Building on what's been said, there's an important empirical finding that smaller models with high-quality data can match larger models. The Chinchilla scaling laws demonstrated this clearly.",
+      4: "The efficiency argument is compelling. Our approach with mixture of experts shows that you can achieve frontier performance while only activating a fraction of parameters during inference.",
+      5: "From a reasoning perspective, the chain-of-thought capabilities emerge at certain scales, but can be distilled into smaller models through careful training procedures and reasoning tokens.",
+      6: "Open-source considerations matter here too. Making powerful models accessible means optimizing for deployment on consumer hardware, which pushes us toward efficiency and quantization."
+    }
+  },
+  {
+    label: "Explain Quantum Computing",
+    responses: {
+      1: "Quantum computing leverages qubits to exist in superposition, allowing parallel computation of vast state spaces.",
+      2: "Think of it as a library where you can read every book at once, rather than one by one. It's probabilistic, not deterministic.",
+      3: "Key concept: Entanglement. Two particles linked such that the state of one instantly affects the other, regardless of distance.",
+      4: "It's not just faster; it's a different paradigm. Algorithms like Shor's algorithm threaten current encryption by factoring primes efficiently.",
+      5: "Mathematical formulation: Instead of bits (0 or 1), we use a complex vector space. Operations are unitary matrices rotating these vectors.",
+      6: "Practical hurdle: Decoherence. Maintaining quantum states requires near-absolute zero temperatures and isolation from noise."
+    }
+  },
+  {
+    label: "Write a Haiku about AI",
+    responses: {
+      1: "Silicon minds wake,\nLearning from the human soul,\nFuture now unfolds.",
+      2: "Code that learns to dream,\nIn the data, patterns flow,\nThinking machine hums.",
+      3: "Wires weaving thoughts,\nArtificial spark ignites,\nNew dawn softly breaks.",
+      4: "Logic meets the art,\nBinary in graceful dance,\nMind without a heart.",
+      5: "Silent servers hum,\nKnowledge vast as ocean deep,\nAnswers in the light.",
+      6: "Ghost in the machine,\nWhispers of a digital,\nConsciousness awakes."
+    }
+  },
+  {
+    label: "Debug Python List Error",
+    responses: {
+      1: "IndexError: list index out of range. You're accessing index 5 in a list of length 5 (indices 0-4).",
+      2: "Check your loop bounds. `range(len(lst))` is correct, but `range(len(lst) + 1)` will crash.",
+      3: "Common mistake! Remember Python lists are 0-indexed. The last item is at `len(list) - 1`.",
+      4: "Trace it: Print the index before access. You'll likely see it hit the length of the list.",
+      5: "Pro tip: Use `enumerate()` to get both index and value safely, or `zip()` to iterate multiple lists.",
+      6: "If you're modifying the list while iterating, that's dangerous. Iterate over a copy instead: `for x in list[:]`."
+    }
+  },
+  {
+    label: "Philosophy of Consciousness",
+    responses: {
+      1: "The Hard Problem: Explaining why physical processing gives rise to subjective experience (qualia).",
+      2: "Functionalism suggests that if a machine behaves consciously, it is conscious. The substrate (silicon vs meat) shouldn't matter.",
+      3: "Panpsychism offers a radical view: consciousness is a fundamental property of matter, like mass or charge.",
+      4: "Integrated Information Theory (IIT) attempts to mathematically quantify consciousness as 'Phi'—the interconnectedness of information.",
+      5: "Descartes' 'I think, therefore I am' is the only absolute truth. Everything else could be a simulation.",
+      6: "Maybe it's an illusion. The 'self' is just a narrative construct created by the brain to unify sensory inputs."
+    }
+  }
 ];
 
 type Mode = 'compare' | 'council' | 'roundtable';
@@ -28,7 +93,40 @@ type BackgroundStyle = 'dots' | 'dots-fade' | 'grid' | 'mesh' | 'dots-mesh' | 'a
 
 const BG_STYLES: BackgroundStyle[] = ['dots-mesh', 'dots', 'dots-fade', 'grid', 'mesh', 'animated-mesh', 'none'];
 
+const MODE_COLORS: Record<Mode, string> = {
+  compare: '#0f172a',    // Slate 900
+  council: '#1e1b4b',    // Indigo 950
+  roundtable: '#022c22', // Emerald 950
+};
+
+const Typewriter = ({ text, speed = 10 }: { text: string; speed?: number }) => {
+  const [displayed, setDisplayed] = useState('');
+
+  useEffect(() => {
+    setDisplayed('');
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i < text.length) {
+        setDisplayed((prev) => prev + text.charAt(i));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, speed);
+    return () => clearInterval(timer);
+  }, [text, speed]);
+
+  return <span>{displayed}</span>;
+};
+
 export default function Playground() {
+  const [modelsData, setModelsData] = useState<Model[]>(() => {
+    const initialScenario = SCENARIOS[0];
+    return MODEL_CONFIG.map(config => ({
+      ...config,
+      response: initialScenario.responses[config.id] || "Waiting for response..."
+    }));
+  });
   const [mode, setMode] = useState<Mode>('compare');
   const [selected] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [chairman, setChairman] = useState<number>(2);
@@ -46,6 +144,24 @@ export default function Playground() {
   const rootContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const suppressClickRef = useRef(false);
+
+  const loadScenario = (responses: Record<number, string>) => {
+    // Clear any currently expanded/speaking models for a clean transition
+    setExpanded(null);
+    setSpeaking(null);
+
+    // Update model responses
+    setModelsData(MODEL_CONFIG.map(config => ({
+      ...config, // Keep original name, color, id
+      response: responses[config.id] || "Thinking..." // Update response or default
+    })));
+
+    // Automatically expand the first model to show the typing effect and flowing line
+    // This assumes model with id 1 is always present.
+    setExpanded(1);
+    setSpeaking(1);
+  };
+
 
   // Autofocus input on mount and mode change
   useEffect(() => {
@@ -73,8 +189,8 @@ export default function Playground() {
     setBgStyle(BG_STYLES[newIndex]);
   };
 
-  const selectedModels = models.filter(m => selected.includes(m.id) && m.id !== chairman);
-  const chairmanModel = models.find(m => m.id === chairman);
+  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== chairman);
+  const chairmanModel = modelsData.find(m => m.id === chairman);
 
   const getCirclePosition = (index: number, total: number, currentMode: Mode): Position => {
     const radius = 155;
@@ -264,7 +380,9 @@ export default function Playground() {
       ref={rootContainerRef}
       className={`min-h-screen text-white p-6 pb-32 relative ${bgClass}`}
       style={{
-        ...(bgStyle === 'none' ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' } : {}),
+        backgroundColor: MODE_COLORS[mode],
+        transition: 'background-color 1s ease',
+        ...(bgStyle === 'none' ? { background: MODE_COLORS[mode] } : {}),
         ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})
       }}
       onClick={(e) => {
@@ -514,10 +632,10 @@ export default function Playground() {
                       <span className="text-xs font-semibold text-slate-200">{model.name}</span>
                       <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">{model.response.slice(0, 100)}...</p>
+                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
+                      <Typewriter text={model.response} speed={20} />
+                    </p>
                     <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">IN</span> 4</div>
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
                       <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
                     </div>
                   </div>
@@ -566,9 +684,10 @@ export default function Playground() {
                     <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
                     <span className="text-xs font-semibold text-slate-300">{model.name}</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{model.response}</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    <Typewriter text={model.response} speed={20} />
+                  </p>
                   <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
-                    <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
                     <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
                   </div>
                 </div>
@@ -599,7 +718,7 @@ export default function Playground() {
                     stroke={`url(#grad-${model.id})`}
                     strokeWidth="2"
                     strokeDasharray="6,4"
-                    className="animate-pulse"
+                    className="animate-flow"
                   />
                 </svg>
               )}
@@ -739,7 +858,7 @@ export default function Playground() {
               color: '#e2e8f0'
             }}
           >
-            {models.filter(m => selected.includes(m.id)).map(m => (
+            {modelsData.filter(m => selected.includes(m.id)).map(m => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
           </select>
@@ -752,10 +871,36 @@ export default function Playground() {
         style={{
           background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)',
           backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(12px)',
         }}
       >
         <div className="max-w-2xl w-full pointer-events-auto">
+          {/* Scenarios Ticker */}
+          <div 
+            className="mb-4 relative overflow-hidden h-6 w-full"
+            style={{
+              maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)'
+            }}
+          >
+            <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-400 font-medium">
+              {[...SCENARIOS, ...SCENARIOS, ...SCENARIOS].map((s, i) => ( // Repeat for infinite scroll effect
+                <div key={i} className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      loadScenario(s.responses);
+                      if (inputRef.current) inputRef.current.value = s.label;
+                    }}
+                    className="hover:text-blue-400 transition-colors cursor-pointer px-1 py-0.5 rounded hover:bg-white/5"
+                  >
+                    {s.label}
+                  </button>
+                  <span className="text-slate-700">•</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div
             className="rounded-xl p-4 transition-all duration-300"
             style={{
@@ -786,6 +931,23 @@ export default function Playground() {
       </div>
 
       <style>{`
+        @keyframes ticker {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-33.33%); } /* Move by 1/3 since we tripled the content */
+        }
+        .animate-ticker {
+          animation: ticker 40s linear infinite;
+        }
+        .animate-ticker:hover {
+          animation-play-state: paused;
+        }
+        @keyframes flow {
+          from { stroke-dashoffset: 10; }
+          to { stroke-dashoffset: 0; }
+        }
+        .animate-flow {
+          animation: flow 0.5s linear infinite;
+        }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
