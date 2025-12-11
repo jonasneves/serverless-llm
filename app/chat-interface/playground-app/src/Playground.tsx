@@ -17,6 +17,9 @@ export default function Playground() {
   const [showDock, setShowDock] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
   const [arenaOffsetY, setArenaOffsetY] = useState(0); // Vertical scroll offset for arena
+  
+  // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
+  const [executionTimes, setExecutionTimes] = useState<Record<string, { startTime: number; firstTokenTime?: number; endTime?: number }>>({}); 
   const dockRef = useRef<HTMLDivElement>(null); // Ref for the Model Dock
 
   // Dynamic grid column calculation
@@ -152,6 +155,17 @@ export default function Playground() {
     setExpanded(null);
     setSpeaking(new Set(selected)); // Mark all selected models as speaking
 
+    // Initialize execution time tracking for all selected models
+    const startTime = performance.now();
+    const initialTimes: Record<string, { startTime: number; firstTokenTime?: number; endTime?: number }> = {};
+    selected.forEach(modelId => {
+      initialTimes[modelId] = { startTime };
+    });
+    setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
+
+    // Track which models have received their first token
+    const firstTokenReceived = new Set<string>();
+
     // Reset responses for selected models
     setModelsData(prev => prev.map(m => 
       selected.includes(m.id) ? { ...m, response: '' } : m
@@ -198,12 +212,39 @@ export default function Playground() {
               const data = JSON.parse(jsonStr);
               
               if (data.event === 'token' && data.model_id) {
+                const modelId = data.model_id;
+                const now = performance.now();
+                
+                // Track first token time (Time To First Token - TTFT)
+                if (!firstTokenReceived.has(modelId)) {
+                  firstTokenReceived.add(modelId);
+                  setExecutionTimes(prev => ({
+                    ...prev,
+                    [modelId]: { ...prev[modelId], firstTokenTime: now }
+                  }));
+                }
+                
                 setModelsData(prev => prev.map(m => {
-                  if (m.id === data.model_id) {
+                  if (m.id === modelId) {
                     return { ...m, response: m.response + data.content };
                   }
                   return m;
                 }));
+              }
+              
+              // Track completion time when model finishes
+              if (data.event === 'done' && data.model_id) {
+                const now = performance.now();
+                setExecutionTimes(prev => ({
+                  ...prev,
+                  [data.model_id]: { ...prev[data.model_id], endTime: now }
+                }));
+                // Remove this model from speaking set
+                setSpeaking(prev => {
+                  const next = new Set(prev);
+                  next.delete(data.model_id);
+                  return next;
+                });
               }
             } catch (e) {
               console.error('Error parsing SSE:', e);
@@ -217,6 +258,17 @@ export default function Playground() {
         selected.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
       ));
     } finally {
+      // Mark end time for any models that didn't receive a 'done' event
+      const finalTime = performance.now();
+      setExecutionTimes(prev => {
+        const updated = { ...prev };
+        selected.forEach(modelId => {
+          if (updated[modelId] && !updated[modelId].endTime) {
+            updated[modelId] = { ...updated[modelId], endTime: finalTime };
+          }
+        });
+        return updated;
+      });
       setIsGenerating(false);
       setSpeaking(new Set()); // Clear speaking state
     }
@@ -720,7 +772,19 @@ export default function Playground() {
                       <Typewriter text={model.response} speed={20} />
                     </p>
                     <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
+                      <div className="text-[10px] text-slate-500">
+                        <span className="text-slate-400">TIME</span>{' '}
+                        {executionTimes[model.id]?.endTime && executionTimes[model.id]?.startTime
+                          ? `${((executionTimes[model.id].endTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s`
+                          : executionTimes[model.id]?.startTime && !executionTimes[model.id]?.endTime
+                          ? '...'
+                          : '—'}
+                        {executionTimes[model.id]?.firstTokenTime && executionTimes[model.id]?.startTime && (
+                          <span className="ml-2 text-slate-600">
+                            TTFT {((executionTimes[model.id].firstTokenTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -773,7 +837,19 @@ export default function Playground() {
                     <Typewriter text={model.response} speed={20} />
                   </p>
                   <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
-                    <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
+                    <div className="text-[10px] text-slate-500">
+                      <span className="text-slate-400">TIME</span>{' '}
+                      {executionTimes[model.id]?.endTime && executionTimes[model.id]?.startTime
+                        ? `${((executionTimes[model.id].endTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s`
+                        : executionTimes[model.id]?.startTime && !executionTimes[model.id]?.endTime
+                        ? '...'
+                        : '—'}
+                      {executionTimes[model.id]?.firstTokenTime && executionTimes[model.id]?.startTime && (
+                        <span className="ml-2 text-slate-600">
+                          TTFT {((executionTimes[model.id].firstTokenTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
