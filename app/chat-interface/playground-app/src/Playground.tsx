@@ -34,7 +34,6 @@ export default function Playground() {
   const [chairman, setChairman] = useState<number>(2);
   const [expanded, setExpanded] = useState<number | string | null>(null);
   const [speaking, setSpeaking] = useState<number | null>(null);
-  const [inputValue, setInputValue] = useState<string>('');
   const [inputFocused, setInputFocused] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -125,7 +124,7 @@ export default function Playground() {
 
         {/* Center: Mode Toggle */}
         <div className="absolute left-1/2 -translate-x-1/2">
-          <div className="relative flex p-1 rounded-xl" style={{ background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71, 85, 105, 0.4)' }}>
+          <div className="relative flex p-1 rounded-xl" style={{ background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71, 85, 105, 0.4)', minWidth: '370px', width: '370px' }}>
             {/* Sliding indicator */}
             <div
               className="absolute top-1 bottom-1 rounded-lg transition-all duration-300 ease-out"
@@ -146,14 +145,21 @@ export default function Playground() {
               <button
                 key={m}
                 onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(null); }}
-                className={`relative z-10 px-5 py-2 text-sm font-medium transition-colors duration-200 ${
+                className={`relative z-10 py-2 text-sm font-medium transition-colors duration-200 ${
                   mode === m.toLowerCase()
                     ? 'text-white'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                style={{ flex: 1 }}
+                style={{ 
+                  flex: 1,
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  position: 'relative'
+                }}
               >
-                {m}
+                <span style={{ width: '100%', textAlign: 'center' }}>{m}</span>
               </button>
             ))}
           </div>

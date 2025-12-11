@@ -1,4 +1,4 @@
-.PHONY: help setup install build-chat build-qwen build-phi build-llama start-qwen start-phi start-llama stop logs-chat logs-qwen logs-phi health ps clean clean-all dev-remote dev-local dev-qwen dev-phi dev-llama dev-interface-local lint format
+.PHONY: help setup install build-chat build-playground build-qwen build-phi build-llama start-qwen start-phi start-llama stop logs-chat logs-qwen logs-phi health ps clean clean-all dev-remote dev-local dev-qwen dev-phi dev-llama dev-interface-local lint format
 
 # Load .env file if it exists
 -include .env
@@ -27,8 +27,9 @@ help:
 	@echo "  make start-llama    Start chat + Llama in Docker"
 	@echo ""
 	@echo "Build:"
-	@echo "  make build-chat     Build chat interface image"
-	@echo "  make build-qwen     Build Qwen model image"
+	@echo "  make build-chat        Build chat interface image"
+	@echo "  make build-playground  Build playground React app (npm build)"
+	@echo "  make build-qwen        Build Qwen model image"
 	@echo ""
 	@echo "Stop:"
 	@echo "  make stop           Stop all running services"
@@ -92,6 +93,16 @@ install:
 
 build-chat:
 	docker-compose build chat-interface
+
+build-playground:
+	@echo "Building playground React app..."
+	@cd app/chat-interface/playground-app && \
+		if [ ! -d node_modules ]; then \
+			echo "Installing npm dependencies..."; \
+			npm install; \
+		fi && \
+		npm run build && \
+		echo "✓ Playground built successfully to static/playground/"
 
 build-qwen:
 	docker-compose --profile qwen build qwen
