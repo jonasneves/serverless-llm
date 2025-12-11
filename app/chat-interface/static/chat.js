@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let conversationHistory = [];
   let totalTokensUsed = 0;
+  let userHasManuallyScrolled = false;
+  const AUTO_SCROLL_THRESHOLD = 120; // px from bottom to keep auto-scrolling
 
   // Elements
   const chatHistory = document.getElementById('chatHistory');
@@ -179,6 +181,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function isNearBottom() {
+    const distanceFromBottom = chatHistory.scrollHeight - chatHistory.clientHeight - chatHistory.scrollTop;
+    return distanceFromBottom <= AUTO_SCROLL_THRESHOLD;
+  }
+
+  function scrollChatToBottom(force = false) {
+    if (force || !userHasManuallyScrolled || isNearBottom()) {
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+  }
+
+  chatHistory.addEventListener('scroll', () => {
+    // If the user scrolls away from the bottom, disable auto-scroll until they come back
+    userHasManuallyScrolled = !isNearBottom();
+  });
+
   // Add user message
   function addUserMessage(content) {
     // Hide welcome card when conversation starts
@@ -188,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     messageDiv.className = 'message user';
     messageDiv.textContent = content;
     chatHistory.appendChild(messageDiv);
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    scrollChatToBottom(true);
   }
 
   // Add model responses
@@ -277,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
       chatHistory.appendChild(container);
     }
 
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    scrollChatToBottom();
   }
 
   // Configure marked.js via shared module
@@ -380,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
       chatHistory.appendChild(container);
     }
 
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    scrollChatToBottom();
     return modelData;
   }
 
@@ -394,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     entry.contentEl.innerHTML = formatContentWithThinking(entry.content) + '<span class="cursor">▋</span>';
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    scrollChatToBottom();
   }
 
   // Finalize streaming for a model
