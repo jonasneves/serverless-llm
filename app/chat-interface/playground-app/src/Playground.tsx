@@ -1,145 +1,84 @@
 import { useState, useEffect, useRef } from 'react';
-
-interface Model {
-  id: number;
-  name: string;
-  color: string;
-  response: string;
-  type?: 'local' | 'api';
-}
-
-interface Scenario {
-  label: string;
-  responses: Record<number, string>;
-}
-
-// 1. Static Configuration (The "Source of Truth" for Model Identity)
-const MODEL_CONFIG: Omit<Model, 'response'>[] = [
-  { id: 1, name: 'QWEN3 4B', color: '#3b82f6', type: 'local' },
-  { id: 2, name: 'CLAUDE 3.5', color: '#f97316', type: 'api' },
-  { id: 3, name: 'GEMMA 2 9B', color: '#22c55e', type: 'local' },
-  { id: 4, name: 'MISTRAL 7B', color: '#a855f7', type: 'local' },
-  { id: 5, name: 'DEEPSEEK R1', color: '#06b6d4', type: 'api' },
-  { id: 6, name: 'LLAMA 3.2', color: '#ec4899', type: 'local' },
-];
-
-// 2. Content / Scenarios
-const SCENARIOS: Scenario[] = [
-  {
-    label: "Model Efficiency Debate",
-    responses: {
-      1: "The key consideration here is computational efficiency. When we look at the trade-offs between model size and performance, smaller models with targeted fine-tuning can achieve remarkable results.",
-      2: "I'd approach this from a slightly different angle. The question of model scaling involves not just computational costs but also the quality of training data and architectural innovations.",
-      3: "Building on what's been said, there's an important empirical finding that smaller models with high-quality data can match larger models. The Chinchilla scaling laws demonstrated this clearly.",
-      4: "The efficiency argument is compelling. Our approach with mixture of experts shows that you can achieve frontier performance while only activating a fraction of parameters during inference.",
-      5: "From a reasoning perspective, the chain-of-thought capabilities emerge at certain scales, but can be distilled into smaller models through careful training procedures and reasoning tokens.",
-      6: "Open-source considerations matter here too. Making powerful models accessible means optimizing for deployment on consumer hardware, which pushes us toward efficiency and quantization."
-    }
-  },
-  {
-    label: "Explain Quantum Computing",
-    responses: {
-      1: "Quantum computing leverages qubits to exist in superposition, allowing parallel computation of vast state spaces.",
-      2: "Think of it as a library where you can read every book at once, rather than one by one. It's probabilistic, not deterministic.",
-      3: "Key concept: Entanglement. Two particles linked such that the state of one instantly affects the other, regardless of distance.",
-      4: "It's not just faster; it's a different paradigm. Algorithms like Shor's algorithm threaten current encryption by factoring primes efficiently.",
-      5: "Mathematical formulation: Instead of bits (0 or 1), we use a complex vector space. Operations are unitary matrices rotating these vectors.",
-      6: "Practical hurdle: Decoherence. Maintaining quantum states requires near-absolute zero temperatures and isolation from noise."
-    }
-  },
-  {
-    label: "Write a Haiku about AI",
-    responses: {
-      1: "Silicon minds wake,\nLearning from the human soul,\nFuture now unfolds.",
-      2: "Code that learns to dream,\nIn the data, patterns flow,\nThinking machine hums.",
-      3: "Wires weaving thoughts,\nArtificial spark ignites,\nNew dawn softly breaks.",
-      4: "Logic meets the art,\nBinary in graceful dance,\nMind without a heart.",
-      5: "Silent servers hum,\nKnowledge vast as ocean deep,\nAnswers in the light.",
-      6: "Ghost in the machine,\nWhispers of a digital,\nConsciousness awakes."
-    }
-  },
-  {
-    label: "Debug Python List Error",
-    responses: {
-      1: "IndexError: list index out of range. You're accessing index 5 in a list of length 5 (indices 0-4).",
-      2: "Check your loop bounds. `range(len(lst))` is correct, but `range(len(lst) + 1)` will crash.",
-      3: "Common mistake! Remember Python lists are 0-indexed. The last item is at `len(list) - 1`.",
-      4: "Trace it: Print the index before access. You'll likely see it hit the length of the list.",
-      5: "Pro tip: Use `enumerate()` to get both index and value safely, or `zip()` to iterate multiple lists.",
-      6: "If you're modifying the list while iterating, that's dangerous. Iterate over a copy instead: `for x in list[:]`."
-    }
-  },
-  {
-    label: "Philosophy of Consciousness",
-    responses: {
-      1: "The Hard Problem: Explaining why physical processing gives rise to subjective experience (qualia).",
-      2: "Functionalism suggests that if a machine behaves consciously, it is conscious. The substrate (silicon vs meat) shouldn't matter.",
-      3: "Panpsychism offers a radical view: consciousness is a fundamental property of matter, like mass or charge.",
-      4: "Integrated Information Theory (IIT) attempts to mathematically quantify consciousness as 'Phi'—the interconnectedness of information.",
-      5: "Descartes' 'I think, therefore I am' is the only absolute truth. Everything else could be a simulation.",
-      6: "Maybe it's an illusion. The 'self' is just a narrative construct created by the brain to unify sensory inputs."
-    }
-  }
-];
-
-type Mode = 'compare' | 'council' | 'roundtable';
-
-interface Position {
-  x: number;
-  y: number;
-  angle: number;
-}
-
-type BackgroundStyle = 'dots' | 'dots-fade' | 'grid' | 'mesh' | 'dots-mesh' | 'animated-mesh' | 'none';
-
-const BG_STYLES: BackgroundStyle[] = ['dots-mesh', 'dots', 'dots-fade', 'grid', 'mesh', 'animated-mesh', 'none'];
-
-const MODE_COLORS: Record<Mode, string> = {
-  compare: '#0f172a',    // Slate 900
-  council: '#1e1b4b',    // Indigo 950
-  roundtable: '#022c22', // Emerald 950
-};
-
-const Typewriter = ({ text, speed = 10 }: { text: string; speed?: number }) => {
-  const [displayed, setDisplayed] = useState('');
-
-  useEffect(() => {
-    setDisplayed('');
-    let i = 0;
-    const timer = setInterval(() => {
-      if (i < text.length) {
-        setDisplayed((prev) => prev + text.charAt(i));
-        i++;
-      } else {
-        clearInterval(timer);
-      }
-    }, speed);
-    return () => clearInterval(timer);
-  }, [text, speed]);
-
-  return <span>{displayed}</span>;
-};
+import { Model, Mode, Position, BackgroundStyle } from './types';
+import { MODEL_META, SCENARIOS, BG_STYLES, MODE_COLORS } from './constants';
+import Typewriter from './components/Typewriter';
+import ModelDock from './components/ModelDock';
 
 export default function Playground() {
-  const [modelsData, setModelsData] = useState<Model[]>(() => {
-    const initialScenario = SCENARIOS[0];
-    return MODEL_CONFIG.map(config => ({
-      ...config,
-      response: initialScenario.responses[config.id] || "Waiting for response..."
-    }));
-  });
+  const [modelsData, setModelsData] = useState<Model[]>([]);
   const [mode, setMode] = useState<Mode>('compare');
-  const [selected, setSelected] = useState<number[]>([1, 2, 3]); // Start with a few active
-  const [chairman, setChairman] = useState<number>(2);
-  const [draggedModelId, setDraggedModelId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [chairman, setChairman] = useState<string>('');
+  const [draggedModelId, setDraggedModelId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const [showDock, setShowDock] = useState(false);
+  const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
+  const dockRef = useRef<HTMLDivElement>(null); // Ref for the Model Dock
+
+  // Dynamic grid column calculation
+  useEffect(() => {
+    const cardWidth = 256; 
+    const gapX = 24;      
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry.target === visualizationAreaRef.current) {
+          const availableWidth = entry.contentRect.width;
+          let newCols = Math.floor(availableWidth / (cardWidth + gapX));
+          newCols = Math.max(1, newCols); // Ensure at least 1 column
+          setGridCols(newCols);
+        }
+      }
+    });
+
+    if (visualizationAreaRef.current) {
+      resizeObserver.observe(visualizationAreaRef.current);
+    }
+    
+    return () => {
+      if (visualizationAreaRef.current) {
+        resizeObserver.unobserve(visualizationAreaRef.current);
+      }
+    };
+  }, []);
+
+  // Fetch models from API
+  useEffect(() => {
+    fetch('/api/models')
+      .then(res => res.json())
+      .then(data => {
+        const apiModels = data.models.map((m: any) => {
+          const meta = MODEL_META[m.id] || MODEL_META['default'];
+          return {
+            id: m.id,
+            name: meta.name || m.name || m.id, // Use meta name or API name
+            color: meta.color,
+            type: m.type,
+            response: "Ready to generate..."
+          };
+        });
+        setModelsData(apiModels);
+        
+        // Select only local models by default
+        const defaultSelectedIds = apiModels.filter((m: Model) => m.type === 'local').map((m: Model) => m.id);
+        setSelected(defaultSelectedIds);
+        
+        // Set default chairman to an API model if available, otherwise the first model
+        const apiChairmanCandidate = apiModels.find((m: Model) => m.type === 'api');
+        if (apiChairmanCandidate) {
+          setChairman(apiChairmanCandidate.id);
+        } else if (apiModels.length > 0) {
+          setChairman(apiModels[0].id);
+        }
+      })
+      .catch(err => console.error("Failed to fetch models:", err));
+  }, []);
 
   // Available models are those in CONFIG but NOT in selected
-  const availableModels = MODEL_CONFIG.filter(m => !selected.includes(m.id));
+  const availableModels = modelsData.filter(m => !selected.includes(m.id));
 
-  const handleDragStart = (e: React.DragEvent, modelId: number) => {
+  const handleDragStart = (e: React.DragEvent, modelId: string) => {
     setDraggedModelId(modelId);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -164,7 +103,7 @@ export default function Playground() {
     }
   };
 
-  const handleModelToggle = (modelId: number) => {
+  const handleModelToggle = (modelId: string) => {
     if (selected.includes(modelId)) {
       setSelected(prev => prev.filter(id => id !== modelId));
     } else {
@@ -178,10 +117,10 @@ export default function Playground() {
       .map(m => m.id);
     setSelected(prev => [...prev, ...modelsToAdd]);
   };
-  const [expanded, setExpanded] = useState<number | string | null>(null);
-  const [speaking, setSpeaking] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [speaking, setSpeaking] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState<boolean>(false);
-  const [selectedCardIds, setSelectedCardIds] = useState<Set<number>>(new Set());
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [dragSelection, setDragSelection] = useState<{
     origin: { x: number; y: number };
     current: { x: number; y: number };
@@ -190,31 +129,132 @@ export default function Playground() {
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const suppressClickRef = useRef(false);
 
-  const loadScenario = (responses: Record<number, string>) => {
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId: string } | null>(null);
+
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
+
+  const loadScenario = (responses: Record<string, string>) => {
     // Clear any currently expanded/speaking models for a clean transition
     setExpanded(null);
     setSpeaking(null);
 
     // Update model responses
-    setModelsData(MODEL_CONFIG.map(config => ({
-      ...config, // Keep original name, color, id
-      response: responses[config.id] || "Thinking..." // Update response or default
+    setModelsData(prev => prev.map(m => ({
+      ...m,
+      response: responses[m.id] || "Thinking..."
     })));
 
     // Automatically expand the first model to show the typing effect and flowing line
-    // This assumes model with id 1 is always present.
-    setExpanded(1);
-    setSpeaking(1);
+    if (modelsData.length > 0) {
+      const firstId = modelsData[0].id;
+      setExpanded(firstId);
+      setSpeaking(firstId);
+    }
   };
 
 
-  // Autofocus input on mount and mode change
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || selected.length === 0 || isGenerating) return;
+
+    setIsGenerating(true);
+    setExpanded(null);
+    setSpeaking(null);
+
+    // Reset responses for selected models
+    setModelsData(prev => prev.map(m => 
+      selected.includes(m.id) ? { ...m, response: '' } : m
+    ));
+
+    // Determine first active model for visualization
+    const firstActive = selected[0];
+    if (firstActive) {
+      setSpeaking(firstActive);
+      setExpanded(firstActive);
+    }
+
+    try {
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          models: selected,
+          messages: [{ role: 'user', content: text }],
+          max_tokens: 512, // Default limit
+          temperature: 0.7
+        })
+      });
+
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6);
+              if (jsonStr === '[DONE]') continue;
+              
+              const data = JSON.parse(jsonStr);
+              
+              if (data.event === 'token' && data.model_id) {
+                setModelsData(prev => prev.map(m => {
+                  if (m.id === data.model_id) {
+                    return { ...m, response: m.response + data.content };
+                  }
+                  return m;
+                }));
+                
+                // Switch visualization focus to the currently generating model (optional, maybe too jumpy)
+                // setSpeaking(data.model_id); 
+              }
+            } catch (e) {
+              console.error('Error parsing SSE:', e);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Chat error:', err);
+      setModelsData(prev => prev.map(m => 
+        selected.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
+      ));
+    } finally {
+      setIsGenerating(false);
+      setSpeaking(null);
+    }
+  };
+
+  // Handle Escape key to close dock
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [mode]);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showDock) {
+        setShowDock(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showDock]);
 
   // Load background style from localStorage or use default
   const [bgStyle, setBgStyle] = useState<BackgroundStyle>(() => {
@@ -240,9 +280,11 @@ export default function Playground() {
   const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== chairman);
   const chairmanModel = modelsData.find(m => m.id === chairman);
 
-  const getCirclePosition = (index: number, total: number, currentMode: Mode): Position => {
-    const radius = 155;
+  // Dynamic layout radius calculation
+  // Base 160, expand by 15px for each model over 4 to prevent overlap
+  const layoutRadius = mode === 'compare' ? 0 : Math.max(160, 120 + selectedModels.length * 15);
 
+  const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'council') {
       // Semi-circle (Parliament style)
       // Spread models across a ~220 degree arc to center them above the chairman
@@ -315,7 +357,8 @@ export default function Playground() {
       // Don't start selection if clicking on cards, buttons, inputs, or other interactive elements
       const clickedOnCard = target.closest('[data-card]');
       const clickedOnInteractive = target.closest('button, a, input, textarea, select, [role="button"]');
-      if (clickedOnCard || clickedOnInteractive) return;
+      const clickedOnDraggable = target.closest('[draggable]');
+      if (clickedOnCard || clickedOnInteractive || clickedOnDraggable) return;
       
       // Only allow selection within the root container
       const clickedOnContainer = rootContainerRef.current.contains(target);
@@ -372,16 +415,18 @@ export default function Playground() {
         if (!state) return null;
 
         const rect = normalizeRect(state.origin, point);
+        let selectionRectScreen: { left: number; right: number; top: number; bottom: number } | null = null; // Declare here
+
         if (state.active && rect.width > 0 && rect.height > 0) {
-          const matched: number[] = [];
+          const matched: string[] = [];
           
           // Convert selection rect from root container coordinates to screen coordinates
-          const rootBounds = rootContainerRef.current!.getBoundingClientRect();
-          const selectionRectScreen = {
-            left: rootBounds.left + rect.left,
-            right: rootBounds.left + rect.right,
-            top: rootBounds.top + rect.top,
-            bottom: rootBounds.top + rect.bottom
+          const currentRootBounds = rootContainerRef.current!.getBoundingClientRect();
+          selectionRectScreen = { // Assign value here
+            left: currentRootBounds.left + rect.left,
+            right: currentRootBounds.left + rect.right,
+            top: currentRootBounds.top + rect.top,
+            bottom: currentRootBounds.top + rect.bottom
           };
           
           // Check all model cards
@@ -392,10 +437,10 @@ export default function Playground() {
             const cardBounds = cardElement.getBoundingClientRect();
             
             const intersects = !(
-              cardBounds.right < selectionRectScreen.left ||
-              cardBounds.left > selectionRectScreen.right ||
-              cardBounds.bottom < selectionRectScreen.top ||
-              cardBounds.top > selectionRectScreen.bottom
+              cardBounds.right < selectionRectScreen!.left || // Use non-null assertion
+              cardBounds.left > selectionRectScreen!.right ||
+              cardBounds.bottom < selectionRectScreen!.top ||
+              cardBounds.top > selectionRectScreen!.bottom
             );
             
             if (intersects) {
@@ -544,83 +589,23 @@ export default function Playground() {
         </div>
       </div>
 
-      {/* Content Wrapper with Sidebar Offset */}
-      <div 
-        style={{ 
-          paddingLeft: '1.5rem', // Static padding, sidebar will overlay
-          paddingRight: '1.5rem',
-        }}
-      >
-              {/* Model Dock (Left) */}
-              <div className="fixed left-6 top-24 bottom-24 w-64 rounded-2xl p-4 flex flex-col gap-6 z-[60] transition-all duration-300"           style={{
-             background: 'rgba(15, 23, 42, 0.6)',
-             backdropFilter: 'blur(12px)',
-             border: '1px solid rgba(255, 255, 255, 0.1)',
-             transform: showDock ? 'translateX(0)' : 'translateX(-150%)',
-             opacity: showDock ? 1 : 0,
-             pointerEvents: showDock ? 'auto' : 'none',
-           }}>
-        
-        {/* Local Models Section */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-400 tracking-wider">LOCAL MODELS</h3>
-            <button 
-              onClick={() => handleAddGroup('local')}
-              className="text-[10px] text-emerald-400 hover:text-emerald-300 transition-colors"
+            {/* Content Wrapper with Sidebar Offset */}
+            <div 
+              style={{ 
+                paddingLeft: '1.5rem', // Static padding, sidebar will overlay
+                paddingRight: '1.5rem',
+                paddingTop: '8rem', // Increased to push content further below header
+              }}
             >
-              + ALL
-            </button>
-          </div>
-          <div className="flex flex-col gap-2">
-            {availableModels.filter(m => m.type === 'local').map(model => (
-              <div
-                key={model.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, model.id)}
-                onClick={() => handleModelToggle(model.id)}
-                className="group flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent hover:border-emerald-500/30"
-              >
-                <div className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)] bg-emerald-500" />
-                <span className="text-xs font-medium text-slate-300 group-hover:text-white">{model.name}</span>
-              </div>
-            ))}
-            {availableModels.filter(m => m.type === 'local').length === 0 && (
-              <div className="text-[10px] text-slate-600 italic px-2">All active</div>
-            )}
-          </div>
-        </div>
-
-        {/* API Models Section */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-400 tracking-wider">API MODELS</h3>
-            <button 
-              onClick={() => handleAddGroup('api')}
-              className="text-[10px] text-orange-400 hover:text-orange-300 transition-colors"
-            >
-              + ALL
-            </button>
-          </div>
-          <div className="flex flex-col gap-2">
-            {availableModels.filter(m => m.type === 'api').map(model => (
-              <div
-                key={model.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, model.id)}
-                onClick={() => handleModelToggle(model.id)}
-                className="group flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent hover:border-orange-500/30"
-              >
-                <div className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] bg-orange-500" />
-                <span className="text-xs font-medium text-slate-300 group-hover:text-white">{model.name}</span>
-              </div>
-            ))}
-            {availableModels.filter(m => m.type === 'api').length === 0 && (
-              <div className="text-[10px] text-slate-600 italic px-2">All active</div>
-            )}
-          </div>
-        </div>
-      </div>
+        {/* Model Dock (Left) */}
+        <ModelDock 
+          showDock={showDock}
+          availableModels={availableModels}
+          handleDragStart={handleDragStart}
+          handleModelToggle={handleModelToggle}
+          handleAddGroup={handleAddGroup}
+          dockRef={dockRef}
+        />
 
       {/* Main visualization area */}
       <div 
@@ -635,6 +620,7 @@ export default function Playground() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          marginTop: '6rem', // Extra push down
           border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
           borderRadius: isDraggingOver ? '24px' : '0px',
           
@@ -666,18 +652,18 @@ export default function Playground() {
       >
         {/* Model cards - rendered for all modes with transitions */}
         {selectedModels.map((model, index) => {
-          const circlePos = getCirclePosition(index, selectedModels.length, mode);
+          const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
           const isCircle = mode !== 'compare';
           const isSpeaking = speaking === model.id;
           const isExpanded = expanded === model.id;
           const isSelected = selectedCardIds.has(model.id);
 
           // Calculate grid position for compare mode
-          const cols = 2; // Reduced to 2 cols to fit sidebar
           const cardWidth = 256;
           const cardHeight = 200;
           const gapX = 24;
           const gapY = 24;
+          const cols = gridCols; // Use dynamic gridCols state
           const row = Math.floor(index / cols);
           const col = index % cols;
           const totalWidth = (cardWidth + gapX) * cols - gapX;
@@ -695,6 +681,15 @@ export default function Playground() {
                 else cardRefs.current.delete(model.id);
               }}
               className="absolute transition-all duration-700 ease-out"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  modelId: model.id
+                });
+              }}
               style={{
                 transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,
                 zIndex: isExpanded ? 100 : isSelected ? 20 : isSpeaking ? 10 : 1,
@@ -903,7 +898,7 @@ export default function Playground() {
               opacity: 1,
               transform: 'translate(-50%, -50%) scale(1)',
               left: '50%',
-              top: mode === 'council' ? 'calc(50% + 155px)' : '50%', // Shift chairman down by radius in council mode
+              top: mode === 'council' ? `calc(50% + ${layoutRadius}px - 64px)` : '50%', // Align top edge with circle bottom
             }}
             onClick={(e) => {
               e.stopPropagation(); // Prevent background click handler from firing
@@ -988,15 +983,15 @@ export default function Playground() {
           <svg
             className="absolute pointer-events-none transition-opacity duration-700"
             style={{
-              width: '350px',
-              height: '350px',
+              width: '1000px',
+              height: '1000px',
               opacity: 0.2
             }}
           >
             <circle
-              cx="175"
-              cy="175"
-              r="155"
+              cx="500"
+              cy="500"
+              r={layoutRadius}
               fill="none"
               stroke="url(#circleGrad)"
               strokeWidth="1"
@@ -1012,28 +1007,6 @@ export default function Playground() {
           </svg>
         )}
       </div>
-
-      {/* Chairman selector */}
-      {mode !== 'compare' && (
-        <div className="flex items-center justify-center gap-3 mt-2">
-          <span className="text-xs text-slate-500">Chairman:</span>
-          <select
-            value={chairman}
-            onChange={(e) => { setChairman(Number(e.target.value)); setExpanded(null); setSpeaking(null); }}
-            className="text-xs px-3 py-1.5 rounded-lg transition-all"
-            style={{
-              background: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(71, 85, 105, 0.5)',
-              color: '#e2e8f0'
-            }}
-          >
-            {modelsData.filter(m => selected.includes(m.id)).map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
 
       </div>
 
@@ -1093,6 +1066,15 @@ export default function Playground() {
               className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (inputRef.current?.value) {
+                    sendMessage(inputRef.current.value);
+                    inputRef.current.value = '';
+                  }
+                }
+              }}
             />
           </div>
           {/* Footer hint */}
@@ -1101,6 +1083,28 @@ export default function Playground() {
           </div>
         </div>
       </div>
+
+      {/* Custom Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
+            onClick={() => {
+              setChairman(contextMenu.modelId);
+              setContextMenu(null);
+            }}
+          >
+            <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            </svg>
+            Promote to Chairman
+          </button>
+        </div>
+      )}
 
       <style>{`
         @keyframes ticker {
