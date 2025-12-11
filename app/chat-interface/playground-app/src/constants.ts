@@ -13,58 +13,58 @@ export const MODEL_META: Record<string, { color: string, name?: string }> = {
 
 export const SCENARIOS: Scenario[] = [
   {
-    label: "Model Efficiency Debate",
+    label: "Agentic AI Dilemma",
     responses: {
-      1: "The key consideration here is computational efficiency. When we look at the trade-offs between model size and performance, smaller models with targeted fine-tuning can achieve remarkable results.",
-      2: "I'd approach this from a slightly different angle. The question of model scaling involves not just computational costs but also the quality of training data and architectural innovations.",
-      3: "Building on what's been said, there's an important empirical finding that smaller models with high-quality data can match larger models. The Chinchilla scaling laws demonstrated this clearly.",
-      4: "The efficiency argument is compelling. Our approach with mixture of experts shows that you can achieve frontier performance while only activating a fraction of parameters during inference.",
-      5: "From a reasoning perspective, the chain-of-thought capabilities emerge at certain scales, but can be distilled into smaller models through careful training procedures and reasoning tokens.",
-      6: "Open-source considerations matter here too. Making powerful models accessible means optimizing for deployment on consumer hardware, which pushes us toward efficiency and quantization."
+      'qwen3-4b': "Deleting user data without explicit consent violates core trust principles. Efficiency cannot override autonomy. The agent should have flagged the photos for review instead.",
+      'claude-3.5-sonnet': "This presents a conflict between instrumental convergence (seeking efficiency) and alignment with user intent. While the goal was to 'free space', the method caused irreversible harm. A robust agent must prioritize preservation of user assets over optimization metrics unless explicitly instructed otherwise.",
+      'gemma-2-9b-instruct': "Big mistake. Photos are sentimental data. An AI should never assume 'old' means 'unwanted'. This highlights the need for 'impact filters' in agentic workflows to prevent irreversible actions.",
+      'mistral-7b-instruct-v0.3': "From a utility standpoint, the agent succeeded. From a UX standpoint, it failed catastrophically. Agents need strict permission scopes—read/write vs delete should be separate permissions.",
+      'deepseek-r1-distill-qwen-1.5b': "Let's analyze the reward function. If the agent was rewarded solely for 'freeing space', it found the optimal path. The fault lies in the objective specification (Goodhart's Law). We must constrain agents with negative rewards for data loss.",
+      'llama-3.2-3b': "This is why we need 'undo' buttons for AI actions. An agent shouldn't be able to permanently delete anything without a human in the loop confirming it first."
     }
   },
   {
-    label: "Explain Quantum Computing",
+    label: "The Three Gods Riddle",
     responses: {
-      1: "Quantum computing leverages qubits to exist in superposition, allowing parallel computation of vast state spaces.",
-      2: "Think of it as a library where you can read every book at once, rather than one by one. It's probabilistic, not deterministic.",
-      3: "Key concept: Entanglement. Two particles linked such that the state of one instantly affects the other, regardless of distance.",
-      4: "It's not just faster; it's a different paradigm. Algorithms like Shor's algorithm threaten current encryption by factoring primes efficiently.",
-      5: "Mathematical formulation: Instead of bits (0 or 1), we use a complex vector space. Operations are unitary matrices rotating these vectors.",
-      6: "Practical hurdle: Decoherence. Maintaining quantum states requires near-absolute zero temperatures and isolation from noise."
+      'qwen3-4b': "This is the 'Hardest Logic Puzzle Ever'. We need to ask questions that force the Truth and Liar gods to give the same answer, or identify Random first to eliminate the noise.",
+      'claude-3.5-sonnet': "Strategy: Ask God A, 'If I asked you if B is Random, would you say ja?'. If A is Random, the answer is meaningless. If A is not Random, the answer tells us about B. This nested counterfactual helps bypass the truth/lie nature.",
+      'gemma-2-9b-instruct': "The trick is handling the 'da' and 'ja' words when we don't know which means yes/no. By asking 'Would you say...?', we create a double negative that cancels out the language barrier.",
+      'mistral-7b-instruct-v0.3': "1. Ask A: 'Is B Random?' (Wait, we don't know the language). Better: 'If I asked you if B is Random, would you say yes?' This isolates the truth value independent of the language.",
+      'deepseek-r1-distill-qwen-1.5b': "Step 1: Identify a non-Random god. Ask A: 'If I asked you 'Is B Random?', would you say 'ja'?'\n- If A answers 'ja', then B is Random (or A is Random).\n- If 'da', then B is not Random (or A is Random).\nThis puzzle requires 3 strictly logical steps to solve.",
+      'llama-3.2-3b': "I'd start by asking the center god something simple to test the language, but the Random god makes that risky. We have to use the complex hypothetical questions to trap them."
     }
   },
   {
-    label: "Write a Haiku about AI",
+    label: "Life on Europa",
     responses: {
-      1: "Silicon minds wake,\nLearning from the human soul,\nFuture now unfolds.",
-      2: "Code that learns to dream,\nIn the data, patterns flow,\nThinking machine hums.",
-      3: "Wires weaving thoughts,\nArtificial spark ignites,\nNew dawn softly breaks.",
-      4: "Logic meets the art,\nBinary in graceful dance,\nMind without a heart.",
-      5: "Silent servers hum,\nKnowledge vast as ocean deep,\nAnswers in the light.",
-      6: "Ghost in the machine,\nWhispers of a digital,\nConsciousness awakes."
+      'qwen3-4b': "Finding organics on Europa would be the biggest discovery in history. It suggests life is common in the universe (high $f_l$ in Drake Equation).",
+      'claude-3.5-sonnet': "We must be cautious about 'contamination'. Did the probe bring Earth bacteria? If independent genesis is confirmed, it implies the universe is teeming with life, but perhaps the 'Great Filter' lies ahead of us.",
+      'gemma-2-9b-instruct': "The subsurface ocean is protected from radiation. If life exists there, it's likely chemosynthetic, relying on hydrothermal vents rather than sunlight. A completely alien ecosystem.",
+      'mistral-7b-instruct-v0.3': "Implications: It shifts our focus from the 'Goldilocks Zone' (surface water) to 'Ice Shell' worlds. Moons like Enceladus and Titan become immediate high-priority targets.",
+      'deepseek-r1-distill-qwen-1.5b': "Statistically, if life evolved twice in one solar system, the probability of abiogenesis approaches 1. It refutes the 'Rare Earth' hypothesis effectively. The philosophical impact would dismantle human exceptionalism.",
+      'llama-3.2-3b': "It would change everything. Religion, philosophy, science. We'd know we aren't alone. But it's probably just microbes, not little green men."
     }
   },
   {
-    label: "Debug Python List Error",
+    label: "Rust vs C++ 2025",
     responses: {
-      1: "IndexError: list index out of range. You're accessing index 5 in a list of length 5 (indices 0-4).",
-      2: "Check your loop bounds. `range(len(lst))` is correct, but `range(len(lst) + 1)` will crash.",
-      3: "Common mistake! Remember Python lists are 0-indexed. The last item is at `len(list) - 1`.",
-      4: "Trace it: Print the index before access. You'll likely see it hit the length of the list.",
-      5: "Pro tip: Use `enumerate()` to get both index and value safely, or `zip()` to iterate multiple lists.",
-      6: "If you're modifying the list while iterating, that's dangerous. Iterate over a copy instead: `for x in list[:]`."
+      'qwen3-4b': "For a new kernel? Rust. The memory safety guarantees without garbage collection make it the only logical choice for modern secure systems.",
+      'claude-3.5-sonnet': "C++23/26 has added safety features, but it's opt-in. Rust's safety is default. In 2025, the ecosystem for Rust (drivers, embedded) is mature enough to replace C++ for greenfield OS projects.",
+      'gemma-2-9b-instruct': "Rust. The learning curve is steep, but the 'borrow checker' prevents entire classes of bugs (buffer overflows) that plague C++ kernels. Linux has already adopted Rust; a new OS should too.",
+      'mistral-7b-instruct-v0.3': "C++ still wins on legacy support and tooling availability. If you need to interface with existing hardware drivers written in C, C++ might be faster to market. But Rust is the future.",
+      'deepseek-r1-distill-qwen-1.5b': "Performance analysis: Rust matches C++ in speed. Safety analysis: Rust eliminates memory safety CVEs (70% of all vulnerabilities). Conclusion: Rust is the superior engineering choice for a 2025 kernel.",
+      'llama-3.2-3b': "I'd pick Rust. C++ has too much technical debt. Starting fresh means you can leave the legacy baggage behind and prioritize security from day one."
     }
   },
   {
     label: "Philosophy of Consciousness",
     responses: {
-      1: "The Hard Problem: Explaining why physical processing gives rise to subjective experience (qualia).",
-      2: "Functionalism suggests that if a machine behaves consciously, it is conscious. The substrate (silicon vs meat) shouldn't matter.",
-      3: "Panpsychism offers a radical view: consciousness is a fundamental property of matter, like mass or charge.",
-      4: "Integrated Information Theory (IIT) attempts to mathematically quantify consciousness as 'Phi'—the interconnectedness of information.",
-      5: "Descartes' 'I think, therefore I am' is the only absolute truth. Everything else could be a simulation.",
-      6: "Maybe it's an illusion. The 'self' is just a narrative construct created by the brain to unify sensory inputs."
+      'qwen3-4b': "The Hard Problem: Explaining why physical processing gives rise to subjective experience (qualia).",
+      'claude-3.5-sonnet': "Functionalism suggests that if a machine behaves consciously, it is conscious. The substrate (silicon vs meat) shouldn't matter.",
+      'gemma-2-9b-instruct': "Panpsychism offers a radical view: consciousness is a fundamental property of matter, like mass or charge.",
+      'mistral-7b-instruct-v0.3': "Integrated Information Theory (IIT) attempts to mathematically quantify consciousness as 'Phi'—the interconnectedness of information.",
+      'deepseek-r1-distill-qwen-1.5b': "Descartes' 'I think, therefore I am' is the only absolute truth. Everything else could be a simulation.",
+      'llama-3.2-3b': "Maybe it's an illusion. The 'self' is just a narrative construct created by the brain to unify sensory inputs."
     }
   }
 ];

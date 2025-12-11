@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
-import { MODEL_META, SCENARIOS, BG_STYLES, MODE_COLORS } from './constants';
+import { MODEL_META, BG_STYLES, MODE_COLORS } from './constants';
 import Typewriter from './components/Typewriter';
 import ModelDock from './components/ModelDock';
+import PromptInput from './components/PromptInput';
+import Header from './components/Header';
 
 export default function Playground() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
@@ -487,107 +489,16 @@ export default function Playground() {
       }}
     >
       {/* Header */}
-      <div className="relative flex items-center justify-between mb-6 px-6 pt-6 z-50">
-        {/* Left: Logo */}
-        <div className="flex items-center gap-3 flex-1">
-          <button
-            onClick={() => setShowDock(!showDock)}
-            className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-slate-600/50 hover:border-slate-500 transition-all active:scale-95"
-            title={showDock ? "Close Dock" : "Open Dock"}
-          >
-            <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-lg font-semibold text-slate-100">Model Arena</h1>
-            <p className="text-xs text-slate-500">
-              {mode === 'compare' && 'Side-by-side response comparison'}
-              {mode === 'council' && 'Anonymous peer review & consensus'}
-              {mode === 'roundtable' && 'Multi-model collaborative discussion'}
-            </p>
-          </div>
-        </div>
-
-        {/* Center: Mode Toggle */}
-        <div className="absolute left-1/2 -translate-x-1/2">
-          <div className="relative flex p-1 rounded-xl" style={{ background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71, 85, 105, 0.4)', minWidth: '370px', width: '370px' }}>
-            {/* Sliding indicator */}
-            <div
-              className="absolute top-1 bottom-1 rounded-lg transition-all duration-300 ease-out"
-              style={{
-                left: mode === 'compare'
-                  ? '4px'
-                  : mode === 'council'
-                  ? 'calc((100% + 4px) / 3)'
-                  : 'calc((200% - 4px) / 3)',
-                width: 'calc((100% - 8px) / 3)',
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3))',
-                boxShadow: '0 4px 20px rgba(59, 130, 246, 0.2)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                zIndex: 0
-              }}
-            />
-            {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
-              <button
-                key={m}
-                onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(null); setDragSelection(null); }}
-                className={`relative z-10 py-2 text-sm font-medium transition-colors duration-200 ${
-                  mode === m.toLowerCase()
-                    ? 'text-white'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                style={{ 
-                  flex: 1,
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  position: 'relative'
-                }}
-              >
-                <span style={{ width: '100%', textAlign: 'center' }}>{m}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Right: Settings */}
-        <div className="flex items-center gap-2 flex-1 justify-end">
-          {/* Background Style Cycler */}
-          <div className="flex items-center rounded-lg bg-slate-800/30 border border-slate-700/50">
-            <button
-              onClick={() => cycleBgStyle('prev')}
-              className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
-              title="Previous background"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={() => cycleBgStyle('next')}
-              className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
-              title="Next background"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Settings */}
-          <button
-            className="w-8 h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors"
-            title="Settings"
-          >
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-        </div>
-      </div>
+      <Header 
+        mode={mode}
+        setMode={setMode}
+        setExpanded={setExpanded}
+        setSpeaking={setSpeaking}
+        setDragSelection={setDragSelection}
+        cycleBgStyle={cycleBgStyle}
+        showDock={showDock}
+        setShowDock={setShowDock}
+      />
 
             {/* Content Wrapper with Sidebar Offset */}
             <div 
@@ -1010,79 +921,14 @@ export default function Playground() {
 
       </div>
 
-      {/* Prompt input - Sticky at bottom center */}
-      <div 
-        className="fixed bottom-0 right-0 z-[100] pb-6 px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
-        style={{
-          left: '0', // Static left, independent of dock
-          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-        }}
-      >
-        <div className="max-w-2xl w-full pointer-events-auto">
-          {/* Scenarios Ticker */}
-          <div 
-            className="mb-4 relative overflow-hidden h-6 w-full"
-            style={{
-              maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)'
-            }}
-          >
-            <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-400 font-medium">
-              {[...SCENARIOS, ...SCENARIOS, ...SCENARIOS].map((s, i) => ( // Repeat for infinite scroll effect
-                <div key={i} className="flex items-center gap-2">
-                  <button 
-                    onClick={() => {
-                      loadScenario(s.responses);
-                      if (inputRef.current) inputRef.current.value = s.label;
-                    }}
-                    className="hover:text-blue-400 transition-colors cursor-pointer px-1 py-0.5 rounded hover:bg-white/5"
-                  >
-                    {s.label}
-                  </button>
-                  <span className="text-slate-700">•</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div
-            className="rounded-xl p-4 transition-all duration-300"
-            style={{
-              background: 'rgba(30, 41, 59, 0.95)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              border: inputFocused ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(71, 85, 105, 0.4)',
-              boxShadow: inputFocused
-                ? '0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(59, 130, 246, 0.15)'
-                : '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Ask a question to compare model responses..."
-              className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (inputRef.current?.value) {
-                    sendMessage(inputRef.current.value);
-                    inputRef.current.value = '';
-                  }
-                }
-              }}
-            />
-          </div>
-          {/* Footer hint */}
-          <div className="text-center mt-2 text-[10px] text-slate-600">
-            {mode !== 'compare' ? "Click on models to expand their responses" : "Showing all model responses"}
-          </div>
-        </div>
-      </div>
+      <PromptInput 
+        inputRef={inputRef}
+        inputFocused={inputFocused}
+        setInputFocused={setInputFocused}
+        onSendMessage={sendMessage}
+        mode={mode}
+        loadScenario={loadScenario}
+      />
 
       {/* Custom Context Menu */}
       {contextMenu && (
