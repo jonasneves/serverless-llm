@@ -51,7 +51,7 @@ export default function Playground() {
       .then(res => res.json())
       .then(data => {
         const apiModels = data.models.map((m: any) => {
-          const meta = MODEL_META[m.id] || MODEL_META['default'];
+          const meta = MODEL_META[m.type] || MODEL_META['local'];
           return {
             id: m.id,
             name: meta.name || m.name || m.id, // Use meta name or API name

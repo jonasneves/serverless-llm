@@ -1,14 +1,8 @@
 import { BackgroundStyle, Mode } from './types';
 
 export const MODEL_META: Record<string, { color: string, name?: string }> = {
-  'qwen3-4b': { color: '#3b82f6', name: 'QWEN3 4B' },
-  'claude-3.5-sonnet': { color: '#f97316', name: 'CLAUDE 3.5' },
-  'gemma-2-9b-instruct': { color: '#22c55e', name: 'GEMMA 2 9B' },
-  'mistral-7b-instruct-v0.3': { color: '#a855f7', name: 'MISTRAL 7B' },
-  'deepseek-r1-distill-qwen-1.5b': { color: '#06b6d4', name: 'DEEPSEEK R1' },
-  'llama-3.2-3b': { color: '#ec4899', name: 'LLAMA 3.2' },
-  // Fallbacks
-  'default': { color: '#64748b' }
+  'local': { color: '#22c55e' },   // Green for local models
+  'api': { color: '#f97316' }      // Orange for API models
 };
 
 export const SUGGESTED_TOPICS = [
