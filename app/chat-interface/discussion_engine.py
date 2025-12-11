@@ -133,6 +133,20 @@ class DiscussionEngine:
                 )
             ])
 
+            # Determine if query needs detailed step-by-step analysis
+            needs_detailed_analysis = any(
+                domain in analysis.domain_weights and analysis.domain_weights[domain] > 0.3
+                for domain in ['mathematics', 'coding', 'logical_reasoning', 'reasoning']
+            )
+
+            if needs_detailed_analysis:
+                analysis_instruction = """Show your work step by step:
+- Counting tasks: list each item explicitly
+- Math problems: show each calculation
+- Logical reasoning: explain each step"""
+            else:
+                analysis_instruction = "Provide a clear, concise response."
+
             return f"""You are {my_name}, participating in a Model Roundtable discussion.
 
 You are seated at a virtual roundtable with other AI models: {participants_list}. You have been selected to LEAD this discussion and speak first based on your expertise in this topic.
@@ -144,12 +158,9 @@ Query domains: {domain_context}
 User Query:
 {query}
 
-As the discussion leader, provide your analysis and response. Show your work step by step, especially for:
-- Counting tasks: list each item explicitly
-- Math problems: show each calculation
-- Logical reasoning: explain each step
+As the discussion leader, provide your analysis and response. {analysis_instruction}
 
-Be thorough and precise - {participants_list} will review and critique your response next."""
+{participants_list} will review and critique your response next."""
 
         else:
             # Supporting models - respond with full context including evaluations
@@ -174,6 +185,23 @@ Be thorough and precise - {participants_list} will review and critique your resp
             # Get the lead model's display name
             lead_model_name = MODEL_PROFILES.get(analysis.discussion_lead, {}).get("display_name", analysis.discussion_lead)
 
+            # Determine if query needs detailed verification
+            needs_verification = any(
+                domain in analysis.domain_weights and analysis.domain_weights[domain] > 0.3
+                for domain in ['mathematics', 'coding', 'logical_reasoning', 'reasoning']
+            )
+
+            if needs_verification:
+                contribution_guide = """CRITICALLY EVALUATE what others have said:
+1. **VERIFY**: Check accuracy of claims and calculations
+2. **CHALLENGE**: If you disagree with conclusions, explain why
+3. **IMPROVE**: Offer corrections or alternative approaches
+4. **CONFIRM**: If you agree, explain why you're confident
+
+Be direct and specific. If counting items, do it yourself step by step."""
+            else:
+                contribution_guide = "Add your perspective. If you agree with previous responses, you can acknowledge them briefly. If you have a different view, share it concisely."
+
             return f"""You are {my_name}, participating in a Model Roundtable discussion.
 
 You are seated at a virtual roundtable with: {participants_list}. The designated discussion lead is **{lead_model_name}** (selected for highest expertise on this query). So far, {spoken_list} ha{"ve" if len(spoken_models) > 1 else "s"} shared their perspectives.
@@ -189,14 +217,7 @@ Discussion so far:
 
 ---
 
-Now it's your turn to contribute. CRITICALLY EVALUATE what others have said:
-
-1. **VERIFY**: Check accuracy of claims and calculations. If {spoken_models[0] if spoken_models else "another model"} made an error, call it out by name.
-2. **CHALLENGE**: If you disagree with conclusions, explain why. Reference specific models (e.g., "I disagree with {spoken_models[0] if spoken_models else "the previous response"} because...").
-3. **IMPROVE**: Offer corrections or alternative approaches.
-4. **CONFIRM**: If you agree, explain why you're confident.
-
-Be direct and specific. Refer to other models by name when agreeing or disagreeing. If counting items, do it yourself step by step."""
+{contribution_guide}"""
 
     async def _call_model_api(
         self,

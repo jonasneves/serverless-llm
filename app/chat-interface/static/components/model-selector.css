@@ -73,6 +73,10 @@
     background: var(--warning-color);
 }
 
+.status-api {
+    background: var(--info-color);
+}
+
 .status-available {
     background: var(--info-color);
 }
@@ -320,6 +324,11 @@
 .model-option .status-dot.status-checking {
     background: var(--warning-color);
     animation: pulse 1.5s infinite;
+}
+
+.model-option .status-dot.status-api {
+    background: var(--info-color);
+    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 6px var(--info-color);
 }
 
 .model-option .model-name-text {

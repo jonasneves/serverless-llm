@@ -1,0 +1,561 @@
+"""
+Council Mode - Anonymized Peer Review
+
+3-stage process:
+1. Stage 1: All models respond independently (parallel)
+2. Stage 2: Models rank responses anonymously
+3. Stage 3: Chairman synthesizes final answer using rankings
+"""
+
+from typing import List, Dict, Any, AsyncGenerator, Tuple
+import asyncio
+import json
+import re
+from collections import defaultdict
+from model_profiles import MODEL_PROFILES
+
+
+class CouncilEngine:
+    """Orchestrates the 3-stage council process with anonymized peer review"""
+
+    def __init__(
+        self,
+        model_endpoints: Dict[str, str],
+        github_token: str = None,
+        timeout: int = 120
+    ):
+        """
+        Initialize council engine
+
+        Args:
+            model_endpoints: Dict mapping model_id -> API URL for local models
+            github_token: GitHub token for API models
+            timeout: Max seconds per stage
+        """
+        self.model_endpoints = model_endpoints
+        self.github_token = github_token
+        self.timeout = timeout
+
+    def is_api_model(self, model_id: str) -> bool:
+        """Check if a model is an API model (uses GitHub Models API)"""
+        profile = MODEL_PROFILES.get(model_id)
+        return profile is not None and profile.get("model_type") == "api"
+
+    async def _call_model(
+        self,
+        model_id: str,
+        messages: List[Dict[str, str]],
+        max_tokens: int = 2048,
+        stream: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Call a single model and return response (streaming or non-streaming)
+
+        Args:
+            model_id: Model identifier
+            messages: OpenAI-format messages
+            max_tokens: Max tokens to generate
+            stream: Whether to stream the response
+
+        Returns:
+            Dict with 'content' key containing response text (if not streaming)
+            AsyncGenerator yielding chunks (if streaming)
+        """
+        from http_client import HTTPClient
+        import httpx
+
+        if self.is_api_model(model_id):
+            # GitHub Models API
+            url = "https://models.github.ai/inference/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.github_token}",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+            payload = {
+                "model": model_id,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": 0.7,
+                "stream": stream
+            }
+        else:
+            # Local model
+            endpoint = self.model_endpoints.get(model_id)
+            if not endpoint:
+                raise ValueError(f"No endpoint for model: {model_id}")
+
+            url = f"{endpoint}/v1/chat/completions"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": 0.7,
+                "stream": stream
+            }
+
+        client = HTTPClient.get_client()
+
+        try:
+            response = await client.post(url, headers=headers, json=payload, timeout=self.timeout)
+
+            if response.status_code != 200:
+                error_text = await response.aread()
+                raise Exception(f"Model API error {response.status_code}: {error_text.decode()}")
+
+            if stream:
+                return {"stream": response, "url": url}
+            else:
+                data = response.json()
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                return {"content": content}
+
+        except httpx.HTTPError as e:
+            raise Exception(f"Connection error to {model_id}: {str(e)}")
+
+    async def _stream_model_response(
+        self,
+        model_id: str,
+        messages: List[Dict[str, str]],
+        max_tokens: int = 2048
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Stream a single model's response, yielding chunks as they arrive
+
+        Yields:
+            Dict with 'chunk' (token) or 'complete' (full response) or 'error'
+        """
+        try:
+            result = await self._call_model(model_id, messages, max_tokens, stream=True)
+            response_stream = result["stream"]
+
+            full_response = ""
+            async for line in response_stream.aiter_lines():
+                if not line.strip() or not line.startswith("data: "):
+                    continue
+
+                data = line[6:]  # Remove "data: " prefix
+                if data == "[DONE]":
+                    break
+
+                try:
+                    chunk_data = json.loads(data)
+                    delta = chunk_data.get("choices", [{}])[0].get("delta", {})
+                    content = delta.get("content", "")
+
+                    if content:
+                        full_response += content
+                        yield {"chunk": content, "full_response": full_response}
+
+                except json.JSONDecodeError:
+                    continue
+
+            yield {"complete": True, "full_response": full_response}
+
+        except Exception as e:
+            yield {"error": str(e)}
+
+    async def stage1_collect_responses(
+        self,
+        query: str,
+        participants: List[str],
+        max_tokens: int = 2048
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Stage 1: Collect independent responses from all models in parallel with streaming
+
+        Args:
+            query: User query
+            participants: List of model IDs to participate
+            max_tokens: Max tokens per response
+
+        Yields:
+            Events: stage1_start, model_start, model_chunk, model_response, stage1_complete
+        """
+        yield {"type": "stage1_start", "participants": participants}
+
+        messages = [{"role": "user", "content": query}]
+        stage1_results = []
+        model_responses = {model_id: "" for model_id in participants}
+        active_models = set(participants)
+
+        # Create streaming tasks for all models
+        async def stream_model(model_id: str):
+            """Stream a single model and yield events"""
+            model_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+
+            # Notify that this model is starting
+            yield {
+                "type": "model_start",
+                "model_id": model_id,
+                "model_name": model_name
+            }
+
+            async for event in self._stream_model_response(model_id, messages, max_tokens):
+                if "error" in event:
+                    yield {
+                        "type": "model_error",
+                        "model_id": model_id,
+                        "model_name": model_name,
+                        "error": event["error"]
+                    }
+                    break
+                elif "chunk" in event:
+                    model_responses[model_id] = event["full_response"]
+                    yield {
+                        "type": "model_chunk",
+                        "model_id": model_id,
+                        "model_name": model_name,
+                        "chunk": event["chunk"],
+                        "full_response": event["full_response"]
+                    }
+                elif event.get("complete"):
+                    final_response = event["full_response"]
+                    model_responses[model_id] = final_response
+                    stage1_results.append({
+                        "model_id": model_id,
+                        "model_name": model_name,
+                        "response": final_response
+                    })
+                    yield {
+                        "type": "model_response",
+                        "model_id": model_id,
+                        "model_name": model_name,
+                        "response": final_response
+                    }
+
+        # Stream all models concurrently
+        tasks = [stream_model(model_id) for model_id in participants]
+
+        # Merge all streams
+        async for event in self._merge_streams(tasks):
+            yield event
+
+        yield {"type": "stage1_complete", "results": stage1_results}
+
+    async def _merge_streams(self, generators: List[AsyncGenerator]) -> AsyncGenerator[Dict[str, Any], None]:
+        """Merge multiple async generators into one stream"""
+        queues = [asyncio.Queue() for _ in generators]
+
+        async def consume(gen, queue):
+            try:
+                async for item in gen:
+                    await queue.put(item)
+            finally:
+                await queue.put(None)  # Signal completion
+
+        # Start all consumers
+        consumers = [asyncio.create_task(consume(gen, queue)) for gen, queue in zip(generators, queues)]
+
+        # Yield items as they arrive from any queue
+        active = len(queues)
+        while active > 0:
+            for queue in queues:
+                try:
+                    item = await asyncio.wait_for(queue.get(), timeout=0.01)
+                    if item is None:
+                        active -= 1
+                    else:
+                        yield item
+                except asyncio.TimeoutError:
+                    continue
+
+        # Wait for all consumers to finish
+        await asyncio.gather(*consumers)
+
+    def _parse_ranking(self, ranking_text: str) -> List[str]:
+        """
+        Parse FINAL RANKING section from model's response
+
+        Args:
+            ranking_text: Full text response
+
+        Returns:
+            List of response labels in ranked order
+        """
+        if "FINAL RANKING:" in ranking_text:
+            parts = ranking_text.split("FINAL RANKING:")
+            if len(parts) >= 2:
+                ranking_section = parts[1]
+
+                # Look for numbered list (e.g., "1. Response A")
+                numbered_matches = re.findall(r'\d+\.\s*Response [A-Z]', ranking_section)
+                if numbered_matches:
+                    return [re.search(r'Response [A-Z]', m).group() for m in numbered_matches]
+
+                # Fallback: Extract all "Response X" patterns
+                matches = re.findall(r'Response [A-Z]', ranking_section)
+                return matches
+
+        # Final fallback
+        matches = re.findall(r'Response [A-Z]', ranking_text)
+        return matches
+
+    async def stage2_collect_rankings(
+        self,
+        query: str,
+        stage1_results: List[Dict[str, Any]],
+        participants: List[str]
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Stage 2: Models rank anonymized responses
+
+        Args:
+            query: Original user query
+            stage1_results: Results from Stage 1
+            participants: List of model IDs
+
+        Yields:
+            Events: stage2_start, ranking_response, stage2_complete
+        """
+        yield {"type": "stage2_start"}
+
+        # Create anonymized labels
+        labels = [chr(65 + i) for i in range(len(stage1_results))]  # A, B, C, ...
+
+        label_to_model = {
+            f"Response {label}": result["model_id"]
+            for label, result in zip(labels, stage1_results)
+        }
+
+        # Build ranking prompt
+        responses_text = "\n\n".join([
+            f"Response {label}:\n{result['response']}"
+            for label, result in zip(labels, stage1_results)
+        ])
+
+        ranking_prompt = f"""You are evaluating different responses to the following question:
+
+Question: {query}
+
+Here are the responses from different models (anonymized):
+
+{responses_text}
+
+Your task:
+1. Evaluate each response individually. For each response, explain what it does well and what it does poorly.
+2. At the very end, provide a final ranking.
+
+IMPORTANT: Your final ranking MUST be formatted EXACTLY as follows:
+- Start with "FINAL RANKING:" (all caps, with colon)
+- List responses from best to worst as a numbered list
+- Each line: number, period, space, then ONLY the response label (e.g., "1. Response A")
+
+Example format:
+
+Response A provides good detail but misses X...
+Response B is accurate but lacks depth...
+
+FINAL RANKING:
+1. Response B
+2. Response A
+
+Now provide your evaluation and ranking:"""
+
+        messages = [{"role": "user", "content": ranking_prompt}]
+
+        # Get rankings from all models in parallel
+        tasks = []
+        for model_id in participants:
+            tasks.append(self._call_model(model_id, messages))
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process rankings
+        stage2_results = []
+        for model_id, result in zip(participants, results):
+            if isinstance(result, Exception):
+                yield {
+                    "type": "ranking_error",
+                    "model_id": model_id,
+                    "error": str(result)
+                }
+            else:
+                ranking_text = result.get("content", "")
+                parsed = self._parse_ranking(ranking_text)
+
+                stage2_results.append({
+                    "model_id": model_id,
+                    "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                    "ranking": ranking_text,
+                    "parsed_ranking": parsed
+                })
+
+                yield {
+                    "type": "ranking_response",
+                    "model_id": model_id,
+                    "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                    "ranking": ranking_text,
+                    "parsed_ranking": parsed
+                }
+
+        # Calculate aggregate rankings
+        aggregate = self._calculate_aggregate_rankings(stage2_results, label_to_model)
+
+        yield {
+            "type": "stage2_complete",
+            "results": stage2_results,
+            "label_to_model": label_to_model,
+            "aggregate_rankings": aggregate
+        }
+
+    def _calculate_aggregate_rankings(
+        self,
+        stage2_results: List[Dict[str, Any]],
+        label_to_model: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
+        """Calculate aggregate rankings across all models"""
+        model_positions = defaultdict(list)
+
+        for ranking in stage2_results:
+            parsed_ranking = ranking.get("parsed_ranking", [])
+
+            for position, label in enumerate(parsed_ranking, start=1):
+                if label in label_to_model:
+                    model_id = label_to_model[label]
+                    model_positions[model_id].append(position)
+
+        # Calculate average position
+        aggregate = []
+        for model_id, positions in model_positions.items():
+            if positions:
+                avg_rank = sum(positions) / len(positions)
+                aggregate.append({
+                    "model_id": model_id,
+                    "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                    "average_rank": round(avg_rank, 2),
+                    "votes_count": len(positions)
+                })
+
+        # Sort by average rank (lower is better)
+        aggregate.sort(key=lambda x: x["average_rank"])
+
+        return aggregate
+
+    async def stage3_synthesize(
+        self,
+        query: str,
+        stage1_results: List[Dict[str, Any]],
+        stage2_results: List[Dict[str, Any]],
+        chairman_model: str
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Stage 3: Chairman synthesizes final response
+
+        Args:
+            query: Original user query
+            stage1_results: Individual responses
+            stage2_results: Rankings
+            chairman_model: Model ID for chairman
+
+        Yields:
+            Events: stage3_start, stage3_complete
+        """
+        yield {"type": "stage3_start", "chairman": chairman_model}
+
+        # Build context
+        stage1_text = "\n\n".join([
+            f"Model: {result['model_name']}\nResponse: {result['response']}"
+            for result in stage1_results
+        ])
+
+        stage2_text = "\n\n".join([
+            f"Model: {result['model_name']}\nRanking: {result['ranking']}"
+            for result in stage2_results
+        ])
+
+        chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+
+Original Question: {query}
+
+STAGE 1 - Individual Responses:
+{stage1_text}
+
+STAGE 2 - Peer Rankings:
+{stage2_text}
+
+Your task as Chairman is to synthesize all of this information into a single, comprehensive, accurate answer. Consider:
+- The individual responses and their insights
+- The peer rankings and what they reveal about quality
+- Any patterns of agreement or disagreement
+
+Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
+
+        messages = [{"role": "user", "content": chairman_prompt}]
+
+        try:
+            result = await self._call_model(chairman_model, messages, max_tokens=4096)
+            final_response = result.get("content", "")
+
+            yield {
+                "type": "stage3_complete",
+                "chairman": chairman_model,
+                "chairman_name": MODEL_PROFILES.get(chairman_model, {}).get("display_name", chairman_model),
+                "response": final_response
+            }
+
+        except Exception as e:
+            yield {
+                "type": "stage3_error",
+                "error": str(e),
+                "response": "Error: Unable to generate final synthesis."
+            }
+
+    async def run_council(
+        self,
+        query: str,
+        participants: List[str],
+        chairman_model: str = None,
+        max_tokens: int = 2048
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Run the complete 3-stage council process
+
+        Args:
+            query: User query
+            participants: List of model IDs to participate
+            chairman_model: Optional chairman model (defaults to first participant)
+            max_tokens: Max tokens per response
+
+        Yields:
+            All events from all stages
+        """
+        if not participants:
+            yield {"type": "error", "error": "No participants selected"}
+            return
+
+        chairman = chairman_model or participants[0]
+
+        yield {"type": "council_start", "participants": participants, "chairman": chairman}
+
+        # Stage 1: Collect responses (with streaming)
+        stage1_results = []
+        async for event in self.stage1_collect_responses(query, participants, max_tokens):
+            yield event
+            if event["type"] == "stage1_complete":
+                stage1_results = event["results"]
+
+        if not stage1_results:
+            yield {"type": "error", "error": "All models failed in Stage 1"}
+            return
+
+        # Stage 2: Collect rankings
+        stage2_results = []
+        label_to_model = {}
+        aggregate_rankings = []
+
+        async for event in self.stage2_collect_rankings(query, stage1_results, participants):
+            yield event
+            if event["type"] == "stage2_complete":
+                stage2_results = event["results"]
+                label_to_model = event["label_to_model"]
+                aggregate_rankings = event["aggregate_rankings"]
+
+        # Stage 3: Synthesize
+        async for event in self.stage3_synthesize(query, stage1_results, stage2_results, chairman):
+            yield event
+
+        yield {
+            "type": "council_complete",
+            "aggregate_rankings": aggregate_rankings
+        }

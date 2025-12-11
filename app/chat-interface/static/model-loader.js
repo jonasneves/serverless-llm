@@ -114,9 +114,9 @@ class ModelLoader {
   }
 
   /**
-   * Build orchestrator dropdown for Discussion mode
+   * Build chairman dropdown for Council mode
    */
-  buildOrchestratorDropdown(selectSelector) {
+  buildChairmanDropdown(selectSelector) {
     const select = document.querySelector(selectSelector);
     if (!select) {
       console.error('[ModelLoader] Select not found:', selectSelector);
@@ -155,8 +155,8 @@ class ModelLoader {
         const option = document.createElement('option');
         option.value = model.id;
         option.textContent = model.name;
-        // Default to gpt-5-nano if available
-        if (model.id === 'openai/gpt-5-nano') {
+        // Default to gpt-4o if available
+        if (model.id === 'openai/gpt-4o') {
           option.selected = true;
           defaultFound = true;
         }
@@ -174,7 +174,7 @@ class ModelLoader {
       }
     }
 
-    console.log('[ModelLoader] Built orchestrator dropdown:',
+    console.log('[ModelLoader] Built chairman dropdown:',
       `${localModels.length} local, ${apiModels.length} API, default: ${select.value}`);
   }
 

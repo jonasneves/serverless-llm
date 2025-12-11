@@ -390,7 +390,7 @@ class ModelSelector {
       el.className = `model-option ${isSelected ? 'selected' : ''}`;
 
       let statusClass = 'offline';
-      if (model.type === 'api') statusClass = 'online';
+      if (model.type === 'api') statusClass = 'api';  // API models get their own distinct color
       else if (model.status === 'online') statusClass = 'online';
       else if (model.status === 'checking') statusClass = 'checking';
 

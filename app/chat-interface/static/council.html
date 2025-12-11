@@ -1,11 +1,11 @@
 {% extends "layout.html" %}
 
-{% block title %}Roundtable{% endblock %}
-{% block subtitle %}Models collaborate through discussion{% endblock %}
+{% block title %}Council{% endblock %}
+{% block subtitle %}Anonymous peer review and democratic voting{% endblock %}
 
 {% block extra_css %}
 <style>
-  /* Page-specific styles for Discussion mode */
+  /* Page-specific styles for Council mode */
   :root {
     --qwen-color: #8B5CF6;
     --phi-color: #EC4899;
@@ -98,6 +98,29 @@
     line-height: 1.4;
   }
 
+  .council-credits {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .council-credits-text {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
+  .council-credits-text a {
+    color: var(--accent-color);
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+
+  .council-credits-text a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+  }
+
   .overview-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -115,88 +138,82 @@
     scroll-margin-top: 80px;
   }
 
-  .orchestrator-bar {
-    display: none;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 14px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-full);
-    font-size: 13px;
+  /* Chairman status bar - top sticky */
+  .chairman-status-bar {
     position: sticky;
-    top: 80px;
+    top: 64px;
     z-index: 100;
-    box-shadow: var(--shadow-sm);
-    width: fit-content;
-    margin: 0 auto;
-  }
-
-  .orchestrator-bar.visible {
-    display: inline-flex;
-  }
-
-  [data-theme="dark"] .orchestrator-bar {
     background: var(--bg-tertiary);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .orchestrator-bar-icon {
-    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 20px;
+    display: none;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    background: var(--accent-color);
-    border-radius: var(--radius-full);
-    color: white;
-    flex-shrink: 0;
-  }
-
-  .orchestrator-bar-icon svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  .orchestrator-bar-content {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .orchestrator-bar-label {
-    display: none;
-    /* Hide label to save space */
-  }
-
-  .orchestrator-bar-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-primary);
-    font-weight: 500;
+    gap: 12px;
     font-size: 13px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
 
-  .orchestrator-bar-model {
+  .chairman-status-bar.active {
+    display: flex;
+  }
+
+  [data-theme="dark"] .chairman-status-bar {
+    background: rgba(30, 30, 40, 0.95);
+    backdrop-filter: blur(8px);
+  }
+
+  .chairman-label {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .chairman-model {
     color: var(--accent-color);
     font-weight: 600;
   }
 
-  .orchestrator-bar-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-secondary);
+  .chairman-separator {
+    color: var(--border-color);
   }
 
-  .orchestrator-bar-spinner {
+  .chairman-action {
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chairman-spinner {
     width: 14px;
     height: 14px;
     border: 2px solid var(--border-color);
     border-top-color: var(--accent-color);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* Stage status in stage header */
+  .stage-status {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stage-status-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid transparent;
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
   }
 
   .analysis-card {
@@ -573,20 +590,20 @@
     margin: 16px 0;
   }
 
-  .orchestrator-control {
+  .chairman-control {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
   }
 
-  .orchestrator-control label {
+  .chairman-control label {
     font-size: 14px;
     color: var(--text-secondary);
     white-space: nowrap;
   }
 
-  .orchestrator-control select {
+  .chairman-control select {
     padding: 6px 10px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -969,22 +986,320 @@
     flex-direction: column;
     gap: 8px;
   }
+
+  /* Ranking items for Stage 2 aggregate display */
+  .rankings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+
+  .ranking-item:first-child {
+    border-color: var(--success-color);
+    background: rgba(5, 150, 105, 0.05);
+  }
+
+  .rank-badge {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent-color);
+    min-width: 32px;
+  }
+
+  .ranking-item:first-child .rank-badge {
+    color: var(--success-color);
+  }
+
+  .rank-model {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .rank-score {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .rank-votes {
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  /* Stage badge for response cards */
+  .stage-badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .stage-badge.generating {
+    background: rgba(2, 132, 199, 0.1);
+    color: var(--info-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stage-badge.complete {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+  }
+
+  .generating-spinner {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .streaming-cursor {
+    display: inline-block;
+    color: var(--accent-color);
+    animation: blink 1s step-end infinite;
+    margin-left: 1px;
+  }
+
+  @keyframes blink {
+    0%,
+    50% {
+      opacity: 1;
+    }
+    51%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .turn-card.streaming {
+    border-color: var(--info-color);
+    box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.1);
+  }
+
+  /* De-anonymized model references in rankings */
+  .ranking-card .turn-content strong {
+    color: var(--accent-color);
+  }
+
+  /* Horizontal scrollable grid styles */
+  .stage-content {
+    display: flex;
+    gap: 16px;
+    padding: 20px 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Center single cards in Stage 3 */
+  #stage3-content {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .stage-content::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .stage-content::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+  }
+
+  .stage-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+  }
+
+  .stage-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+  }
+
+  .response-card,
+  .ranking-card {
+    flex: 0 0 calc(33.33% - 11px);
+    min-width: 380px;
+    max-width: 500px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+  }
+
+  @media (max-width: 1400px) {
+    .response-card,
+    .ranking-card {
+      flex: 0 0 calc(50% - 8px);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .response-card,
+    .ranking-card {
+      flex: 0 0 calc(100% - 40px);
+      min-width: unset;
+    }
+  }
+
+  .response-card-header,
+  .ranking-card-header {
+    flex-shrink: 0;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .response-card-body,
+  .ranking-card-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .response-card-body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .response-card-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .response-card-body::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+  }
+
+  .ranking-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+  }
+
+  .ranking-badge.top-ranked {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+  }
+
+  /* Stage section headers */
+  .stage-section {
+    margin-top: 32px;
+  }
+
+  .stage-section:first-child {
+    margin-top: 0;
+  }
+
+  .stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: -4px;
+  }
+
+  [data-theme="dark"] .stage-header {
+    background: var(--bg-tertiary);
+  }
+
+  .stage-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stage-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .stage-nav-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stage-nav-btn:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+  }
+
+  .stage-nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .stage-counter {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 0 8px;
+  }
+
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script src="/static/model-selector.js?v={{ model_selector_js }}"></script>
 <script src="/static/model-loader.js?v={{ model_loader_js }}"></script>
-<script defer src="/static/roundtable.js?v={{ roundtable_js }}"></script>
+<script defer src="/static/council.js?v={{ council_js }}"></script>
 {% endblock %}
 
 {% block content %}
 <div class="scrollable-content">
   <div class="mode-overview-card">
-    <div class="mode-overview-title">Let models debate before answering</div>
+    <div class="mode-overview-title">Anonymous peer review and democratic voting</div>
     <p class="mode-overview-subtitle">
-      Pick any mix of local or API models and have an orchestrator coordinate a structured, turn-based
-      discussion before returning the final takeaways.
+      Models respond independently, then anonymously rank each other's work. A chairman model synthesizes
+      the final answer based on the collective rankings.
     </p>
 
     <div class="features-card">
@@ -996,31 +1311,34 @@
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
           <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
         </svg>
-        <span>Discussion Features</span>
+        <span>Council Process</span>
       </div>
       <ul class="features-list">
         <li>
           <span class="feature-bullet"></span>
           <div class="feature-item">
-            <strong>Real-time Streaming</strong>
-            <span class="feature-desc">Watch each model's reasoning unfold turn by turn</span>
+            <strong>Independent Responses</strong>
+            <span class="feature-desc">All models answer simultaneously without seeing each other</span>
           </div>
         </li>
         <li>
           <span class="feature-bullet"></span>
           <div class="feature-item">
-            <strong>Model Diversity</strong>
-            <span class="feature-desc">Mix local and API models for varied perspectives</span>
+            <strong>Anonymous Peer Review</strong>
+            <span class="feature-desc">Models rank responses blindly to prevent bias</span>
           </div>
         </li>
         <li>
           <span class="feature-bullet"></span>
           <div class="feature-item">
-            <strong>Turn-based Coordination</strong>
-            <span class="feature-desc">Orchestrator facilitates structured debate rounds</span>
+            <strong>Democratic Synthesis</strong>
+            <span class="feature-desc">Chairman compiles final answer using collective rankings</span>
           </div>
         </li>
       </ul>
+      <div class="council-credits">
+        <span class="council-credits-text">Inspired by <a href="https://github.com/karpathy/llm-council" target="_blank" rel="noopener noreferrer">Andrej Karpathy's LLM Council</a></span>
+      </div>
     </div>
 
     <div class="card-divider"></div>
@@ -1041,44 +1359,15 @@
   </div>
 
   <div class="discussion-area">
-    <!-- Orchestrator Status Bar (compact pill) -->
-    <div id="orchestratorBar" class="orchestrator-bar">
-      <div class="orchestrator-bar-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path
-            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
-          </path>
-        </svg>
-      </div>
-      <div class="orchestrator-bar-content">
-        <div class="orchestrator-bar-status">
-          <span class="orchestrator-bar-model" id="orchestratorModelName">Loading...</span>
-          <span class="orchestrator-bar-action" id="orchestratorAction">
-            <span class="orchestrator-bar-spinner"></span>
-            <span id="orchestratorActionText">Initializing...</span>
-          </span>
-        </div>
-      </div>
-      <button class="orchestrator-info-btn" type="button" aria-label="What does the orchestrator do?">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <div class="orchestrator-tooltip">
-          <strong>What does the orchestrator do?</strong>
-          <p class="orchestrator-tooltip-text">Coordinates the discussion via small API calls (~300 tokens each):</p>
-          <ul class="orchestrator-tooltip-list">
-            <li><strong>Analyzes</strong> your query and scores model expertise</li>
-            <li><strong>Evaluates</strong> each response for quality</li>
-            <li><strong>Synthesizes</strong> a plan for combining responses</li>
-          </ul>
-          <p class="orchestrator-tooltip-text">The orchestrator creates a synthesis plan that determines how to merge
-            the best parts of each model's response into the final answer.</p>
-        </div>
-      </button>
+    <!-- Chairman Status Bar - Top Sticky -->
+    <div id="chairmanStatusBar" class="chairman-status-bar">
+      <span class="chairman-label">Chairman</span>
+      <span class="chairman-model" id="chairmanModel">...</span>
+      <span class="chairman-separator">·</span>
+      <span class="chairman-action">
+        <span class="chairman-spinner"></span>
+        <span id="chairmanActionText">Initializing...</span>
+      </span>
     </div>
 
     <!-- Discussion Content -->
@@ -1104,10 +1393,10 @@
       <!-- Model chips populated by model-selector.js -->
     </div>
 
-    <!-- Orchestrator selector -->
-    <div class="orchestrator-control">
-      <label>Orchestrator:</label>
-      <select id="orchestratorModel">
+    <!-- Chairman selector -->
+    <div class="chairman-control">
+      <label>Chairman:</label>
+      <select id="chairmanModel">
         <option>Loading...</option>
       </select>
     </div>
@@ -1116,11 +1405,6 @@
 
     <div class="controls-secondary">
       <span id="participantCount" class="participant-count"><strong>0</strong> selected</span>
-      <div class="control-group">
-        <label>Rounds:</label>
-        <input type="number" id="discussionRounds" value="2" min="1" max="4" step="1" title="Discussion rounds"
-          class="input-narrow">
-      </div>
       <div class="control-group">
         <label>Tokens:</label>
         <input type="number" id="maxTokens" value="2048" min="256" max="4096" step="256">
@@ -1132,7 +1416,7 @@
   <div id="statusIndicator"></div>
 
   <div class="input-wrapper">
-    <textarea id="userInput" placeholder="Enter your question... Models will discuss together before responding."
+    <textarea id="userInput" placeholder="Enter your question... Models will respond and rank each other anonymously."
       rows="1"></textarea>
     <button id="sendBtn" class="send-btn" aria-label="Start discussion">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
