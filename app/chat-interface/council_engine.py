@@ -11,8 +11,43 @@ from typing import List, Dict, Any, AsyncGenerator, Tuple
 import asyncio
 import json
 import re
+import random
 from collections import defaultdict
 from model_profiles import MODEL_PROFILES
+
+# Pre-defined quip templates for faster response (used as fallback)
+CHAIRMAN_QUIP_TEMPLATES = {
+    "waiting": [
+        "Hmm, {model} is taking their time... probably consulting ancient scrolls.",
+        "{model} appears to be deep in thought. The gears are turning!",
+        "Waiting on {model}... they're crafting something special, I'm sure.",
+        "{model} is still cooking. Good things take time!",
+        "The suspense builds as we await {model}'s wisdom...",
+        "{model} seems to be having a philosophical moment.",
+        "Patience... {model} is working their magic.",
+    ],
+    "slow": [
+        "{model} is being extra thorough today. Respect the process!",
+        "Still waiting on {model}... they must be writing a novel.",
+        "{model} is fashionably late to the party.",
+        "The floor is still {model}'s... any moment now!",
+    ],
+    "first_done": [
+        "And {model} takes the lead! First one done.",
+        "{model} came in hot! Speed demon of the council.",
+        "Lightning fast! {model} is already finished.",
+    ],
+    "all_done": [
+        "All models have spoken! Let the deliberation begin.",
+        "The council has convened. All responses are in!",
+        "Excellent! Everyone's had their say. Time for judgment.",
+    ],
+    "ranking_wait": [
+        "The models are now judging each other... this should be interesting.",
+        "Anonymous peer review in progress. No one knows who wrote what!",
+        "Models are ranking responses. The democracy of AI at work.",
+    ],
+}
 
 
 class CouncilEngine:
@@ -35,6 +70,79 @@ class CouncilEngine:
         self.model_endpoints = model_endpoints
         self.github_token = github_token
         self.timeout = timeout
+        self._quip_cache = {}  # Cache for generated quips
+        self._last_quip_time = 0
+        self._quip_cooldown = 4.0  # Seconds between quips
+
+    def generate_quip(
+        self,
+        quip_type: str,
+        model_name: str = None,
+        topic: str = None,
+        waiting_models: List[str] = None
+    ) -> str:
+        """
+        Generate a chairman quip (template-based for fast response)
+        
+        Args:
+            quip_type: Type of quip (waiting, slow, first_done, all_done, ranking_wait)
+            model_name: Name of model being referenced
+            topic: Original query topic for context
+            waiting_models: List of models still working
+            
+        Returns:
+            A witty quip string
+        """
+        templates = CHAIRMAN_QUIP_TEMPLATES.get(quip_type, CHAIRMAN_QUIP_TEMPLATES["waiting"])
+        template = random.choice(templates)
+        
+        if model_name:
+            return template.format(model=model_name)
+        elif waiting_models and len(waiting_models) > 0:
+            # Pick a random waiting model to comment on
+            model = random.choice(waiting_models)
+            return template.format(model=model)
+        return template.format(model="the models")
+
+    async def generate_contextual_quip(
+        self,
+        chairman_model: str,
+        waiting_models: List[str],
+        topic: str,
+        completed_count: int,
+        total_count: int
+    ) -> str:
+        """
+        Generate an AI-powered contextual quip from the chairman
+        
+        This is more expensive (API call) but produces topic-aware humor.
+        Falls back to template if generation fails.
+        """
+        try:
+            # Build a fun prompt for the chairman
+            waiting_names = [MODEL_PROFILES.get(m, {}).get("display_name", m) for m in waiting_models]
+            waiting_list = ", ".join(waiting_names) if waiting_names else "the remaining models"
+            
+            quip_prompt = f"""You are the witty Chairman of an AI Council. The council is discussing: "{topic}"
+
+Currently {completed_count}/{total_count} models have responded. We're waiting on: {waiting_list}.
+
+Generate a single SHORT (under 15 words), witty, slightly humorous comment about waiting for these models. 
+Be playful but not mean. You can reference the topic if it's funny. Just output the quip, nothing else."""
+
+            messages = [{"role": "user", "content": quip_prompt}]
+            result = await self._call_model(chairman_model, messages, max_tokens=50)
+            quip = result.get("content", "").strip().strip('"').strip("'")
+            
+            # Validate the quip isn't too long
+            if len(quip) < 100 and len(quip) > 5:
+                return quip
+                
+        except Exception:
+            pass  # Fall through to template
+        
+        # Fallback to template
+        return self.generate_quip("waiting", waiting_models=waiting_models)
 
     def is_api_model(self, model_id: str) -> bool:
         """Check if a model is an API model (uses GitHub Models API)"""
@@ -506,20 +614,24 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         query: str,
         participants: List[str],
         chairman_model: str = None,
-        max_tokens: int = 2048
+        max_tokens: int = 2048,
+        enable_quips: bool = True
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Run the complete 3-stage council process
+        Run the complete 3-stage council process with chairman quips
 
         Args:
             query: User query
             participants: List of model IDs to participate
             chairman_model: Optional chairman model (defaults to first participant)
             max_tokens: Max tokens per response
+            enable_quips: Whether to emit chairman quips during waits
 
         Yields:
-            All events from all stages
+            All events from all stages, including chairman_quip events
         """
+        import time
+        
         if not participants:
             yield {"type": "error", "error": "No participants selected"}
             return
@@ -528,21 +640,57 @@ Provide a clear, well-reasoned final answer that represents the council's collec
 
         yield {"type": "council_start", "participants": participants, "chairman": chairman}
 
-        # Stage 1: Collect responses (with streaming)
+        # Track model completion for quips
+        completed_models = set()
+        active_models = set(participants)
+        last_quip_time = time.time()
+        first_model_done = False
+        
+        # Stage 1: Collect responses (with streaming and quips)
         stage1_results = []
         async for event in self.stage1_collect_responses(query, participants, max_tokens):
             yield event
-            if event["type"] == "stage1_complete":
+            
+            # Track completions
+            if event["type"] == "model_response":
+                completed_models.add(event["model_id"])
+                active_models.discard(event["model_id"])
+                
+                # Quip when first model finishes
+                if enable_quips and not first_model_done:
+                    first_model_done = True
+                    quip = self.generate_quip("first_done", model_name=event["model_name"])
+                    yield {"type": "chairman_quip", "quip": quip}
+                    last_quip_time = time.time()
+                    
+            elif event["type"] == "model_chunk" and enable_quips:
+                # Periodically emit waiting quips
+                current_time = time.time()
+                if current_time - last_quip_time > self._quip_cooldown and len(active_models) > 0 and len(completed_models) > 0:
+                    waiting_names = [MODEL_PROFILES.get(m, {}).get("display_name", m) for m in active_models]
+                    quip = self.generate_quip("waiting", waiting_models=waiting_names)
+                    yield {"type": "chairman_quip", "quip": quip}
+                    last_quip_time = current_time
+                    
+            elif event["type"] == "stage1_complete":
                 stage1_results = event["results"]
+                # Quip when all done
+                if enable_quips:
+                    quip = self.generate_quip("all_done")
+                    yield {"type": "chairman_quip", "quip": quip}
 
         if not stage1_results:
             yield {"type": "error", "error": "All models failed in Stage 1"}
             return
 
-        # Stage 2: Collect rankings
+        # Stage 2: Collect rankings (with quips)
         stage2_results = []
         label_to_model = {}
         aggregate_rankings = []
+        
+        if enable_quips:
+            quip = self.generate_quip("ranking_wait")
+            yield {"type": "chairman_quip", "quip": quip}
 
         async for event in self.stage2_collect_rankings(query, stage1_results, participants):
             yield event
@@ -559,3 +707,4 @@ Provide a clear, well-reasoned final answer that represents the council's collec
             "type": "council_complete",
             "aggregate_rankings": aggregate_rankings
         }
+
