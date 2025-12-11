@@ -48,10 +48,10 @@
           <div class="settings-card">
             <h3>API Models (Large Language Models)</h3>
             <p class="settings-description">
-              Enable large cloud-based models (GPT-4, DeepSeek R1, Llama 3.1 405B, etc.) in addition to the local small models (3-4B parameters).<br>
+              Large cloud-based models (GPT-4, DeepSeek R1, Llama 3.1 405B) enabled by default with free quota via GitHub Models.<br>
               <br>
               <strong>Local:</strong> Unlimited, private (3-4B params) <br>
-              <strong>API:</strong> Free quota via GitHub Models, powerful (70B+ params)
+              <strong>API:</strong> Free quota (default), powerful (70B+ params)
             </p>
             <label class="toggle-row">
               <span class="toggle-label">Enable API Models</span>
@@ -61,8 +61,8 @@
           </div>
 
           <div class="settings-card token-card" id="tokenSection">
-            <h3>GitHub Models API Token</h3>
-            <p class="settings-description">Use your GitHub token to access large language models (GPT-4, DeepSeek R1, Llama 405B). Free quota with rate limits.</p>
+            <h3>GitHub Models API Token (Optional)</h3>
+            <p class="settings-description">Default token (free quota) is provided. Optionally configure your own token for dedicated quota.</p>
             <div class="token-input-row">
               <input
                 type="password"
@@ -215,8 +215,9 @@
     apiModelsCheckbox = modal?.querySelector('#enableApiModels');
     if (!apiModelsCheckbox) return;
 
-    // Load saved state (default: false/disabled)
-    const savedState = localStorage.getItem(API_MODELS_STORAGE_KEY) === 'true';
+    // Load saved state (default: true/enabled with free quota)
+    const savedValue = localStorage.getItem(API_MODELS_STORAGE_KEY);
+    const savedState = savedValue === null ? true : savedValue === 'true';
     apiModelsCheckbox.checked = savedState;
     updateTokenSectionVisibility(savedState);
 
@@ -271,7 +272,10 @@
         localStorage.removeItem(TOKEN_STORAGE_KEY);
       }
     },
-    isApiModelsEnabled: () => localStorage.getItem(API_MODELS_STORAGE_KEY) === 'true',
+    isApiModelsEnabled: () => {
+      const saved = localStorage.getItem(API_MODELS_STORAGE_KEY);
+      return saved === null ? true : saved === 'true';
+    },
     setApiModelsEnabled: (enabled) => {
       localStorage.setItem(API_MODELS_STORAGE_KEY, enabled ? 'true' : 'false');
       if (apiModelsCheckbox) apiModelsCheckbox.checked = enabled;
