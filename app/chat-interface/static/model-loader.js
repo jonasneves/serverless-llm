@@ -156,7 +156,7 @@ class ModelLoader {
         option.value = model.id;
         option.textContent = model.name;
         // Default to gpt-5-nano if available
-        if (model.id === 'gpt-5-nano') {
+        if (model.id === 'openai/gpt-5-nano') {
           option.selected = true;
           defaultFound = true;
         }

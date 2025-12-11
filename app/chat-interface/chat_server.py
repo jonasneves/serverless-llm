@@ -1263,13 +1263,13 @@ async def stream_discussion_events(
     try:
         # Determine orchestrator model type
         api_models = [
-            'gpt-4.1', 'gpt-4o', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
-            'deepseek-v3-0324', 'cohere-command-r-plus-08-2024',
-            'llama-3.3-70b-instruct', 'llama-4-scout-17b-16e-instruct', 'meta-llama-3.1-405b-instruct'
+            'openai/gpt-4.1', 'openai/gpt-4o', 'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano',
+            'deepseek/deepseek-v3-0324', 'cohere/command-r-plus-08-2024',
+            'meta/llama-3.3-70b-instruct', 'meta/llama-4-scout-17b-16e-instruct', 'meta/llama-3.1-405b-instruct'
         ]
         local_models = list(MODEL_ENDPOINTS.keys())
 
-        selected_orchestrator = orchestrator_model or 'gpt-4o'
+        selected_orchestrator = orchestrator_model or 'openai/gpt-5-nano'
         is_api_model = selected_orchestrator in api_models
 
         if is_api_model:

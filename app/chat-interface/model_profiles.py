@@ -179,7 +179,7 @@ LLAMA_PROFILE = {
 # API Model Profiles (GitHub Models API)
 
 GPT4_1_PROFILE = {
-    "model_id": "gpt-4.1",
+    "model_id": "openai/gpt-4.1",
     "display_name": "GPT-4.1",
     "model_type": "api",
     "creator": "OpenAI",
@@ -205,7 +205,7 @@ GPT4_1_PROFILE = {
 }
 
 GPT4O_PROFILE = {
-    "model_id": "gpt-4o",
+    "model_id": "openai/gpt-4o",
     "display_name": "GPT-4o",
     "model_type": "api",
     "creator": "OpenAI",
@@ -231,7 +231,7 @@ GPT4O_PROFILE = {
 }
 
 GPT5_PROFILE = {
-    "model_id": "gpt-5",
+    "model_id": "openai/gpt-5",
     "display_name": "GPT-5",
     "model_type": "api",
     "creator": "OpenAI",
@@ -251,7 +251,7 @@ GPT5_PROFILE = {
 }
 
 GPT5_MINI_PROFILE = {
-    "model_id": "gpt-5-mini",
+    "model_id": "openai/gpt-5-mini",
     "display_name": "GPT-5 Mini",
     "model_type": "api",
     "creator": "OpenAI",
@@ -269,7 +269,7 @@ GPT5_MINI_PROFILE = {
 }
 
 GPT5_NANO_PROFILE = {
-    "model_id": "gpt-5-nano",
+    "model_id": "openai/gpt-5-nano",
     "display_name": "GPT-5 Nano",
     "model_type": "api",
     "creator": "OpenAI",
@@ -286,7 +286,7 @@ GPT5_NANO_PROFILE = {
 }
 
 COHERE_COMMAND_R_PLUS_PROFILE = {
-    "model_id": "cohere-command-r-plus-08-2024",
+    "model_id": "cohere/command-r-plus-08-2024",
     "display_name": "Cohere Command R+",
     "model_type": "api",
     "creator": "Cohere",
@@ -304,7 +304,7 @@ COHERE_COMMAND_R_PLUS_PROFILE = {
 }
 
 LLAMA_4_SCOUT_PROFILE = {
-    "model_id": "llama-4-scout-17b-16e-instruct",
+    "model_id": "meta/llama-4-scout-17b-16e-instruct",
     "display_name": "Llama 4 Scout 17B",
     "model_type": "api",
     "creator": "Meta",
@@ -321,7 +321,7 @@ LLAMA_4_SCOUT_PROFILE = {
 }
 
 LLAMA_3_1_405B_PROFILE = {
-    "model_id": "meta-llama-3.1-405b-instruct",
+    "model_id": "meta/llama-3.1-405b-instruct",
     "display_name": "Llama 3.1 405B",
     "model_type": "api",
     "creator": "Meta",
@@ -339,7 +339,7 @@ LLAMA_3_1_405B_PROFILE = {
 }
 
 DEEPSEEK_V3_PROFILE = {
-    "model_id": "deepseek-v3-0324",
+    "model_id": "deepseek/deepseek-v3-0324",
     "display_name": "DeepSeek V3",
     "model_type": "api",
     "creator": "DeepSeek",
@@ -365,7 +365,7 @@ DEEPSEEK_V3_PROFILE = {
 }
 
 LLAMA_33_70B_PROFILE = {
-    "model_id": "llama-3.3-70b-instruct",
+    "model_id": "meta/llama-3.3-70b-instruct",
     "display_name": "Llama 3.3 70B",
     "model_type": "api",
     "creator": "Meta",
@@ -604,16 +604,16 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 6
     "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 7
     # API models
-    "gpt-4.1": GPT4_1_PROFILE,
-    "gpt-4o": GPT4O_PROFILE,
-    "gpt-5": GPT5_PROFILE,
-    "gpt-5-mini": GPT5_MINI_PROFILE,
-    "gpt-5-nano": GPT5_NANO_PROFILE,
-    "deepseek-v3-0324": DEEPSEEK_V3_PROFILE,
-    "cohere-command-r-plus-08-2024": COHERE_COMMAND_R_PLUS_PROFILE,
-    "llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
-    "llama-4-scout-17b-16e-instruct": LLAMA_4_SCOUT_PROFILE,
-    "meta-llama-3.1-405b-instruct": LLAMA_3_1_405B_PROFILE,
+    "openai/gpt-4.1": GPT4_1_PROFILE,
+    "openai/gpt-4o": GPT4O_PROFILE,
+    "openai/gpt-5": GPT5_PROFILE,
+    "openai/gpt-5-mini": GPT5_MINI_PROFILE,
+    "openai/gpt-5-nano": GPT5_NANO_PROFILE,
+    "deepseek/deepseek-v3-0324": DEEPSEEK_V3_PROFILE,
+    "cohere/command-r-plus-08-2024": COHERE_COMMAND_R_PLUS_PROFILE,
+    "meta/llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
+    "meta/llama-4-scout-17b-16e-instruct": LLAMA_4_SCOUT_PROFILE,
+    "meta/llama-3.1-405b-instruct": LLAMA_3_1_405B_PROFILE,
 }
 
 
