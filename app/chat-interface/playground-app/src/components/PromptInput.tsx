@@ -13,17 +13,17 @@ export default function PromptInput({
   setInputFocused,
   onSendMessage,
 }: PromptInputProps) {
-  
+
   return (
-    <div 
+    <div
       className="fixed bottom-0 right-0 z-[100] pb-6 px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
       style={{
         left: '0', // Static left, independent of dock
       }}
     >
-      <div className="max-w-xl w-full pointer-events-auto">
+      <div className="max-w-3xl w-full pointer-events-auto">
         {/* Scenarios Ticker */}
-        <div 
+        <div
           className="mb-4 relative overflow-hidden h-6 w-full backdrop-blur-md bg-slate-900/40 rounded-lg border border-white/5"
           style={{
             maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
@@ -33,7 +33,7 @@ export default function PromptInput({
           <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-300 font-medium h-full px-4">
             {[...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS].map((s, i) => ( // Repeat for infinite scroll effect
               <div key={i} className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => {
                     if (inputRef.current) inputRef.current.value = s.prompt;
                     onSendMessage(s.prompt);

@@ -20,3 +20,9 @@ export const MODE_COLORS: Record<Mode, string> = {
   council: '#1e1b4b',    // Indigo 950
   roundtable: '#022c22', // Emerald 950
 };
+
+// Generation defaults - centralized for easy maintenance
+export const GENERATION_DEFAULTS = {
+  maxTokens: 1024,      // Reasonable default for comparison
+  temperature: 0.7,     // Balanced creativity/coherence
+};

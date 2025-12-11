@@ -39,10 +39,10 @@ export default function Header({
 
       {/* Center: Unified Title & Mode Toggle */}
       <div className="absolute left-1/2 -translate-x-1/2">
-        <div 
+        <div
           className="flex items-center p-1.5 rounded-xl border border-slate-700/40"
-          style={{ 
-            background: 'rgba(30, 41, 59, 0.8)', 
+          style={{
+            background: 'rgba(30, 41, 59, 0.8)',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
@@ -65,8 +65,8 @@ export default function Header({
                 left: mode === 'compare'
                   ? '4px'
                   : mode === 'council'
-                  ? 'calc((100% + 4px) / 3)'
-                  : 'calc((200% - 4px) / 3)',
+                    ? 'calc((100% + 4px) / 3)'
+                    : 'calc((200% - 4px) / 3)',
                 width: 'calc((100% - 8px) / 3)',
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.4))',
                 boxShadow: '0 2px 10px rgba(59, 130, 246, 0.2)',
@@ -78,15 +78,14 @@ export default function Header({
               <button
                 key={m}
                 onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(new Set()); setDragSelection(null); }}
-                className={`relative z-10 py-1.5 text-xs font-medium transition-colors duration-200 ${
-                  mode === m.toLowerCase()
+                className={`relative z-10 py-1.5 text-xs font-medium transition-colors duration-200 ${mode === m.toLowerCase()
                     ? 'text-white'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
-                style={{ 
+                  }`}
+                style={{
                   flex: 1,
-                  display: 'flex', 
-                  alignItems: 'center', 
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   textAlign: 'center',
                 }}
