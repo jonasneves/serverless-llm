@@ -39,13 +39,13 @@
   <script defer src="/static/content-formatter.js?v={{ content_formatter_js }}"></script>
   <script>
     // Smart dropdown positioning utility
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const dropdowns = document.querySelectorAll('.mode-dropdown');
-      
+
       dropdowns.forEach(dropdown => {
         const trigger = dropdown.querySelector('.dropdown-trigger');
         const menu = dropdown.querySelector('.dropdown-menu');
-        
+
         if (!trigger || !menu) return;
 
         // Position dropdown intelligently based on available space
@@ -57,10 +57,10 @@
           requestAnimationFrame(() => {
             const triggerRect = trigger.getBoundingClientRect();
             const viewportHeight = window.innerHeight;
-            
+
             // Get actual menu height if visible, otherwise estimate
             let menuHeight = menu.offsetHeight || 200;
-            
+
             // Calculate space above and below the trigger
             const spaceBelow = viewportHeight - triggerRect.bottom - 8; // 8px margin
             const spaceAbove = triggerRect.top - 8; // 8px margin
@@ -75,14 +75,14 @@
         // Trigger positioning on interaction events
         dropdown.addEventListener('mouseenter', positionDropdown);
         dropdown.addEventListener('focusin', positionDropdown);
-        
+
         // Reposition on window resize/scroll
         let resizeTimeout;
         window.addEventListener('resize', () => {
           clearTimeout(resizeTimeout);
           resizeTimeout = setTimeout(positionDropdown, 100);
         });
-        
+
         window.addEventListener('scroll', positionDropdown, { passive: true });
       });
     });
@@ -113,11 +113,11 @@
         <a href="/" class="mode-link {% if request.url.path == '/' %}active{% endif %}">
           Compare
         </a>
-        <a href="/roundtable" class="mode-link {% if request.url.path == '/roundtable' %}active{% endif %}">
-          Roundtable
-        </a>
         <a href="/council" class="mode-link {% if request.url.path == '/council' %}active{% endif %}">
           Council
+        </a>
+        <a href="/roundtable" class="mode-link {% if request.url.path == '/roundtable' %}active{% endif %}">
+          Roundtable
         </a>
         <a href="/autogen" class="mode-link {% if request.url.path == '/autogen' %}active{% endif %}">
           Agents
