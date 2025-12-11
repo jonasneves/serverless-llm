@@ -1713,7 +1713,12 @@
   </div>
 
   <div class="discussion-area">
-    <!-- Chairman Status Bar - Top Sticky -->
+    <!-- Compact Participant Status Strip - Sticky ABOVE chairman -->
+    <div id="participantStatusStrip" class="participant-status-strip">
+      <!-- Model status badges will be dynamically populated -->
+    </div>
+
+    <!-- Chairman Status Bar - Sticky below participant strip -->
     <div id="chairmanStatusBar" class="chairman-status-bar">
       <div class="chairman-bar-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
@@ -1753,14 +1758,6 @@
       </button>
       <!-- Chairman Quip Container - Speech bubble under the bar -->
       <div id="chairmanQuipContainer" class="chairman-quip-container"></div>
-    </div>
-
-    <!-- Legacy Chairman Quip Area (hidden, kept for compatibility) -->
-    <div id="chairmanQuipArea" class="chairman-quip-area"></div>
-
-    <!-- Compact Participant Status Strip -->
-    <div id="participantStatusStrip" class="participant-status-strip">
-      <!-- Model status badges will be dynamically populated -->
     </div>
 
     <!-- Discussion Content -->
