@@ -549,7 +549,7 @@ export default function Playground() {
               className="absolute transition-all duration-700 ease-out"
               style={{
                 transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,
-                zIndex: isExpanded ? 30 : isSelected ? 20 : isSpeaking ? 10 : 1,
+                zIndex: isExpanded ? 100 : isSelected ? 20 : isSpeaking ? 10 : 1,
                 left: '50%',
                 top: '50%',
               }}
@@ -586,6 +586,11 @@ export default function Playground() {
                     setSelectedCardIds(newSelection);
                   } else {
                     if (isCircle) {
+                      // Immediately raise z-index on click
+                      const cardElement = e.currentTarget.closest('.absolute');
+                      if (cardElement) {
+                        (cardElement as HTMLElement).style.zIndex = '100';
+                      }
                       setSpeaking(speaking === model.id ? null : model.id);
                       setExpanded(isExpanded ? null : model.id);
                     }
@@ -666,7 +671,7 @@ export default function Playground() {
                 <div
                   data-card
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-40 transition-all duration-300"
+                  className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl transition-all duration-300"
                   style={{
                     top: circlePos.y > 0 ? 'auto' : '100%',
                     bottom: circlePos.y > 0 ? '100%' : 'auto',
@@ -677,7 +682,8 @@ export default function Playground() {
                     background: 'rgba(15, 23, 42, 0.95)',
                     backdropFilter: 'blur(16px)',
                     border: `1px solid ${model.color}40`,
-                    boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${model.color}15`
+                    boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${model.color}15`,
+                    zIndex: 101
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
@@ -918,7 +924,6 @@ export default function Playground() {
               type="text"
               placeholder="Ask a question to compare model responses..."
               className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
-              style={{ caretColor: 'transparent' }}
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
             />
