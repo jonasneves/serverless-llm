@@ -209,13 +209,13 @@
     transform: rotate(180deg);
   }
 
-  /* Compact Card Mode */
+  /* Compact Card Mode - More compact like in reference images */
   .response-card.compact {
-    height: 280px;
+    height: 200px;
   }
 
   .response-card.compact .response-card-body {
-    max-height: 200px;
+    max-height: 140px;
     overflow: hidden;
     position: relative;
   }
@@ -226,7 +226,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    height: 40px;
     background: linear-gradient(transparent, var(--bg-secondary));
     pointer-events: none;
   }
@@ -234,11 +234,11 @@
   /* Expanded Card Mode */
   .response-card.expanded {
     height: auto;
-    max-height: 600px;
+    max-height: 500px;
   }
 
   .response-card.expanded .response-card-body {
-    max-height: 500px;
+    max-height: 400px;
     overflow-y: auto;
   }
 
@@ -246,9 +246,9 @@
     display: none;
   }
 
-  /* Ranking cards (Stage 2) - default height */
+  /* Ranking cards (Stage 2) - compact */
   .ranking-card {
-    height: 400px;
+    height: 300px;
   }
 
   .ranking-card .ranking-card-body {
@@ -1482,8 +1482,8 @@
   .response-card,
   .ranking-card {
     flex: 0 0 calc(33.33% - 11px);
-    min-width: 380px;
-    max-width: 500px;
+    min-width: 300px;
+    max-width: 420px;
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
@@ -1734,9 +1734,11 @@
           </ul>
         </div>
       </button>
+      <!-- Chairman Quip Container - Speech bubble under the bar -->
+      <div id="chairmanQuipContainer" class="chairman-quip-container"></div>
     </div>
 
-    <!-- Chairman Quip Area - Shows witty comments -->
+    <!-- Legacy Chairman Quip Area (hidden, kept for compatibility) -->
     <div id="chairmanQuipArea" class="chairman-quip-area"></div>
 
     <!-- Compact Participant Status Strip -->

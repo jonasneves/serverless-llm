@@ -41,33 +41,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (chairmanActionText) chairmanActionText.textContent = statusText;
   }
 
-  // Show a witty chairman quip with animation
+  // Show a witty chairman quip as a speech bubble under the status bar
+  let quipTimeout = null;
   function showChairmanQuip(quip) {
-    const quipArea = document.getElementById('chairmanQuipArea');
-    if (!quipArea) return;
+    const quipContainer = document.getElementById('chairmanQuipContainer');
+    if (!quipContainer) return;
 
-    // Clear any existing quip
-    quipArea.innerHTML = '';
-    quipArea.classList.remove('visible');
+    // Clear any existing timeout
+    if (quipTimeout) clearTimeout(quipTimeout);
 
-    // Create quip element
-    const quipEl = document.createElement('div');
-    quipEl.className = 'chairman-quip';
-    quipEl.innerHTML = `
-      <span class="quip-icon">💬</span>
-      <span class="quip-text">${quip}</span>
+    // Update quip content
+    quipContainer.innerHTML = `
+      <div class="chairman-quip">
+        <span class="quip-icon">💬</span>
+        <span class="quip-text">${quip}</span>
+      </div>
     `;
-    quipArea.appendChild(quipEl);
 
-    // Trigger animation
+    // Show with animation
     requestAnimationFrame(() => {
-      quipArea.classList.add('visible');
+      quipContainer.classList.add('visible');
     });
 
     // Auto-hide after a few seconds
-    setTimeout(() => {
-      quipArea.classList.remove('visible');
-    }, 4500);
+    quipTimeout = setTimeout(() => {
+      quipContainer.classList.remove('visible');
+    }, 5000);
   }
 
   // Initialize participant status strip with selected models
