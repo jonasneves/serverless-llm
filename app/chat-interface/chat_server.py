@@ -196,14 +196,26 @@ async def startup_event():
     else:
         logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
 
-    # Fetch capacity for each model and create semaphores
-    logger.info("Querying model capacities...")
+    # Fetch capacity and context length for each model
+    logger.info("Querying model capacities and context lengths...")
     for model_id, endpoint in MODEL_ENDPOINTS.items():
         capacity = await fetch_model_capacity(model_id, endpoint)
         MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(capacity)
 
+        # Also fetch context length
+        try:
+            client = HTTPClient.get_client()
+            details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
+            if details_response.status_code == 200:
+                details_data = details_response.json()
+                if "n_ctx" in details_data:
+                    LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
+                    logger.info(f"✓ {model_id}: n_ctx={details_data['n_ctx']}")
+        except Exception as e:
+            logger.warning(f"⚠️  {model_id}: failed to fetch n_ctx ({e})")
+
     if MODEL_SEMAPHORES:
-        logger.info(f"✓ Initialized semaphores for {len(MODEL_SEMAPHORES)} models")
+        logger.info(f"✓ Initialized {len(MODEL_SEMAPHORES)} models with live configurations")
 
 @app.on_event("shutdown")
 async def shutdown_event():

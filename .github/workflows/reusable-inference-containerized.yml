@@ -323,7 +323,11 @@ jobs:
           fi
 
           INSTANCES="${{ inputs.instances }}"
-          echo "Duration: ${DURATION_HOURS}h | Auto-restart: $AUTO_RESTART | Instances: $INSTANCES"
+          N_CTX="${{ inputs.n_ctx }}"
+          N_THREADS="${{ inputs.n_threads }}"
+          N_BATCH="${{ inputs.n_batch }}"
+          MAX_CONCURRENT="${{ inputs.max_concurrent }}"
+          echo "Duration: ${DURATION_HOURS}h | Auto-restart: $AUTO_RESTART | Instances: $INSTANCES | n_ctx: $N_CTX"
 
           while true; do
             ELAPSED=$(($(date +%s) - START_TIME))
@@ -357,7 +361,7 @@ jobs:
                     -H "Authorization: Bearer $PAT" \
                     -H "X-GitHub-Api-Version: 2022-11-28" \
                     https://api.github.com/repos/${{ github.repository }}/dispatches \
-                    -d "{\"event_type\":\"${{ inputs.restart_event_type }}\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$([ \"$AUTO_RESTART\" = \"true\" ] && echo \"true\" || echo \"false\"),\"instances\":\"$INSTANCES\"}}" \
+                    -d "{\"event_type\":\"${{ inputs.restart_event_type }}\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$([ \"$AUTO_RESTART\" = \"true\" ] && echo \"true\" || echo \"false\"),\"instances\":\"$INSTANCES\",\"n_ctx\":\"$N_CTX\",\"n_threads\":\"$N_THREADS\",\"n_batch\":\"$N_BATCH\",\"max_concurrent\":\"$MAX_CONCURRENT\"}}" \
                     -w "\nHTTP_STATUS:%{http_code}" 2>&1)
 
                   HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
