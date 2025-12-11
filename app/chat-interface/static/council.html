@@ -171,6 +171,78 @@
     animation: spin 1s linear infinite;
   }
 
+  /* Card Expand Button */
+  .card-expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    margin-left: auto;
+  }
+
+  .card-expand-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
+
+  .card-expand-btn .expand-icon {
+    transition: transform 0.3s ease;
+  }
+
+  .response-card.expanded .card-expand-btn .expand-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Compact Card Mode */
+  .response-card.compact {
+    height: 280px;
+  }
+
+  .response-card.compact .response-card-body {
+    max-height: 200px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .response-card.compact .response-card-body::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(transparent, var(--bg-secondary));
+    pointer-events: none;
+  }
+
+  /* Expanded Card Mode */
+  .response-card.expanded {
+    height: auto;
+    max-height: none;
+  }
+
+  .response-card.expanded .response-card-body {
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .response-card.expanded .response-card-body::after {
+    display: none;
+  }
+
+  /* Response card header flex layout */
+  .response-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
   .discussion-area {
     display: flex;
     flex-direction: column;
