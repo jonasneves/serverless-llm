@@ -393,6 +393,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setTimeout(() => hideOrchestratorBar(), 3000);
                 break;
 
+              case 'info':
+                console.info('[Roundtable]', event.message);
+                if (event.message.includes('quota')) {
+                  const infoDiv = document.createElement('div');
+                  infoDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404;';
+                  infoDiv.innerHTML = `<strong>ℹ️</strong> ${event.message}`;
+                  document.getElementById('discussion-container').prepend(infoDiv);
+                  setTimeout(() => infoDiv.remove(), 10000);
+                }
+                break;
+
               case 'error':
                 showError(event.error);
                 hideOrchestratorBar();

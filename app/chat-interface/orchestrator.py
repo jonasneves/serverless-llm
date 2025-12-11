@@ -220,7 +220,13 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                 if response.status_code == 429:
                     error_text = await response.aread()
                     rate_limit_reset = response.headers.get("x-ratelimit-reset")
-                    raise Exception(f"Rate limit exceeded. Reset at: {rate_limit_reset}")
+
+                    # Provide helpful message about default token
+                    quota_msg = ""
+                    if self.github_token == os.getenv("GH_MODELS_TOKEN"):
+                        quota_msg = " Configure your own token for dedicated quota."
+
+                    raise Exception(f"GitHub Models rate limit exceeded. Reset at: {rate_limit_reset}.{quota_msg}")
                 
                 if response.status_code != 200:
                     error_text = await response.aread()

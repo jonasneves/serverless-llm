@@ -171,7 +171,7 @@ async def startup_event():
     
     # Check for GitHub token (needed for Discussion/Agents)
     if os.getenv("GH_MODELS_TOKEN"):
-        logger.info("✓ GitHub Models token configured")
+        logger.info("✓ GitHub Models token configured (free quota)")
     else:
         logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
 
@@ -1279,6 +1279,10 @@ async def stream_discussion_events(
             if not token:
                 yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for API orchestrator. Please provide your token or contact the server admin.'})}\n\n"
                 return
+
+            # Warn if using server's default token
+            if not github_token and os.getenv("GH_MODELS_TOKEN"):
+                yield f"data: {json.dumps({'event': 'info', 'message': 'Using default GitHub Models token (free quota). Configure your own for dedicated quota.'})}\n\n"
 
             orchestrator = GitHubModelsOrchestrator(
                 github_token=token,

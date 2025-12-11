@@ -210,6 +210,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                   ${event.summary.agents_used ? `<div class="summary-item"><span>Agents:</span><span>${event.summary.agents_used.join(', ')}</span></div>` : ''}
                 `;
                 orchestrationResults.appendChild(summaryDiv);
+              } else if (event.event === 'info') {
+                console.info('[Orchestrator]', event.message);
+                if (event.message.includes('quota')) {
+                  const infoDiv = document.createElement('div');
+                  infoDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404;';
+                  infoDiv.innerHTML = `<strong>ℹ️</strong> ${event.message}`;
+                  orchestrationResults.prepend(infoDiv);
+                  setTimeout(() => infoDiv.remove(), 10000);
+                }
               } else if (event.event === 'error') {
                 console.error('Orchestration error:', event.error);
                 const errorDiv = document.createElement('div');

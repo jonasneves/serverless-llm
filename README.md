@@ -56,7 +56,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, GEMMA, R1QWEN, RNJ) |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for web interface |
 | `{MODEL}_API_URL` | Public URL for each model (e.g., `https://qwen.neevs.io`) |
-| `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents modes ([create token](https://github.com/settings/personal-access-tokens/new)) |
+| `GH_MODELS_TOKEN` | **[OPTIONAL]** GitHub token for Discussion/Agents modes. Default uses free quota ([create your own](https://github.com/settings/personal-access-tokens/new)) |
 
 ### 2. Create Cloudflare Tunnels
 
@@ -166,7 +166,7 @@ export PHI_API_URL=http://localhost:8001
 export LLAMA_API_URL=http://localhost:8002
 # ... add other models as needed
 
-# Optional: GitHub Models API token for Discussion/Agents modes
+# Optional: GitHub Models token for Discussion/Agents modes (uses free quota by default)
 export GH_MODELS_TOKEN=ghp_xxxxxxxxxxxxx
 
 # Start interface
