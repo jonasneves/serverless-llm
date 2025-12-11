@@ -602,10 +602,16 @@
   }
 
   .turn-card {
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition-all);
+  }
+
+  .turn-card:hover {
+    box-shadow: var(--shadow-md);
   }
 
   .turn-card.streaming {
