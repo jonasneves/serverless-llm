@@ -296,6 +296,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  // Toggle card expand/collapse
+  window.toggleCardExpand = function (modelId) {
+    const card = document.getElementById(`model-card-${modelId}`);
+    if (!card) return;
+
+    card.classList.toggle('compact');
+    card.classList.toggle('expanded');
+  };
+
   // Update stage counter
   function updateStageCounter(stageId, count) {
     const counter = document.getElementById(`${stageId}-counter`);
@@ -311,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const content = document.getElementById('stage1-content');
 
     const card = document.createElement('div');
-    card.className = 'turn-card response-card streaming';
+    card.className = 'turn-card response-card streaming compact';
     card.dataset.model = modelId;
     card.id = `model-card-${modelId}`;
     card.innerHTML = `
@@ -323,6 +332,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             Generating...
           </div>
         </div>
+        <button class="card-expand-btn" onclick="toggleCardExpand('${modelId}')" title="Expand/Collapse">
+          <svg class="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
       </div>
       <div class="response-card-body">
         <div class="turn-content"><span class="streaming-cursor">█</span></div>
