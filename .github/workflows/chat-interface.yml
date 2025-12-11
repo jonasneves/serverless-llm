@@ -101,7 +101,6 @@ jobs:
           LLAMA_API_URL: ${{ secrets.LLAMA_API_URL }}
           MISTRAL_API_URL: ${{ secrets.MISTRAL_API_URL }}
           GEMMA_API_URL: ${{ secrets.GEMMA_API_URL }}
-
           GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
         run: |
           docker run -d \

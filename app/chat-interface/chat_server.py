@@ -142,6 +142,27 @@ def validate_environment():
     logger.info("✓ Environment validation passed")
 
 
+async def fetch_model_capacity(model_id: str, endpoint: str) -> int:
+    """
+    Query a model's /health/details endpoint to get its max_concurrent capacity.
+    Returns the model's reported capacity, or a default of 1 if unavailable.
+    """
+    try:
+        client = HTTPClient.get_client()
+        response = await client.get(f"{endpoint}/health/details", timeout=5.0)
+        if response.status_code == 200:
+            data = response.json()
+            capacity = data.get("max_concurrent", 1)
+            logger.info(f"✓ {model_id}: max_concurrent={capacity}")
+            return capacity
+        else:
+            logger.warning(f"⚠️  {model_id}: health check returned {response.status_code}, using default capacity=1")
+            return 1
+    except Exception as e:
+        logger.warning(f"⚠️  {model_id}: failed to fetch capacity ({e}), using default capacity=1")
+        return 1
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize resources on startup."""
@@ -174,6 +195,15 @@ async def startup_event():
         logger.info("✓ GitHub Models token configured (free quota)")
     else:
         logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
+
+    # Fetch capacity for each model and create semaphores
+    logger.info("Querying model capacities...")
+    for model_id, endpoint in MODEL_ENDPOINTS.items():
+        capacity = await fetch_model_capacity(model_id, endpoint)
+        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(capacity)
+
+    if MODEL_SEMAPHORES:
+        logger.info(f"✓ Initialized semaphores for {len(MODEL_SEMAPHORES)} models")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -344,11 +374,9 @@ DEFAULT_MODEL_ID = next(
 )
 
 # Request queueing: limit concurrent requests per model to prevent overload
-# GitHub Actions runners have limited CPU (2 cores), so we limit to 1 concurrent request per model
-MODEL_SEMAPHORES = {
-    model_id: asyncio.Semaphore(1)
-    for model_id in MODEL_ENDPOINTS.keys()
-}
+# Semaphores are populated at startup based on each model's reported capacity
+# Models expose their max_concurrent via /health/details endpoint
+MODEL_SEMAPHORES: Dict[str, asyncio.Semaphore] = {}
 
 # Cache for live context lengths fetched from inference servers
 # Keys are model IDs, values are the actual n_ctx the server is running with
