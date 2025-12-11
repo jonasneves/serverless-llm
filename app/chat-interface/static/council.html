@@ -682,7 +682,7 @@
     color: var(--text-primary);
   }
 
-  .orchestrator-info-btn {
+  .chairman-info-btn {
     background: none;
     border: none;
     color: var(--text-tertiary);
@@ -697,17 +697,17 @@
     margin-left: 2px;
   }
 
-  .orchestrator-info-btn svg {
+  .chairman-info-btn svg {
     width: 14px;
     height: 14px;
   }
 
-  .orchestrator-info-btn:hover {
+  .chairman-info-btn:hover {
     color: var(--text-primary);
     background: var(--bg-tertiary);
   }
 
-  .orchestrator-tooltip {
+  .chairman-tooltip {
     display: none;
     position: absolute;
     top: calc(100% + 8px);
@@ -724,7 +724,7 @@
     z-index: 200;
   }
 
-  .orchestrator-tooltip::before {
+  .chairman-tooltip::before {
     content: '';
     position: absolute;
     top: -6px;
@@ -737,27 +737,27 @@
     transform: rotate(45deg);
   }
 
-  .orchestrator-info-btn:hover .orchestrator-tooltip {
+  .chairman-info-btn:hover .chairman-tooltip {
     display: block;
   }
 
-  .orchestrator-tooltip strong {
+  .chairman-tooltip strong {
     color: var(--text-primary);
   }
 
-  .orchestrator-tooltip-text {
+  .chairman-tooltip-text {
     margin: var(--space-2) 0 var(--space-2) 0;
   }
 
-  .orchestrator-tooltip-text:first-of-type {
+  .chairman-tooltip-text:first-of-type {
     margin-top: var(--space-2);
   }
 
-  .orchestrator-tooltip-text:last-of-type {
+  .chairman-tooltip-text:last-of-type {
     margin-bottom: 0;
   }
 
-  .orchestrator-tooltip-list {
+  .chairman-tooltip-list {
     margin: 0;
     padding-left: var(--space-4);
   }
@@ -808,7 +808,7 @@
     color: var(--text-primary);
   }
 
-  .token-summary-value.orchestrator {
+  .token-summary-value.chairman {
     color: var(--accent-color);
   }
 
@@ -959,7 +959,7 @@
     gap: 16px;
   }
 
-  .orchestrator-column {
+  .chairman-column {
     max-width: 320px;
     flex: 0 0 320px;
     border-left: 1px solid var(--border-color);
@@ -967,7 +967,7 @@
   }
 
   @media (max-width: 900px) {
-    .orchestrator-column {
+    .chairman-column {
       flex: 1 1 100%;
       border-left: none;
       padding-left: 0;
@@ -976,7 +976,7 @@
     }
   }
 
-  .orchestrator-column .config-group-label {
+  .chairman-column .config-group-label {
     margin-bottom: 8px;
   }
 
