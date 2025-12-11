@@ -939,7 +939,6 @@ export default function Playground() {
         inputFocused={inputFocused}
         setInputFocused={setInputFocused}
         onSendMessage={sendMessage}
-        mode={mode}
       />
 
       {/* Custom Context Menu */}

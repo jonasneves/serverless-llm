@@ -5,7 +5,6 @@ interface PromptInputProps {
   inputFocused: boolean;
   setInputFocused: (focused: boolean) => void;
   onSendMessage: (text: string) => void;
-  mode: string;
 }
 
 export default function PromptInput({
@@ -13,7 +12,6 @@ export default function PromptInput({
   inputFocused,
   setInputFocused,
   onSendMessage,
-  mode
 }: PromptInputProps) {
   
   return (
@@ -94,10 +92,7 @@ export default function PromptInput({
             </svg>
           </button>
         </div>
-        {/* Footer hint */}
-        <div className="mt-2 text-[10px] text-slate-400 w-fit mx-auto px-3 py-1 rounded-full backdrop-blur-md bg-slate-900/40 border border-white/5">
-          {mode !== 'compare' ? "Click on models to expand their responses" : "Showing all model responses"}
-        </div>
+
       </div>
     </div>
   );

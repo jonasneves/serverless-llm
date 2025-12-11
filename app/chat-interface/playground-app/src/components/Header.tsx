@@ -23,7 +23,7 @@ export default function Header({
 }: HeaderProps) {
   return (
     <div className="relative flex items-center justify-between mb-2 px-6 pt-6 z-50">
-      {/* Left: Logo */}
+      {/* Left: Dock Toggle Only */}
       <div className="flex items-center gap-3 flex-1">
         <button
           id="dockToggleBtn"
@@ -35,56 +35,66 @@ export default function Header({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <div>
-          <h1 className="text-lg font-semibold text-slate-100">Model Arena</h1>
-          <p className="text-xs text-slate-500">
-            {mode === 'compare' && 'Side-by-side response comparison'}
-            {mode === 'council' && 'Anonymous peer review & consensus'}
-            {mode === 'roundtable' && 'Multi-model collaborative discussion'}
-          </p>
-        </div>
       </div>
 
-      {/* Center: Mode Toggle */}
+      {/* Center: Unified Title & Mode Toggle */}
       <div className="absolute left-1/2 -translate-x-1/2">
-        <div className="relative flex p-1 rounded-xl" style={{ background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71, 85, 105, 0.4)', minWidth: '370px', width: '370px' }}>
-          {/* Sliding indicator */}
-          <div
-            className="absolute top-1 bottom-1 rounded-lg transition-all duration-300 ease-out"
-            style={{
-              left: mode === 'compare'
-                ? '4px'
-                : mode === 'council'
-                ? 'calc((100% + 4px) / 3)'
-                : 'calc((200% - 4px) / 3)',
-              width: 'calc((100% - 8px) / 3)',
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3))',
-              boxShadow: '0 4px 20px rgba(59, 130, 246, 0.2)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              zIndex: 0
-            }}
-          />
-          {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
-            <button
-              key={m}
-              onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(new Set()); setDragSelection(null); }}
-              className={`relative z-10 py-2 text-sm font-medium transition-colors duration-200 ${
-                mode === m.toLowerCase()
-                  ? 'text-white'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              style={{ 
-                flex: 1,
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                textAlign: 'center',
-                position: 'relative'
+        <div 
+          className="flex items-center p-1.5 rounded-xl border border-slate-700/40"
+          style={{ 
+            background: 'rgba(30, 41, 59, 0.8)', 
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+          }}
+        >
+          {/* Title */}
+          <div className="px-4 flex items-center gap-2">
+            <span className="font-bold text-slate-100 tracking-tight whitespace-nowrap">Model Arena</span>
+          </div>
+
+          {/* Divider */}
+          <div className="w-px h-5 bg-slate-700/50 mx-1"></div>
+
+          {/* Mode Toggle Track */}
+          <div className="relative flex p-1 rounded-lg bg-black/20" style={{ width: '320px' }}>
+            {/* Sliding indicator */}
+            <div
+              className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out"
+              style={{
+                left: mode === 'compare'
+                  ? '4px'
+                  : mode === 'council'
+                  ? 'calc((100% + 4px) / 3)'
+                  : 'calc((200% - 4px) / 3)',
+                width: 'calc((100% - 8px) / 3)',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.4))',
+                boxShadow: '0 2px 10px rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                zIndex: 0
               }}
-            >
-              <span style={{ width: '100%', textAlign: 'center' }}>{m}</span>
-            </button>
-          ))}
+            />
+            {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
+              <button
+                key={m}
+                onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(new Set()); setDragSelection(null); }}
+                className={`relative z-10 py-1.5 text-xs font-medium transition-colors duration-200 ${
+                  mode === m.toLowerCase()
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                style={{ 
+                  flex: 1,
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
