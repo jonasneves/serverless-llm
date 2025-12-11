@@ -76,10 +76,10 @@ export default function Playground() {
 
   const getGridPosition = (index: number): Position => {
     const cols = 3;
-    const cardWidth = 192; // w-48 = 12rem = 192px
+    const cardWidth = 256; // w-64 = 16rem = 256px
     const cardHeight = 200;
-    const gapX = 24; // Better spacing between cards
-    const gapY = 32;
+    const gapX = 24; // Consistent spacing between cards
+    const gapY = 24; // Same as gapX for consistent vertical spacing
     const row = Math.floor(index / cols);
     const col = index % cols;
     const totalWidth = (cardWidth + gapX) * cols - gapX;
@@ -309,17 +309,19 @@ export default function Playground() {
                   }
                 }}
                 className={`relative cursor-pointer transition-all duration-300 ease-out ${
-                  isCircle ? 'w-24 h-24 rounded-full' : 'w-48 rounded-xl'
+                  isCircle ? 'w-24 h-24 rounded-full' : 'w-64 rounded-xl'
                 }`}
                 style={{
-                  background: 'rgba(30, 41, 59, 0.6)',
-                  backdropFilter: 'blur(12px)',
+                  background: 'rgba(30, 41, 59, 0.85)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   border: `1px solid ${isSpeaking ? model.color : 'rgba(71, 85, 105, 0.5)'}`,
                   boxShadow: isSpeaking
                     ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
                     : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
                   transform: isSpeaking ? 'scale(1.1)' : 'scale(1)',
                   willChange: 'transform',
+                  ...(!isCircle && { height: '200px' }),
                 }}
                 onMouseEnter={(e) => {
                   if (!isSpeaking && !isCircle) {
@@ -334,12 +336,21 @@ export default function Playground() {
               >
                 {/* Grid mode content */}
                 {!isCircle && (
-                  <div className="p-4">
+                  <div style={{ 
+                    padding: '16px', 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    isolation: 'isolate',
+                    WebkitFontSmoothing: 'antialiased',
+                    MozOsxFontSmoothing: 'grayscale',
+                    textRendering: 'optimizeLegibility'
+                  }}>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-semibold text-slate-200">{model.name}</span>
                       <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{model.response.slice(0, 100)}...</p>
+                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">{model.response.slice(0, 100)}...</p>
                     <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
                       <div className="text-[10px] text-slate-500"><span className="text-slate-400">IN</span> 4</div>
                       <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
