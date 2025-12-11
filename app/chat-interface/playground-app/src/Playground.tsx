@@ -86,13 +86,18 @@ export default function Playground() {
 
         {/* Center: Mode Toggle */}
         <div className="absolute left-1/2 -translate-x-1/2">
-          <div className="relative flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71, 85, 105, 0.4)' }}>
+          <div className="relative flex p-1 rounded-xl" style={{ background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71, 85, 105, 0.4)' }}>
             {/* Sliding indicator */}
             <div
               className="absolute top-1 bottom-1 rounded-lg transition-all duration-300 ease-out"
               style={{
-                left: mode === 'compare' ? '4px' : mode === 'council' ? 'calc(33.33% + 2px)' : 'calc(66.66%)',
-                width: 'calc(33.33% - 6px)',
+                left: mode === 'compare'
+                  ? '4px'
+                  : mode === 'council'
+                  ? '33.33%'
+                  : '66.66%',
+                width: '33.33%',
+                transform: 'translateX(0)',
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3))',
                 boxShadow: '0 4px 20px rgba(59, 130, 246, 0.2)',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -103,7 +108,7 @@ export default function Playground() {
               <button
                 key={m}
                 onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(null); }}
-                className={`relative z-10 px-5 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                className={`relative z-10 px-5 py-2 text-sm font-medium transition-colors duration-200 ${
                   mode === m.toLowerCase()
                     ? 'text-white'
                     : 'text-slate-400 hover:text-slate-200'
