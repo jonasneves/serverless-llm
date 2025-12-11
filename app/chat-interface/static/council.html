@@ -77,22 +77,22 @@
     display: none;
   }
 
-  /* Compact Participant Status Strip - Sticky above chairman */
+  /* Compact Participant Status Strip - Sticky at top */
   .participant-status-strip {
     display: none;
     flex-wrap: wrap;
     justify-content: center;
     gap: 6px;
-    padding: 10px 16px;
+    padding: 8px 14px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-full);
     width: fit-content;
     max-width: 90%;
-    margin: 0 auto 8px auto;
+    margin: 0 auto;
     position: sticky;
-    top: 60px;
-    z-index: 101;
+    top: 56px;
+    z-index: 102;
     box-shadow: var(--shadow-sm);
   }
 
@@ -416,11 +416,11 @@
     border-radius: var(--radius-full);
     font-size: 13px;
     position: sticky;
-    top: 110px;
+    top: 100px;
     z-index: 100;
     box-shadow: var(--shadow-sm);
     width: fit-content;
-    margin: 0 auto;
+    margin: 8px auto 0 auto;
   }
 
   .chairman-status-bar.active {
