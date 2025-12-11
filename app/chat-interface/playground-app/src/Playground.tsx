@@ -76,9 +76,28 @@ export default function Playground() {
   const selectedModels = models.filter(m => selected.includes(m.id) && m.id !== chairman);
   const chairmanModel = models.find(m => m.id === chairman);
 
-  const getCirclePosition = (index: number, total: number): Position => {
-    const angle = (index * 360 / total) - 90;
+  const getCirclePosition = (index: number, total: number, currentMode: Mode): Position => {
     const radius = 155;
+
+    if (currentMode === 'council') {
+      // Semi-circle (Parliament style)
+      // Spread models across a ~220 degree arc to center them above the chairman
+      // Range 250-470 minus 90 gives 160 to 380 degrees (Left-ish to Right-ish over the top)
+      const startAngle = 250;
+      const endAngle = 470;
+      const angleRange = endAngle - startAngle;
+      const angle = (startAngle + (index * angleRange / (total - 1))) - 90; // -90 to rotate 0 to top
+
+      const rad = angle * Math.PI / 180;
+      return {
+        x: Math.cos(rad) * radius,
+        y: Math.sin(rad) * radius,
+        angle
+      };
+    }
+
+    // Roundtable (Full Circle - existing logic)
+    const angle = (index * 360 / total) - 90;
     const x = Math.cos(angle * Math.PI / 180) * radius;
     const y = Math.sin(angle * Math.PI / 180) * radius;
     return { x, y, angle };
@@ -381,7 +400,7 @@ export default function Playground() {
       >
         {/* Model cards - rendered for all modes with transitions */}
         {selectedModels.map((model, index) => {
-          const circlePos = getCirclePosition(index, selectedModels.length);
+          const circlePos = getCirclePosition(index, selectedModels.length, mode);
           const isCircle = mode !== 'compare';
           const isSpeaking = speaking === model.id;
           const isExpanded = expanded === model.id;
@@ -555,13 +574,11 @@ export default function Playground() {
                 </div>
               )}
 
-              {/* Connection line to chairman */}
-              {isSpeaking && isCircle && (
-                <svg
+                            {isSpeaking && mode !== 'compare' && (                <svg
                   className="absolute pointer-events-none"
                   style={{
-                    width: '400px',
-                    height: '400px',
+                    width: '800px',
+                    height: '800px',
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
@@ -575,10 +592,10 @@ export default function Playground() {
                     </linearGradient>
                   </defs>
                   <line
-                    x1="200"
-                    y1="200"
-                    x2={200 - circlePos.x}
-                    y2={200 - circlePos.y}
+                    x1="400"
+                    y1="400"
+                    x2={400 - circlePos.x}
+                    y2={400 + (mode === 'council' ? 155 : 0) - circlePos.y}
                     stroke={`url(#grad-${model.id})`}
                     strokeWidth="2"
                     strokeDasharray="6,4"
@@ -597,7 +614,9 @@ export default function Playground() {
             className="absolute z-20 transition-all duration-700 ease-out cursor-pointer"
             style={{
               opacity: 1,
-              transform: 'scale(1)',
+              transform: 'translate(-50%, -50%) scale(1)',
+              left: '50%',
+              top: mode === 'council' ? 'calc(50% + 155px)' : '50%', // Shift chairman down by radius in council mode
             }}
             onClick={(e) => {
               e.stopPropagation(); // Prevent background click handler from firing
