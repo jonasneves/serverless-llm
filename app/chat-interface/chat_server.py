@@ -1240,6 +1240,7 @@ async def chat_stream(request: MultiChatRequest):
 async def stream_discussion_events(
     query: str,
     max_tokens: int,
+    temperature: float = 0.7,
     orchestrator_model: Optional[str] = None,
     github_token: Optional[str] = None,
     turns: int = 2,
@@ -1347,6 +1348,7 @@ async def discussion_stream(request: DiscussionRequest):
         stream_discussion_events(
             request.query,
             request.max_tokens,
+            request.temperature,
             request.orchestrator_model,
             request.github_token,
             request.turns,
