@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tokenSection = document.getElementById('tokenSection');
   const githubToken = document.getElementById('githubToken');
   const chairmanStatusBar = document.getElementById('chairmanStatusBar');
-  const chairmanModelEl = document.getElementById('chairmanModel');
+  const chairmanModelDisplay = document.getElementById('chairmanModelDisplay');
   const chairmanActionText = document.getElementById('chairmanActionText');
   const participantCount = document.getElementById('participantCount');
   const settingsBtn = document.getElementById('settingsBtn');
@@ -27,8 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function showChairmanBar(modelId) {
     if (!chairmanStatusBar) return;
     const displayName = modelLoader.getDisplayName(modelId) || modelId;
-    const modelNameEl = chairmanStatusBar.querySelector('.chairman-model');
-    if (modelNameEl) modelNameEl.textContent = displayName;
+    if (chairmanModelDisplay) chairmanModelDisplay.textContent = displayName;
     chairmanStatusBar.classList.add('active');
   }
 
