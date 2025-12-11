@@ -35,7 +35,16 @@ export default function Playground() {
   const [expanded, setExpanded] = useState<number | string | null>(null);
   const [speaking, setSpeaking] = useState<number | null>(null);
   const [inputFocused, setInputFocused] = useState<boolean>(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<number>>(new Set());
+  const [dragSelection, setDragSelection] = useState<{
+    origin: { x: number; y: number };
+    current: { x: number; y: number };
+    active: boolean;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const visualizationAreaRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const suppressClickRef = useRef(false);
 
   // Autofocus input on mount and mode change
   useEffect(() => {
@@ -77,6 +86,157 @@ export default function Playground() {
   const chairmanSynthesis = "After considering all perspectives, the consensus emerges: model efficiency isn't just about size—it's about the intersection of architecture, data quality, and deployment constraints. Each approach offers valid trade-offs depending on use case requirements.";
 
   const bgClass = bgStyle === 'none' ? '' : `bg-${bgStyle}`;
+
+  // Normalize rectangle coordinates
+  const normalizeRect = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const left = Math.min(a.x, b.x);
+    const top = Math.min(a.y, b.y);
+    const right = Math.max(a.x, b.x);
+    const bottom = Math.max(a.y, b.y);
+    return {
+      left,
+      top,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top
+    };
+  };
+
+  // Calculate selection rectangle
+  const selectionRect = dragSelection && dragSelection.active
+    ? (() => {
+        const rect = normalizeRect(dragSelection.origin, dragSelection.current);
+        if (rect.width <= 0 || rect.height <= 0) {
+          return null;
+        }
+        return {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        };
+      })()
+    : null;
+
+  // Handle mouse down for selection box
+  useEffect(() => {
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return; // Only left mouse button
+      if (!visualizationAreaRef.current) return;
+      
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      
+      // Don't start selection if clicking on cards or interactive elements
+      const clickedOnCard = target.closest('[data-card]');
+      if (clickedOnCard) return;
+      
+      const clickedOnDashboard = visualizationAreaRef.current.contains(target);
+      if (!clickedOnDashboard) return;
+      
+      const bounds = visualizationAreaRef.current.getBoundingClientRect();
+      const point = {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top
+      };
+      
+      suppressClickRef.current = false;
+      setDragSelection({ origin: point, current: point, active: false });
+    };
+
+    window.addEventListener('mousedown', handleMouseDown, true);
+    return () => window.removeEventListener('mousedown', handleMouseDown, true);
+  }, []);
+
+  // Handle mouse move and mouse up for selection box
+  useEffect(() => {
+    if (!dragSelection) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!visualizationAreaRef.current) return;
+      
+      const bounds = visualizationAreaRef.current.getBoundingClientRect();
+      const point = {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top
+      };
+      
+      setDragSelection((state) => {
+        if (!state) return state;
+        const rect = normalizeRect(state.origin, point);
+        const active = state.active || rect.width > 4 || rect.height > 4;
+        return { origin: state.origin, current: point, active };
+      });
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (!visualizationAreaRef.current) {
+        setDragSelection(null);
+        return;
+      }
+
+      const bounds = visualizationAreaRef.current.getBoundingClientRect();
+      const point = {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top
+      };
+
+      const upTarget = event.target as HTMLElement | null;
+      const willTriggerCardClick = Boolean(upTarget && upTarget.closest('[data-card]'));
+
+      setDragSelection((state) => {
+        if (!state) return null;
+
+        const rect = normalizeRect(state.origin, point);
+        if (state.active && rect.width > 0 && rect.height > 0) {
+          const matched: number[] = [];
+          
+          // Check all model cards
+          for (const model of selectedModels) {
+            const cardElement = cardRefs.current.get(model.id);
+            if (!cardElement || !visualizationAreaRef.current) continue;
+            
+            const cardBounds = cardElement.getBoundingClientRect();
+            const containerBounds = visualizationAreaRef.current.getBoundingClientRect();
+            const cardRect = {
+              left: cardBounds.left - containerBounds.left,
+              right: cardBounds.right - containerBounds.left,
+              top: cardBounds.top - containerBounds.top,
+              bottom: cardBounds.bottom - containerBounds.top
+            };
+            
+            const intersects = !(
+              cardRect.right < rect.left ||
+              cardRect.left > rect.right ||
+              cardRect.bottom < rect.top ||
+              cardRect.top > rect.bottom
+            );
+            
+            if (intersects) {
+              matched.push(model.id);
+            }
+          }
+
+          setSelectedCardIds(new Set(matched));
+          suppressClickRef.current = willTriggerCardClick;
+        } else if (!state.active) {
+          // Click without drag - clear selection
+          setSelectedCardIds(new Set());
+        }
+
+        return null;
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragSelection, selectedModels]);
 
   return (
     <div
@@ -187,6 +347,7 @@ export default function Playground() {
 
       {/* Main visualization area */}
       <div 
+        ref={visualizationAreaRef}
         className={`relative ${mode === 'compare' ? 'min-h-[480px] py-8' : 'flex items-center justify-center'}`}
         style={mode === 'compare' ? {} : { height: '480px', minHeight: '480px', maxHeight: '100vh' }}
         onClick={(e) => {
@@ -197,6 +358,10 @@ export default function Playground() {
           if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
             setExpanded(null);
             setSpeaking(null);
+            if (!suppressClickRef.current) {
+              setSelectedCardIds(new Set());
+            }
+            suppressClickRef.current = false;
           }
         }}
       >
@@ -205,12 +370,17 @@ export default function Playground() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
             {selectedModels.map((model) => {
               const isExpanded = expanded === model.id;
+              const isSelected = selectedCardIds.has(model.id);
               return (
                 <div
                   key={model.id}
+                  ref={(el) => {
+                    if (el) cardRefs.current.set(model.id, el);
+                    else cardRefs.current.delete(model.id);
+                  }}
                   className="relative transition-all duration-300 ease-out"
                   style={{
-                    zIndex: isExpanded ? 30 : 1,
+                    zIndex: isExpanded ? 30 : isSelected ? 20 : 1,
                   }}
                 >
                   {/* Card */}
@@ -218,14 +388,34 @@ export default function Playground() {
                     data-card
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (suppressClickRef.current) {
+                        suppressClickRef.current = false;
+                        return;
+                      }
+                      const isMulti = e.metaKey || e.ctrlKey;
+                      if (isMulti) {
+                        const newSelection = new Set(selectedCardIds);
+                        if (newSelection.has(model.id)) {
+                          newSelection.delete(model.id);
+                        } else {
+                          newSelection.add(model.id);
+                        }
+                        setSelectedCardIds(newSelection);
+                      } else {
+                        setSelectedCardIds(new Set([model.id]));
+                      }
                     }}
                     className="relative cursor-pointer transition-all duration-300 ease-out w-full rounded-xl"
                     style={{
                       background: 'rgba(30, 41, 59, 0.85)',
                       backdropFilter: 'blur(8px)',
                       WebkitBackdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(71, 85, 105, 0.5)',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
+                      border: isSelected 
+                        ? `2px solid ${model.color}` 
+                        : '1px solid rgba(71, 85, 105, 0.5)',
+                      boxShadow: isSelected
+                        ? `0 0 20px ${model.color}40, 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)`
+                        : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
                       height: '200px',
                     }}
                     onMouseEnter={(e) => {
@@ -340,14 +530,19 @@ export default function Playground() {
           const circlePos = getCirclePosition(index, selectedModels.length);
           const isSpeaking = speaking === model.id;
           const isExpanded = expanded === model.id;
+          const isSelected = selectedCardIds.has(model.id);
 
           return (
             <div
               key={model.id}
+              ref={(el) => {
+                if (el) cardRefs.current.set(model.id, el);
+                else cardRefs.current.delete(model.id);
+              }}
               className="absolute transition-all duration-700 ease-out"
               style={{
                 transform: `translate(${circlePos.x}px, ${circlePos.y}px)`,
-                zIndex: isExpanded ? 30 : isSpeaking ? 10 : 1,
+                zIndex: isExpanded ? 30 : isSelected ? 20 : isSpeaking ? 10 : 1,
               }}
             >
               {/* Speaking glow effect */}
@@ -367,19 +562,39 @@ export default function Playground() {
                 data-card
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent background click handler from firing
-                  setSpeaking(speaking === model.id ? null : model.id);
-                  setExpanded(isExpanded ? null : model.id);
+                  if (suppressClickRef.current) {
+                    suppressClickRef.current = false;
+                    return;
+                  }
+                  const isMulti = e.metaKey || e.ctrlKey;
+                  if (isMulti) {
+                    const newSelection = new Set(selectedCardIds);
+                    if (newSelection.has(model.id)) {
+                      newSelection.delete(model.id);
+                    } else {
+                      newSelection.add(model.id);
+                    }
+                    setSelectedCardIds(newSelection);
+                  } else {
+                    setSpeaking(speaking === model.id ? null : model.id);
+                    setExpanded(isExpanded ? null : model.id);
+                    setSelectedCardIds(new Set([model.id]));
+                  }
                 }}
                 className="relative cursor-pointer transition-all duration-300 ease-out w-24 h-24 rounded-full"
                 style={{
                   background: 'rgba(30, 41, 59, 0.85)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
-                  border: `1px solid ${isSpeaking ? model.color : 'rgba(71, 85, 105, 0.5)'}`,
-                  boxShadow: isSpeaking
+                  border: isSelected
+                    ? `2px solid ${model.color}`
+                    : `1px solid ${isSpeaking ? model.color : 'rgba(71, 85, 105, 0.5)'}`,
+                  boxShadow: isSelected
+                    ? `0 0 30px ${model.color}50, inset 0 1px 1px rgba(255,255,255,0.1)`
+                    : isSpeaking
                     ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
                     : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
-                  transform: isSpeaking ? 'scale(1.1)' : 'scale(1)',
+                  transform: isSelected || isSpeaking ? 'scale(1.1)' : 'scale(1)',
                   willChange: 'transform',
                 }}
               >
@@ -463,6 +678,19 @@ export default function Playground() {
             </div>
           );
         })}
+
+        {/* Selection rectangle overlay */}
+        {selectionRect && (
+          <div
+            className="absolute pointer-events-none border-2 border-blue-400 bg-blue-400/10 z-50"
+            style={{
+              left: `${selectionRect.left}px`,
+              top: `${selectionRect.top}px`,
+              width: `${selectionRect.width}px`,
+              height: `${selectionRect.height}px`,
+            }}
+          />
+        )}
 
         {/* Connecting circle */}
         {mode !== 'compare' && (
@@ -558,6 +786,14 @@ export default function Playground() {
           overflow: hidden;
         }
       `}</style>
+      {dragSelection && (
+        <style>{`
+          * {
+            user-select: none;
+            -webkit-user-select: none;
+          }
+        `}</style>
+      )}
     </div>
   );
 }
