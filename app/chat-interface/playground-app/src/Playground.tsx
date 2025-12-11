@@ -243,7 +243,7 @@ export default function Playground() {
   return (
     <div
       ref={rootContainerRef}
-      className={`min-h-screen text-white p-6 relative ${bgClass}`}
+      className={`min-h-screen text-white p-6 pb-32 relative ${bgClass}`}
       style={{
         ...(bgStyle === 'none' ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' } : {}),
         ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})
@@ -354,8 +354,16 @@ export default function Playground() {
       {/* Main visualization area */}
       <div 
         ref={visualizationAreaRef}
-        className={`relative ${mode === 'compare' ? 'min-h-[480px] py-8' : 'flex items-center justify-center'}`}
-        style={mode === 'compare' ? {} : { height: '480px', minHeight: '480px', maxHeight: '100vh' }}
+        className={`relative w-full ${mode === 'compare' ? 'min-h-[480px] py-8' : ''}`}
+        style={mode === 'compare' ? {} : { 
+          height: '480px', 
+          minHeight: '480px', 
+          maxHeight: '100vh',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
         onClick={(e) => {
           // Deselect if clicking on the background (cards use stopPropagation to prevent this)
           const target = e.target as HTMLElement;
@@ -371,94 +379,216 @@ export default function Playground() {
           }
         }}
       >
-        {/* Compare mode - Responsive Grid */}
-        {mode === 'compare' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
-            {selectedModels.map((model) => {
-              const isExpanded = expanded === model.id;
-              const isSelected = selectedCardIds.has(model.id);
-              return (
+        {/* Model cards - rendered for all modes with transitions */}
+        {selectedModels.map((model, index) => {
+          const circlePos = getCirclePosition(index, selectedModels.length);
+          const isCircle = mode !== 'compare';
+          const isSpeaking = speaking === model.id;
+          const isExpanded = expanded === model.id;
+          const isSelected = selectedCardIds.has(model.id);
+
+          // Calculate grid position for compare mode
+          const cols = 3;
+          const cardWidth = 256;
+          const cardHeight = 200;
+          const gapX = 24;
+          const gapY = 24;
+          const row = Math.floor(index / cols);
+          const col = index % cols;
+          const totalWidth = (cardWidth + gapX) * cols - gapX;
+          const totalHeight = (cardHeight + gapY) * 2;
+          const gridX = mode === 'compare' ? col * (cardWidth + gapX) - totalWidth / 2 + cardWidth / 2 : 0;
+          const gridY = mode === 'compare' ? row * (cardHeight + gapY) - totalHeight / 2 + cardHeight / 2 : 0;
+
+          const pos = isCircle ? circlePos : { x: gridX, y: gridY, angle: 0 };
+
+          return (
+            <div
+              key={model.id}
+              ref={(el) => {
+                if (el) cardRefs.current.set(model.id, el);
+                else cardRefs.current.delete(model.id);
+              }}
+              className="absolute transition-all duration-700 ease-out"
+              style={{
+                transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,
+                zIndex: isExpanded ? 30 : isSelected ? 20 : isSpeaking ? 10 : 1,
+                left: '50%',
+                top: '50%',
+              }}
+            >
+              {/* Speaking glow effect */}
+              {isSpeaking && isCircle && (
                 <div
-                  key={model.id}
-                  ref={(el) => {
-                    if (el) cardRefs.current.set(model.id, el);
-                    else cardRefs.current.delete(model.id);
-                  }}
-                  className="relative transition-all duration-300 ease-out"
+                  className="absolute inset-0 rounded-full animate-pulse"
                   style={{
-                    zIndex: isExpanded ? 30 : isSelected ? 20 : 1,
+                    background: `radial-gradient(circle, ${model.color}40 0%, transparent 70%)`,
+                    transform: 'scale(2)',
+                    filter: 'blur(15px)'
                   }}
-                >
-                  {/* Card */}
-                  <div
-                    data-card
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (suppressClickRef.current) {
-                        suppressClickRef.current = false;
-                        return;
-                      }
-                      const isMulti = e.metaKey || e.ctrlKey;
-                      if (isMulti) {
-                        const newSelection = new Set(selectedCardIds);
-                        if (newSelection.has(model.id)) {
-                          newSelection.delete(model.id);
-                        } else {
-                          newSelection.add(model.id);
-                        }
-                        setSelectedCardIds(newSelection);
-                      } else {
-                        setSelectedCardIds(new Set([model.id]));
-                      }
-                    }}
-                    className="relative cursor-pointer transition-all duration-300 ease-out w-full rounded-xl"
-                    style={{
-                      background: 'rgba(30, 41, 59, 0.85)',
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                      border: isSelected 
-                        ? `2px solid ${model.color}` 
-                        : '1px solid rgba(71, 85, 105, 0.5)',
-                      boxShadow: isSelected
-                        ? `0 0 20px ${model.color}40, 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)`
-                        : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
-                      height: '200px',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.02)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                  >
-                    {/* Grid mode content */}
-                    <div style={{ 
-                      padding: '16px', 
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      isolation: 'isolate',
-                      WebkitFontSmoothing: 'antialiased',
-                      MozOsxFontSmoothing: 'grayscale',
-                      textRendering: 'optimizeLegibility'
-                    }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-semibold text-slate-200">{model.name}</span>
-                        <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">{model.response.slice(0, 100)}...</p>
-                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                        <div className="text-[10px] text-slate-500"><span className="text-slate-400">IN</span> 4</div>
-                        <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
-                        <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
-                      </div>
+                />
+              )}
+
+              {/* Card */}
+              <div
+                data-card
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (suppressClickRef.current) {
+                    suppressClickRef.current = false;
+                    return;
+                  }
+                  const isMulti = e.metaKey || e.ctrlKey;
+                  if (isMulti) {
+                    const newSelection = new Set(selectedCardIds);
+                    if (newSelection.has(model.id)) {
+                      newSelection.delete(model.id);
+                    } else {
+                      newSelection.add(model.id);
+                    }
+                    setSelectedCardIds(newSelection);
+                  } else {
+                    if (isCircle) {
+                      setSpeaking(speaking === model.id ? null : model.id);
+                      setExpanded(isExpanded ? null : model.id);
+                    }
+                    setSelectedCardIds(new Set([model.id]));
+                  }
+                }}
+                className={`relative cursor-pointer card-hover ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
+                style={{
+                  background: 'rgba(30, 41, 59, 0.85)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  border: isSelected 
+                    ? `2px solid ${model.color}` 
+                    : isCircle && isSpeaking
+                    ? `1px solid ${model.color}`
+                    : '1px solid rgba(71, 85, 105, 0.5)',
+                  boxShadow: isSelected
+                    ? `0 0 30px ${model.color}50, inset 0 1px 1px rgba(255,255,255,0.1)`
+                    : isCircle && isSpeaking
+                    ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
+                    : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
+                  transform: isSelected || (isCircle && isSpeaking) ? 'scale(1.1)' : 'scale(1)',
+                  width: isCircle ? '96px' : '256px',
+                  height: isCircle ? '96px' : '200px',
+                  borderRadius: isCircle ? '50%' : '12px',
+                  transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.7s cubic-bezier(0.4, 0, 0.2, 1), width 0.7s cubic-bezier(0.4, 0, 0.2, 1), height 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                {/* Grid mode content */}
+                {!isCircle && (
+                  <div style={{ 
+                    padding: '16px', 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    isolation: 'isolate',
+                    WebkitFontSmoothing: 'antialiased',
+                    MozOsxFontSmoothing: 'grayscale',
+                    textRendering: 'optimizeLegibility',
+                    opacity: isCircle ? 0 : 1,
+                    transition: 'opacity 0.3s ease-out'
+                  }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-semibold text-slate-200">{model.name}</span>
+                      <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">{model.response.slice(0, 100)}...</p>
+                    <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
+                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">IN</span> 4</div>
+                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
+                      <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
                     </div>
                   </div>
+                )}
+
+                {/* Circle mode content */}
+                {isCircle && (
+                  <div className="absolute inset-0 flex items-center justify-center" style={{
+                    opacity: isCircle ? 1 : 0,
+                    transition: 'opacity 0.3s ease-out'
+                  }}>
+                    <div className="text-center px-2">
+                      <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
+                      {isSpeaking && (
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
+                          <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
+                          <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Expanded response panel */}
+              {isExpanded && isCircle && (
+                <div
+                  data-card
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-40 transition-all duration-300"
+                  style={{
+                    top: circlePos.y > 0 ? 'auto' : '100%',
+                    bottom: circlePos.y > 0 ? '100%' : 'auto',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    marginTop: circlePos.y > 0 ? 0 : '12px',
+                    marginBottom: circlePos.y > 0 ? '12px' : 0,
+                    background: 'rgba(15, 23, 42, 0.95)',
+                    backdropFilter: 'blur(16px)',
+                    border: `1px solid ${model.color}40`,
+                    boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${model.color}15`
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
+                    <span className="text-xs font-semibold text-slate-300">{model.name}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">{model.response}</p>
+                  <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
+                    <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
+                    <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
+
+              {/* Connection line to chairman */}
+              {isSpeaking && isCircle && (
+                <svg
+                  className="absolute pointer-events-none"
+                  style={{
+                    width: '400px',
+                    height: '400px',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: -1
+                  }}
+                >
+                  <defs>
+                    <linearGradient id={`grad-${model.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor={model.color} stopOpacity="0.8" />
+                      <stop offset="100%" stopColor={model.color} stopOpacity="0.1" />
+                    </linearGradient>
+                  </defs>
+                  <line
+                    x1="200"
+                    y1="200"
+                    x2={200 - circlePos.x}
+                    y2={200 - circlePos.y}
+                    stroke={`url(#grad-${model.id})`}
+                    strokeWidth="2"
+                    strokeDasharray="6,4"
+                    className="animate-pulse"
+                  />
+                </svg>
+              )}
+            </div>
+          );
+        })}
 
         {/* Chairman in center */}
         {mode !== 'compare' && chairmanModel && (
@@ -531,159 +661,6 @@ export default function Playground() {
           </div>
         )}
 
-        {/* Model cards - Circle mode only (Compare mode handled above) */}
-        {mode !== 'compare' && selectedModels.map((model, index) => {
-          const circlePos = getCirclePosition(index, selectedModels.length);
-          const isSpeaking = speaking === model.id;
-          const isExpanded = expanded === model.id;
-          const isSelected = selectedCardIds.has(model.id);
-
-          return (
-            <div
-              key={model.id}
-              ref={(el) => {
-                if (el) cardRefs.current.set(model.id, el);
-                else cardRefs.current.delete(model.id);
-              }}
-              className="absolute transition-all duration-700 ease-out"
-              style={{
-                transform: `translate(${circlePos.x}px, ${circlePos.y}px)`,
-                zIndex: isExpanded ? 30 : isSelected ? 20 : isSpeaking ? 10 : 1,
-              }}
-            >
-              {/* Speaking glow effect */}
-              {isSpeaking && (
-                <div
-                  className="absolute inset-0 rounded-full animate-pulse"
-                  style={{
-                    background: `radial-gradient(circle, ${model.color}40 0%, transparent 70%)`,
-                    transform: 'scale(2)',
-                    filter: 'blur(15px)'
-                  }}
-                />
-              )}
-
-              {/* Card */}
-              <div
-                data-card
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent background click handler from firing
-                  if (suppressClickRef.current) {
-                    suppressClickRef.current = false;
-                    return;
-                  }
-                  const isMulti = e.metaKey || e.ctrlKey;
-                  if (isMulti) {
-                    const newSelection = new Set(selectedCardIds);
-                    if (newSelection.has(model.id)) {
-                      newSelection.delete(model.id);
-                    } else {
-                      newSelection.add(model.id);
-                    }
-                    setSelectedCardIds(newSelection);
-                  } else {
-                    setSpeaking(speaking === model.id ? null : model.id);
-                    setExpanded(isExpanded ? null : model.id);
-                    setSelectedCardIds(new Set([model.id]));
-                  }
-                }}
-                className="relative cursor-pointer transition-all duration-300 ease-out w-24 h-24 rounded-full"
-                style={{
-                  background: 'rgba(30, 41, 59, 0.85)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  border: isSelected
-                    ? `2px solid ${model.color}`
-                    : `1px solid ${isSpeaking ? model.color : 'rgba(71, 85, 105, 0.5)'}`,
-                  boxShadow: isSelected
-                    ? `0 0 30px ${model.color}50, inset 0 1px 1px rgba(255,255,255,0.1)`
-                    : isSpeaking
-                    ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
-                    : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
-                  transform: isSelected || isSpeaking ? 'scale(1.1)' : 'scale(1)',
-                  willChange: 'transform',
-                }}
-              >
-                {/* Circle mode content */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center px-2">
-                    <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-                    {isSpeaking && (
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
-                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
-                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Expanded response panel */}
-              {isExpanded && (
-                <div
-                  data-card
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-40 transition-all duration-300"
-                  style={{
-                    top: circlePos.y > 0 ? 'auto' : '100%',
-                    bottom: circlePos.y > 0 ? '100%' : 'auto',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    marginTop: circlePos.y > 0 ? 0 : '12px',
-                    marginBottom: circlePos.y > 0 ? '12px' : 0,
-                    background: 'rgba(15, 23, 42, 0.95)',
-                    backdropFilter: 'blur(16px)',
-                    border: `1px solid ${model.color}40`,
-                    boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${model.color}15`
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
-                    <span className="text-xs font-semibold text-slate-300">{model.name}</span>
-                  </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{model.response}</p>
-                  <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
-                    <div className="text-[10px] text-slate-500"><span className="text-slate-400">OUT</span> 128</div>
-                    <div className="text-[10px] text-slate-500"><span className="text-slate-400">TIME</span> 1.2s</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Connection line to chairman */}
-              {isSpeaking && (
-                <svg
-                  className="absolute pointer-events-none"
-                  style={{
-                    width: '400px',
-                    height: '400px',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: -1
-                  }}
-                >
-                  <defs>
-                    <linearGradient id={`grad-${model.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor={model.color} stopOpacity="0.8" />
-                      <stop offset="100%" stopColor={model.color} stopOpacity="0.1" />
-                    </linearGradient>
-                  </defs>
-                  <line
-                    x1="200"
-                    y1="200"
-                    x2={200 - circlePos.x}
-                    y2={200 - circlePos.y}
-                    stroke={`url(#grad-${model.id})`}
-                    strokeWidth="2"
-                    strokeDasharray="6,4"
-                    className="animate-pulse"
-                  />
-                </svg>
-              )}
-            </div>
-          );
-        })}
 
         {/* Selection rectangle overlay - positioned relative to root container */}
         {selectionRect && rootContainerRef.current && (
@@ -750,34 +727,43 @@ export default function Playground() {
         </div>
       )}
 
-      {/* Prompt input */}
-      <div className="mt-6 max-w-2xl mx-auto">
-        <div
-          className="rounded-xl p-4 transition-all duration-300"
-          style={{
-            background: 'rgba(30, 41, 59, 0.6)',
-            backdropFilter: 'blur(12px)',
-            border: inputFocused ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(71, 85, 105, 0.4)',
-            boxShadow: inputFocused
-              ? '0 4px 20px rgba(0,0,0,0.2), 0 0 20px rgba(59, 130, 246, 0.15)'
-              : '0 4px 20px rgba(0,0,0,0.2)'
-          }}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Ask a question to compare model responses..."
-            className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
-            style={{ caretColor: 'transparent' }}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-          />
+      {/* Prompt input - Sticky at bottom center */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-[100] pb-6 px-4 flex justify-center items-end pointer-events-none"
+        style={{
+          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.8) 50%, transparent 100%)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <div className="max-w-2xl w-full pointer-events-auto">
+          <div
+            className="rounded-xl p-4 transition-all duration-300"
+            style={{
+              background: 'rgba(30, 41, 59, 0.95)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: inputFocused ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(71, 85, 105, 0.4)',
+              boxShadow: inputFocused
+                ? '0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(59, 130, 246, 0.15)'
+                : '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Ask a question to compare model responses..."
+              className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
+              style={{ caretColor: 'transparent' }}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+            />
+          </div>
+          {/* Footer hint */}
+          <div className="text-center mt-2 text-[10px] text-slate-600">
+            {mode !== 'compare' ? "Click on models to expand their responses" : "Showing all model responses"}
+          </div>
         </div>
-      </div>
-
-      {/* Footer hint */}
-      <div className="text-center mt-4 text-[10px] text-slate-600">
-        {mode !== 'compare' ? "Click on models to expand their responses" : "Showing all model responses"}
       </div>
 
       <style>{`
@@ -790,6 +776,15 @@ export default function Playground() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+        .card-hover {
+          will-change: transform;
+        }
+        .card-hover:hover:not(.card-selected):not(.card-speaking) {
+          transform: scale(1.02) !important;
+        }
+        .card-hover.rounded-full:hover:not(.card-selected):not(.card-speaking) {
+          transform: scale(1.05) !important;
         }
       `}</style>
       {dragSelection && (
