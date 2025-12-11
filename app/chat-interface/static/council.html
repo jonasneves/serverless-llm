@@ -77,19 +77,28 @@
     display: none;
   }
 
-  /* Compact Participant Status Strip */
+  /* Compact Participant Status Strip - Sticky above chairman */
   .participant-status-strip {
     display: none;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 8px;
-    padding: 12px;
+    gap: 6px;
+    padding: 10px 16px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    width: 100%;
-    max-width: 700px;
-    margin: 0 auto;
+    border-radius: var(--radius-full);
+    width: fit-content;
+    max-width: 90%;
+    margin: 0 auto 8px auto;
+    position: sticky;
+    top: 60px;
+    z-index: 101;
+    box-shadow: var(--shadow-sm);
+  }
+
+  [data-theme="dark"] .participant-status-strip {
+    background: var(--bg-tertiary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
   .participant-status-strip.active {
@@ -218,16 +227,24 @@
     max-height: 140px;
     overflow: hidden;
     position: relative;
+    display: flex;
+    flex-direction: column-reverse;
   }
 
+  .response-card.compact .response-card-body .turn-content {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
+  /* Fade gradient at TOP to indicate more content above */
   .response-card.compact .response-card-body::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
     height: 40px;
-    background: linear-gradient(transparent, var(--bg-secondary));
+    background: linear-gradient(var(--bg-secondary), transparent);
     pointer-events: none;
   }
 
