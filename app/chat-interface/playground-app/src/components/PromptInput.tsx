@@ -1,4 +1,4 @@
-import { SCENARIOS } from '../constants';
+import { SUGGESTED_TOPICS } from '../constants';
 
 interface PromptInputProps {
   inputRef: React.RefObject<HTMLInputElement>;
@@ -6,7 +6,6 @@ interface PromptInputProps {
   setInputFocused: (focused: boolean) => void;
   onSendMessage: (text: string) => void;
   mode: string;
-  loadScenario: (responses: Record<string, string>) => void;
 }
 
 export default function PromptInput({
@@ -14,8 +13,7 @@ export default function PromptInput({
   inputFocused,
   setInputFocused,
   onSendMessage,
-  mode,
-  loadScenario
+  mode
 }: PromptInputProps) {
   
   return (
@@ -38,12 +36,12 @@ export default function PromptInput({
           }}
         >
           <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-400 font-medium">
-            {[...SCENARIOS, ...SCENARIOS, ...SCENARIOS].map((s, i) => ( // Repeat for infinite scroll effect
+            {[...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS].map((s, i) => ( // Repeat for infinite scroll effect
               <div key={i} className="flex items-center gap-2">
                 <button 
                   onClick={() => {
-                    loadScenario(s.responses);
-                    if (inputRef.current) inputRef.current.value = s.label;
+                    if (inputRef.current) inputRef.current.value = s.prompt;
+                    onSendMessage(s.prompt);
                   }}
                   className="hover:text-blue-400 transition-colors cursor-pointer px-1 py-0.5 rounded hover:bg-white/5"
                 >

@@ -142,26 +142,6 @@ export default function Playground() {
     return () => window.removeEventListener('click', handleClick);
   }, []);
 
-  const loadScenario = (responses: Record<string, string>) => {
-    // Clear any currently expanded/speaking models for a clean transition
-    setExpanded(null);
-    setSpeaking(null);
-
-    // Update model responses
-    setModelsData(prev => prev.map(m => ({
-      ...m,
-      response: responses[m.id] || "Thinking..."
-    })));
-
-    // Automatically expand the first model to show the typing effect and flowing line
-    if (modelsData.length > 0) {
-      const firstId = modelsData[0].id;
-      setExpanded(firstId);
-      setSpeaking(firstId);
-    }
-  };
-
-
   const [isGenerating, setIsGenerating] = useState(false);
 
   const sendMessage = async (text: string) => {
@@ -505,9 +485,17 @@ export default function Playground() {
               style={{ 
                 paddingLeft: '1.5rem', // Static padding, sidebar will overlay
                 paddingRight: '1.5rem',
-                paddingTop: '8rem', // Increased to push content further below header
+                paddingTop: '2rem', // Reduced from 4rem
               }}
             >
+        {/* Dock Backdrop */}
+        {showDock && (
+          <div 
+            className="fixed inset-0 z-[55] bg-black/10 backdrop-blur-[1px] transition-opacity duration-300"
+            onClick={() => setShowDock(false)}
+          />
+        )}
+
         {/* Model Dock (Left) */}
         <ModelDock 
           showDock={showDock}
@@ -529,9 +517,9 @@ export default function Playground() {
           // Base styles for all modes
           position: 'relative',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: mode === 'compare' ? 'flex-start' : 'center', // Top-align for grid to prevent upward growth
           justifyContent: 'center',
-          marginTop: '6rem', // Extra push down
+          // marginTop removed to pull content up
           border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
           borderRadius: isDraggingOver ? '24px' : '0px',
           
@@ -578,9 +566,9 @@ export default function Playground() {
           const row = Math.floor(index / cols);
           const col = index % cols;
           const totalWidth = (cardWidth + gapX) * cols - gapX;
-          const totalHeight = (cardHeight + gapY) * Math.ceil(selectedModels.length / cols); // Dynamic total height
+          // GridY: Start from top (0) + row offset. Do NOT center vertically to avoid overlapping header.
+          const gridY = mode === 'compare' ? row * (cardHeight + gapY) : 0;
           const gridX = mode === 'compare' ? col * (cardWidth + gapX) - totalWidth / 2 + cardWidth / 2 : 0;
-          const gridY = mode === 'compare' ? row * (cardHeight + gapY) - totalHeight / 2 + cardHeight / 2 : 0;
 
           const pos = isCircle ? circlePos : { x: gridX, y: gridY, angle: 0 };
 
@@ -602,10 +590,12 @@ export default function Playground() {
                 });
               }}
               style={{
-                transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,
+                transform: mode === 'compare' 
+                  ? `translate(calc(-50% + ${pos.x}px), ${pos.y}px)` 
+                  : `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,
                 zIndex: isExpanded ? 100 : isSelected ? 20 : isSpeaking ? 10 : 1,
                 left: '50%',
-                top: '50%',
+                top: mode === 'compare' ? '0' : '50%',
               }}
             >
               {/* Speaking glow effect */}
@@ -847,8 +837,10 @@ export default function Playground() {
                 <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Chairman</div>
                 <div className="text-sm font-semibold">{chairmanModel.name}</div>
                 <div className="flex items-center justify-center gap-1 mt-1">
-                  <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: chairmanModel.color }} />
-                  <span className="text-[10px] text-slate-500">Synthesizing</span>
+                  <div className={`w-1.5 h-1.5 rounded-full ${speaking === chairmanModel.id ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
+                  <span className="text-[10px] text-slate-500">
+                    {speaking === chairmanModel.id ? "Synthesizing" : isGenerating ? "Observing" : "Presiding"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -927,7 +919,6 @@ export default function Playground() {
         setInputFocused={setInputFocused}
         onSendMessage={sendMessage}
         mode={mode}
-        loadScenario={loadScenario}
       />
 
       {/* Custom Context Menu */}

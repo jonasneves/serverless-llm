@@ -6,11 +6,6 @@ export interface Model {
   type?: 'local' | 'api';
 }
 
-export interface Scenario {
-  label: string;
-  responses: Record<string, string>;
-}
-
 export type Mode = 'compare' | 'council' | 'roundtable';
 
 export interface Position {
