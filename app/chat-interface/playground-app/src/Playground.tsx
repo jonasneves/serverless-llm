@@ -160,22 +160,22 @@ export default function Playground() {
     setSelected(prev => [...prev, ...modelsToAdd]);
   };
   const [expanded, setExpanded] = useState<string | null>(null);
-	  const [speaking, setSpeaking] = useState<Set<string>>(new Set());
-	  const [inputFocused, setInputFocused] = useState<boolean>(false);
-	  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
-	  const [activeInspectorId, setActiveInspectorId] = useState<string | null>(null);
-	  const [dragSelection, setDragSelection] = useState<{
-	    origin: { x: number; y: number };
-	    current: { x: number; y: number };
-	    active: boolean;
-	  } | null>(null);
+  const [speaking, setSpeaking] = useState<Set<string>>(new Set());
+  const [inputFocused, setInputFocused] = useState<boolean>(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [activeInspectorId, setActiveInspectorId] = useState<string | null>(null);
+  const [dragSelection, setDragSelection] = useState<{
+    origin: { x: number; y: number };
+    current: { x: number; y: number };
+    active: boolean;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-	  const visualizationAreaRef = useRef<HTMLDivElement>(null);
-	  const rootContainerRef = useRef<HTMLDivElement>(null);
-	  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-	  const suppressClickRef = useRef(false);
-	  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
-	  const sessionModelIdsRef = useRef<string[]>([]);
+  const visualizationAreaRef = useRef<HTMLDivElement>(null);
+  const rootContainerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const suppressClickRef = useRef(false);
+  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
+  const sessionModelIdsRef = useRef<string[]>([]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId: string } | null>(null);
 
@@ -190,45 +190,45 @@ export default function Playground() {
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
   const [lastUserPrompt, setLastUserPrompt] = useState<string>('');
 
-	  const sendMessage = async (text: string) => {
-	    if (!text.trim() || selected.length === 0 || isGenerating) return;
-	    const sessionModelIds = selected.slice();
-	    sessionModelIdsRef.current = sessionModelIds;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || selected.length === 0 || isGenerating) return;
+    const sessionModelIds = selected.slice();
+    sessionModelIdsRef.current = sessionModelIds;
 
-	    setIsGenerating(true);
-	    setExpanded(null);
-	    setSpeaking(new Set(sessionModelIds)); // Mark all selected models as speaking
-	    setLastUserPrompt(text); // Store the prompt for synthesis
-	    setModeratorSynthesis(''); // Reset moderator synthesis
+    setIsGenerating(true);
+    setExpanded(null);
+    setSpeaking(new Set(sessionModelIds)); // Mark all selected models as speaking
+    setLastUserPrompt(text); // Store the prompt for synthesis
+    setModeratorSynthesis(''); // Reset moderator synthesis
 
-	    // Initialize execution time tracking for all selected models
-	    const startTime = performance.now();
-	    const initialTimes: Record<string, ExecutionTimeData> = {};
-	    sessionModelIds.forEach(modelId => {
-	      initialTimes[modelId] = { startTime };
-	    });
-	    setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
-	
-	    // Reset thinking state for streaming
-	    sessionModelIds.forEach(modelId => {
-	      thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
-	    });
+    // Initialize execution time tracking for all selected models
+    const startTime = performance.now();
+    const initialTimes: Record<string, ExecutionTimeData> = {};
+    sessionModelIds.forEach(modelId => {
+      initialTimes[modelId] = { startTime };
+    });
+    setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
 
-	    // Track which models have received their first token
-	    const firstTokenReceived = new Set<string>();
+    // Reset thinking state for streaming
+    sessionModelIds.forEach(modelId => {
+      thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
+    });
 
-	    // Reset responses for selected models
-	    setModelsData(prev => prev.map(m =>
-	      sessionModelIds.includes(m.id) ? { ...m, response: '', thinking: '' } : m
-	    ));
+    // Track which models have received their first token
+    const firstTokenReceived = new Set<string>();
 
-	    // Determine first active model for visualization if needed (optional)
-	    const firstActive = sessionModelIds[0];
-	    if (firstActive) {
-	      setExpanded(firstActive);
-	    }
+    // Reset responses for selected models
+    setModelsData(prev => prev.map(m =>
+      sessionModelIds.includes(m.id) ? { ...m, response: '', thinking: '' } : m
+    ));
 
-	    try {
+    // Determine first active model for visualization if needed (optional)
+    const firstActive = sessionModelIds[0];
+    if (firstActive) {
+      setExpanded(firstActive);
+    }
+
+    try {
       const response = await fetchChatStream({
         models: sessionModelIds,
         messages: [{ role: 'user', content: text }],
@@ -238,9 +238,9 @@ export default function Playground() {
       });
 
       await streamSseEvents(response, (data) => {
-	        if (data.event === 'token' && data.model_id) {
-	          const modelId = data.model_id as string;
-	          const now = performance.now();
+        if (data.event === 'token' && data.model_id) {
+          const modelId = data.model_id as string;
+          const now = performance.now();
 
           // Track first token time (Time To First Token - TTFT)
           if (!firstTokenReceived.has(modelId)) {
@@ -248,63 +248,63 @@ export default function Playground() {
             setExecutionTimes(prev => ({
               ...prev,
               [modelId]: { ...prev[modelId], firstTokenTime: now }
-	            }));
-	          }
+            }));
+          }
 
-	          const rawChunk = String(data.content ?? '');
-	          const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
-	          let textChunk = state.carry + rawChunk;
-	          state.carry = '';
+          const rawChunk = String(data.content ?? '');
+          const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
+          let textChunk = state.carry + rawChunk;
+          state.carry = '';
 
-	          const lastLt = textChunk.lastIndexOf('<');
-	          if (lastLt !== -1 && textChunk.length - lastLt < 8) {
-	            const tail = textChunk.slice(lastLt);
-	            if ('<think>'.startsWith(tail) || '</think>'.startsWith(tail)) {
-	              state.carry = tail;
-	              textChunk = textChunk.slice(0, lastLt);
-	            }
-	          }
+          const lastLt = textChunk.lastIndexOf('<');
+          if (lastLt !== -1 && textChunk.length - lastLt < 8) {
+            const tail = textChunk.slice(lastLt);
+            if ('<think>'.startsWith(tail) || '</think>'.startsWith(tail)) {
+              state.carry = tail;
+              textChunk = textChunk.slice(0, lastLt);
+            }
+          }
 
-	          let thinkingAdd = '';
-	          let answerAdd = '';
-	          let idx = 0;
-	          while (idx < textChunk.length) {
-	            if (!state.inThink) {
-	              const start = textChunk.indexOf('<think>', idx);
-	              if (start === -1) {
-	                answerAdd += textChunk.slice(idx);
-	                break;
-	              }
-	              answerAdd += textChunk.slice(idx, start);
-	              state.inThink = true;
-	              idx = start + 7;
-	            } else {
-	              const end = textChunk.indexOf('</think>', idx);
-	              if (end === -1) {
-	                thinkingAdd += textChunk.slice(idx);
-	                break;
-	              }
-	              thinkingAdd += textChunk.slice(idx, end);
-	              state.inThink = false;
-	              idx = end + 8;
-	            }
-	          }
+          let thinkingAdd = '';
+          let answerAdd = '';
+          let idx = 0;
+          while (idx < textChunk.length) {
+            if (!state.inThink) {
+              const start = textChunk.indexOf('<think>', idx);
+              if (start === -1) {
+                answerAdd += textChunk.slice(idx);
+                break;
+              }
+              answerAdd += textChunk.slice(idx, start);
+              state.inThink = true;
+              idx = start + 7;
+            } else {
+              const end = textChunk.indexOf('</think>', idx);
+              if (end === -1) {
+                thinkingAdd += textChunk.slice(idx);
+                break;
+              }
+              thinkingAdd += textChunk.slice(idx, end);
+              state.inThink = false;
+              idx = end + 8;
+            }
+          }
 
-	          thinkingStateRef.current[modelId] = state;
+          thinkingStateRef.current[modelId] = state;
 
-	          if (thinkingAdd || answerAdd) {
-	            setModelsData(prev => prev.map(m => {
-	              if (m.id === modelId) {
-	                return {
-	                  ...m,
-	                  response: m.response + answerAdd,
-	                  thinking: (m.thinking || '') + thinkingAdd,
-	                };
-	              }
-	              return m;
-	            }));
-	          }
-	        }
+          if (thinkingAdd || answerAdd) {
+            setModelsData(prev => prev.map(m => {
+              if (m.id === modelId) {
+                return {
+                  ...m,
+                  response: m.response + answerAdd,
+                  thinking: (m.thinking || '') + thinkingAdd,
+                };
+              }
+              return m;
+            }));
+          }
+        }
 
         // Track completion time when model finishes
         if (data.event === 'done' && data.model_id) {
@@ -322,22 +322,22 @@ export default function Playground() {
           });
         }
       });
-	    } catch (err) {
-	      console.error('Chat error:', err);
-	      setModelsData(prev => prev.map(m =>
-	        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
-	      ));
-	    } finally {
-	      // Mark end time for any models that didn't receive a 'done' event
-	      const finalTime = performance.now();
-	      setExecutionTimes(prev => {
-	        const updated = { ...prev };
-	        sessionModelIdsRef.current.forEach(modelId => {
-	          if (updated[modelId] && !updated[modelId].endTime) {
-	            updated[modelId] = { ...updated[modelId], endTime: finalTime };
-	          }
-	        });
-	        return updated;
+    } catch (err) {
+      console.error('Chat error:', err);
+      setModelsData(prev => prev.map(m =>
+        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
+      ));
+    } finally {
+      // Mark end time for any models that didn't receive a 'done' event
+      const finalTime = performance.now();
+      setExecutionTimes(prev => {
+        const updated = { ...prev };
+        sessionModelIdsRef.current.forEach(modelId => {
+          if (updated[modelId] && !updated[modelId].endTime) {
+            updated[modelId] = { ...updated[modelId], endTime: finalTime };
+          }
+        });
+        return updated;
       });
       setIsGenerating(false);
       setSpeaking(new Set()); // Clear speaking state
@@ -363,7 +363,8 @@ export default function Playground() {
       })
       .join('\n\n');
 
-    const synthesisPrompt = `You are the moderator synthesizing multiple AI model responses to a user's question.
+    const roleName = mode === 'council' ? 'chairman' : 'moderator';
+    const synthesisPrompt = `You are the ${roleName} synthesizing multiple AI model responses to a user's question.
 
 User's Question: "${userPrompt}"
 
@@ -400,26 +401,26 @@ Synthesis:`;
     }
   };
 
-	  // Effect to trigger moderator synthesis when all models complete (in Council/Roundtable mode)
-	  useEffect(() => {
-	    // Only in Council or Roundtable mode, after generation completes
-	    if (mode === 'compare' || !lastUserPrompt || !moderator) return;
+  // Effect to trigger moderator synthesis when all models complete (in Council/Roundtable mode)
+  useEffect(() => {
+    // Only in Council or Roundtable mode, after generation completes
+    if (mode === 'compare' || !lastUserPrompt || !moderator) return;
 
-	    const participantIds = sessionModelIdsRef.current.filter(id => id !== moderator && selected.includes(id));
-	    const participantModels = modelsData.filter(m => participantIds.includes(m.id));
-	    const allHaveResponses = participantModels.length > 0 &&
-	      participantModels.every(m => m.response && m.response.trim().length > 0);
-	    const allStoppedSpeaking = participantIds.every(id => !speaking.has(id));
+    const participantIds = sessionModelIdsRef.current.filter(id => id !== moderator && selected.includes(id));
+    const participantModels = modelsData.filter(m => participantIds.includes(m.id));
+    const allHaveResponses = participantModels.length > 0 &&
+      participantModels.every(m => m.response && m.response.trim().length > 0);
+    const allStoppedSpeaking = participantIds.every(id => !speaking.has(id));
 
-	    // Only synthesize if we haven't already and all models have responded
-	    if (allHaveResponses && allStoppedSpeaking && !moderatorSynthesis && !isSynthesizing) {
-	      const responses: Record<string, string> = {};
-	      participantModels.forEach(m => {
-	        responses[m.id] = m.response;
-	      });
-	      generateModeratorSynthesis(lastUserPrompt, responses);
-	    }
-	  }, [mode, modelsData, selected, moderator, lastUserPrompt, moderatorSynthesis, isSynthesizing, speaking]);
+    // Only synthesize if we haven't already and all models have responded
+    if (allHaveResponses && allStoppedSpeaking && !moderatorSynthesis && !isSynthesizing) {
+      const responses: Record<string, string> = {};
+      participantModels.forEach(m => {
+        responses[m.id] = m.response;
+      });
+      generateModeratorSynthesis(lastUserPrompt, responses);
+    }
+  }, [mode, modelsData, selected, moderator, lastUserPrompt, moderatorSynthesis, isSynthesizing, speaking]);
 
   // Handle Escape key to close dock and Delete/Backspace to remove selected models
   useEffect(() => {
@@ -474,10 +475,10 @@ Synthesis:`;
       wheelRafRef.current = requestAnimationFrame(step);
     };
 
-	    const handleWheel = (event: WheelEvent) => {
-	      const target = event.target as HTMLElement | null;
-	      // Let native scroll work inside text inputs
-	      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
+    const handleWheel = (event: WheelEvent) => {
+      const target = event.target as HTMLElement | null;
+      // Let native scroll work inside text inputs
+      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
 
       event.preventDefault();
       const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
@@ -511,30 +512,30 @@ Synthesis:`;
     localStorage.setItem('playground-bg-style', bgStyle);
   }, [bgStyle]);
 
-	  const cycleBgStyle = (direction: 'prev' | 'next') => {
-	    const currentIndex = BG_STYLES.indexOf(bgStyle);
-	    const newIndex = direction === 'next'
-	      ? (currentIndex + 1) % BG_STYLES.length
-	      : (currentIndex - 1 + BG_STYLES.length) % BG_STYLES.length;
-	    setBgStyle(BG_STYLES[newIndex]);
-	  };
+  const cycleBgStyle = (direction: 'prev' | 'next') => {
+    const currentIndex = BG_STYLES.indexOf(bgStyle);
+    const newIndex = direction === 'next'
+      ? (currentIndex + 1) % BG_STYLES.length
+      : (currentIndex - 1 + BG_STYLES.length) % BG_STYLES.length;
+    setBgStyle(BG_STYLES[newIndex]);
+  };
 
-	  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
-	  const moderatorModel = modelsData.find(m => m.id === moderator);
-	  const inspectorModels = modelsData.filter(m => selectedCardIds.has(m.id));
+  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
+  const moderatorModel = modelsData.find(m => m.id === moderator);
+  const inspectorModels = modelsData.filter(m => selectedCardIds.has(m.id));
 
-	  useEffect(() => {
-	    if (inspectorModels.length === 0) {
-	      if (activeInspectorId !== null) setActiveInspectorId(null);
-	      return;
-	    }
-	    if (!activeInspectorId || !selectedCardIds.has(activeInspectorId)) {
-	      setActiveInspectorId(inspectorModels[0].id);
-	    }
-	  }, [inspectorModels.length, selectedCardIds, activeInspectorId]);
+  useEffect(() => {
+    if (inspectorModels.length === 0) {
+      if (activeInspectorId !== null) setActiveInspectorId(null);
+      return;
+    }
+    if (!activeInspectorId || !selectedCardIds.has(activeInspectorId)) {
+      setActiveInspectorId(inspectorModels[0].id);
+    }
+  }, [inspectorModels.length, selectedCardIds, activeInspectorId]);
 
-	  // Dynamic layout radius calculation
-	  const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
+  // Dynamic layout radius calculation
+  const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
 
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'council') {
@@ -597,12 +598,12 @@ Synthesis:`;
 
   // Handle mouse down for selection box
   useEffect(() => {
-	    const handleMouseDown = (event: MouseEvent) => {
-	      if (event.button !== 0) return; // Only left mouse button
-	      if (!rootContainerRef.current || !visualizationAreaRef.current) return;
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return; // Only left mouse button
+      if (!rootContainerRef.current || !visualizationAreaRef.current) return;
 
-	      const target = event.target as HTMLElement | null;
-	      if (!target) return;
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
 
       // Don't start selection if clicking on cards, buttons, inputs, or other interactive elements
       const clickedOnCard = target.closest('[data-card]');
@@ -611,21 +612,21 @@ Synthesis:`;
       if (clickedOnCard || clickedOnInteractive || clickedOnDraggable) return;
 
       // Only allow selection within the root container
-	      const clickedOnContainer = rootContainerRef.current.contains(target);
-	      if (!clickedOnContainer) return;
+      const clickedOnContainer = rootContainerRef.current.contains(target);
+      if (!clickedOnContainer) return;
 
-	      // Stop any scroll inertia so selection origin stays under cursor.
-	      arenaTargetYRef.current = arenaOffsetYRef.current;
-	      if (wheelRafRef.current != null) {
-	        cancelAnimationFrame(wheelRafRef.current);
-	        wheelRafRef.current = null;
-	      }
+      // Stop any scroll inertia so selection origin stays under cursor.
+      arenaTargetYRef.current = arenaOffsetYRef.current;
+      if (wheelRafRef.current != null) {
+        cancelAnimationFrame(wheelRafRef.current);
+        wheelRafRef.current = null;
+      }
 
-	      const rootBounds = rootContainerRef.current.getBoundingClientRect();
-	      const point = {
-	        x: event.clientX - rootBounds.left,
-	        y: event.clientY - rootBounds.top
-	      };
+      const rootBounds = rootContainerRef.current.getBoundingClientRect();
+      const point = {
+        x: event.clientX - rootBounds.left,
+        y: event.clientY - rootBounds.top
+      };
 
       // Prevent text selection when starting drag
       event.preventDefault();
@@ -714,18 +715,18 @@ Synthesis:`;
             }
           }
 
-	          setSelectedCardIds(new Set(matched));
-	          if (matched.length > 0) {
-	            setActiveInspectorId(prev => (prev && matched.includes(prev)) ? prev : matched[0]);
-	          } else {
-	            setActiveInspectorId(null);
-	          }
-	          suppressClickRef.current = willTriggerCardClick;
-	        } else if (!state.active) {
-	          // Click without drag - clear selection
-	          setSelectedCardIds(new Set());
-	          setActiveInspectorId(null);
-	        }
+          setSelectedCardIds(new Set(matched));
+          if (matched.length > 0) {
+            setActiveInspectorId(prev => (prev && matched.includes(prev)) ? prev : matched[0]);
+          } else {
+            setActiveInspectorId(null);
+          }
+          suppressClickRef.current = willTriggerCardClick;
+        } else if (!state.active) {
+          // Click without drag - clear selection
+          setSelectedCardIds(new Set());
+          setActiveInspectorId(null);
+        }
 
         return null;
       });
@@ -774,12 +775,12 @@ Synthesis:`;
 
       {/* Content Wrapper with Sidebar Offset */}
       <div
-	        style={{
-	          paddingLeft: '1.5rem', // Static padding, sidebar will overlay
-	          paddingRight: activeInspectorId && mode === 'compare' ? '28rem' : '1.5rem',
-	          paddingTop: '4rem', // Reverted to 4rem
-	        }}
-	      >
+        style={{
+          paddingLeft: '1.5rem', // Static padding, sidebar will overlay
+          paddingRight: activeInspectorId && mode === 'compare' ? '28rem' : '1.5rem',
+          paddingTop: '4rem', // Reverted to 4rem
+        }}
+      >
         {/* Dock Backdrop */}
         {showDock && (
           <div
@@ -845,13 +846,13 @@ Synthesis:`;
           }}
         >
           {/* Model cards - rendered for all modes with transitions */}
-	          {selectedModels.map((model, index) => {
-	            const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
-	            const isCircle = mode !== 'compare';
-	            const isSpeaking = speaking.has(model.id); // Check set membership
-	            const isExpanded = expanded === model.id;
-	            const isSelected = selectedCardIds.has(model.id);
-	            const isDone = !isSpeaking && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
+          {selectedModels.map((model, index) => {
+            const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
+            const isCircle = mode !== 'compare';
+            const isSpeaking = speaking.has(model.id); // Check set membership
+            const isExpanded = expanded === model.id;
+            const isSelected = selectedCardIds.has(model.id);
+            const isDone = !isSpeaking && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
 
             // Calculate grid position for compare mode
             const cols = gridCols; // Use dynamic gridCols state
@@ -911,18 +912,18 @@ Synthesis:`;
                       suppressClickRef.current = false;
                       return;
                     }
-	                    const isMulti = e.metaKey || e.ctrlKey;
-	                    if (isMulti) {
-	                      const newSelection = new Set(selectedCardIds);
-	                      if (newSelection.has(model.id)) {
-	                        newSelection.delete(model.id);
-	                      } else {
-	                        newSelection.add(model.id);
-	                      }
-	                      setSelectedCardIds(newSelection);
-	                      setActiveInspectorId(model.id);
-	                    } else {
-	                      if (isCircle) {
+                    const isMulti = e.metaKey || e.ctrlKey;
+                    if (isMulti) {
+                      const newSelection = new Set(selectedCardIds);
+                      if (newSelection.has(model.id)) {
+                        newSelection.delete(model.id);
+                      } else {
+                        newSelection.add(model.id);
+                      }
+                      setSelectedCardIds(newSelection);
+                      setActiveInspectorId(model.id);
+                    } else {
+                      if (isCircle) {
                         // Immediately raise z-index on click
                         const cardElement = e.currentTarget.closest('.absolute');
                         if (cardElement) {
@@ -933,13 +934,13 @@ Synthesis:`;
                           if (next.has(model.id)) next.delete(model.id);
                           else next.add(model.id);
                           return next;
-	                        });
-	                        setExpanded(isExpanded ? null : model.id);
-	                      }
-	                      setSelectedCardIds(new Set([model.id]));
-	                      setActiveInspectorId(model.id);
-	                    }
-	                  }}
+                        });
+                        setExpanded(isExpanded ? null : model.id);
+                      }
+                      setSelectedCardIds(new Set([model.id]));
+                      setActiveInspectorId(model.id);
+                    }
+                  }}
                   className={`relative cursor-pointer card-hover ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
                   style={{
                     background: 'rgba(30, 41, 59, 0.85)',
@@ -1003,40 +1004,40 @@ Synthesis:`;
                     </div>
                   )}
 
-	                  {/* Circle mode content */}
-	                  {isCircle && (
-	                    <div className="absolute inset-0 flex items-center justify-center" style={{
-	                      opacity: isCircle ? 1 : 0,
-	                      transition: 'opacity 0.3s ease-out'
-	                    }}>
-	                      <div className="text-center px-2">
-	                        <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-	                        {isSpeaking && (
-	                          <div className="flex items-center justify-center gap-1 mt-1">
-	                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
-	                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
-	                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
-	                          </div>
-	                        )}
-	                        {!isSpeaking && isDone && (
-	                          <div className="flex items-center justify-center mt-1">
-	                            <svg
-	                              className="w-3 h-3"
-	                              viewBox="0 0 24 24"
-	                              fill="none"
-	                              stroke={model.color}
-	                              strokeWidth="3"
-	                              strokeLinecap="round"
-	                              strokeLinejoin="round"
-	                              style={{ opacity: 0.85 }}
-	                            >
-	                              <polyline points="20 6 9 17 4 12" />
-	                            </svg>
-	                          </div>
-	                        )}
-	                      </div>
-	                    </div>
-	                  )}
+                  {/* Circle mode content */}
+                  {isCircle && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{
+                      opacity: isCircle ? 1 : 0,
+                      transition: 'opacity 0.3s ease-out'
+                    }}>
+                      <div className="text-center px-2">
+                        <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
+                        {isSpeaking && (
+                          <div className="flex items-center justify-center gap-1 mt-1">
+                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
+                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
+                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
+                          </div>
+                        )}
+                        {!isSpeaking && isDone && (
+                          <div className="flex items-center justify-center mt-1">
+                            <svg
+                              className="w-3 h-3"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke={model.color}
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ opacity: 0.85 }}
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Expanded response panel */}
@@ -1149,7 +1150,7 @@ Synthesis:`;
                 <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
 
                 <div className="relative text-center z-10">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Moderator</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">{mode === 'council' ? 'Chairman' : 'Moderator'}</div>
                   <div className="text-sm font-semibold">{moderatorModel.name}</div>
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <div className={`w-1.5 h-1.5 rounded-full ${isSynthesizing ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
@@ -1189,21 +1190,6 @@ Synthesis:`;
               )}
             </div>
           )}
-
-
-          {/* Selection rectangle overlay - positioned relative to root container */}
-          {selectionRect && rootContainerRef.current && (
-            <div
-              className="fixed pointer-events-none border-2 border-blue-400 bg-blue-400/10 z-50"
-              style={{
-                left: `${selectionRect.left + rootContainerRef.current.getBoundingClientRect().left}px`,
-                top: `${selectionRect.top + rootContainerRef.current.getBoundingClientRect().top}px`,
-                width: `${selectionRect.width}px`,
-                height: `${selectionRect.height}px`,
-              }}
-            />
-          )}
-
           {/* Connecting circle */}
           {mode !== 'compare' && (
             <svg
@@ -1235,6 +1221,19 @@ Synthesis:`;
         </div>
 
       </div>
+
+      {/* Selection rectangle overlay - positioned relative to root container */}
+      {selectionRect && (
+        <div
+          className="absolute pointer-events-none border-2 border-blue-400 bg-blue-400/10 z-50"
+          style={{
+            left: `${selectionRect.left}px`,
+            top: `${selectionRect.top}px`,
+            width: `${selectionRect.width}px`,
+            height: `${selectionRect.height}px`,
+          }}
+        />
+      )}
 
       {activeInspectorId && inspectorModels.length > 0 && (
         <ResponseInspector
@@ -1277,7 +1276,7 @@ Synthesis:`;
             <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
-            Promote to Moderator
+            Promote to {mode === 'council' ? 'Chairman' : 'Moderator'}
           </button>
         </div>
       )}
