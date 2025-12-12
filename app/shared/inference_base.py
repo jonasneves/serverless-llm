@@ -22,6 +22,11 @@ from pydantic import BaseModel
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
 
+# Clamp BLAS thread pools so llama.cpp controls CPU usage
+if not os.getenv("OPENBLAS_NUM_THREADS"):
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+if not os.getenv("OMP_NUM_THREADS"):
+    os.environ["OMP_NUM_THREADS"] = "1"
 
 @dataclass
 class ModelConfig:

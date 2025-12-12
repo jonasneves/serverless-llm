@@ -22,7 +22,7 @@ config = ModelConfig(
     default_file="Qwen3-4B-Q4_K_M.gguf",
     default_n_ctx=4096,
     default_n_threads=2,
-    n_batch=256,
+    n_batch=512,
 )
 
 app = create_inference_app(config)

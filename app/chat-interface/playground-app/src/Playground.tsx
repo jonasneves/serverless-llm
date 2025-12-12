@@ -22,6 +22,8 @@ interface ModelsApiResponse {
   models: ModelsApiModel[];
 }
 
+type ChatHistoryEntry = { role: 'user' | 'assistant'; content: string };
+
 export default function Playground() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
   const [mode, setMode] = useState<Mode>('compare');
@@ -60,6 +62,42 @@ export default function Playground() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastQuery, setLastQuery] = useState('');
+  const [conversationHistory, setConversationHistory] = useState<ChatHistoryEntry[]>([]);
+  const conversationHistoryRef = useRef<ChatHistoryEntry[]>([]);
+
+  const pushHistoryEntries = (entries: ChatHistoryEntry[]) => {
+    if (!entries.length) return;
+    const next = [...conversationHistoryRef.current, ...entries];
+    conversationHistoryRef.current = next;
+    setConversationHistory(next);
+  };
+
+  const historyToText = (history: ChatHistoryEntry[]) =>
+    history.map(entry => `${entry.role === 'user' ? 'User' : 'Models'}: ${entry.content}`).join('\n\n');
+
+  const modelIdToName = (id: string) => modelsData.find(m => m.id === id)?.name || id;
+
+  const summarizeSessionResponses = (responses: Record<string, string>, order: string[]) => {
+    const seen = new Set<string>();
+    const uniqueOrder = order.filter(Boolean).filter((id, idx, arr) => arr.indexOf(id) === idx);
+    const entries: Array<{ id: string; text: string }> = [];
+
+    uniqueOrder.forEach(id => {
+      const text = responses[id];
+      if (text && text.trim()) {
+        entries.push({ id, text: text.trim() });
+        seen.add(id);
+      }
+    });
+
+    Object.entries(responses).forEach(([id, text]) => {
+      if (seen.has(id) || !text || !text.trim()) return;
+      entries.push({ id, text: text.trim() });
+    });
+
+    if (!entries.length) return null;
+    return entries.map(({ id, text }) => `${modelIdToName(id)}:\n${text}`).join('\n\n');
+  };
 
   // Dynamic grid column calculation
   useEffect(() => {
@@ -522,7 +560,12 @@ export default function Playground() {
     });
   };
 
-  const sendMessage = async (text: string, previousResponses?: Record<string, string> | null, participantsOverride?: string[]) => {
+  const sendMessage = async (
+    text: string,
+    previousResponses?: Record<string, string> | null,
+    participantsOverride?: string[],
+    options?: { skipHistory?: boolean }
+  ) => {
     if (!text.trim() || (selected.length === 0 && !participantsOverride) || (isGenerating && !participantsOverride)) return;
     setLastQuery(text);
 

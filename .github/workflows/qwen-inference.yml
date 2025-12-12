@@ -37,7 +37,7 @@ on:
       n_batch:
         description: 'Batch size'
         required: false
-        default: '256'
+        default: '512'
         type: string
       max_concurrent:
         description: 'Max concurrent requests per instance'
