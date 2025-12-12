@@ -615,7 +615,8 @@ Synthesis:`;
       const clickedOnCard = target.closest('[data-card]');
       const clickedOnInteractive = target.closest('button, a, input, textarea, select, [role="button"]');
       const clickedOnDraggable = target.closest('[draggable]');
-      if (clickedOnCard || clickedOnInteractive || clickedOnDraggable) return;
+      const clickedInNoSelectArea = target.closest('[data-no-arena-scroll]');
+      if (clickedOnCard || clickedOnInteractive || clickedOnDraggable || clickedInNoSelectArea) return;
 
       // Only allow selection within the root container
       const clickedOnContainer = rootContainerRef.current.contains(target);
