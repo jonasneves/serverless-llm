@@ -9,6 +9,7 @@ interface HeaderProps {
   cycleBgStyle: (direction: 'prev' | 'next') => void;
   showDock: boolean;
   setShowDock: (show: boolean) => void;
+  onOpenSettings: () => void;
 }
 
 export default function Header({
@@ -19,7 +20,8 @@ export default function Header({
   setDragSelection,
   cycleBgStyle,
   showDock,
-  setShowDock
+  setShowDock,
+  onOpenSettings
 }: HeaderProps) {
   return (
     <div className="relative flex items-center justify-between mb-2 px-6 pt-6 z-50">
@@ -123,6 +125,7 @@ export default function Header({
 
         {/* Settings */}
         <button
+          onClick={onOpenSettings}
           className="w-8 h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors"
           title="Settings"
         >

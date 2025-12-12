@@ -7,6 +7,7 @@ import PromptInput from './components/PromptInput';
 import Header from './components/Header';
 import ExecutionTimeDisplay, { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import ResponseInspector from './components/ResponseInspector';
+import SettingsModal from './components/SettingsModal';
 import { fetchChatStream, streamSseEvents } from './utils/streaming';
 
 interface ModelsApiModel {
@@ -33,6 +34,14 @@ export default function Playground() {
   const arenaOffsetYRef = useRef(0);
   const arenaTargetYRef = useRef(0);
   const wheelRafRef = useRef<number | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [githubToken, setGithubToken] = useState<string>(() => {
+    try {
+      return localStorage.getItem('github_models_token') || '';
+    } catch {
+      return '';
+    }
+  });
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
@@ -94,6 +103,19 @@ export default function Playground() {
       })
       .catch(err => console.error("Failed to fetch models:", err));
   }, []);
+
+  // Persist optional GitHub token in browser (same key as chat mode)
+  useEffect(() => {
+    try {
+      if (githubToken) {
+        localStorage.setItem('github_models_token', githubToken);
+      } else {
+        localStorage.removeItem('github_models_token');
+      }
+    } catch {
+      // Ignore storage errors (e.g., private mode)
+    }
+  }, [githubToken]);
 
   // Available models are those in CONFIG but NOT in selected
   const availableModels = modelsData.filter(m => !selected.includes(m.id));
@@ -207,12 +229,13 @@ export default function Playground() {
 	    }
 
 	    try {
-	      const response = await fetchChatStream({
-	        models: sessionModelIds,
-	        messages: [{ role: 'user', content: text }],
-	        max_tokens: GENERATION_DEFAULTS.maxTokens,
-	        temperature: GENERATION_DEFAULTS.temperature
-	      });
+      const response = await fetchChatStream({
+        models: sessionModelIds,
+        messages: [{ role: 'user', content: text }],
+        max_tokens: GENERATION_DEFAULTS.maxTokens,
+        temperature: GENERATION_DEFAULTS.temperature,
+        github_token: githubToken || null
+      });
 
       await streamSseEvents(response, (data) => {
 	        if (data.event === 'token' && data.model_id) {
@@ -359,7 +382,8 @@ Synthesis:`;
         models: [moderator],
         messages: [{ role: 'user', content: synthesisPrompt }],
         max_tokens: GENERATION_DEFAULTS.maxTokens,
-        temperature: 0.5 // Slightly lower for more coherent synthesis
+        temperature: 0.5, // Slightly lower for more coherent synthesis
+        github_token: githubToken || null
       });
 
       await streamSseEvents(response, (data) => {
@@ -745,6 +769,7 @@ Synthesis:`;
         cycleBgStyle={cycleBgStyle}
         showDock={showDock}
         setShowDock={setShowDock}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
       {/* Content Wrapper with Sidebar Offset */}
@@ -1220,6 +1245,13 @@ Synthesis:`;
           speaking={speaking}
         />
       )}
+
+      <SettingsModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        token={githubToken}
+        setToken={setGithubToken}
+      />
 
       <PromptInput
         inputRef={inputRef}

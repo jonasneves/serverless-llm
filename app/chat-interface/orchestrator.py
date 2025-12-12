@@ -115,13 +115,21 @@ class GitHubModelsOrchestrator:
             api_url: GitHub Models API endpoint
             max_tokens: Maximum tokens per response (includes reasoning tokens for GPT-5 models)
         """
-        self.github_token = github_token or os.getenv("GH_MODELS_TOKEN")
+        default_env_token = (
+            os.getenv("GH_MODELS_TOKEN")
+            or os.getenv("GITHUB_TOKEN")
+            or os.getenv("GH_TOKEN")
+        )
+        self.github_token = github_token or default_env_token
+        self._default_env_token = default_env_token
         self.model_id = model_id or os.getenv("ORCHESTRATOR_MODEL", "gpt-4o")
         self.api_url = api_url
         self.max_tokens = max_tokens
 
         if not self.github_token:
-            raise ValueError("GitHub token required. Set GH_MODELS_TOKEN env var or pass github_token parameter.")
+            raise ValueError(
+                "GitHub token required. Set GH_MODELS_TOKEN (or GITHUB_TOKEN/GH_TOKEN) env var or pass github_token parameter."
+            )
 
     def _get_headers(self) -> Dict[str, str]:
         """Get authentication headers for GitHub Models API"""
@@ -219,7 +227,7 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
 
                     # Provide helpful message about default token
                     quota_msg = ""
-                    if self.github_token == os.getenv("GH_MODELS_TOKEN"):
+                    if self._default_env_token and self.github_token == self._default_env_token:
                         quota_msg = " Configure your own token for dedicated quota."
 
                     raise Exception(f"GitHub Models rate limit exceeded. Reset at: {rate_limit_reset}.{quota_msg}")

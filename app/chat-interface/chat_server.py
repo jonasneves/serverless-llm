@@ -48,6 +48,14 @@ from confession_engine import ConfessionEngine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def get_default_github_token() -> Optional[str]:
+    """Return default GitHub Models token from environment."""
+    return (
+        os.getenv("GH_MODELS_TOKEN")
+        or os.getenv("GITHUB_TOKEN")
+        or os.getenv("GH_TOKEN")
+    )
+
 def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
     """
     Sanitize error messages to hide raw HTML/technical details from users.
@@ -116,7 +124,7 @@ def validate_environment():
         warnings.append("No model endpoints explicitly configured - using defaults (localhost)")
     
     # Check GitHub token for Discussion/Agents modes
-    gh_token = os.getenv("GH_MODELS_TOKEN")
+    gh_token = get_default_github_token()
     if not gh_token:
         warnings.append("GH_MODELS_TOKEN not set - Discussion and Agents modes will have limited functionality")
     
@@ -191,8 +199,8 @@ async def startup_event():
         logger.info(f"○ Optional endpoints not set: {', '.join(missing)}")
     
     # Check for GitHub token (needed for Discussion/Agents)
-    if os.getenv("GH_MODELS_TOKEN"):
-        logger.info("✓ GitHub Models token configured (free quota)")
+    if get_default_github_token():
+        logger.info("✓ GitHub Models token configured")
     else:
         logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
 
@@ -1278,7 +1286,7 @@ async def chat_stream(request: MultiChatRequest):
     messages = serialize_messages(request.messages)
     
     # Get GitHub token from request or environment
-    github_token = request.github_token or os.getenv("GH_MODELS_TOKEN")
+    github_token = request.github_token or get_default_github_token()
 
     return StreamingResponse(
         stream_multiple_models(
