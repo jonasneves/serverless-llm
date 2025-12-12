@@ -6,6 +6,7 @@ import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
 import Header from './components/Header';
 import ExecutionTimeDisplay, { ExecutionTimeData } from './components/ExecutionTimeDisplay';
+import ResponseInspector from './components/ResponseInspector';
 import { fetchChatStream, streamSseEvents } from './utils/streaming';
 
 interface ModelsApiModel {
@@ -137,19 +138,21 @@ export default function Playground() {
     setSelected(prev => [...prev, ...modelsToAdd]);
   };
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [speaking, setSpeaking] = useState<Set<string>>(new Set());
-  const [inputFocused, setInputFocused] = useState<boolean>(false);
-  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
-  const [dragSelection, setDragSelection] = useState<{
-    origin: { x: number; y: number };
-    current: { x: number; y: number };
-    active: boolean;
-  } | null>(null);
+	  const [speaking, setSpeaking] = useState<Set<string>>(new Set());
+	  const [inputFocused, setInputFocused] = useState<boolean>(false);
+	  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+	  const [activeInspectorId, setActiveInspectorId] = useState<string | null>(null);
+	  const [dragSelection, setDragSelection] = useState<{
+	    origin: { x: number; y: number };
+	    current: { x: number; y: number };
+	    active: boolean;
+	  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const visualizationAreaRef = useRef<HTMLDivElement>(null);
-  const rootContainerRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const suppressClickRef = useRef(false);
+	  const visualizationAreaRef = useRef<HTMLDivElement>(null);
+	  const rootContainerRef = useRef<HTMLDivElement>(null);
+	  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+	  const suppressClickRef = useRef(false);
+	  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId: string } | null>(null);
 
@@ -176,18 +179,23 @@ export default function Playground() {
     // Initialize execution time tracking for all selected models
     const startTime = performance.now();
     const initialTimes: Record<string, ExecutionTimeData> = {};
-    selected.forEach(modelId => {
-      initialTimes[modelId] = { startTime };
-    });
-    setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
+	    selected.forEach(modelId => {
+	      initialTimes[modelId] = { startTime };
+	    });
+	    setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
+	
+	    // Reset thinking state for streaming
+	    selected.forEach(modelId => {
+	      thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
+	    });
 
-    // Track which models have received their first token
-    const firstTokenReceived = new Set<string>();
+	    // Track which models have received their first token
+	    const firstTokenReceived = new Set<string>();
 
-    // Reset responses for selected models
-    setModelsData(prev => prev.map(m =>
-      selected.includes(m.id) ? { ...m, response: '' } : m
-    ));
+	    // Reset responses for selected models
+	    setModelsData(prev => prev.map(m =>
+	      selected.includes(m.id) ? { ...m, response: '', thinking: '' } : m
+	    ));
 
     // Determine first active model for visualization if needed (optional)
     const firstActive = selected[0];
@@ -204,9 +212,9 @@ export default function Playground() {
       });
 
       await streamSseEvents(response, (data) => {
-        if (data.event === 'token' && data.model_id) {
-          const modelId = data.model_id as string;
-          const now = performance.now();
+	        if (data.event === 'token' && data.model_id) {
+	          const modelId = data.model_id as string;
+	          const now = performance.now();
 
           // Track first token time (Time To First Token - TTFT)
           if (!firstTokenReceived.has(modelId)) {
@@ -214,16 +222,63 @@ export default function Playground() {
             setExecutionTimes(prev => ({
               ...prev,
               [modelId]: { ...prev[modelId], firstTokenTime: now }
-            }));
-          }
+	            }));
+	          }
 
-          setModelsData(prev => prev.map(m => {
-            if (m.id === modelId) {
-              return { ...m, response: m.response + (data.content ?? '') };
-            }
-            return m;
-          }));
-        }
+	          const rawChunk = String(data.content ?? '');
+	          const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
+	          let textChunk = state.carry + rawChunk;
+	          state.carry = '';
+
+	          const lastLt = textChunk.lastIndexOf('<');
+	          if (lastLt !== -1 && textChunk.length - lastLt < 8) {
+	            const tail = textChunk.slice(lastLt);
+	            if ('<think>'.startsWith(tail) || '</think>'.startsWith(tail)) {
+	              state.carry = tail;
+	              textChunk = textChunk.slice(0, lastLt);
+	            }
+	          }
+
+	          let thinkingAdd = '';
+	          let answerAdd = '';
+	          let idx = 0;
+	          while (idx < textChunk.length) {
+	            if (!state.inThink) {
+	              const start = textChunk.indexOf('<think>', idx);
+	              if (start === -1) {
+	                answerAdd += textChunk.slice(idx);
+	                break;
+	              }
+	              answerAdd += textChunk.slice(idx, start);
+	              state.inThink = true;
+	              idx = start + 7;
+	            } else {
+	              const end = textChunk.indexOf('</think>', idx);
+	              if (end === -1) {
+	                thinkingAdd += textChunk.slice(idx);
+	                break;
+	              }
+	              thinkingAdd += textChunk.slice(idx, end);
+	              state.inThink = false;
+	              idx = end + 8;
+	            }
+	          }
+
+	          thinkingStateRef.current[modelId] = state;
+
+	          if (thinkingAdd || answerAdd) {
+	            setModelsData(prev => prev.map(m => {
+	              if (m.id === modelId) {
+	                return {
+	                  ...m,
+	                  response: m.response + answerAdd,
+	                  thinking: (m.thinking || '') + thinkingAdd,
+	                };
+	              }
+	              return m;
+	            }));
+	          }
+	        }
 
         // Track completion time when model finishes
         if (data.event === 'done' && data.model_id) {

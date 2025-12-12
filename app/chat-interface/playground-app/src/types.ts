@@ -3,6 +3,7 @@ export interface Model {
   name: string;
   color: string;
   response: string;
+  thinking?: string;
   type?: 'local' | 'api';
 }
 
