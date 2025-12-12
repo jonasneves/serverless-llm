@@ -24,6 +24,8 @@ interface ResponseInspectorProps {
   }>>;
   pinned?: boolean;
   onTogglePin?: () => void;
+  position?: 'left' | 'right';
+  onTogglePosition?: () => void;
 }
 
 export default function ResponseInspector({
@@ -38,6 +40,8 @@ export default function ResponseInspector({
   discussionTurnsByModel,
   pinned = false,
   onTogglePin,
+  position = 'right',
+  onTogglePosition,
 }: ResponseInspectorProps) {
   const activeModel = useMemo(
     () => models.find(m => m.id === activeId),
@@ -53,7 +57,8 @@ export default function ResponseInspector({
   return (
     <aside
       data-no-arena-scroll
-      className="fixed left-3 right-3 top-20 bottom-20 sm:left-auto sm:right-6 sm:top-24 sm:bottom-24 sm:w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col"
+      className={`fixed top-20 bottom-20 sm:top-24 sm:bottom-24 sm:w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col transition-all duration-300 ${position === 'left' ? 'left-3 sm:left-6 right-auto' : 'right-3 sm:right-6 left-auto'
+        }`}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-800/60">
@@ -72,6 +77,20 @@ export default function ResponseInspector({
           ))}
         </div>
         <div className="flex items-center gap-1">
+          {onTogglePosition && (
+            <button
+              onClick={onTogglePosition}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+              aria-label={position === 'left' ? "Move to right" : "Move to left"}
+              title={position === 'left' ? "Move to right" : "Move to left"}
+            >
+              {position === 'left' ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+              )}
+            </button>
+          )}
           {onTogglePin && (
             <button
               onClick={onTogglePin}
@@ -92,7 +111,7 @@ export default function ResponseInspector({
             className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
             aria-label="Close"
           >
-            ×
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
       </div>
