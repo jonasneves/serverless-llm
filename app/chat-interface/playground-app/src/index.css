@@ -13,6 +13,18 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
 #root {
@@ -25,6 +37,13 @@ body {
   #root {
     height: 100dvh;
   }
+}
+
+.markdown-content {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
 .markdown-content h1,
