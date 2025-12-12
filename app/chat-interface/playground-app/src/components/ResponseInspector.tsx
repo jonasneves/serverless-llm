@@ -30,7 +30,7 @@ export default function ResponseInspector({
   return (
     <aside
       data-no-arena-scroll
-      className="fixed right-6 top-24 bottom-24 w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col"
+      className="fixed left-3 right-3 top-20 bottom-20 sm:left-auto sm:right-6 sm:top-24 sm:bottom-24 sm:w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-800/60">

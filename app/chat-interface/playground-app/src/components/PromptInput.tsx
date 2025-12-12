@@ -16,9 +16,10 @@ export default function PromptInput({
 
   return (
     <div
-      className="fixed bottom-0 right-0 z-[100] pb-6 px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
+      className="fixed bottom-0 right-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
       style={{
         left: '0', // Static left, independent of dock
+        paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
       }}
     >
       <div className="max-w-3xl w-full pointer-events-auto">

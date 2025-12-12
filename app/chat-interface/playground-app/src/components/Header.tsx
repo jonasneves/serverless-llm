@@ -22,7 +22,7 @@ export default function Header({
   onOpenSettings
 }: HeaderProps) {
   return (
-    <div className="relative flex items-center justify-between mb-2 px-6 pt-6 z-50">
+    <div className="relative flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50">
       {/* Left: Dock Toggle Only */}
       <div className="flex items-center gap-3 flex-1">
         <button
@@ -57,7 +57,7 @@ export default function Header({
           <div className="w-px h-5 bg-slate-700/50 mx-1"></div>
 
           {/* Mode Toggle Track */}
-          <div className="relative flex p-1 rounded-lg bg-black/20" style={{ width: '320px' }}>
+          <div className="relative flex p-1 rounded-lg bg-black/20" style={{ width: 'min(320px, 90vw)' }}>
             {/* Sliding indicator */}
             <div
               className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out"

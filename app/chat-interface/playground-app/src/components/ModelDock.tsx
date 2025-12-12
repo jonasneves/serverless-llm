@@ -37,7 +37,7 @@ export default function ModelDock({
   return (
     <div 
       ref={dockRef}
-      className="fixed left-6 top-24 bottom-24 w-64 rounded-2xl p-4 flex flex-col gap-6 z-[60] transition-all duration-300"
+      className="fixed left-3 top-20 bottom-20 w-[85vw] sm:left-6 sm:top-24 sm:bottom-24 sm:w-64 rounded-2xl p-4 flex flex-col gap-6 z-[60] transition-all duration-300"
       style={{
         background: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(12px)',
