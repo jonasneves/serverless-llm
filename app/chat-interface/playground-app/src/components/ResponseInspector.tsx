@@ -197,7 +197,7 @@ export default function ResponseInspector({
         )}
 
         {showCouncilStats && (
-          <details className="mb-3 rounded-lg border border-slate-700/50 bg-slate-900/40">
+          <details open className="mb-3 rounded-lg border border-slate-700/50 bg-slate-900/40">
             <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-300">
               Anonymous rankings
             </summary>

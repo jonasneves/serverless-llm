@@ -16,6 +16,13 @@ def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
 
     error_lower = (error_text or "").lower()
 
+    # Handle rate limiting (429)
+    if "429" in error_text or "too many requests" in error_lower or "rate limit" in error_lower:
+        is_github_api = "github" in endpoint.lower()
+        if is_github_api:
+            return "⏱️ GitHub Models rate limit reached. Using the free quota has limits. Try again in a few moments, or add your own GitHub token in Settings for higher quota."
+        return "Rate limit exceeded. Please wait a moment before trying again."
+
     if "cloudflare" in error_lower or "<!doctype" in error_lower or "<html" in error_lower:
         return "Service temporarily unavailable. The model server may be down or experiencing issues."
 
@@ -30,6 +37,10 @@ def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
 
     if "520" in error_text or "521" in error_text or "522" in error_lower:
         return "Service temporarily unavailable (CDN error)."
+
+    # Handle 404 Not Found for GitHub Models
+    if "404" in error_text and "github" in endpoint.lower():
+        return "Model not found. This model may not be available via GitHub Models API, or your token doesn't have access to it."
 
     clean_text = re.sub(r"<[^>]+>", "", error_text or "")
     clean_text = re.sub(r"\s+", " ", clean_text).strip()

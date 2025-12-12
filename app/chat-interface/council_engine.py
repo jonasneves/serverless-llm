@@ -204,7 +204,7 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
             payload = {
                 "model": model_id,
                 "messages": messages,
-                "max_tokens": max_tokens,
+                "max_completion_tokens": max_tokens,
                 "temperature": 0.7,
                 "stream": stream
             }
@@ -524,40 +524,45 @@ Now provide your evaluation and ranking:"""
         ]
 
         # Run rankings concurrently and stream results as they complete
-        tasks_by_id: Dict[asyncio.Task, str] = {}
-        for model_id in participants:
-            task = asyncio.create_task(asyncio.wait_for(self._call_model(model_id, messages), timeout=self.timeout))
-            tasks_by_id[task] = model_id
+        # Create wrapper coroutines that preserve model_id
+        async def call_with_id(model_id: str):
+            try:
+                result = await asyncio.wait_for(self._call_model(model_id, messages), timeout=self.timeout)
+                return (model_id, result, None)
+            except Exception as e:
+                return (model_id, None, e)
+
+        tasks = [call_with_id(model_id) for model_id in participants]
 
         stage2_results = []
-        for task in asyncio.as_completed(tasks_by_id.keys()):
-            model_id = tasks_by_id[task]
-            try:
-                result = await task
-            except Exception as e:
+        for future in asyncio.as_completed(tasks):
+            model_id, result, error = await future
+
+            if error:
                 yield {
                     "type": "ranking_error",
                     "model_id": model_id,
-                    "error": str(e)
+                    "error": str(error)
                 }
-            else:
-                ranking_text = result.get("content", "")
-                parsed = self._parse_ranking(ranking_text)
+                continue
 
-                stage2_results.append({
-                    "model_id": model_id,
-                    "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
-                    "ranking": ranking_text,
-                    "parsed_ranking": parsed
-                })
+            ranking_text = result.get("content", "")
+            parsed = self._parse_ranking(ranking_text)
 
-                yield {
-                    "type": "ranking_response",
-                    "model_id": model_id,
-                    "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
-                    "ranking": ranking_text,
-                    "parsed_ranking": parsed
-                }
+            stage2_results.append({
+                "model_id": model_id,
+                "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                "ranking": ranking_text,
+                "parsed_ranking": parsed
+            })
+
+            yield {
+                "type": "ranking_response",
+                "model_id": model_id,
+                "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                "ranking": ranking_text,
+                "parsed_ranking": parsed
+            }
 
         # Calculate aggregate rankings
         aggregate = self._calculate_aggregate_rankings(stage2_results, label_to_model)

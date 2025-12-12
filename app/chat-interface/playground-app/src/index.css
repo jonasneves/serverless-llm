@@ -27,6 +27,46 @@ textarea {
   -ms-user-select: text;
 }
 
+input[type="checkbox"] {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid rgb(51 65 85 / 0.6);
+  border-radius: 0.25rem;
+  background-color: rgb(2 6 23 / 0.6);
+  transition: all 0.2s;
+  position: relative;
+}
+
+input[type="checkbox"]:checked {
+  background-color: rgb(59 130 246);
+  border-color: rgb(59 130 246);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 0.25rem;
+  top: 0.05rem;
+  width: 0.35rem;
+  height: 0.6rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(59 130 246 / 0.4);
+}
+
+input[type="checkbox"]:hover:not(:checked) {
+  border-color: rgb(100 116 139 / 0.8);
+  background-color: rgb(15 23 42 / 0.6);
+}
+
 #root {
   width: 100%;
   height: 100vh;
