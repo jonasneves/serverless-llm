@@ -1,6 +1,9 @@
 # Environment
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # OS
 .DS_Store
@@ -27,6 +30,7 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
 
 # IDE
 .vscode/
@@ -43,22 +47,16 @@ htmlcov/
 *.bin
 models/
 
-# Node (if any frontend tooling added)
+# Node
 node_modules/
 npm-debug.log
+yarn-error.log
 
 # Temporary
 tmp/
 temp/
 *.tmp
 
-# React
-node_modules/
-npm-debug.log
-dist/
-build/
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Agent artifacts (Claude/Gemini/etc)
+.claude/
+.gemini/
