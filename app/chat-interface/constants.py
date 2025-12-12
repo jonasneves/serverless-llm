@@ -21,3 +21,9 @@ DEFAULT_REMOTE_ENDPOINTS = {
     "R1QWEN_API_URL": "https://r1qwen.neevs.io",
     "RNJ_API_URL": "https://rnj.neevs.io",
 }
+
+# Generation defaults - keep in sync with playground-app/src/constants.ts
+GENERATION_DEFAULTS = {
+    "max_tokens": 1024,     # Reasonable default for comparison
+    "temperature": 0.7,     # Balanced creativity/coherence
+}

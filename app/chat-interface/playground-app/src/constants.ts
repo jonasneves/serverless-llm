@@ -26,3 +26,23 @@ export const GENERATION_DEFAULTS = {
   maxTokens: 1024,      // Reasonable default for comparison
   temperature: 0.7,     // Balanced creativity/coherence
 };
+
+// Layout constants - centralized for consistent sizing
+export const LAYOUT = {
+  // Card dimensions
+  cardWidth: 256,       // Width of model cards in compare mode (px)
+  cardHeight: 200,      // Height of model cards in compare mode (px)
+
+  // Grid gaps
+  gapX: 24,             // Horizontal gap between cards (px)
+  gapY: 24,             // Vertical gap between cards (px)
+
+  // Circle/Council layout
+  baseRadius: 160,      // Minimum radius for circle layouts (px)
+  minRadius: 120,       // Starting point for radius calculation (px)
+  radiusPerModel: 15,   // Additional radius per model to prevent overlap (px)
+
+  // Arena dimensions
+  arenaHeight: 480,     // Height of visualization area for circle modes (px)
+  scrollClamp: 200,     // Max scroll offset in either direction (px)
+};

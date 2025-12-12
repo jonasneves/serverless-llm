@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
-import { MODEL_META, BG_STYLES, MODE_COLORS, GENERATION_DEFAULTS } from './constants';
+import { MODEL_META, BG_STYLES, MODE_COLORS, GENERATION_DEFAULTS, LAYOUT } from './constants';
 import Typewriter from './components/Typewriter';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
@@ -24,14 +24,11 @@ export default function Playground() {
 
   // Dynamic grid column calculation
   useEffect(() => {
-    const cardWidth = 256;
-    const gapX = 24;
-
     const resizeObserver = new ResizeObserver(entries => {
       for (let entry of entries) {
         if (entry.target === visualizationAreaRef.current) {
           const availableWidth = entry.contentRect.width;
-          let newCols = Math.floor(availableWidth / (cardWidth + gapX));
+          let newCols = Math.floor(availableWidth / (LAYOUT.cardWidth + LAYOUT.gapX));
           newCols = Math.max(1, newCols); // Ensure at least 1 column
           setGridCols(newCols);
         }
@@ -404,8 +401,8 @@ Synthesis:`;
       setArenaOffsetY(prev => {
         const delta = event.deltaY * 0.5; // Adjust sensitivity
         const newOffset = prev - delta;
-        // Clamp between -200 and 200 to prevent scrolling too far
-        return Math.max(-200, Math.min(200, newOffset));
+        // Clamp to prevent scrolling too far
+        return Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, newOffset));
       });
     };
 
@@ -440,8 +437,7 @@ Synthesis:`;
   const chairmanModel = modelsData.find(m => m.id === chairman);
 
   // Dynamic layout radius calculation
-  // Base 160, expand by 15px for each model over 4 to prevent overlap
-  const layoutRadius = mode === 'compare' ? 0 : Math.max(160, 120 + selectedModels.length * 15);
+  const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
 
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'council') {
@@ -701,8 +697,8 @@ Synthesis:`;
 
             // Mode-specific styles override base
             ...(mode === 'compare' ? {} : {
-              height: '480px',
-              minHeight: '480px',
+              height: `${LAYOUT.arenaHeight}px`,
+              minHeight: `${LAYOUT.arenaHeight}px`,
               maxHeight: '100vh',
             }),
 
@@ -734,17 +730,13 @@ Synthesis:`;
             const isSelected = selectedCardIds.has(model.id);
 
             // Calculate grid position for compare mode
-            const cardWidth = 256;
-            const cardHeight = 200;
-            const gapX = 24;
-            const gapY = 24;
             const cols = gridCols; // Use dynamic gridCols state
             const row = Math.floor(index / cols);
             const col = index % cols;
-            const totalWidth = (cardWidth + gapX) * cols - gapX;
+            const totalWidth = (LAYOUT.cardWidth + LAYOUT.gapX) * cols - LAYOUT.gapX;
             // GridY: Start from top (0) + row offset. Do NOT center vertically to avoid overlapping header.
-            const gridY = mode === 'compare' ? row * (cardHeight + gapY) : 0;
-            const gridX = mode === 'compare' ? col * (cardWidth + gapX) - totalWidth / 2 + cardWidth / 2 : 0;
+            const gridY = mode === 'compare' ? row * (LAYOUT.cardHeight + LAYOUT.gapY) : 0;
+            const gridX = mode === 'compare' ? col * (LAYOUT.cardWidth + LAYOUT.gapX) - totalWidth / 2 + LAYOUT.cardWidth / 2 : 0;
 
             const pos = isCircle ? circlePos : { x: gridX, y: gridY, angle: 0 };
 

@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             messages: [{ role: 'user', content: query }],
             model: model,
             temperature: temperature,
-            max_tokens: 512,
+            max_tokens: 1024,  // Match centralized GENERATION_DEFAULTS
             stream: false
           })
         });
