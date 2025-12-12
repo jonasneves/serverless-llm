@@ -252,7 +252,7 @@ export default function Playground() {
     };
   }, []);
 
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId?: string; type?: 'background' } | null>(null);
 
   useEffect(() => {
     dragSelectionActiveRef.current = dragSelection != null;
@@ -1347,6 +1347,13 @@ export default function Playground() {
               suppressClickRef.current = false;
             }
           }}
+          onContextMenu={(e) => {
+            // Show background context menu only if clicking on actual background
+            const target = e.target as HTMLElement;
+            if (target.closest('[data-card]')) return; // Don't show if right-clicking on a card
+            e.preventDefault();
+            setContextMenu({ x: e.clientX, y: e.clientY, type: 'background' });
+          }}
         >
           {/* Model cards - rendered for all modes with transitions */}
           {selectedModels.map((model, index) => {
@@ -1373,7 +1380,8 @@ export default function Playground() {
                   : 'Ready';
             const processingColor = '#fbbf24';
             const errorColor = '#ef4444'; // Red for errors
-            const effectiveColor = hasError ? errorColor : model.color; // Use red for errors
+            const typeColor = model.type === 'local' ? '#10b981' : '#3b82f6'; // Green for local, blue for API
+            const effectiveColor = hasError ? errorColor : typeColor; // Use type-based color
             const isProcessing = isSpeaking && !hasError;
             const baseBackground = 'rgba(30, 41, 59, 0.85)';
             const cardBackground = hasError
@@ -1386,14 +1394,14 @@ export default function Playground() {
               : isProcessing
                 ? `1px solid ${processingColor}99`
                 : isSelected
-                  ? `1px solid ${model.color}d0`
+                  ? `1px solid ${typeColor}d0`
                   : '1px solid rgba(71, 85, 105, 0.5)';
             const cardShadow = hasError
               ? `0 0 24px ${errorColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
               : isProcessing
                 ? `0 0 24px ${processingColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
                 : isSelected
-                  ? `0 0 20px ${model.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
+                  ? `0 0 20px ${typeColor}30, inset 0 1px 1px rgba(255,255,255,0.1)`
                   : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)';
 
             // Calculate grid position for compare mode
@@ -1871,18 +1879,35 @@ export default function Playground() {
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
-            onClick={() => {
-              setModerator(contextMenu.modelId);
-              setContextMenu(null);
-            }}
-          >
-            <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-            </svg>
-            {'Set as Orchestrator'}
-          </button>
+          {contextMenu.type === 'background' ? (
+            // Background context menu
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
+              onClick={() => {
+                setShowDock(true);
+                setContextMenu(null);
+              }}
+            >
+              <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Model
+            </button>
+          ) : contextMenu.modelId ? (
+            // Model context menu
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
+              onClick={() => {
+                setModerator(contextMenu.modelId!);
+                setContextMenu(null);
+              }}
+            >
+              <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              Set as Orchestrator
+            </button>
+          ) : null}
         </div>
       )}
 

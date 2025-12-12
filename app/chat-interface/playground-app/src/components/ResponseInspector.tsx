@@ -63,8 +63,8 @@ export default function ResponseInspector({
               key={m.id}
               onClick={() => onSelect(m.id)}
               className={`px-2 py-1 text-[11px] rounded-md whitespace-nowrap transition-colors ${m.id === activeId
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                 }`}
             >
               {m.name}
@@ -76,8 +76,8 @@ export default function ResponseInspector({
             <button
               onClick={onTogglePin}
               className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${pinned
-                  ? 'text-amber-400 bg-amber-400/10'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'text-amber-400 bg-amber-400/10'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               aria-label={pinned ? 'Unpin panel' : 'Pin panel'}
               title={pinned ? 'Unpin panel' : 'Pin panel'}
@@ -98,7 +98,7 @@ export default function ResponseInspector({
       </div>
 
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800/60">
-        <div className="w-2.5 h-2.5 rounded-full" style={{ background: activeModel.color }} />
+        <div className="w-2.5 h-2.5 rounded-full" style={{ background: activeModel.type === 'local' ? '#10b981' : '#3b82f6' }} />
         <div className="text-sm font-semibold text-slate-100">{activeModel.name}</div>
         {isStreaming && (
           <div className="text-xs text-slate-500 ml-auto">Streaming…</div>

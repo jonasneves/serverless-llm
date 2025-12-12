@@ -54,26 +54,36 @@ export default function StatusIndicator({
                 animation: 'spin 0.6s linear infinite'
               }}
             >
-              {/* Ouroboros - snake chasing its tail */}
-              {/* Tail/body arc - about 270 degrees */}
+              <defs>
+                {/* Gradient that fades from bright (head) to transparent (tail) */}
+                <linearGradient id="spinnerGradient" gradientUnits="userSpaceOnUse" x1="3" y1="12" x2="12" y2="3">
+                  <stop offset="0%" stopColor={processingColor} stopOpacity="1" />
+                  <stop offset="60%" stopColor={processingColor} stopOpacity="0.5" />
+                  <stop offset="100%" stopColor={processingColor} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {/* Background ring - very faint */}
               <circle
                 cx="12"
                 cy="12"
                 r="9"
-                stroke={appendAlpha(processingColor, '28')}
+                stroke={appendAlpha(processingColor, '15')}
                 strokeWidth={strokeWidth}
                 fill="none"
               />
+              {/* Main arc with gradient fade */}
               <path
                 d="M 12 3 A 9 9 0 1 1 3 12"
-                stroke={processingColor}
+                stroke="url(#spinnerGradient)"
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 fill="none"
               />
-              {/* Snake head - small triangle pointing along the arc */}
-              <path
-                d="M 3 12 L 5 9 L 6 13 Z"
+              {/* Bright head dot for emphasis */}
+              <circle
+                cx="3"
+                cy="12"
+                r={strokeWidth * 0.7}
                 fill={processingColor}
               />
             </svg>
