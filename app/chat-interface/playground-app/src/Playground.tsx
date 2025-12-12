@@ -183,11 +183,12 @@ export default function Playground() {
       setSelected(prev => [...prev, ...modelsToAdd]);
     }
   };
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null); // For tiny preview on hover
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
   const [inputFocused, setInputFocused] = useState<boolean>(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [activeInspectorId, setActiveInspectorId] = useState<string | null>(null);
+  const [pinnedModels, setPinnedModels] = useState<Set<string>>(new Set()); // Set of pinned model IDs
   const [dragSelection, setDragSelection] = useState<{
     origin: { x: number; y: number };
     current: { x: number; y: number };
@@ -312,7 +313,7 @@ export default function Playground() {
 
     setIsGenerating(true);
     setIsSynthesizing(false);
-    setExpanded(null);
+    setHoveredCard(null);
     setPhaseLabel(null);
     setModeratorSynthesis('');
     setCouncilAggregateRankings(null);
@@ -703,41 +704,42 @@ export default function Playground() {
         }
 
         if (eventType === 'discussion_complete') {
-	          const synthesis = String((data as any).final_response ?? '');
-	          setModeratorSynthesis(synthesis);
-	          if (moderator) {
-	            clearPendingStreamForModel(moderator);
-	            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
-	          }
-	          setPhaseLabel(null);
+          const synthesis = String((data as any).final_response ?? '');
+          setModeratorSynthesis(synthesis);
+          if (moderator) {
+            clearPendingStreamForModel(moderator);
+            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
+          }
+          setPhaseLabel(null);
           setIsSynthesizing(false);
           setSpeaking(new Set());
         }
 
         if (eventType === 'error') {
-	          const message = String((data as any).error ?? (data as any).message ?? 'Discussion error.');
-	          setModeratorSynthesis(message);
-	          if (moderator) {
-	            clearPendingStreamForModel(moderator);
-	            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
-	          }
-	          setPhaseLabel('Error');
+          const message = String((data as any).error ?? (data as any).message ?? 'Discussion error.');
+          setModeratorSynthesis(message);
+          if (moderator) {
+            clearPendingStreamForModel(moderator);
+            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
+          }
+          setPhaseLabel('Error');
           setIsSynthesizing(false);
           setSpeaking(new Set());
         }
       });
 
-	    } catch (err) {
-	      console.error('Chat error:', err);
-	      pendingStreamRef.current = {};
-	      if (flushStreamRafRef.current != null) {
-	        cancelAnimationFrame(flushStreamRafRef.current);
-	        flushStreamRafRef.current = null;
-	      }
-	      setModelsData(prev => prev.map(m =>
-	        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
-	      ));
-	    } finally {
+    } catch (err) {
+      console.error('Chat error:', err);
+      pendingStreamRef.current = {};
+      if (flushStreamRafRef.current != null) {
+        cancelAnimationFrame(flushStreamRafRef.current);
+        flushStreamRafRef.current = null;
+      }
+      setModelsData(prev => prev.map(m =>
+        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
+      ));
+      sessionModelIds.forEach(id => markModelFailed(id));
+    } finally {
       const finalTime = performance.now();
       setExecutionTimes(prev => {
         const updated = { ...prev };
@@ -775,6 +777,19 @@ export default function Playground() {
         // Remove all selected cards from the arena
         setSelected(prev => prev.filter(id => !selectedCardIds.has(id)));
         setSelectedCardIds(new Set());
+        return;
+      }
+
+      // Auto-focus input when typing printable characters
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      // Check if it's a printable character (single character, not a modifier key)
+      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          // The character will be typed into the input automatically
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -783,21 +798,21 @@ export default function Playground() {
     };
   }, [showDock, selectedCardIds]);
 
-	  // Handle wheel scroll to move arena up/down
-	  useEffect(() => {
-	    const applyOffset = (offset: number) => {
-	      const el = visualizationAreaRef.current;
-	      if (!el) return;
-	      el.style.setProperty('--arena-offset-y', `${offset}px`);
-	    };
+  // Handle wheel scroll to move arena up/down
+  useEffect(() => {
+    const applyOffset = (offset: number) => {
+      const el = visualizationAreaRef.current;
+      if (!el) return;
+      el.style.setProperty('--arena-offset-y', `${offset}px`);
+    };
 
-	    const clampTarget = (value: number) =>
-	      Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, value));
+    const clampTarget = (value: number) =>
+      Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, value));
 
-	    const step = () => {
-	      const current = arenaOffsetYRef.current;
-	      const target = arenaTargetYRef.current;
-	      const diff = target - current;
+    const step = () => {
+      const current = arenaOffsetYRef.current;
+      const target = arenaTargetYRef.current;
+      const diff = target - current;
 
       if (Math.abs(diff) < 0.5) {
         arenaOffsetYRef.current = target;
@@ -808,48 +823,48 @@ export default function Playground() {
 
       // Ease toward target for a more natural feel.
       const next = current + diff * 0.35;
-	      arenaOffsetYRef.current = next;
-	      applyOffset(next);
-	      wheelRafRef.current = requestAnimationFrame(step);
-	    };
+      arenaOffsetYRef.current = next;
+      applyOffset(next);
+      wheelRafRef.current = requestAnimationFrame(step);
+    };
 
-	    const ensureRaf = () => {
-	      if (wheelRafRef.current == null) {
-	        wheelRafRef.current = requestAnimationFrame(step);
-	      }
-	    };
+    const ensureRaf = () => {
+      if (wheelRafRef.current == null) {
+        wheelRafRef.current = requestAnimationFrame(step);
+      }
+    };
 
     const handleWheel = (event: WheelEvent) => {
       if (dragSelectionActiveRef.current) return;
       const target = event.target as HTMLElement | null;
-	      // Let native scroll work inside text inputs
-	      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
+      // Let native scroll work inside text inputs
+      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
 
-	      event.preventDefault();
-	      const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
-	      const nextTarget = arenaTargetYRef.current - delta;
-	      arenaTargetYRef.current = clampTarget(nextTarget);
-	      ensureRaf();
-	    };
+      event.preventDefault();
+      const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
+      const nextTarget = arenaTargetYRef.current - delta;
+      arenaTargetYRef.current = clampTarget(nextTarget);
+      ensureRaf();
+    };
 
-	    // Touch / mobile panning (single-finger vertical)
-	    let touchActive = false;
-	    let lastTouchY = 0;
+    // Touch / mobile panning (single-finger vertical)
+    let touchActive = false;
+    let lastTouchY = 0;
 
-	    const shouldIgnoreTouch = (target: HTMLElement | null) => {
-	      if (!target) return false;
-	      return Boolean(
-	        target.closest('input, textarea, [data-no-arena-scroll], [data-card], button, a, select, [role="button"]')
-	      );
-	    };
+    const shouldIgnoreTouch = (target: HTMLElement | null) => {
+      if (!target) return false;
+      return Boolean(
+        target.closest('input, textarea, [data-no-arena-scroll], [data-card], button, a, select, [role="button"]')
+      );
+    };
 
-	    const handleTouchStart = (event: TouchEvent) => {
-	      if (event.touches.length !== 1) return;
-	      const target = event.target as HTMLElement | null;
-	      if (shouldIgnoreTouch(target)) return;
-	      touchActive = true;
-	      lastTouchY = event.touches[0].clientY;
-	    };
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      const target = event.target as HTMLElement | null;
+      if (shouldIgnoreTouch(target)) return;
+      touchActive = true;
+      lastTouchY = event.touches[0].clientY;
+    };
 
     const handleTouchMove = (event: TouchEvent) => {
       if (dragSelectionActiveRef.current) return;
@@ -860,36 +875,36 @@ export default function Playground() {
         return;
       }
 
-	      const touchY = event.touches[0].clientY;
-	      const deltaY = touchY - lastTouchY;
-	      lastTouchY = touchY;
+      const touchY = event.touches[0].clientY;
+      const deltaY = touchY - lastTouchY;
+      lastTouchY = touchY;
 
-	      event.preventDefault();
-	      arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
-	      ensureRaf();
-	    };
+      event.preventDefault();
+      arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
+      ensureRaf();
+    };
 
-	    const handleTouchEnd = () => {
-	      touchActive = false;
-	    };
+    const handleTouchEnd = () => {
+      touchActive = false;
+    };
 
-	    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-	    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-	    window.addEventListener('touchend', handleTouchEnd);
-	    window.addEventListener('touchcancel', handleTouchEnd);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
 
-	    window.addEventListener('wheel', handleWheel, { passive: false });
-	    return () => {
-	      window.removeEventListener('touchstart', handleTouchStart);
-	      window.removeEventListener('touchmove', handleTouchMove);
-	      window.removeEventListener('touchend', handleTouchEnd);
-	      window.removeEventListener('touchcancel', handleTouchEnd);
-	      window.removeEventListener('wheel', handleWheel);
-	      if (wheelRafRef.current != null) {
-	        cancelAnimationFrame(wheelRafRef.current);
-	      }
-	    };
-	  }, []);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
+      window.removeEventListener('wheel', handleWheel);
+      if (wheelRafRef.current != null) {
+        cancelAnimationFrame(wheelRafRef.current);
+      }
+    };
+  }, []);
 
   // Load background style from localStorage or use default
   const [bgStyle, setBgStyle] = useState<BackgroundStyle>(() => {
@@ -1181,9 +1196,18 @@ export default function Playground() {
           }
           suppressClickRef.current = willTriggerCardClick;
         } else if (!state.active) {
-          // Click without drag - clear selection
-          setSelectedCardIds(new Set());
-          setActiveInspectorId(null);
+          // Click without drag - keep only pinned models
+          const onlyPinned = new Set([...selectedCardIds].filter(id => pinnedModels.has(id)));
+          if (onlyPinned.size > 0) {
+            setSelectedCardIds(onlyPinned);
+            // Keep active inspector if it's pinned, otherwise clear
+            if (activeInspectorId && !pinnedModels.has(activeInspectorId)) {
+              setActiveInspectorId([...onlyPinned][0] || null);
+            }
+          } else {
+            setSelectedCardIds(new Set());
+            setActiveInspectorId(null);
+          }
         }
 
         return null;
@@ -1210,18 +1234,18 @@ export default function Playground() {
         ...(bgStyle === 'none' ? { background: MODE_COLORS[mode] } : {}),
         ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}),
       }}
-	      onClick={(e) => {
-	        // Only deselect if clicking directly on the background
-	        if (e.target === e.currentTarget) {
-	          setExpanded(null);
-	        }
-	      }}
+      onClick={(e) => {
+        // Only deselect if clicking directly on the background
+        if (e.target === e.currentTarget) {
+          setHoveredCard(null);
+        }
+      }}
     >
       {/* Header */}
       <Header
         mode={mode}
         setMode={setMode}
-        setExpanded={setExpanded}
+        setHoveredCard={setHoveredCard}
         setDragSelection={setDragSelection}
         cycleBgStyle={cycleBgStyle}
         showDock={showDock}
@@ -1292,13 +1316,22 @@ export default function Playground() {
             // Deselect if clicking on the background (cards use stopPropagation to prevent this)
             const target = e.target as HTMLElement;
             // Check if click is on background container or SVG elements (connection lines)
-	            const isSVG = target.tagName === 'svg' || target.closest('svg');
-	            if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
-	              setExpanded(null);
-	              if (!suppressClickRef.current) {
-	                setSelectedCardIds(new Set());
-	              }
-	              suppressClickRef.current = false;
+            const isSVG = target.tagName === 'svg' || target.closest('svg');
+            if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
+              setHoveredCard(null);
+              if (!suppressClickRef.current) {
+                // Keep only pinned models
+                const onlyPinned = new Set([...selectedCardIds].filter(id => pinnedModels.has(id)));
+                if (onlyPinned.size > 0) {
+                  setSelectedCardIds(onlyPinned);
+                  if (activeInspectorId && !pinnedModels.has(activeInspectorId)) {
+                    setActiveInspectorId([...onlyPinned][0] || null);
+                  }
+                } else {
+                  setSelectedCardIds(new Set());
+                }
+              }
+              suppressClickRef.current = false;
             }
           }}
         >
@@ -1307,11 +1340,11 @@ export default function Playground() {
             const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
             const isCircle = mode !== 'compare';
             const isSpeaking = speaking.has(model.id); // Check set membership
-            const isExpanded = expanded === model.id;
+            const isHovered = hoveredCard === model.id;
             const isSelected = selectedCardIds.has(model.id);
             const hasError = failedModels.has(model.id);
             const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
-            const statusState = hasError
+            const statusState: 'idle' | 'responding' | 'done' | 'waiting' = hasError
               ? 'waiting'
               : isSpeaking
                 ? 'responding'
@@ -1326,21 +1359,29 @@ export default function Playground() {
                   ? 'Done'
                   : 'Ready';
             const processingColor = '#fbbf24';
+            const errorColor = '#ef4444'; // Red for errors
+            const effectiveColor = hasError ? errorColor : model.color; // Use red for errors
             const isProcessing = isSpeaking && !hasError;
             const baseBackground = 'rgba(30, 41, 59, 0.85)';
-            const cardBackground = isProcessing
-              ? `linear-gradient(135deg, ${processingColor}14, ${baseBackground})`
-              : baseBackground;
-            const cardBorder = isProcessing
-              ? `1px solid ${processingColor}99`
-              : isSelected
-                ? `1px solid ${model.color}d0`
-                : '1px solid rgba(71, 85, 105, 0.5)';
-            const cardShadow = isProcessing
-              ? `0 0 24px ${processingColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
-              : isSelected
-                ? `0 0 20px ${model.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
-                : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)';
+            const cardBackground = hasError
+              ? `linear-gradient(135deg, ${errorColor}14, ${baseBackground})`
+              : isProcessing
+                ? `linear-gradient(135deg, ${processingColor}14, ${baseBackground})`
+                : baseBackground;
+            const cardBorder = hasError
+              ? `1px solid ${errorColor}99`
+              : isProcessing
+                ? `1px solid ${processingColor}99`
+                : isSelected
+                  ? `1px solid ${model.color}d0`
+                  : '1px solid rgba(71, 85, 105, 0.5)';
+            const cardShadow = hasError
+              ? `0 0 24px ${errorColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
+              : isProcessing
+                ? `0 0 24px ${processingColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
+                : isSelected
+                  ? `0 0 20px ${model.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
+                  : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)';
 
             // Calculate grid position for compare mode
             const cols = gridCols; // Use dynamic gridCols state
@@ -1352,6 +1393,19 @@ export default function Playground() {
             const gridX = mode === 'compare' ? col * (LAYOUT.cardWidth + LAYOUT.gapX) - totalWidth / 2 + LAYOUT.cardWidth / 2 : 0;
 
             const pos = isCircle ? circlePos : { x: gridX, y: gridY, angle: 0 };
+            // In council mode, orchestrator sits at (0, layoutRadius - 64) relative to arena center
+            const orchestratorYOffset = mode === 'council' ? layoutRadius - 64 : 0;
+            const lineSize = Math.max(800, layoutRadius * 2 + 600);
+            const lineCenter = lineSize / 2;
+            // SVG is centered on the card. Line goes FROM card center TO orchestrator.
+            // Card is at (circlePos.x, circlePos.y) in arena coords.
+            // Orchestrator is at (0, orchestratorYOffset) in arena coords.
+            // In SVG coords (centered on card): card = (lineCenter, lineCenter)
+            // Orchestrator = lineCenter + (orchestratorX - cardX), lineCenter + (orchestratorY - cardY)
+            const lineX1 = lineCenter; // card center
+            const lineY1 = lineCenter;
+            const lineX2 = lineCenter + (0 - circlePos.x); // orchestrator x relative to card
+            const lineY2 = lineCenter + (orchestratorYOffset - circlePos.y); // orchestrator y relative to card
 
             return (
               <div
@@ -1360,21 +1414,21 @@ export default function Playground() {
                   if (el) cardRefs.current.set(model.id, el);
                   else cardRefs.current.delete(model.id);
                 }}
-	                className="absolute transition-all duration-700 ease-out"
-	                onContextMenu={(e) => {
-	                  e.preventDefault();
-	                  e.stopPropagation();
-	                  setContextMenu({
-	                    x: e.clientX,
-	                    y: e.clientY,
-	                    modelId: model.id
-	                  });
-	                }}
+                className="absolute transition-all duration-700 ease-out"
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setContextMenu({
+                    x: e.clientX,
+                    y: e.clientY,
+                    modelId: model.id
+                  });
+                }}
                 style={{
                   transform: mode === 'compare'
                     ? `translate(calc(-50% + ${pos.x}px), ${pos.y}px)`
                     : `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,
-                  zIndex: isExpanded ? 100 : isSelected ? 20 : isSpeaking ? 10 : 1,
+                  zIndex: isHovered ? 100 : isSelected ? 20 : isSpeaking ? 10 : 1,
                   left: '50%',
                   top: mode === 'compare' ? '0' : '50%',
                 }}
@@ -1411,18 +1465,16 @@ export default function Playground() {
                       setSelectedCardIds(newSelection);
                       setActiveInspectorId(model.id);
                     } else {
-	                      if (isCircle) {
-	                        // Immediately raise z-index on click
-	                        const cardElement = e.currentTarget.closest('.absolute');
-	                        if (cardElement) {
-	                          (cardElement as HTMLElement).style.zIndex = '100';
-	                        }
-	                        setExpanded(isExpanded ? null : model.id);
-	                      }
-                      setSelectedCardIds(new Set([model.id]));
+                      // Click opens full inspector
+                      // Add this model to selection (alongside any pinned models)
+                      const newSelection = new Set([...selectedCardIds].filter(id => pinnedModels.has(id)));
+                      newSelection.add(model.id);
+                      setSelectedCardIds(newSelection);
                       setActiveInspectorId(model.id);
                     }
                   }}
+                  onMouseEnter={() => isCircle && setHoveredCard(model.id)}
+                  onMouseLeave={() => isCircle && setHoveredCard(null)}
                   className={`relative cursor-pointer card-hover ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
                   style={{
                     background: cardBackground,
@@ -1444,7 +1496,7 @@ export default function Playground() {
                       handleModelToggle(model.id);
                     }}
                     className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all opacity-0 group-hover:opacity-100 z-50"
-                    style={{ opacity: isSelected || isExpanded ? 1 : undefined }}
+                    style={{ opacity: isSelected || isHovered ? 1 : undefined }}
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1467,33 +1519,43 @@ export default function Playground() {
                     }}>
                       <div className="flex items-center justify-between mb-3 gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
+                          <StatusIndicator
+                            state={statusState}
+                            color={effectiveColor}
+                            size={16}
+                            label={statusLabel}
+                          />
                           <span className="text-xs font-semibold text-slate-200 truncate">{model.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {mode === 'compare' && moderator === model.id && (
                             <span
-                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-300 border border-yellow-500/30"
+                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300 border border-orange-500/30"
                               title="Orchestrator used for Council/Roundtable"
                             >
                               Orchestrator
                             </span>
                           )}
+                          <span
+                            className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${model.type === 'local'
+                              ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
+                              }`}
+                          >
+                            {model.type === 'local' ? 'Local' : 'API'}
+                          </span>
                         </div>
-                        <StatusIndicator
-                          state={statusState}
-                          color={model.color}
-                          size={16}
-                          label={statusLabel}
-                        />
                       </div>
-	                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
-	                        {isSpeaking ? (
-	                          <Typewriter text={model.response} speed={20} />
-	                        ) : (
-	                          model.response
-	                        )}
-	                      </p>
-	                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-	                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
-	                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
+                        {isSpeaking ? (
+                          <Typewriter text={model.response} speed={20} />
+                        ) : (
+                          model.response
+                        )}
+                      </p>
+                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
+                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
+                      </div>
                     </div>
                   )}
 
@@ -1506,8 +1568,8 @@ export default function Playground() {
                       <div className="text-center px-2">
                         <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
                         {(isSpeaking || isDone || hasError) && (
-                          <div className="flex items-center justify-center mt-1">
-                            <StatusIndicator state={statusState} color={model.color} size={16} label={statusLabel} />
+                          <div className="flex items-center justify-center mt-3">
+                            <StatusIndicator state={statusState} color={effectiveColor} size={14} />
                           </div>
                         )}
                       </div>
@@ -1515,8 +1577,8 @@ export default function Playground() {
                   )}
                 </div>
 
-                {/* Expanded response panel */}
-                {isExpanded && isCircle && (
+                {/* Hover preview panel */}
+                {isHovered && isCircle && (
                   <div
                     data-card
                     onClick={(e) => e.stopPropagation()}
@@ -1530,60 +1592,70 @@ export default function Playground() {
                       marginBottom: circlePos.y > 0 ? '12px' : 0,
                       background: 'rgba(15, 23, 42, 0.95)',
                       backdropFilter: 'blur(16px)',
-                      border: `1px solid ${model.color}40`,
-                      boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${model.color}15`,
-                      zIndex: 101
+                      border: `1px solid ${effectiveColor}40`,
+                      boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${effectiveColor}15`,
+                      zIndex: 200
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
+                      <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
                       <span className="text-xs font-semibold text-slate-300">{model.name}</span>
                     </div>
-	                    <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-	                      {isSpeaking ? (
-	                        <Typewriter text={model.response} speed={20} />
-	                      ) : model.response ? (
-	                        getTailSnippet(model.response)
-	                      ) : (
-	                        <span className="text-slate-500 italic">No response yet.</span>
-	                      )}
-	                    </p>
+                    <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+                      {isSpeaking ? (
+                        <Typewriter text={model.response} speed={20} />
+                      ) : model.response ? (
+                        getTailSnippet(model.response)
+                      ) : (
+                        <span className="text-slate-500 italic">No response yet.</span>
+                      )}
+                    </p>
                     <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
                       <ExecutionTimeDisplay times={executionTimes[model.id]} />
                     </div>
                   </div>
                 )}
 
-                {isSpeaking && mode !== 'compare' && (<svg
-                  className="absolute pointer-events-none"
-                  style={{
-                    width: '800px',
-                    height: '800px',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: -1
-                  }}
-                >
-                  <defs>
-                    <linearGradient id={`grad-${model.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor={processingColor} stopOpacity="0.45" />
-                      <stop offset="100%" stopColor={processingColor} stopOpacity="0.12" />
-                    </linearGradient>
-                  </defs>
-                  <line
-                    x1="400"
-                    y1="400"
-                    x2={400 - circlePos.x}
-                    y2={400 + (mode === 'council' ? 155 : 0) - circlePos.y}
-                    stroke={`url(#grad-${model.id})`}
-                    strokeWidth="2"
-                    strokeDasharray="6,4"
-                    strokeLinecap="round"
-                    className="animate-flow"
-                  />
-                </svg>
+                {isSpeaking && mode !== 'compare' && !hasError && (
+                  <svg
+                    className="absolute pointer-events-none"
+                    style={{
+                      width: `${lineSize}px`,
+                      height: `${lineSize}px`,
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: -1
+                    }}
+                    viewBox={`0 0 ${lineSize} ${lineSize}`}
+                  >
+                    <defs>
+                      <linearGradient
+                        id={`grad-${model.id}`}
+                        gradientUnits="userSpaceOnUse"
+                        x1={lineX1}
+                        y1={lineY1}
+                        x2={lineX2}
+                        y2={lineY2}
+                      >
+                        <stop offset="0%" stopColor={processingColor} stopOpacity="0.45" />
+                        <stop offset="100%" stopColor={processingColor} stopOpacity="0.12" />
+                      </linearGradient>
+                    </defs>
+                    <line
+                      x1={lineX1}
+                      y1={lineY1}
+                      x2={lineX2}
+                      y2={lineY2}
+                      stroke={`url(#grad-${model.id})`}
+                      strokeWidth="2"
+                      strokeDasharray="6,4"
+                      strokeLinecap="round"
+                      className="animate-flow"
+                    />
+                  </svg>
                 )}
+
               </div>
             );
           })}
@@ -1605,8 +1677,9 @@ export default function Playground() {
                   setSelectedCardIds(new Set([moderator]));
                   setActiveInspectorId(moderator);
                 }
-                setExpanded(expanded === 'moderator' ? null : 'moderator');
               }}
+              onMouseEnter={() => setHoveredCard('moderator')}
+              onMouseLeave={() => setHoveredCard(null)}
             >
               <div className="relative w-32 h-32 flex items-center justify-center">
                 {/* Outer glow rings */}
@@ -1640,14 +1713,13 @@ export default function Playground() {
                   <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
 
                   <div className="relative text-center z-10">
-                    <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">
-                      Orchestrator
+                    <div className="text-sm font-semibold text-slate-200">
+                      {moderatorModel.name}
                     </div>
-                    <div className="text-sm font-semibold">{moderatorModel.name}</div>
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-center gap-1 mt-3">
+              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1" style={{ top: 'calc(100% + 12px)' }}>
                 <StatusIndicator
                   state={orchestratorStatus}
                   color={moderatorModel.color}
@@ -1657,12 +1729,12 @@ export default function Playground() {
                 <span className="text-[10px] text-slate-500">{orchestratorPhaseLabel}</span>
               </div>
 
-              {/* Expanded synthesis */}
-              {expanded === 'moderator' && (
+              {/* Hover preview synthesis */}
+              {hoveredCard === 'moderator' && (
                 <div
                   data-card
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full mt-4 left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-30 transition-all duration-300"
+                  className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-[200] transition-all duration-300"
                   style={{
                     background: 'rgba(15, 23, 42, 0.95)',
                     backdropFilter: 'blur(16px)',
@@ -1670,16 +1742,20 @@ export default function Playground() {
                     boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${moderatorModel.color}20`
                   }}
                 >
-	                  <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Synthesis</div>
-	                  <p className="text-sm text-slate-300 leading-relaxed">
-	                    {moderatorSynthesis ? (
-	                      (isSynthesizing && moderator && speaking.has(moderator))
-	                        ? <Typewriter text={moderatorSynthesis} speed={20} />
-	                        : getTailSnippet(moderatorSynthesis)
-	                    ) : isSynthesizing ? (
-	                      <span className="text-slate-500 italic">Synthesizing responses...</span>
-	                    ) : isGenerating ? (
-	                      <span className="text-slate-500 italic">Waiting for model responses...</span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="text-xs text-slate-400 uppercase tracking-wider">Orchestrator</div>
+                    <span className="text-xs text-slate-500">·</span>
+                    <span className="text-xs font-medium text-slate-300">{moderatorModel.name}</span>
+                  </div>
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    {moderatorSynthesis ? (
+                      (isSynthesizing && moderator && speaking.has(moderator))
+                        ? <Typewriter text={moderatorSynthesis} speed={20} />
+                        : getTailSnippet(moderatorSynthesis)
+                    ) : isSynthesizing ? (
+                      <span className="text-slate-500 italic">Synthesizing responses...</span>
+                    ) : isGenerating ? (
+                      <span className="text-slate-500 italic">Waiting for model responses...</span>
                     ) : (
                       <span className="text-slate-500 italic">Send a prompt to see the synthesis.</span>
                     )}
@@ -1738,12 +1814,26 @@ export default function Playground() {
           models={inspectorModels}
           activeId={activeInspectorId}
           onSelect={setActiveInspectorId}
-          onClose={() => setSelectedCardIds(new Set())}
+          onClose={() => {
+            // Close always works - clear selection but keep pinnedModels info
+            setSelectedCardIds(new Set());
+            setActiveInspectorId(null);
+          }}
           speaking={speaking}
           mode={mode}
           moderatorId={moderator}
           councilAggregateRankings={councilAggregateRankings}
           discussionTurnsByModel={discussionTurnsByModel}
+          pinned={pinnedModels.has(activeInspectorId)}
+          onTogglePin={() => {
+            const newPinned = new Set(pinnedModels);
+            if (newPinned.has(activeInspectorId)) {
+              newPinned.delete(activeInspectorId);
+            } else {
+              newPinned.add(activeInspectorId);
+            }
+            setPinnedModels(newPinned);
+          }}
         />
       )}
 
@@ -1761,12 +1851,12 @@ export default function Playground() {
         onSendMessage={sendMessage}
       />
 
-		      {/* Custom Context Menu */}
-		      {contextMenu && (
-		        <div
-		          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
-		          style={{ top: contextMenu.y, left: contextMenu.x }}
-		          onClick={(e) => e.stopPropagation()}
+      {/* Custom Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
@@ -1778,10 +1868,10 @@ export default function Playground() {
             <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
-		            {'Set as Orchestrator'}
-		          </button>
-	        </div>
-	      )}
+            {'Set as Orchestrator'}
+          </button>
+        </div>
+      )}
 
       <style>{`
         @keyframes ticker {

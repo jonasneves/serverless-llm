@@ -1,4 +1,4 @@
-type StatusIndicatorState = 'idle' | 'responding' | 'done' | 'waiting';
+type StatusIndicatorState = 'idle' | 'responding' | 'done' | 'waiting' | 'error';
 
 interface StatusIndicatorProps {
   state: StatusIndicatorState;
@@ -21,6 +21,7 @@ const defaultLabels: Record<StatusIndicatorState, string> = {
   responding: 'Responding',
   done: 'Done',
   waiting: 'Waiting',
+  error: 'Error',
 };
 
 export default function StatusIndicator({
@@ -47,9 +48,14 @@ export default function StatusIndicator({
               height={iconSize}
               viewBox="0 0 24 24"
               fill="none"
-              className="animate-spin"
-              style={{ filter: `drop-shadow(0 0 6px ${appendAlpha(processingColor, '55')})` }}
+              className=""
+              style={{
+                filter: `drop-shadow(0 0 6px ${appendAlpha(processingColor, '55')})`,
+                animation: 'spin 0.6s linear infinite'
+              }}
             >
+              {/* Ouroboros - snake chasing its tail */}
+              {/* Tail/body arc - about 270 degrees */}
               <circle
                 cx="12"
                 cy="12"
@@ -59,11 +65,16 @@ export default function StatusIndicator({
                 fill="none"
               />
               <path
-                d="M4.5 10.5a7.5 7.5 0 0 1 12.57-5.303L21 9M21 4.5V9h-4.5M19.5 13.5a7.5 7.5 0 0 1-12.57 5.303L3 15m0 4.5V15h4.5"
+                d="M 12 3 A 9 9 0 1 1 3 12"
                 stroke={processingColor}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
-                strokeLinejoin="round"
+                fill="none"
+              />
+              {/* Snake head - small triangle pointing along the arc */}
+              <path
+                d="M 3 12 L 5 9 L 6 13 Z"
+                fill={processingColor}
               />
             </svg>
           </div>
@@ -82,6 +93,28 @@ export default function StatusIndicator({
               <polyline
                 points="5 13 10 18 19 7"
                 stroke={color}
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        );
+      case 'error':
+        const errorColor = '#ef4444';
+        return (
+          <div
+            className="flex items-center justify-center rounded-full"
+            style={{
+              ...indicatorSizeStyle,
+              background: appendAlpha(errorColor, '14'),
+              border: `1.5px solid ${appendAlpha(errorColor, '70')}`,
+            }}
+          >
+            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
+              <path
+                d="M6 6L18 18M6 18L18 6"
+                stroke={errorColor}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"

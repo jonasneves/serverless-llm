@@ -11,13 +11,13 @@ interface ModelDockProps {
   dockRef: React.RefObject<HTMLDivElement>;
 }
 
-export default function ModelDock({ 
-  showDock, 
-  availableModels, 
+export default function ModelDock({
+  showDock,
+  availableModels,
   allSelectedByType,
   totalModelsByType,
-  handleDragStart, 
-  handleModelToggle, 
+  handleDragStart,
+  handleModelToggle,
   handleAddGroup,
   dockRef
 }: ModelDockProps) {
@@ -32,14 +32,14 @@ export default function ModelDock({
     {
       type: 'api' as const,
       title: 'API MODELS',
-      addAllClass: 'text-[10px] text-orange-400 hover:text-orange-300 transition-colors',
-      itemBorderHover: 'hover:border-orange-500/30',
-      dotClass: 'w-2 h-2 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] bg-orange-500',
+      addAllClass: 'text-[10px] text-blue-400 hover:text-blue-300 transition-colors',
+      itemBorderHover: 'hover:border-blue-500/30',
+      dotClass: 'w-2 h-2 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] bg-blue-500',
     },
   ];
 
   return (
-    <div 
+    <div
       ref={dockRef}
       data-no-arena-scroll
       className="dock-scroll fixed left-3 top-20 bottom-20 w-[85vw] sm:left-6 sm:top-24 sm:bottom-24 sm:w-64 rounded-2xl p-4 flex flex-col gap-6 z-[60] transition-all duration-300 overflow-y-auto pr-1"

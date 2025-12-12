@@ -22,6 +22,8 @@ interface ResponseInspectorProps {
     response: string;
     evaluation?: any;
   }>>;
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export default function ResponseInspector({
@@ -34,6 +36,8 @@ export default function ResponseInspector({
   moderatorId,
   councilAggregateRankings,
   discussionTurnsByModel,
+  pinned = false,
+  onTogglePin,
 }: ResponseInspectorProps) {
   const activeModel = useMemo(
     () => models.find(m => m.id === activeId),
@@ -58,23 +62,39 @@ export default function ResponseInspector({
             <button
               key={m.id}
               onClick={() => onSelect(m.id)}
-              className={`px-2 py-1 text-[11px] rounded-md whitespace-nowrap transition-colors ${
-                m.id === activeId
+              className={`px-2 py-1 text-[11px] rounded-md whitespace-nowrap transition-colors ${m.id === activeId
                   ? 'bg-slate-700 text-white'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
+                }`}
             >
               {m.name}
             </button>
           ))}
         </div>
-        <button
-          onClick={onClose}
-          className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
-          aria-label="Close"
-        >
-          ×
-        </button>
+        <div className="flex items-center gap-1">
+          {onTogglePin && (
+            <button
+              onClick={onTogglePin}
+              className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${pinned
+                  ? 'text-amber-400 bg-amber-400/10'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              aria-label={pinned ? 'Unpin panel' : 'Pin panel'}
+              title={pinned ? 'Unpin panel' : 'Pin panel'}
+            >
+              <svg className="w-4 h-4" fill={pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800/60">
