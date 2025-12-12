@@ -523,6 +523,9 @@ Synthesis:`;
         y: event.clientY - rootBounds.top
       };
 
+      // Prevent text selection when starting drag
+      event.preventDefault();
+
       suppressClickRef.current = false;
       setDragSelection({
         origin: point,
@@ -538,6 +541,12 @@ Synthesis:`;
   // Handle mouse move and mouse up for selection box
   useEffect(() => {
     if (!dragSelection || !rootContainerRef.current || !visualizationAreaRef.current) return;
+
+    // Prevent text selection during drag
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault();
+    };
+    document.addEventListener('selectstart', handleSelectStart);
 
     const handleMouseMove = (event: MouseEvent) => {
       const rootBounds = rootContainerRef.current!.getBoundingClientRect();
@@ -618,6 +627,7 @@ Synthesis:`;
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('selectstart', handleSelectStart);
     };
   }, [dragSelection, selectedModels]);
 
