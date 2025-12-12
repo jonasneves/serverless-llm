@@ -41,7 +41,7 @@ export default function PromptInput({
                       inputRef.current.focus();
                     }
                   }}
-                  className="hover:text-blue-400 transition-colors cursor-pointer px-1 py-0.5 rounded hover:bg-white/5"
+                  className="hover:text-blue-400 transition-colors cursor-pointer px-2 py-1 sm:px-1 sm:py-0.5 rounded hover:bg-white/5 active:scale-95"
                 >
                   {s.label}
                 </button>
@@ -87,10 +87,10 @@ export default function PromptInput({
                 inputRef.current.value = '';
               }
             }}
-            className="p-2 -mr-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="min-w-[44px] min-h-[44px] p-2 -mr-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors active:scale-95"
             aria-label="Send message"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-6 h-6 sm:w-5 sm:h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </svg>
           </button>

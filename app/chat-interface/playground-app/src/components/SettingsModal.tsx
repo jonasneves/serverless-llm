@@ -32,10 +32,10 @@ export default function SettingsModal({ open, onClose, token, setToken }: Settin
           <h2 className="text-base font-semibold text-slate-100">Settings</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+            className="min-w-[44px] min-h-[44px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors active:scale-95"
             aria-label="Close settings"
           >
-            ×
+            <span className="text-2xl leading-none">×</span>
           </button>
         </div>
 
@@ -59,7 +59,7 @@ export default function SettingsModal({ open, onClose, token, setToken }: Settin
               <button
                 type="button"
                 onClick={() => setShowToken(v => !v)}
-                className="w-9 h-9 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors"
+                className="min-w-[44px] min-h-[44px] w-11 h-11 sm:w-9 sm:h-9 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors active:scale-95 flex items-center justify-center"
                 title={showToken ? 'Hide token' : 'Show token'}
               >
                 {showToken ? (

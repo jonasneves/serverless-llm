@@ -94,7 +94,7 @@ export default function ModelDock({
                 </div>
                 <button
                   onClick={() => handleAddGroup(section.type)}
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded transition-all ${accentClasses.button} ${!hasAny ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  className={`text-[10px] font-medium px-2 py-1.5 sm:py-0.5 rounded transition-all active:scale-95 ${accentClasses.button} ${!hasAny ? 'opacity-40 cursor-not-allowed' : ''}`}
                   disabled={!hasAny}
                 >
                   {allSelected ? '− Remove All' : '+ Add All'}
@@ -109,7 +109,7 @@ export default function ModelDock({
                     draggable
                     onDragStart={(e) => handleDragStart(e, model.id)}
                     onClick={() => handleModelToggle(model.id)}
-                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent ${accentClasses.border}`}
+                    className={`group flex items-center gap-3 px-3 py-3 sm:py-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent active:scale-95 ${accentClasses.border}`}
                   >
                     <div
                       className={`w-1.5 h-1.5 rounded-full ${accentClasses.dot} opacity-60 group-hover:opacity-100 transition-opacity`}

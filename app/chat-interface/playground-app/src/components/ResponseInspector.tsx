@@ -101,7 +101,7 @@ export default function ResponseInspector({
   return (
     <aside
       data-no-arena-scroll
-      className={`fixed top-20 bottom-20 sm:top-24 sm:bottom-24 sm:w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col ${position === 'left' ? 'left-3 sm:left-6 right-auto' : 'right-3 sm:right-6 left-auto'
+      className={`fixed top-20 bottom-20 w-[min(85vw,380px)] sm:top-24 sm:bottom-24 sm:w-[420px] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col ${position === 'left' ? 'left-3 sm:left-6 right-auto' : 'right-3 sm:right-6 left-auto'
         }`}
       onClick={(e) => e.stopPropagation()}
       style={{
@@ -121,7 +121,7 @@ export default function ResponseInspector({
             <button
               key={m.id}
               onClick={() => onSelect(m.id)}
-              className={`px-2 py-1 text-[11px] rounded-md whitespace-nowrap transition-colors ${m.id === activeId
+              className={`px-3 py-2 sm:px-2 sm:py-1 text-[11px] rounded-md whitespace-nowrap transition-colors active:scale-95 ${m.id === activeId
                 ? 'bg-slate-700 text-white'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                 }`}
@@ -134,21 +134,21 @@ export default function ResponseInspector({
           {onTogglePin && (
             <button
               onClick={onTogglePin}
-              className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${pinned
+              className={`min-w-[44px] min-h-[44px] w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-colors active:scale-95 ${pinned
                 ? 'text-amber-400 bg-amber-400/10'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               aria-label={pinned ? 'Unpin panel' : 'Pin panel'}
               title={pinned ? 'Unpin panel' : 'Pin panel'}
             >
-              <svg className="w-4 h-4" fill={pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-4 sm:h-4" fill={pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
             </button>
           )}
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+            className="min-w-[44px] min-h-[44px] w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors active:scale-95"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
