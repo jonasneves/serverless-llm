@@ -5,6 +5,18 @@ import Typewriter from './components/Typewriter';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
 import Header from './components/Header';
+import ExecutionTimeDisplay, { ExecutionTimeData } from './components/ExecutionTimeDisplay';
+import { fetchChatStream, streamSseEvents } from './utils/streaming';
+
+interface ModelsApiModel {
+  id: string;
+  name?: string;
+  type?: string;
+}
+
+interface ModelsApiResponse {
+  models: ModelsApiModel[];
+}
 
 export default function Playground() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
@@ -19,7 +31,7 @@ export default function Playground() {
   const [arenaOffsetY, setArenaOffsetY] = useState(0); // Vertical scroll offset for arena
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
-  const [executionTimes, setExecutionTimes] = useState<Record<string, { startTime: number; firstTokenTime?: number; endTime?: number }>>({});
+  const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
   const dockRef = useRef<HTMLDivElement>(null); // Ref for the Model Dock
 
   // Dynamic grid column calculation
@@ -50,14 +62,15 @@ export default function Playground() {
   useEffect(() => {
     fetch('/api/models')
       .then(res => res.json())
-      .then(data => {
-        const apiModels = data.models.map((m: any) => {
-          const meta = MODEL_META[m.type] || MODEL_META['local'];
+      .then((data: ModelsApiResponse) => {
+        const apiModels = data.models.map((m) => {
+          const modelType: 'local' | 'api' = m.type === 'api' ? 'api' : 'local';
+          const meta = MODEL_META[modelType];
           return {
             id: m.id,
             name: meta.name || m.name || m.id, // Use meta name or API name
             color: meta.color,
-            type: m.type,
+            type: modelType,
             response: "Ready to generate..."
           };
         });
@@ -159,7 +172,7 @@ export default function Playground() {
 
     // Initialize execution time tracking for all selected models
     const startTime = performance.now();
-    const initialTimes: Record<string, { startTime: number; firstTokenTime?: number; endTime?: number }> = {};
+    const initialTimes: Record<string, ExecutionTimeData> = {};
     selected.forEach(modelId => {
       initialTimes[modelId] = { startTime };
     });
@@ -180,80 +193,51 @@ export default function Playground() {
     }
 
     try {
-      const response = await fetch('/api/chat/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          models: selected,
-          messages: [{ role: 'user', content: text }],
-          max_tokens: GENERATION_DEFAULTS.maxTokens,
-          temperature: GENERATION_DEFAULTS.temperature
-        })
+      const response = await fetchChatStream({
+        models: selected,
+        messages: [{ role: 'user', content: text }],
+        max_tokens: GENERATION_DEFAULTS.maxTokens,
+        temperature: GENERATION_DEFAULTS.temperature
       });
 
-      if (!response.body) throw new Error('No response body');
+      await streamSseEvents(response, (data) => {
+        if (data.event === 'token' && data.model_id) {
+          const modelId = data.model_id as string;
+          const now = performance.now();
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const jsonStr = line.slice(6);
-              if (jsonStr === '[DONE]') continue;
-
-              const data = JSON.parse(jsonStr);
-
-              if (data.event === 'token' && data.model_id) {
-                const modelId = data.model_id;
-                const now = performance.now();
-
-                // Track first token time (Time To First Token - TTFT)
-                if (!firstTokenReceived.has(modelId)) {
-                  firstTokenReceived.add(modelId);
-                  setExecutionTimes(prev => ({
-                    ...prev,
-                    [modelId]: { ...prev[modelId], firstTokenTime: now }
-                  }));
-                }
-
-                setModelsData(prev => prev.map(m => {
-                  if (m.id === modelId) {
-                    return { ...m, response: m.response + data.content };
-                  }
-                  return m;
-                }));
-              }
-
-              // Track completion time when model finishes
-              if (data.event === 'done' && data.model_id) {
-                const now = performance.now();
-                setExecutionTimes(prev => ({
-                  ...prev,
-                  [data.model_id]: { ...prev[data.model_id], endTime: now }
-                }));
-                // Remove this model from speaking set
-                setSpeaking(prev => {
-                  const next = new Set(prev);
-                  next.delete(data.model_id);
-                  return next;
-                });
-              }
-            } catch (e) {
-              console.error('Error parsing SSE:', e);
-            }
+          // Track first token time (Time To First Token - TTFT)
+          if (!firstTokenReceived.has(modelId)) {
+            firstTokenReceived.add(modelId);
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], firstTokenTime: now }
+            }));
           }
+
+          setModelsData(prev => prev.map(m => {
+            if (m.id === modelId) {
+              return { ...m, response: m.response + (data.content ?? '') };
+            }
+            return m;
+          }));
         }
-      }
+
+        // Track completion time when model finishes
+        if (data.event === 'done' && data.model_id) {
+          const now = performance.now();
+          const modelId = data.model_id as string;
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now }
+          }));
+          // Remove this model from speaking set
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+        }
+      });
     } catch (err) {
       console.error('Chat error:', err);
       setModelsData(prev => prev.map(m =>
@@ -310,48 +294,18 @@ Provide a concise synthesis (2-3 sentences) that:
 Synthesis:`;
 
     try {
-      const response = await fetch('/api/chat/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          models: [chairman],
-          messages: [{ role: 'user', content: synthesisPrompt }],
-          max_tokens: GENERATION_DEFAULTS.maxTokens,
-          temperature: 0.5 // Slightly lower for more coherent synthesis
-        })
+      const response = await fetchChatStream({
+        models: [chairman],
+        messages: [{ role: 'user', content: synthesisPrompt }],
+        max_tokens: GENERATION_DEFAULTS.maxTokens,
+        temperature: 0.5 // Slightly lower for more coherent synthesis
       });
 
-      if (!response.body) throw new Error('No response body');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const jsonStr = line.slice(6);
-              if (jsonStr === '[DONE]') continue;
-
-              const data = JSON.parse(jsonStr);
-
-              if (data.event === 'token' && data.model_id === chairman) {
-                setChairmanSynthesis(prev => prev + data.content);
-              }
-            } catch (e) {
-              console.error('Error parsing SSE:', e);
-            }
-          }
+      await streamSseEvents(response, (data) => {
+        if (data.event === 'token' && data.model_id === chairman) {
+          setChairmanSynthesis(prev => prev + (data.content ?? ''));
         }
-      }
+      });
     } catch (err) {
       console.error('Synthesis error:', err);
       setChairmanSynthesis('Unable to generate synthesis.');
@@ -882,19 +836,7 @@ Synthesis:`;
                         <Typewriter text={model.response} speed={20} />
                       </p>
                       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                        <div className="text-[10px] text-slate-500">
-                          <span className="text-slate-400">TIME</span>{' '}
-                          {executionTimes[model.id]?.endTime && executionTimes[model.id]?.startTime
-                            ? `${((executionTimes[model.id].endTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s`
-                            : executionTimes[model.id]?.startTime && !executionTimes[model.id]?.endTime
-                              ? '...'
-                              : '—'}
-                          {executionTimes[model.id]?.firstTokenTime && executionTimes[model.id]?.startTime && (
-                            <span className="ml-2 text-slate-600">
-                              TTFT {((executionTimes[model.id].firstTokenTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s
-                            </span>
-                          )}
-                        </div>
+                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
                       </div>
                     </div>
                   )}
@@ -947,19 +889,7 @@ Synthesis:`;
                       <Typewriter text={model.response} speed={20} />
                     </p>
                     <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
-                      <div className="text-[10px] text-slate-500">
-                        <span className="text-slate-400">TIME</span>{' '}
-                        {executionTimes[model.id]?.endTime && executionTimes[model.id]?.startTime
-                          ? `${((executionTimes[model.id].endTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s`
-                          : executionTimes[model.id]?.startTime && !executionTimes[model.id]?.endTime
-                            ? '...'
-                            : '—'}
-                        {executionTimes[model.id]?.firstTokenTime && executionTimes[model.id]?.startTime && (
-                          <span className="ml-2 text-slate-600">
-                            TTFT {((executionTimes[model.id].firstTokenTime! - executionTimes[model.id].startTime) / 1000).toFixed(2)}s
-                          </span>
-                        )}
-                      </div>
+                      <ExecutionTimeDisplay times={executionTimes[model.id]} />
                     </div>
                   </div>
                 )}

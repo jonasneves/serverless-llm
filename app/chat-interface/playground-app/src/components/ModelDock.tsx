@@ -17,6 +17,23 @@ export default function ModelDock({
   handleAddGroup,
   dockRef
 }: ModelDockProps) {
+  const sections = [
+    {
+      type: 'local' as const,
+      title: 'LOCAL MODELS',
+      addAllClass: 'text-[10px] text-emerald-400 hover:text-emerald-300 transition-colors',
+      itemBorderHover: 'hover:border-emerald-500/30',
+      dotClass: 'w-2 h-2 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)] bg-emerald-500',
+    },
+    {
+      type: 'api' as const,
+      title: 'API MODELS',
+      addAllClass: 'text-[10px] text-orange-400 hover:text-orange-300 transition-colors',
+      itemBorderHover: 'hover:border-orange-500/30',
+      dotClass: 'w-2 h-2 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] bg-orange-500',
+    },
+  ];
+
   return (
     <div 
       ref={dockRef}
@@ -30,66 +47,39 @@ export default function ModelDock({
         pointerEvents: showDock ? 'auto' : 'none',
       }}
     >
-      
-      {/* Local Models Section */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-400 tracking-wider">LOCAL MODELS</h3>
-          <button 
-            onClick={() => handleAddGroup('local')}
-            className="text-[10px] text-emerald-400 hover:text-emerald-300 transition-colors"
-          >
-            + ALL
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {availableModels.filter(m => m.type === 'local').map(model => (
-            <div
-              key={model.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, model.id)}
-              onClick={() => handleModelToggle(model.id)}
-              className="group flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent hover:border-emerald-500/30"
-            >
-              <div className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)] bg-emerald-500" />
-              <span className="text-xs font-medium text-slate-300 group-hover:text-white">{model.name}</span>
+      {sections.map(section => {
+        const modelsForSection = availableModels.filter(m => m.type === section.type);
+        return (
+          <div key={section.type} className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-400 tracking-wider">{section.title}</h3>
+              <button
+                onClick={() => handleAddGroup(section.type)}
+                className={section.addAllClass}
+              >
+                + ALL
+              </button>
             </div>
-          ))}
-          {availableModels.filter(m => m.type === 'local').length === 0 && (
-            <div className="text-[10px] text-slate-600 italic px-2">All active</div>
-          )}
-        </div>
-      </div>
-
-      {/* API Models Section */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-400 tracking-wider">API MODELS</h3>
-          <button 
-            onClick={() => handleAddGroup('api')}
-            className="text-[10px] text-orange-400 hover:text-orange-300 transition-colors"
-          >
-            + ALL
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {availableModels.filter(m => m.type === 'api').map(model => (
-            <div
-              key={model.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, model.id)}
-              onClick={() => handleModelToggle(model.id)}
-              className="group flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent hover:border-orange-500/30"
-            >
-              <div className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] bg-orange-500" />
-              <span className="text-xs font-medium text-slate-300 group-hover:text-white">{model.name}</span>
+            <div className="flex flex-col gap-2">
+              {modelsForSection.map(model => (
+                <div
+                  key={model.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, model.id)}
+                  onClick={() => handleModelToggle(model.id)}
+                  className={`group flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-white/5 transition-all border border-transparent ${section.itemBorderHover}`}
+                >
+                  <div className={section.dotClass} />
+                  <span className="text-xs font-medium text-slate-300 group-hover:text-white">{model.name}</span>
+                </div>
+              ))}
+              {modelsForSection.length === 0 && (
+                <div className="text-[10px] text-slate-600 italic px-2">All active</div>
+              )}
             </div>
-          ))}
-          {availableModels.filter(m => m.type === 'api').length === 0 && (
-            <div className="text-[10px] text-slate-600 italic px-2">All active</div>
-          )}
-        </div>
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
