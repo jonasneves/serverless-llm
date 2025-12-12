@@ -41,7 +41,8 @@ export default function ModelDock({
   return (
     <div 
       ref={dockRef}
-      className="fixed left-3 top-20 bottom-20 w-[85vw] sm:left-6 sm:top-24 sm:bottom-24 sm:w-64 rounded-2xl p-4 flex flex-col gap-6 z-[60] transition-all duration-300"
+      data-no-arena-scroll
+      className="dock-scroll fixed left-3 top-20 bottom-20 w-[85vw] sm:left-6 sm:top-24 sm:bottom-24 sm:w-64 rounded-2xl p-4 flex flex-col gap-6 z-[60] transition-all duration-300 overflow-y-auto pr-1"
       style={{
         background: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(12px)',
