@@ -762,17 +762,33 @@ export default function Playground() {
   // Handle Escape key to close dock and Delete/Backspace to remove selected models
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Escape closes dock
-      if (event.key === 'Escape' && showDock) {
-        setShowDock(false);
+      // Escape: unfocus input, close dock, clear hover
+      if (event.key === 'Escape') {
+        const target = event.target as HTMLElement;
+        // If in an input, just blur it
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          (target as HTMLInputElement).blur();
+          return;
+        }
+        // Otherwise close dock and clear selections
+        if (showDock) setShowDock(false);
+        setHoveredCard(null);
+        return;
+      }
+
+      // Don't trigger keyboard shortcuts if user is typing in an input
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      // 'M' toggles models dock
+      if (event.key === 'm' || event.key === 'M') {
+        event.preventDefault();
+        setShowDock(!showDock);
+        return;
       }
 
       // Delete or Backspace removes selected cards from arena
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCardIds.size > 0) {
-        // Don't trigger if user is typing in an input
-        const target = event.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
         event.preventDefault();
         // Remove all selected cards from the arena
         setSelected(prev => prev.filter(id => !selectedCardIds.has(id)));
@@ -780,10 +796,7 @@ export default function Playground() {
         return;
       }
 
-      // Auto-focus input when typing printable characters
-      const target = event.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
+      // Auto-focus input when typing printable characters (except shortcut keys)
       // Check if it's a printable character (single character, not a modifier key)
       if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
         if (inputRef.current) {
@@ -1865,7 +1878,7 @@ export default function Playground() {
               setContextMenu(null);
             }}
           >
-            <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
             {'Set as Orchestrator'}
