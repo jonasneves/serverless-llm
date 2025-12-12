@@ -48,6 +48,10 @@ from confession_engine import ConfessionEngine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Cache of GitHub Models that returned "unknown_model".
+# Prevents repeated network calls/log spam for invalid IDs.
+UNSUPPORTED_GITHUB_MODELS: set[str] = set()
+
 def get_default_github_token() -> Optional[str]:
     """Return default GitHub Models token from environment."""
     return (
@@ -982,6 +986,11 @@ async def stream_github_model_response(
     start_time = time.time()
     total_content = ""
     usage_data = None
+
+    # Short-circuit models known to be invalid on GitHub Models.
+    if model_id in UNSUPPORTED_GITHUB_MODELS:
+        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'This model is not available on GitHub Models (unknown model id). Remove it or update the id.'})}\n\n"
+        return
     
     # Send initial event
     yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
@@ -1025,8 +1034,26 @@ async def stream_github_model_response(
             timeout=120.0
         ) as response:
             if response.status_code != 200:
-                error_text = await response.aread()
-                error_msg = sanitize_error_message(error_text.decode(), GITHUB_MODELS_API_URL)
+                error_bytes = await response.aread()
+                error_raw = error_bytes.decode(errors="ignore")
+
+                # Detect "unknown_model" and cache to avoid repeated calls.
+                try:
+                    error_json = json.loads(error_raw)
+                    err_obj = error_json.get("error") or {}
+                    code = str(err_obj.get("code", "")).lower()
+                    msg = str(err_obj.get("message", "")).lower()
+                except Exception:
+                    code = ""
+                    msg = error_raw.lower()
+
+                if code == "unknown_model" or "unknown model" in msg:
+                    UNSUPPORTED_GITHUB_MODELS.add(model_id)
+                    friendly = "This model id isn’t recognized by GitHub Models. It may be unavailable for your token or renamed."
+                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': friendly})}\n\n"
+                    return
+
+                error_msg = sanitize_error_message(error_raw, GITHUB_MODELS_API_URL)
                 yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
                 return
             
