@@ -971,31 +971,45 @@ export default function Playground() {
       });
 
     } catch (err) {
-      console.error('Chat error:', err);
-      pendingStreamRef.current = {};
-      if (flushStreamRafRef.current != null) {
-        cancelAnimationFrame(flushStreamRafRef.current);
-        flushStreamRafRef.current = null;
+      if ((err as Error).name === 'AbortError') {
+        // Ignore usage aborts
+        return;
       }
-      setModelsData(prev => prev.map(m =>
-        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
-      ));
-      sessionModelIds.forEach(id => markModelFailed(id));
+      console.error('Chat error:', err);
+      // Only set error states if this is still the active controller
+      if (abortControllerRef.current === currentController) {
+        const errorMsg = (err as Error).message || String(err);
+        setModeratorSynthesis(`Session Error: ${errorMsg}`);
+        setPhaseLabel('Error');
+
+        pendingStreamRef.current = {};
+        if (flushStreamRafRef.current != null) {
+          cancelAnimationFrame(flushStreamRafRef.current);
+          flushStreamRafRef.current = null;
+        }
+        setModelsData(prev => prev.map(m =>
+          sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
+        ));
+        sessionModelIds.forEach(id => markModelFailed(id));
+      }
     } finally {
-      const finalTime = performance.now();
-      setExecutionTimes(prev => {
-        const updated = { ...prev };
-        sessionModelIdsRef.current.forEach(modelId => {
-          if (updated[modelId] && !updated[modelId].endTime) {
-            updated[modelId] = { ...updated[modelId], endTime: finalTime };
-          }
+      // ONLY reset state if we are still the active controller
+      if (abortControllerRef.current === currentController) {
+        const finalTime = performance.now();
+        setExecutionTimes(prev => {
+          const updated = { ...prev };
+          sessionModelIdsRef.current.forEach(modelId => {
+            if (updated[modelId] && !updated[modelId].endTime) {
+              updated[modelId] = { ...updated[modelId], endTime: finalTime };
+            }
+          });
+          return updated;
         });
-        return updated;
-      });
-      setIsGenerating(false);
-      setIsSynthesizing(false);
-      setPhaseLabel(prev => (prev === 'Error' ? prev : null));
-      setSpeaking(new Set());
+        setIsGenerating(false);
+        setIsSynthesizing(false);
+        setPhaseLabel(prev => (prev === 'Error' ? prev : null));
+        setSpeaking(new Set());
+      }
     }
   };
 
