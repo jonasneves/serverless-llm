@@ -96,7 +96,7 @@ export default function StatusIndicator({
             style={{
               ...indicatorSizeStyle,
               background: appendAlpha(color, '14'),
-              border: `1.5px solid ${appendAlpha(color, '70')}`,
+              border: `1px solid ${appendAlpha(color, '99')}`,
             }}
           >
             <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
@@ -118,7 +118,7 @@ export default function StatusIndicator({
             style={{
               ...indicatorSizeStyle,
               background: appendAlpha(errorColor, '14'),
-              border: `1.5px solid ${appendAlpha(errorColor, '70')}`,
+              border: `1px solid ${appendAlpha(errorColor, '99')}`,
             }}
           >
             <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
@@ -136,8 +136,8 @@ export default function StatusIndicator({
         return (
           <div className="relative flex items-center justify-center" style={indicatorSizeStyle}>
             <div
-              className="absolute inset-0 rounded-full border"
-              style={{ borderColor: appendAlpha(waitingColor, '35') }}
+              className="absolute inset-0 rounded-full"
+              style={{ border: `1px solid ${appendAlpha(waitingColor, '99')}` }}
             />
             <svg
               width={iconSize}
@@ -169,8 +169,8 @@ export default function StatusIndicator({
         return (
           <div className="relative flex items-center justify-center" style={indicatorSizeStyle}>
             <div
-              className="absolute inset-0 rounded-full border"
-              style={{ borderColor: 'rgba(148, 163, 184, 0.25)' }}
+              className="absolute inset-0 rounded-full"
+              style={{ border: '1px solid rgba(71, 85, 105, 0.5)' }}
             />
             <div
               className="w-2 h-2 rounded-full"

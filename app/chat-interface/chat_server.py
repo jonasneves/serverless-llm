@@ -1460,6 +1460,9 @@ async def stream_council_events(
 
         # Run council process with streaming
         async for event in engine.run_council(query, participants, chairman_model, max_tokens, completed_responses=completed_responses):
+            # Normalize event name for clients (council_engine emits "type"; UI expects "event")
+            if "event" not in event and "type" in event:
+                event = {"event": event["type"], **event}
             yield f"data: {json.dumps(event)}\n\n"
 
     except Exception as e:
@@ -1497,11 +1500,12 @@ async def council_stream(request: CouncilRequest):
     """
     return StreamingResponse(
         stream_council_events(
-            request.query,
-            request.participants,
-            request.chairman_model,
-            request.max_tokens,
-            request.github_token
+            query=request.query,
+            participants=request.participants,
+            chairman_model=request.chairman_model,
+            max_tokens=request.max_tokens,
+            github_token=request.github_token,
+            completed_responses=request.completed_responses,
         ),
         media_type="text/event-stream",
         headers={
