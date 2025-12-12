@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import json
 import asyncio
+import time
 from dataclasses import dataclass
 from typing import Optional, List
 
@@ -58,6 +59,7 @@ class GenerateRequest(BaseModel):
     temperature: float = 0.7
     top_p: float = 0.9
     stream: bool = False
+    include_perf: bool = False
 
     class Config:
         extra = 'ignore'  # allow OpenAI-style extra fields like 'model', 'tools', etc.
@@ -96,6 +98,8 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
     llm: Optional[Llama] = None
     max_concurrent = int(os.getenv("MAX_CONCURRENT", "2"))
     inference_lock = asyncio.Semaphore(max_concurrent)
+    always_include_perf = os.getenv("ALWAYS_INCLUDE_PERF", "").strip().lower() in {"1", "true", "yes", "on"}
+    log_perf = os.getenv("LOG_PERF", "").strip().lower() in {"1", "true", "yes", "on"}
 
     def _load_model():
         nonlocal llm
@@ -151,7 +155,10 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             "file": os.getenv("MODEL_FILE", config.default_file),
             "n_ctx": int(os.getenv("N_CTX", str(config.default_n_ctx))),
             "n_threads": int(os.getenv("N_THREADS", str(config.default_n_threads))),
+            "n_batch": int(os.getenv("N_BATCH", str(config.n_batch))),
             "max_concurrent": max_concurrent,
+            "openblas_num_threads": os.getenv("OPENBLAS_NUM_THREADS"),
+            "omp_num_threads": os.getenv("OMP_NUM_THREADS"),
             "git_sha": os.getenv("GIT_SHA", "unknown"),
         }
 
@@ -163,10 +170,20 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             ]
         }
 
-    async def _generate_stream(messages: list, max_tokens: int, temperature: float, top_p: float):
+    async def _generate_stream(
+        messages: list,
+        max_tokens: int,
+        temperature: float,
+        top_p: float,
+        *,
+        include_perf: bool,
+    ):
         nonlocal llm
         try:
+            request_start = time.perf_counter()
+            wait_start = time.perf_counter()
             async with inference_lock:
+                lock_acquired = time.perf_counter()
                 response = await asyncio.to_thread(
                     llm.create_chat_completion,
                     messages=messages,
@@ -177,20 +194,26 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
                 )
 
                 generated_text = ""
+                first_token_time: Optional[float] = None
                 for chunk in response:
                     if "choices" in chunk and len(chunk["choices"]) > 0:
                         delta = chunk["choices"][0].get("delta", {})
                         if "content" in delta:
                             content = delta["content"]
                             generated_text += content
+                            if first_token_time is None and content:
+                                first_token_time = time.perf_counter()
                             yield f"data: {json.dumps(chunk)}\n\n"
                             await asyncio.sleep(0)
+
+                generation_done = time.perf_counter()
 
                 # Compute token usage
                 prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
                 prompt_tokens = len(llm.tokenize(prompt_text.encode()))
                 completion_tokens = len(llm.tokenize(generated_text.encode()))
                 total_tokens = prompt_tokens + completion_tokens
+                tokenization_done = time.perf_counter()
 
                 usage_chunk = {
                     "choices": [{"delta": {}, "finish_reason": "stop"}],
@@ -200,6 +223,38 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
                         "total_tokens": total_tokens,
                     },
                 }
+
+                if include_perf:
+                    queue_ms = int((lock_acquired - wait_start) * 1000)
+                    total_ms = int((tokenization_done - request_start) * 1000)
+                    generation_ms = int((generation_done - lock_acquired) * 1000)
+                    tokenize_ms = int((tokenization_done - generation_done) * 1000)
+                    ttft_ms = (
+                        int((first_token_time - request_start) * 1000)
+                        if first_token_time is not None
+                        else None
+                    )
+                    completion_tps = (
+                        round(completion_tokens / (generation_ms / 1000), 2)
+                        if generation_ms > 0
+                        else None
+                    )
+                    usage_chunk["perf"] = {
+                        "queue_ms": queue_ms,
+                        "ttft_ms": ttft_ms,
+                        "generation_ms": generation_ms,
+                        "tokenize_ms": tokenize_ms,
+                        "total_ms": total_ms,
+                        "completion_tps": completion_tps,
+                        "n_ctx": int(os.getenv("N_CTX", str(config.default_n_ctx))),
+                        "n_threads": int(os.getenv("N_THREADS", str(config.default_n_threads))),
+                        "n_batch": int(os.getenv("N_BATCH", str(config.n_batch))),
+                        "max_concurrent": max_concurrent,
+                    }
+
+                    if log_perf:
+                        print(f"perf stream queue_ms={queue_ms} ttft_ms={ttft_ms} gen_ms={generation_ms} tok_ms={tokenize_ms} total_ms={total_ms} completion_tokens={completion_tokens} completion_tps={completion_tps}")
+
                 yield f"data: {json.dumps(usage_chunk)}\n\n"
                 yield "data: [DONE]\n\n"
         except Exception as e:
@@ -212,6 +267,8 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             raise HTTPException(status_code=503, detail="Model not loaded")
 
         try:
+            include_perf = bool(request.include_perf) or always_include_perf
+            request_start = time.perf_counter()
             if request.messages:
                 messages = [{"role": m.role, "content": m.content} for m in request.messages]
             elif request.prompt:
@@ -221,12 +278,20 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
 
             if request.stream:
                 return StreamingResponse(
-                    _generate_stream(messages, request.max_tokens, request.temperature, request.top_p),
+                    _generate_stream(
+                        messages,
+                        request.max_tokens,
+                        request.temperature,
+                        request.top_p,
+                        include_perf=include_perf,
+                    ),
                     media_type="text/event-stream",
                     headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
                 )
 
+            wait_start = time.perf_counter()
             async with inference_lock:
+                lock_acquired = time.perf_counter()
                 response = await asyncio.to_thread(
                     llm.create_chat_completion,
                     messages=messages,
@@ -234,14 +299,42 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
                     temperature=request.temperature,
                     top_p=request.top_p,
                 )
+            done = time.perf_counter()
 
-            return {
+            result = {
                 "id": f"chatcmpl-{config.openai_model_id}",
                 "object": "chat.completion",
                 "model": config.openai_model_id,
                 "choices": response["choices"],
                 "usage": response["usage"],
             }
+
+            if include_perf:
+                queue_ms = int((lock_acquired - wait_start) * 1000)
+                compute_ms = int((done - lock_acquired) * 1000)
+                total_ms = int((done - request_start) * 1000)
+                usage = response.get("usage") or {}
+                completion_tokens = usage.get("completion_tokens")
+                completion_tps = (
+                    round(completion_tokens / (compute_ms / 1000), 2)
+                    if isinstance(completion_tokens, int) and compute_ms > 0
+                    else None
+                )
+                result["perf"] = {
+                    "queue_ms": queue_ms,
+                    "compute_ms": compute_ms,
+                    "total_ms": total_ms,
+                    "completion_tps": completion_tps,
+                    "n_ctx": int(os.getenv("N_CTX", str(config.default_n_ctx))),
+                    "n_threads": int(os.getenv("N_THREADS", str(config.default_n_threads))),
+                    "n_batch": int(os.getenv("N_BATCH", str(config.n_batch))),
+                    "max_concurrent": max_concurrent,
+                }
+
+                if log_perf:
+                    print(f"perf queue_ms={queue_ms} compute_ms={compute_ms} total_ms={total_ms} completion_tokens={completion_tokens} completion_tps={completion_tps}")
+
+            return result
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
