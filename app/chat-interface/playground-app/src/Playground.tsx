@@ -1042,9 +1042,9 @@ Synthesis:`;
                   <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Chairman</div>
                   <div className="text-sm font-semibold">{chairmanModel.name}</div>
                   <div className="flex items-center justify-center gap-1 mt-1">
-                    <div className={`w-1.5 h-1.5 rounded-full ${speaking.has(chairmanModel.id) ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${isSynthesizing ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
                     <span className="text-[10px] text-slate-500">
-                      {speaking.has(chairmanModel.id) ? "Synthesizing" : isGenerating ? "Observing" : "Presiding"}
+                      {isSynthesizing ? "Synthesizing..." : isGenerating ? "Observing" : chairmanSynthesis ? "Done" : "Presiding"}
                     </span>
                   </div>
                 </div>
@@ -1065,7 +1065,15 @@ Synthesis:`;
                 >
                   <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Synthesis</div>
                   <p className="text-sm text-slate-300 leading-relaxed">
-                    <Typewriter text={chairmanSynthesis} speed={20} />
+                    {chairmanSynthesis ? (
+                      <Typewriter text={chairmanSynthesis} speed={20} />
+                    ) : isSynthesizing ? (
+                      <span className="text-slate-500 italic">Synthesizing responses...</span>
+                    ) : isGenerating ? (
+                      <span className="text-slate-500 italic">Waiting for model responses...</span>
+                    ) : (
+                      <span className="text-slate-500 italic">Send a prompt to see the synthesis.</span>
+                    )}
                   </p>
                 </div>
               )}
