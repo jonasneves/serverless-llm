@@ -123,7 +123,7 @@
         <!-- Lab (Experimental Modes) Dropdown -->
         <div class="mode-dropdown">
           <button
-            class="mode-link dropdown-trigger {% if request.url.path in ['/council', '/roundtable', '/autogen', '/variations', '/confessions'] %}active{% endif %}">
+            class="mode-link dropdown-trigger {% if request.url.path in ['/council', '/roundtable', '/autogen', '/variations', '/confessions', '/playground'] %}active{% endif %}">
             Lab
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               style="margin-left: 4px;">
@@ -159,6 +159,13 @@
               <div class="dropdown-item-content">
                 <span class="dropdown-item-title">Confessions</span>
                 <span class="dropdown-item-desc">Honesty reports</span>
+              </div>
+            </a>
+            <a href="/playground" class="dropdown-item {% if request.url.path == '/playground' %}active{% endif %}">
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Arena <span
+                    style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;">New</span></span>
+                <span class="dropdown-item-desc">New playground interface</span>
               </div>
             </a>
           </div>
