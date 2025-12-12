@@ -564,6 +564,12 @@ Synthesis:`;
 
   const bgClass = bgStyle === 'none' ? '' : `bg-${bgStyle}`;
 
+  const getTailSnippet = (text: string, maxChars: number = 280) => {
+    if (!text) return '';
+    if (text.length <= maxChars) return text;
+    return `…${text.slice(text.length - maxChars)}`;
+  };
+
   // Normalize rectangle coordinates
   const normalizeRect = (a: { x: number; y: number }, b: { x: number; y: number }) => {
     const left = Math.min(a.x, b.x);
@@ -985,13 +991,17 @@ Synthesis:`;
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-semibold text-slate-200">{model.name}</span>
                         <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
-                        <Typewriter text={model.response} speed={20} />
-                      </p>
-                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
-                      </div>
+	                      </div>
+	                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
+	                        {isSpeaking ? (
+	                          <Typewriter text={model.response} speed={20} />
+	                        ) : (
+	                          model.response
+	                        )}
+	                      </p>
+	                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
+	                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
+	                      </div>
                     </div>
                   )}
 
@@ -1055,9 +1065,15 @@ Synthesis:`;
                       <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
                       <span className="text-xs font-semibold text-slate-300">{model.name}</span>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      <Typewriter text={model.response} speed={20} />
-                    </p>
+	                    <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+	                      {isSpeaking ? (
+	                        <Typewriter text={model.response} speed={20} />
+	                      ) : model.response ? (
+	                        getTailSnippet(model.response)
+	                      ) : (
+	                        <span className="text-slate-500 italic">No response yet.</span>
+	                      )}
+	                    </p>
                     <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
                       <ExecutionTimeDisplay times={executionTimes[model.id]} />
                     </div>
