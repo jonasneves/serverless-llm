@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
 import { MODEL_META, BG_STYLES, MODE_COLORS, GENERATION_DEFAULTS, LAYOUT } from './constants';
 import Typewriter from './components/Typewriter';
@@ -9,6 +9,7 @@ import ExecutionTimeDisplay, { ExecutionTimeData } from './components/ExecutionT
 import ResponseInspector from './components/ResponseInspector';
 import SettingsModal from './components/SettingsModal';
 import { fetchChatStream, fetchCouncilStream, fetchDiscussionStream, streamSseEvents } from './utils/streaming';
+import StatusIndicator from './components/StatusIndicator';
 
 interface ModelsApiModel {
   id: string;
@@ -279,6 +280,10 @@ export default function Playground() {
     evaluation?: any;
   }>>>({});
   const currentDiscussionTurnRef = useRef<{ modelId: string; turnNumber: number } | null>(null);
+
+  const compareCardRectsRef = useRef<Record<string, DOMRect>>({});
+  const prevModeRef = useRef<Mode>(mode);
+  const [orchestratorEntryOffset, setOrchestratorEntryOffset] = useState<{ x: number; y: number } | null>(null);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || selected.length === 0 || isGenerating) return;
@@ -890,6 +895,41 @@ export default function Playground() {
   const moderatorModel = modelsData.find(m => m.id === moderator);
   const inspectorModels = modelsData.filter(m => selectedCardIds.has(m.id));
 
+  const orchestratorStatus = isSynthesizing
+    ? 'responding'
+    : isGenerating
+      ? 'waiting'
+      : moderatorSynthesis
+        ? 'done'
+        : 'idle';
+
+  const orchestratorPhaseLabel = phaseLabel
+    ? phaseLabel
+    : isSynthesizing
+      ? 'Synthesizing'
+      : isGenerating
+        ? 'Observing'
+        : moderatorSynthesis
+          ? 'Done'
+          : 'Presiding';
+
+  const orchestratorTransform = orchestratorEntryOffset
+    ? `translate(-50%, -50%) translate(${orchestratorEntryOffset.x}px, ${orchestratorEntryOffset.y}px)`
+    : 'translate(-50%, -50%)';
+  const orchestratorTransformWithScale = `${orchestratorTransform} scale(1)`;
+
+  useLayoutEffect(() => {
+    if (mode !== 'compare') return;
+    const rects: Record<string, DOMRect> = {};
+    selectedModels.forEach(model => {
+      const card = cardRefs.current.get(model.id);
+      if (card) {
+        rects[model.id] = card.getBoundingClientRect();
+      }
+    });
+    compareCardRectsRef.current = rects;
+  }, [mode, selectedModels.length, selectedModels.map(m => m.id).join(',')]);
+
   useEffect(() => {
     if (inspectorModels.length === 0) {
       if (activeInspectorId !== null) setActiveInspectorId(null);
@@ -902,6 +942,26 @@ export default function Playground() {
 
   // Dynamic layout radius calculation
   const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
+
+  useEffect(() => {
+    const prevMode = prevModeRef.current;
+    if (prevMode === 'compare' && mode !== 'compare' && moderator && visualizationAreaRef.current) {
+      const rect = compareCardRectsRef.current[moderator];
+      const viz = visualizationAreaRef.current.getBoundingClientRect();
+      if (rect && viz.width > 0 && viz.height > 0) {
+        const targetX = viz.left + viz.width / 2;
+        const verticalOffset = mode === 'council' ? layoutRadius - 64 : 0;
+        const targetY = viz.top + (viz.height * 0.5 + verticalOffset);
+        const offsetX = rect.left + rect.width / 2 - targetX;
+        const offsetY = rect.top + rect.height / 2 - targetY;
+        if (Math.abs(offsetX) > 1 || Math.abs(offsetY) > 1) {
+          setOrchestratorEntryOffset({ x: offsetX, y: offsetY });
+          requestAnimationFrame(() => setOrchestratorEntryOffset(null));
+        }
+      }
+    }
+    prevModeRef.current = mode;
+  }, [mode, moderator, layoutRadius]);
 
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'council') {
@@ -1359,27 +1419,25 @@ export default function Playground() {
                       opacity: isCircle ? 0 : 1,
                       transition: 'opacity 0.3s ease-out'
                     }}>
-	                      <div className="flex items-center justify-between mb-3 gap-2">
-		                        <div className="flex items-center gap-1.5 min-w-0">
-		                          <span className="text-xs font-semibold text-slate-200 truncate">{model.name}</span>
-		                          {mode === 'compare' && moderator === model.id && (
-		                            <span
-		                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-300 border border-yellow-500/30"
-		                              title="Orchestrator used for Council/Roundtable"
-		                            >
-		                              Orchestrator
-		                            </span>
-		                          )}
-		                        </div>
-		                        <div className="relative w-2 h-2 rounded-full shrink-0" style={{ background: model.color }}>
-		                          {mode === 'compare' && isSpeaking && (
-		                            <span
-		                              className="absolute inset-0 rounded-full animate-ping"
-		                              style={{ background: model.color, opacity: 0.6 }}
-		                            />
-		                          )}
-		                        </div>
-		                      </div>
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-xs font-semibold text-slate-200 truncate">{model.name}</span>
+                          {mode === 'compare' && moderator === model.id && (
+                            <span
+                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-300 border border-yellow-500/30"
+                              title="Orchestrator used for Council/Roundtable"
+                            >
+                              Orchestrator
+                            </span>
+                          )}
+                        </div>
+                        <StatusIndicator
+                          state={isSpeaking ? 'responding' : isDone ? 'done' : 'idle'}
+                          color={model.color}
+                          size={16}
+                          label={isSpeaking ? 'Responding' : isDone ? 'Done' : 'Ready'}
+                        />
+                      </div>
 	                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
 	                        {isSpeaking ? (
 	                          <Typewriter text={model.response} speed={20} />
@@ -1402,26 +1460,13 @@ export default function Playground() {
                       <div className="text-center px-2">
                         <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
                         {isSpeaking && (
-                          <div className="flex items-center justify-center gap-1 mt-1">
-                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
-                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
-                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
+                          <div className="flex items-center justify-center mt-1">
+                            <StatusIndicator state="responding" color={model.color} size={16} />
                           </div>
                         )}
                         {!isSpeaking && isDone && (
                           <div className="flex items-center justify-center mt-1">
-                            <svg
-                              className="w-3 h-3"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke={model.color}
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              style={{ opacity: 0.85 }}
-                            >
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
+                            <StatusIndicator state="done" color={model.color} size={16} />
                           </div>
                         )}
                       </div>
@@ -1508,7 +1553,7 @@ export default function Playground() {
               className="absolute z-20 transition-all duration-700 ease-out cursor-pointer"
               style={{
                 opacity: 1,
-                transform: 'translate(-50%, -50%) scale(1)',
+                transform: orchestratorTransformWithScale,
                 left: '50%',
                 top: mode === 'council' ? `calc(50% + ${layoutRadius}px - 64px)` : '50%', // Align top edge with circle bottom
               }}
@@ -1560,11 +1605,14 @@ export default function Playground() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-center gap-1 mt-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${isSynthesizing ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
-                <span className="text-[10px] text-slate-500">
-                  {phaseLabel ? phaseLabel : isSynthesizing ? "Synthesizing..." : isGenerating ? "Observing" : moderatorSynthesis ? "Done" : "Presiding"}
-                </span>
+              <div className="flex flex-col items-center gap-1 mt-3">
+                <StatusIndicator
+                  state={orchestratorStatus}
+                  color={moderatorModel.color}
+                  size={18}
+                  label={orchestratorPhaseLabel}
+                />
+                <span className="text-[10px] text-slate-500">{orchestratorPhaseLabel}</span>
               </div>
 
               {/* Expanded synthesis */}
