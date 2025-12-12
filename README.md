@@ -90,6 +90,12 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
   }'
 ```
 
+### Performance Debugging
+
+- Check runtime settings via `GET /health/details` (includes `n_ctx`, `n_threads`, `n_batch`, `max_concurrent`)
+- Add `"include_perf": true` to `/v1/chat/completions` to return queue/compute timing (and TTFT for streaming)
+- Compare models with `python3 scripts/bench_models.py --models qwen phi llama --stream --include-perf`
+
 ## Project Structure
 
 ```

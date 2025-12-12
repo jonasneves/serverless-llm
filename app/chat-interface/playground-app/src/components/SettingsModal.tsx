@@ -63,12 +63,12 @@ export default function SettingsModal({ open, onClose, token, setToken }: Settin
                 title={showToken ? 'Hide token' : 'Show token'}
               >
                 {showToken ? (
-                  <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 014.74-5.74M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.4 18.4 0 01-2.16 3.19M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <line x1="3" y1="3" x2="21" y2="21" strokeWidth={2} />
                   </svg>
                 ) : (
-                  <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                     <circle cx="12" cy="12" r="3" strokeWidth={2} />
                   </svg>

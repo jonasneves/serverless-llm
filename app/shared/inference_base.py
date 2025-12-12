@@ -153,6 +153,7 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             "format": "GGUF",
             "repo": os.getenv("MODEL_REPO", config.default_repo),
             "file": os.getenv("MODEL_FILE", config.default_file),
+            "cpu_count": os.cpu_count(),
             "n_ctx": int(os.getenv("N_CTX", str(config.default_n_ctx))),
             "n_threads": int(os.getenv("N_THREADS", str(config.default_n_threads))),
             "n_batch": int(os.getenv("N_BATCH", str(config.n_batch))),
