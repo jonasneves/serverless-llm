@@ -14,6 +14,7 @@ import re
 import random
 from collections import defaultdict
 from model_profiles import MODEL_PROFILES
+from error_utils import sanitize_error_message
 
 # Pre-defined quip templates for faster response (used as fallback)
 CHAIRMAN_QUIP_TEMPLATES = {
@@ -228,8 +229,9 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
             response = await client.post(url, headers=headers, json=payload, timeout=self.timeout)
 
             if response.status_code != 200:
-                error_text = await response.aread()
-                raise Exception(f"Model API error {response.status_code}: {error_text.decode()}")
+                error_raw = (await response.aread()).decode(errors="ignore")
+                error_msg = sanitize_error_message(error_raw, url)
+                raise Exception(error_msg)
 
             if stream:
                 return {"stream": response, "url": url}
@@ -727,4 +729,3 @@ Provide a clear, well-reasoned final answer that represents the council's collec
             "type": "council_complete",
             "aggregate_rankings": aggregate_rankings
         }
-

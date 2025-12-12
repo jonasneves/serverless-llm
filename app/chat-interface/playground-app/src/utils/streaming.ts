@@ -21,6 +21,40 @@ export const fetchChatStream = async (payload: ChatStreamPayload): Promise<Respo
   });
 };
 
+export interface CouncilStreamPayload {
+  query: string;
+  participants: string[];
+  chairman_model?: string | null;
+  max_tokens: number;
+  github_token?: string | null;
+}
+
+export const fetchCouncilStream = async (payload: CouncilStreamPayload): Promise<Response> => {
+  return fetch('/api/chat/council/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+};
+
+export interface DiscussionStreamPayload {
+  query: string;
+  orchestrator_model?: string | null;
+  participants?: string[] | null;
+  turns?: number;
+  max_tokens: number;
+  temperature: number;
+  github_token?: string | null;
+}
+
+export const fetchDiscussionStream = async (payload: DiscussionStreamPayload): Promise<Response> => {
+  return fetch('/api/chat/discussion/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+};
+
 export const streamSseEvents = async (
   response: Response,
   onEvent: (data: ChatStreamEvent) => void,

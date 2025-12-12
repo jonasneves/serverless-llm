@@ -4,7 +4,6 @@ Web-based chat UI for interacting with different LLM backends
 """
 
 import os
-import re
 import time
 import asyncio
 import json
@@ -42,6 +41,7 @@ from tool_orchestrator import ToolOrchestrator
 # Verbalized Sampling mode imports
 from verbalized_sampling_engine import VerbalizedSamplingEngine
 from confession_engine import ConfessionEngine
+from error_utils import sanitize_error_message
 
 
 # Configure logging
@@ -59,42 +59,6 @@ def get_default_github_token() -> Optional[str]:
         or os.getenv("GITHUB_TOKEN")
         or os.getenv("GH_TOKEN")
     )
-
-def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
-    """
-    Sanitize error messages to hide raw HTML/technical details from users.
-    Logs full details server-side.
-    """
-    # Log full error for debugging
-    logger.error(f"Model error from {endpoint}: {error_text[:500]}...")
-
-    # Check for common error patterns and return user-friendly messages
-    error_lower = error_text.lower()
-
-    if "cloudflare" in error_lower or "<!doctype" in error_lower or "<html" in error_lower:
-        return "Service temporarily unavailable. The model server may be down or experiencing issues."
-
-    if "timeout" in error_lower:
-        return "Request timed out. Please try again."
-
-    if "connection refused" in error_lower or "connect error" in error_lower:
-        return "Cannot connect to model server. Please try again later."
-
-    if "502" in error_text or "503" in error_text or "504" in error_text:
-        return "Model server is temporarily unavailable."
-
-    if "520" in error_text or "521" in error_text or "522" in error_lower:
-        return "Service temporarily unavailable (CDN error)."
-
-    # Strip any HTML tags as a fallback
-    clean_text = re.sub(r'<[^>]+>', '', error_text)
-    clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-
-    # Truncate if still too long
-    if len(clean_text) > 200:
-        return clean_text[:200] + "..."
-
-    return clean_text if clean_text else "An unexpected error occurred."
 
 app = FastAPI(
     title="LLM Chat Interface",

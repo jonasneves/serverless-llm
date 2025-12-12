@@ -9,6 +9,7 @@ import httpx
 from typing import Dict, Any, Optional
 from http_client import HTTPClient
 from constants import DEFAULT_REMOTE_ENDPOINTS
+from error_utils import sanitize_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -156,8 +157,9 @@ class ModelRouter:
                 json=payload
             )
             if response.status_code != 200:
-                error_text = response.text
-                raise Exception(f"Model API error ({model_name}): {response.status_code} - {error_text}")
+                error_raw = response.text or ""
+                error_msg = sanitize_error_message(error_raw, api_url)
+                raise Exception(error_msg)
 
             data = response.json()
 

@@ -8,7 +8,7 @@ import Header from './components/Header';
 import ExecutionTimeDisplay, { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import ResponseInspector from './components/ResponseInspector';
 import SettingsModal from './components/SettingsModal';
-import { fetchChatStream, streamSseEvents } from './utils/streaming';
+import { fetchChatStream, fetchCouncilStream, fetchDiscussionStream, streamSseEvents } from './utils/streaming';
 
 interface ModelsApiModel {
   id: string;
@@ -199,8 +199,13 @@ export default function Playground() {
   const suppressClickRef = useRef(false);
   const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
+  const dragSelectionActiveRef = useRef(false);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId: string } | null>(null);
+
+  useEffect(() => {
+    dragSelectionActiveRef.current = dragSelection != null;
+  }, [dragSelection]);
 
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
@@ -211,57 +216,358 @@ export default function Playground() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
-  const [lastUserPrompt, setLastUserPrompt] = useState<string>('');
+
+  const [phaseLabel, setPhaseLabel] = useState<string | null>(null);
+  const [councilAggregateRankings, setCouncilAggregateRankings] = useState<Array<{
+    model_id: string;
+    model_name: string;
+    average_rank: number;
+    votes_count: number;
+  }> | null>(null);
+  const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{
+    turn_number: number;
+    response: string;
+    evaluation?: any;
+  }>>>({});
+  const currentDiscussionTurnRef = useRef<{ modelId: string; turnNumber: number } | null>(null);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || selected.length === 0 || isGenerating) return;
+
     const sessionModelIds = selected.slice();
     sessionModelIdsRef.current = sessionModelIds;
 
     setIsGenerating(true);
+    setIsSynthesizing(false);
     setExpanded(null);
-    setSpeaking(new Set(sessionModelIds)); // Mark all selected models as speaking
-    setLastUserPrompt(text); // Store the prompt for synthesis
-    setModeratorSynthesis(''); // Reset moderator synthesis
+    setPhaseLabel(null);
+    setModeratorSynthesis('');
+    setCouncilAggregateRankings(null);
+    setDiscussionTurnsByModel({});
+    currentDiscussionTurnRef.current = null;
 
-    // Initialize execution time tracking for all selected models
+    // Initialize execution time tracking for all relevant models
     const startTime = performance.now();
     const initialTimes: Record<string, ExecutionTimeData> = {};
     sessionModelIds.forEach(modelId => {
       initialTimes[modelId] = { startTime };
     });
+    if (moderator && !initialTimes[moderator]) {
+      initialTimes[moderator] = { startTime };
+    }
     setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
 
     // Reset thinking state for streaming
-    sessionModelIds.forEach(modelId => {
+    const thinkingResetIds = new Set(sessionModelIds);
+    if (moderator) thinkingResetIds.add(moderator);
+    thinkingResetIds.forEach(modelId => {
       thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
     });
 
     // Track which models have received their first token
     const firstTokenReceived = new Set<string>();
 
-    // Reset responses for selected models
+    // Reset responses for models participating in this run (and chairman/orchestrator)
     setModelsData(prev => prev.map(m =>
-      sessionModelIds.includes(m.id) ? { ...m, response: '', thinking: '' } : m
+      sessionModelIds.includes(m.id) || m.id === moderator
+        ? { ...m, response: '', thinking: '' }
+        : m
     ));
 
-	    // Leave all cards collapsed on send; users can open any model manually.
+    const applyThinkingChunk = (modelId: string, rawChunk: string) => {
+      const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
+      let textChunk = state.carry + rawChunk;
+      state.carry = '';
+
+      const lastLt = textChunk.lastIndexOf('<');
+      if (lastLt !== -1 && textChunk.length - lastLt < 8) {
+        const tail = textChunk.slice(lastLt);
+        if ('<think>'.startsWith(tail) || '</think>'.startsWith(tail)) {
+          state.carry = tail;
+          textChunk = textChunk.slice(0, lastLt);
+        }
+      }
+
+      let thinkingAdd = '';
+      let answerAdd = '';
+      let idx = 0;
+      while (idx < textChunk.length) {
+        if (!state.inThink) {
+          const start = textChunk.indexOf('<think>', idx);
+          if (start === -1) {
+            answerAdd += textChunk.slice(idx);
+            break;
+          }
+          answerAdd += textChunk.slice(idx, start);
+          state.inThink = true;
+          idx = start + 7;
+        } else {
+          const end = textChunk.indexOf('</think>', idx);
+          if (end === -1) {
+            thinkingAdd += textChunk.slice(idx);
+            break;
+          }
+          thinkingAdd += textChunk.slice(idx, end);
+          state.inThink = false;
+          idx = end + 8;
+        }
+      }
+
+      thinkingStateRef.current[modelId] = state;
+
+      if (thinkingAdd || answerAdd) {
+        setModelsData(prev => prev.map(m => {
+          if (m.id === modelId) {
+            return {
+              ...m,
+              response: m.response + answerAdd,
+              thinking: (m.thinking || '') + thinkingAdd,
+            };
+          }
+          return m;
+        }));
+      }
+    };
 
     try {
-      const response = await fetchChatStream({
-        models: sessionModelIds,
-        messages: [{ role: 'user', content: text }],
+      if (mode === 'compare') {
+        setSpeaking(new Set(sessionModelIds));
+
+        const response = await fetchChatStream({
+          models: sessionModelIds,
+          messages: [{ role: 'user', content: text }],
+          max_tokens: GENERATION_DEFAULTS.maxTokens,
+          temperature: GENERATION_DEFAULTS.temperature,
+          github_token: githubToken || null
+        });
+
+        await streamSseEvents(response, (data) => {
+          if (data.event === 'token' && data.model_id) {
+            const modelId = data.model_id as string;
+            const now = performance.now();
+
+            if (!firstTokenReceived.has(modelId)) {
+              firstTokenReceived.add(modelId);
+              setExecutionTimes(prev => ({
+                ...prev,
+                [modelId]: { ...prev[modelId], firstTokenTime: now }
+              }));
+            }
+
+            applyThinkingChunk(modelId, String(data.content ?? ''));
+          }
+
+          if (data.event === 'done' && data.model_id) {
+            const now = performance.now();
+            const modelId = data.model_id as string;
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], endTime: now }
+            }));
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.delete(modelId);
+              return next;
+            });
+          }
+        });
+        return;
+      }
+
+      if (mode === 'council') {
+        const participants = sessionModelIds;
+        if (participants.length < 2) {
+          const msg = 'Select at least 2 participants for Council mode.';
+          setModeratorSynthesis(msg);
+          if (moderator) {
+            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: msg } : m));
+          }
+          setPhaseLabel('Error');
+          return;
+        }
+        setSpeaking(new Set(participants));
+
+        const response = await fetchCouncilStream({
+          query: text,
+          participants,
+          chairman_model: moderator || null,
+          max_tokens: GENERATION_DEFAULTS.maxTokens,
+          github_token: githubToken || null,
+        });
+
+        await streamSseEvents(response, (data) => {
+          const eventType = data.event;
+
+          if (eventType === 'stage1_start') {
+            setPhaseLabel('Stage 1 · Responses');
+          }
+
+          if (eventType === 'model_chunk' && data.model_id) {
+            const modelId = data.model_id as string;
+            const now = performance.now();
+
+            if (!firstTokenReceived.has(modelId)) {
+              firstTokenReceived.add(modelId);
+              setExecutionTimes(prev => ({
+                ...prev,
+                [modelId]: { ...prev[modelId], firstTokenTime: now }
+              }));
+            }
+
+            applyThinkingChunk(modelId, String((data as any).chunk ?? ''));
+          }
+
+          if (eventType === 'model_response' && data.model_id) {
+            const modelId = data.model_id as string;
+            const now = performance.now();
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], endTime: now }
+            }));
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.delete(modelId);
+              return next;
+            });
+
+            if ((data as any).response) {
+              const finalResponse = String((data as any).response ?? '');
+              setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: finalResponse } : m));
+            }
+          }
+
+          if (eventType === 'model_error' && data.model_id) {
+            const modelId = data.model_id as string;
+            const now = performance.now();
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], endTime: now }
+            }));
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.delete(modelId);
+              return next;
+            });
+            const errorText = String((data as any).error ?? 'Error generating response.');
+            setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
+          }
+
+          if (eventType === 'stage2_start') {
+            setPhaseLabel('Stage 2 · Anonymous Review');
+            setSpeaking(new Set(participants));
+          }
+
+          if (eventType === 'ranking_response' && data.model_id) {
+            const modelId = data.model_id as string;
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.delete(modelId);
+              return next;
+            });
+          }
+
+          if (eventType === 'ranking_error' && data.model_id) {
+            const modelId = data.model_id as string;
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.delete(modelId);
+              return next;
+            });
+          }
+
+          if (eventType === 'stage2_complete') {
+            const aggregate = (data as any).aggregate_rankings as any[] | undefined;
+            if (aggregate) setCouncilAggregateRankings(aggregate as any);
+          }
+
+          if (eventType === 'stage3_start') {
+            setPhaseLabel('Stage 3 · Synthesis');
+            setIsSynthesizing(true);
+            if (moderator) setSpeaking(new Set([moderator]));
+          }
+
+          if (eventType === 'stage3_complete') {
+            const synthesis = String((data as any).response ?? '');
+            setModeratorSynthesis(synthesis);
+            if (moderator) {
+              setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
+            }
+            setIsSynthesizing(false);
+          }
+
+          if (eventType === 'council_complete') {
+            setPhaseLabel(null);
+            setIsSynthesizing(false);
+            setSpeaking(new Set());
+            const aggregate = (data as any).aggregate_rankings as any[] | undefined;
+            if (aggregate) setCouncilAggregateRankings(aggregate as any);
+          }
+
+          if (eventType === 'error') {
+            const message = String((data as any).error ?? (data as any).message ?? 'Council error.');
+            setModeratorSynthesis(message);
+            if (moderator) {
+              setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
+            }
+            setPhaseLabel('Error');
+          }
+        });
+        return;
+      }
+
+      // Roundtable (discussion) mode
+      const participants = sessionModelIds.filter(id => id !== moderator);
+      if (participants.length < 2) {
+        const msg = 'Select at least 2 participants besides the orchestrator.';
+        setModeratorSynthesis(msg);
+        if (moderator) {
+          setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: msg } : m));
+        }
+        setPhaseLabel('Error');
+        return;
+      }
+
+      const response = await fetchDiscussionStream({
+        query: text,
+        orchestrator_model: moderator || null,
+        participants,
+        turns: 2,
         max_tokens: GENERATION_DEFAULTS.maxTokens,
         temperature: GENERATION_DEFAULTS.temperature,
-        github_token: githubToken || null
+        github_token: githubToken || null,
       });
 
       await streamSseEvents(response, (data) => {
-        if (data.event === 'token' && data.model_id) {
+        const eventType = data.event;
+
+        if (eventType === 'analysis_start') {
+          setPhaseLabel('Analysis');
+        }
+
+        if (eventType === 'analysis_complete') {
+          setPhaseLabel('Discussion');
+        }
+
+        if (eventType === 'turn_start' && data.model_id) {
+          const modelId = data.model_id as string;
+          const turnNumber = Number((data as any).turn_number ?? 0);
+          currentDiscussionTurnRef.current = { modelId, turnNumber };
+          setSpeaking(new Set([modelId]));
+          setPhaseLabel(`Turn ${turnNumber + 1}`);
+
+          thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
+
+          setModelsData(prev => prev.map(m => {
+            if (m.id !== modelId) return m;
+            const needsSep = m.response.trim().length > 0;
+            const sep = needsSep ? `\n\n--- Turn ${turnNumber + 1} ---\n\n` : '';
+            return { ...m, response: m.response + sep };
+          }));
+        }
+
+        if (eventType === 'turn_chunk' && data.model_id) {
           const modelId = data.model_id as string;
           const now = performance.now();
-
-          // Track first token time (Time To First Token - TTFT)
           if (!firstTokenReceived.has(modelId)) {
             firstTokenReceived.add(modelId);
             setExecutionTimes(prev => ({
@@ -269,85 +575,78 @@ export default function Playground() {
               [modelId]: { ...prev[modelId], firstTokenTime: now }
             }));
           }
-
-          const rawChunk = String(data.content ?? '');
-          const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
-          let textChunk = state.carry + rawChunk;
-          state.carry = '';
-
-          const lastLt = textChunk.lastIndexOf('<');
-          if (lastLt !== -1 && textChunk.length - lastLt < 8) {
-            const tail = textChunk.slice(lastLt);
-            if ('<think>'.startsWith(tail) || '</think>'.startsWith(tail)) {
-              state.carry = tail;
-              textChunk = textChunk.slice(0, lastLt);
-            }
-          }
-
-          let thinkingAdd = '';
-          let answerAdd = '';
-          let idx = 0;
-          while (idx < textChunk.length) {
-            if (!state.inThink) {
-              const start = textChunk.indexOf('<think>', idx);
-              if (start === -1) {
-                answerAdd += textChunk.slice(idx);
-                break;
-              }
-              answerAdd += textChunk.slice(idx, start);
-              state.inThink = true;
-              idx = start + 7;
-            } else {
-              const end = textChunk.indexOf('</think>', idx);
-              if (end === -1) {
-                thinkingAdd += textChunk.slice(idx);
-                break;
-              }
-              thinkingAdd += textChunk.slice(idx, end);
-              state.inThink = false;
-              idx = end + 8;
-            }
-          }
-
-          thinkingStateRef.current[modelId] = state;
-
-          if (thinkingAdd || answerAdd) {
-            setModelsData(prev => prev.map(m => {
-              if (m.id === modelId) {
-                return {
-                  ...m,
-                  response: m.response + answerAdd,
-                  thinking: (m.thinking || '') + thinkingAdd,
-                };
-              }
-              return m;
-            }));
-          }
+          applyThinkingChunk(modelId, String((data as any).chunk ?? ''));
         }
 
-        // Track completion time when model finishes
-        if (data.event === 'done' && data.model_id) {
+        if (eventType === 'turn_complete' && (data as any).turn) {
+          const turn = (data as any).turn as any;
+          const modelId = String(turn.model_id ?? data.model_id ?? '');
           const now = performance.now();
+          if (modelId) {
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], endTime: now }
+            }));
+            setDiscussionTurnsByModel(prev => {
+              const existing = prev[modelId] ? [...prev[modelId]] : [];
+              existing.push({
+                turn_number: Number(turn.turn_number ?? 0),
+                response: String(turn.response ?? ''),
+                evaluation: (data as any).evaluation ?? undefined,
+              });
+              return { ...prev, [modelId]: existing };
+            });
+          }
+          setSpeaking(new Set());
+        }
+
+        if (eventType === 'turn_error' && data.model_id) {
           const modelId = data.model_id as string;
+          const now = performance.now();
           setExecutionTimes(prev => ({
             ...prev,
             [modelId]: { ...prev[modelId], endTime: now }
           }));
-          // Remove this model from speaking set
-          setSpeaking(prev => {
-            const next = new Set(prev);
-            next.delete(modelId);
-            return next;
-          });
+          const errorText = String((data as any).error ?? 'Error generating response.');
+          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
+          setSpeaking(new Set());
+        }
+
+        if (eventType === 'synthesis_start') {
+          setPhaseLabel('Synthesis');
+          setIsSynthesizing(true);
+          if (moderator) setSpeaking(new Set([moderator]));
+        }
+
+        if (eventType === 'discussion_complete') {
+          const synthesis = String((data as any).final_response ?? '');
+          setModeratorSynthesis(synthesis);
+          if (moderator) {
+            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
+          }
+          setPhaseLabel(null);
+          setIsSynthesizing(false);
+          setSpeaking(new Set());
+        }
+
+        if (eventType === 'error') {
+          const message = String((data as any).error ?? (data as any).message ?? 'Discussion error.');
+          setModeratorSynthesis(message);
+          if (moderator) {
+            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
+          }
+          setPhaseLabel('Error');
+          setIsSynthesizing(false);
+          setSpeaking(new Set());
         }
       });
+
     } catch (err) {
       console.error('Chat error:', err);
       setModelsData(prev => prev.map(m =>
         sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
       ));
     } finally {
-      // Mark end time for any models that didn't receive a 'done' event
       const finalTime = performance.now();
       setExecutionTimes(prev => {
         const updated = { ...prev };
@@ -359,87 +658,13 @@ export default function Playground() {
         return updated;
       });
       setIsGenerating(false);
-      setSpeaking(new Set()); // Clear speaking state
-    }
-  };
-
-  // Function to generate moderator synthesis after all models complete
-  const generateModeratorSynthesis = async (userPrompt: string, modelResponses: Record<string, string>) => {
-    if (!moderator || mode === 'compare') return;
-
-    const moderatorModelData = modelsData.find(m => m.id === moderator);
-    if (!moderatorModelData) return;
-
-    setIsSynthesizing(true);
-    setSpeaking(new Set([moderator]));
-    setModeratorSynthesis('');
-
-    // Build the synthesis prompt
-    const responseSummaries = Object.entries(modelResponses)
-      .map(([modelId, response]) => {
-        const model = modelsData.find(m => m.id === modelId);
-        return `**${model?.name || modelId}**: ${response}`;
-      })
-      .join('\n\n');
-
-    const roleName = mode === 'council' ? 'chairman' : 'moderator';
-    const synthesisPrompt = `You are the ${roleName} synthesizing multiple AI model responses to a user's question.
-
-User's Question: "${userPrompt}"
-
-Model Responses:
-${responseSummaries}
-
-Provide a concise synthesis (2-3 sentences) that:
-1. Identifies common themes or consensus points
-2. Notes any significant differences in perspectives
-3. Offers a balanced conclusion
-
-Synthesis:`;
-
-    try {
-	      const response = await fetchChatStream({
-	        models: [moderator],
-	        messages: [{ role: 'user', content: synthesisPrompt }],
-	        max_tokens: GENERATION_DEFAULTS.maxTokens,
-	        temperature: GENERATION_DEFAULTS.temperature,
-	        github_token: githubToken || null
-	      });
-
-      await streamSseEvents(response, (data) => {
-        if (data.event === 'token' && data.model_id === moderator) {
-          setModeratorSynthesis(prev => prev + (data.content ?? ''));
-        }
-      });
-    } catch (err) {
-      console.error('Synthesis error:', err);
-      setModeratorSynthesis('Unable to generate synthesis.');
-    } finally {
       setIsSynthesizing(false);
+      setPhaseLabel(prev => (prev === 'Error' ? prev : null));
       setSpeaking(new Set());
     }
   };
 
-  // Effect to trigger moderator synthesis when all models complete (in Council/Roundtable mode)
-  useEffect(() => {
-    // Only in Council or Roundtable mode, after generation completes
-    if (mode === 'compare' || !lastUserPrompt || !moderator) return;
-
-    const participantIds = sessionModelIdsRef.current.filter(id => id !== moderator && selected.includes(id));
-    const participantModels = modelsData.filter(m => participantIds.includes(m.id));
-    const allHaveResponses = participantModels.length > 0 &&
-      participantModels.every(m => m.response && m.response.trim().length > 0);
-    const allStoppedSpeaking = participantIds.every(id => !speaking.has(id));
-
-    // Only synthesize if we haven't already and all models have responded
-    if (allHaveResponses && allStoppedSpeaking && !moderatorSynthesis && !isSynthesizing) {
-      const responses: Record<string, string> = {};
-      participantModels.forEach(m => {
-        responses[m.id] = m.response;
-      });
-      generateModeratorSynthesis(lastUserPrompt, responses);
-    }
-  }, [mode, modelsData, selected, moderator, lastUserPrompt, moderatorSynthesis, isSynthesizing, speaking]);
+  // Council/Roundtable synthesis is handled by backend streams.
 
   // Handle Escape key to close dock and Delete/Backspace to remove selected models
   useEffect(() => {
@@ -503,8 +728,9 @@ Synthesis:`;
 	      }
 	    };
 
-	    const handleWheel = (event: WheelEvent) => {
-	      const target = event.target as HTMLElement | null;
+    const handleWheel = (event: WheelEvent) => {
+      if (dragSelectionActiveRef.current) return;
+      const target = event.target as HTMLElement | null;
 	      // Let native scroll work inside text inputs
 	      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
 
@@ -534,13 +760,14 @@ Synthesis:`;
 	      lastTouchY = event.touches[0].clientY;
 	    };
 
-	    const handleTouchMove = (event: TouchEvent) => {
-	      if (!touchActive || event.touches.length !== 1) return;
-	      const target = event.target as HTMLElement | null;
-	      if (shouldIgnoreTouch(target)) {
-	        touchActive = false;
-	        return;
-	      }
+    const handleTouchMove = (event: TouchEvent) => {
+      if (dragSelectionActiveRef.current) return;
+      if (!touchActive || event.touches.length !== 1) return;
+      const target = event.target as HTMLElement | null;
+      if (shouldIgnoreTouch(target)) {
+        touchActive = false;
+        return;
+      }
 
 	      const touchY = event.touches[0].clientY;
 	      const deltaY = touchY - lastTouchY;
@@ -714,6 +941,7 @@ Synthesis:`;
       // Prevent text selection when starting drag
       event.preventDefault();
 
+      dragSelectionActiveRef.current = true;
       suppressClickRef.current = false;
       setDragSelection({
         origin: point,
@@ -752,6 +980,7 @@ Synthesis:`;
     };
 
     const handleMouseUp = (event: MouseEvent) => {
+      dragSelectionActiveRef.current = false;
       const rootBounds = rootContainerRef.current!.getBoundingClientRect();
       const point = {
         x: event.clientX - rootBounds.left,
@@ -1068,19 +1297,26 @@ Synthesis:`;
                       transition: 'opacity 0.3s ease-out'
                     }}>
 	                      <div className="flex items-center justify-between mb-3 gap-2">
-	                        <div className="flex items-center gap-1.5 min-w-0">
-	                          <span className="text-xs font-semibold text-slate-200 truncate">{model.name}</span>
-	                          {mode === 'compare' && moderator === model.id && (
-	                            <span
-	                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-300 border border-yellow-500/30"
-	                              title="Orchestrator used for Council/Roundtable"
-	                            >
-	                              Orchestrator
-	                            </span>
-	                          )}
-	                        </div>
-	                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: model.color }} />
-	                      </div>
+		                        <div className="flex items-center gap-1.5 min-w-0">
+		                          <span className="text-xs font-semibold text-slate-200 truncate">{model.name}</span>
+		                          {mode === 'compare' && moderator === model.id && (
+		                            <span
+		                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-300 border border-yellow-500/30"
+		                              title="Orchestrator used for Council/Roundtable"
+		                            >
+		                              Orchestrator
+		                            </span>
+		                          )}
+		                        </div>
+		                        <div className="relative w-2 h-2 rounded-full shrink-0" style={{ background: model.color }}>
+		                          {mode === 'compare' && isSpeaking && (
+		                            <span
+		                              className="absolute inset-0 rounded-full animate-ping"
+		                              style={{ background: model.color, opacity: 0.6 }}
+		                            />
+		                          )}
+		                        </div>
+		                      </div>
 	                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
 	                        {isSpeaking ? (
 	                          <Typewriter text={model.response} speed={20} />
@@ -1202,7 +1438,7 @@ Synthesis:`;
             );
           })}
 
-          {/* Moderator in center */}
+          {/* Orchestrator in center */}
           {mode !== 'compare' && moderatorModel && (
             <div
               data-card
@@ -1215,46 +1451,57 @@ Synthesis:`;
               }}
               onClick={(e) => {
                 e.stopPropagation(); // Prevent background click handler from firing
+                if (moderator) {
+                  setSelectedCardIds(new Set([moderator]));
+                  setActiveInspectorId(moderator);
+                }
                 setExpanded(expanded === 'moderator' ? null : 'moderator');
               }}
             >
-              {/* Outer glow rings */}
-              <div className="absolute inset-0 rounded-full animate-pulse" style={{
-                background: `radial-gradient(circle, ${moderatorModel.color}20 0%, transparent 70%)`,
-                transform: 'scale(2)',
-                filter: 'blur(20px)'
-              }} />
-
-              {/* Main moderator card */}
-              <div
-                className="relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300"
-                style={{
-                  background: 'rgba(15, 23, 42, 0.9)',
-                  backdropFilter: 'blur(16px)',
-                  border: `2px solid ${moderatorModel.color}60`,
-                  boxShadow: `0 0 40px ${moderatorModel.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
-                }}
-              >
-                {/* Rotating ring */}
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                {/* Outer glow rings */}
                 <div
-                  className="absolute inset-[-4px] rounded-full"
+                  className="absolute inset-0 rounded-full animate-pulse"
                   style={{
-                    background: `conic-gradient(from 0deg, transparent, ${moderatorModel.color}60, transparent)`,
-                    animation: 'spin 4s linear infinite'
+                    background: `radial-gradient(circle, ${moderatorModel.color}20 0%, transparent 70%)`,
+                    transform: 'scale(2)',
+                    filter: 'blur(20px)'
                   }}
                 />
-                <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
 
-                <div className="relative text-center z-10">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">{mode === 'council' ? 'Chairman' : 'Moderator'}</div>
-                  <div className="text-sm font-semibold">{moderatorModel.name}</div>
-                  <div className="flex items-center justify-center gap-1 mt-1">
-                    <div className={`w-1.5 h-1.5 rounded-full ${isSynthesizing ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
-                    <span className="text-[10px] text-slate-500">
-                      {isSynthesizing ? "Synthesizing..." : isGenerating ? "Observing" : moderatorSynthesis ? "Done" : "Presiding"}
-                    </span>
+                {/* Main moderator card */}
+                <div
+                  className="relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300"
+                  style={{
+                    background: 'rgba(15, 23, 42, 0.9)',
+                    backdropFilter: 'blur(16px)',
+                    border: `2px solid ${moderatorModel.color}60`,
+                    boxShadow: `0 0 40px ${moderatorModel.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
+                  }}
+                >
+                  {/* Rotating ring */}
+                  <div
+                    className="absolute inset-[-4px] rounded-full"
+                    style={{
+                      background: `conic-gradient(from 0deg, transparent, ${moderatorModel.color}60, transparent)`,
+                      animation: 'spin 4s linear infinite'
+                    }}
+                  />
+                  <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
+
+                  <div className="relative text-center z-10">
+                    <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+                      Orchestrator
+                    </div>
+                    <div className="text-sm font-semibold">{moderatorModel.name}</div>
                   </div>
                 </div>
+              </div>
+              <div className="flex items-center justify-center gap-1 mt-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${isSynthesizing ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
+                <span className="text-[10px] text-slate-500">
+                  {phaseLabel ? phaseLabel : isSynthesizing ? "Synthesizing..." : isGenerating ? "Observing" : moderatorSynthesis ? "Done" : "Presiding"}
+                </span>
               </div>
 
               {/* Expanded synthesis */}
@@ -1270,14 +1517,16 @@ Synthesis:`;
                     boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${moderatorModel.color}20`
                   }}
                 >
-                  <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Synthesis</div>
-                  <p className="text-sm text-slate-300 leading-relaxed">
-                    {moderatorSynthesis ? (
-                      <Typewriter text={moderatorSynthesis} speed={20} />
-                    ) : isSynthesizing ? (
-                      <span className="text-slate-500 italic">Synthesizing responses...</span>
-                    ) : isGenerating ? (
-                      <span className="text-slate-500 italic">Waiting for model responses...</span>
+	                  <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Synthesis</div>
+	                  <p className="text-sm text-slate-300 leading-relaxed">
+	                    {moderatorSynthesis ? (
+	                      (isSynthesizing && moderator && speaking.has(moderator))
+	                        ? <Typewriter text={moderatorSynthesis} speed={20} />
+	                        : getTailSnippet(moderatorSynthesis)
+	                    ) : isSynthesizing ? (
+	                      <span className="text-slate-500 italic">Synthesizing responses...</span>
+	                    ) : isGenerating ? (
+	                      <span className="text-slate-500 italic">Waiting for model responses...</span>
                     ) : (
                       <span className="text-slate-500 italic">Send a prompt to see the synthesis.</span>
                     )}
@@ -1338,6 +1587,10 @@ Synthesis:`;
           onSelect={setActiveInspectorId}
           onClose={() => setSelectedCardIds(new Set())}
           speaking={speaking}
+          mode={mode}
+          moderatorId={moderator}
+          councilAggregateRankings={councilAggregateRankings}
+          discussionTurnsByModel={discussionTurnsByModel}
         />
       )}
 
@@ -1372,10 +1625,8 @@ Synthesis:`;
             <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
-	            {mode === 'compare'
-	              ? 'Set as Orchestrator'
-	              : `Promote to ${mode === 'council' ? 'Chairman' : 'Moderator'}`}
-	          </button>
+		            {'Set as Orchestrator'}
+		          </button>
 	        </div>
 	      )}
 

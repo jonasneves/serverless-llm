@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Model } from '../types';
+import { Model, Mode } from '../types';
 import FormattedContent from './FormattedContent';
 import Typewriter from './Typewriter';
 
@@ -9,6 +9,19 @@ interface ResponseInspectorProps {
   onSelect: (id: string) => void;
   onClose: () => void;
   speaking: Set<string>;
+  mode: Mode;
+  moderatorId: string;
+  councilAggregateRankings: Array<{
+    model_id: string;
+    model_name: string;
+    average_rank: number;
+    votes_count: number;
+  }> | null;
+  discussionTurnsByModel: Record<string, Array<{
+    turn_number: number;
+    response: string;
+    evaluation?: any;
+  }>>;
 }
 
 export default function ResponseInspector({
@@ -17,6 +30,10 @@ export default function ResponseInspector({
   onSelect,
   onClose,
   speaking,
+  mode,
+  moderatorId,
+  councilAggregateRankings,
+  discussionTurnsByModel,
 }: ResponseInspectorProps) {
   const activeModel = useMemo(
     () => models.find(m => m.id === activeId),
@@ -26,6 +43,8 @@ export default function ResponseInspector({
   if (!activeModel) return null;
 
   const isStreaming = speaking.has(activeModel.id);
+  const showCouncilStats = mode === 'council' && activeModel.id === moderatorId && councilAggregateRankings && councilAggregateRankings.length > 0;
+  const turnsForActive = mode === 'roundtable' ? (discussionTurnsByModel[activeModel.id] || []) : [];
 
   return (
     <aside
@@ -67,6 +86,60 @@ export default function ResponseInspector({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 markdown-content">
+        {showCouncilStats && (
+          <details className="mb-3 rounded-lg border border-slate-700/50 bg-slate-900/40">
+            <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-300">
+              Anonymous rankings
+            </summary>
+            <div className="px-3 pb-3 pt-1 text-xs text-slate-400 space-y-1">
+              {councilAggregateRankings!.map((r, idx) => (
+                <div key={r.model_id} className="flex items-center justify-between gap-2">
+                  <div className="truncate">
+                    {idx + 1}. {r.model_name}
+                  </div>
+                  <div className="shrink-0 text-slate-500">
+                    {r.votes_count} votes · avg {r.average_rank}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {turnsForActive.length > 0 && (
+          <details className="mb-3 rounded-lg border border-slate-700/50 bg-slate-900/40">
+            <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-300">
+              Turn evaluations
+            </summary>
+            <div className="px-3 pb-3 pt-1 text-xs text-slate-400 space-y-2">
+              {turnsForActive.map((t, idx) => {
+                const evaluation = t.evaluation || {};
+                const quality = typeof evaluation.quality_score === 'number' ? evaluation.quality_score : null;
+                const relevance = typeof evaluation.relevance_score === 'number' ? evaluation.relevance_score : null;
+                const alignment = typeof evaluation.expertise_alignment === 'number' ? evaluation.expertise_alignment : null;
+                const confidence = evaluation.confidence_assessment;
+                return (
+                  <div key={`${t.turn_number}-${idx}`} className="space-y-1">
+                    <div className="text-slate-300 font-semibold text-[11px]">
+                      Turn {t.turn_number + 1}
+                    </div>
+                    {quality != null || relevance != null || alignment != null || confidence ? (
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                        {quality != null && <div>Quality: {(quality * 100).toFixed(0)}%</div>}
+                        {relevance != null && <div>Relevance: {(relevance * 100).toFixed(0)}%</div>}
+                        {alignment != null && <div>Alignment: {(alignment * 100).toFixed(0)}%</div>}
+                        {confidence && <div>Confidence: {confidence}</div>}
+                      </div>
+                    ) : (
+                      <div className="text-slate-500 italic text-[11px]">No evaluation.</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+        )}
+
         {isStreaming ? (
           <p className="text-sm text-slate-300 whitespace-pre-wrap">
             <Typewriter text={activeModel.response} speed={20} />

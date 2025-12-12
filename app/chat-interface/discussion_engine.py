@@ -13,6 +13,7 @@ from datetime import datetime
 
 from orchestrator import GitHubModelsOrchestrator, QueryAnalysis, TurnEvaluation, SynthesisResult, TokenUsage
 from model_profiles import MODEL_PROFILES, rank_models_for_query
+from error_utils import sanitize_error_message
 
 
 @dataclass
@@ -258,8 +259,9 @@ Discussion so far:
         try:
             async with client.stream("POST", url, json=payload, timeout=self.timeout_per_turn) as response:
                 if response.status_code != 200:
-                    error_text = await response.aread()
-                    raise Exception(f"Model API error {response.status_code} for {model_id}: {error_text.decode('utf-8')}")
+                    error_raw = (await response.aread()).decode("utf-8", "ignore")
+                    error_msg = sanitize_error_message(error_raw, url)
+                    raise Exception(error_msg)
 
                 async for line in response.aiter_lines():
                     if not line or not line.startswith('data: '):
@@ -338,8 +340,9 @@ Discussion so far:
                     raise Exception(f"Rate limit exceeded for {model_id}. Reset at: {rate_limit_reset}")
 
                 if response.status_code != 200:
-                    error_text = await response.aread()
-                    raise Exception(f"GitHub Models API error {response.status_code} for {model_id}: {error_text.decode('utf-8')}")
+                    error_raw = (await response.aread()).decode("utf-8", "ignore")
+                    error_msg = sanitize_error_message(error_raw, url)
+                    raise Exception(error_msg)
 
                 async for line in response.aiter_lines():
                     if not line or not line.startswith('data: '):
