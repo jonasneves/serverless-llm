@@ -7,11 +7,13 @@ import { splitThinkingContent } from '../utils/thinking';
 
 interface FormattedContentProps {
   text: string;
+  thinkingText?: string;
   showThinking?: boolean;
 }
 
-export default function FormattedContent({ text, showThinking = true }: FormattedContentProps) {
-  const { thinking, answer } = splitThinkingContent(text);
+export default function FormattedContent({ text, thinkingText, showThinking = true }: FormattedContentProps) {
+  const { thinking: tagThinking, answer } = splitThinkingContent(text);
+  const thinking = thinkingText && thinkingText.trim().length > 0 ? thinkingText : tagThinking;
 
   return (
     <div>
@@ -47,11 +49,12 @@ export default function FormattedContent({ text, showThinking = true }: Formatte
               className="rounded-lg bg-slate-950/70 p-3 overflow-x-auto text-sm"
             />
           ),
-          code: ({ inline, className, children, ...props }) => {
+          code: (props: any) => {
+            const { inline, className, children, ...rest } = props;
             if (inline) {
               return (
                 <code
-                  {...props}
+                  {...rest}
                   className="px-1 py-0.5 rounded bg-slate-800/70 text-slate-200 text-[0.9em]"
                 >
                   {children}
@@ -59,7 +62,7 @@ export default function FormattedContent({ text, showThinking = true }: Formatte
               );
             }
             return (
-              <code {...props} className={className}>
+              <code {...rest} className={className}>
                 {children}
               </code>
             );
@@ -71,4 +74,3 @@ export default function FormattedContent({ text, showThinking = true }: Formatte
     </div>
   );
 }
-

@@ -67,3 +67,22 @@ body {
   background: transparent;
   padding: 0;
 }
+
+/* Subtle horizontal scrollbar for inspector tabs */
+.inspector-tabs {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.6) transparent;
+}
+
+.inspector-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.inspector-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inspector-tabs::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.6);
+  border-radius: 9999px;
+}

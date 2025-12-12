@@ -33,7 +33,7 @@ export default function ResponseInspector({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-800/60">
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="inspector-tabs flex gap-1 overflow-x-auto pb-1">
           {models.map(m => (
             <button
               key={m.id}
@@ -71,7 +71,7 @@ export default function ResponseInspector({
             <Typewriter text={activeModel.response} speed={20} />
           </p>
         ) : activeModel.response ? (
-          <FormattedContent text={activeModel.response} />
+          <FormattedContent text={activeModel.response} thinkingText={activeModel.thinking} />
         ) : (
           <div className="text-sm text-slate-500 italic">No response yet.</div>
         )}
@@ -79,4 +79,3 @@ export default function ResponseInspector({
     </aside>
   );
 }
-

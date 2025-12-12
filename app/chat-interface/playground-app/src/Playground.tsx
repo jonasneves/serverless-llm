@@ -483,19 +483,30 @@ Synthesis:`;
     localStorage.setItem('playground-bg-style', bgStyle);
   }, [bgStyle]);
 
-  const cycleBgStyle = (direction: 'prev' | 'next') => {
-    const currentIndex = BG_STYLES.indexOf(bgStyle);
-    const newIndex = direction === 'next'
-      ? (currentIndex + 1) % BG_STYLES.length
-      : (currentIndex - 1 + BG_STYLES.length) % BG_STYLES.length;
-    setBgStyle(BG_STYLES[newIndex]);
-  };
+	  const cycleBgStyle = (direction: 'prev' | 'next') => {
+	    const currentIndex = BG_STYLES.indexOf(bgStyle);
+	    const newIndex = direction === 'next'
+	      ? (currentIndex + 1) % BG_STYLES.length
+	      : (currentIndex - 1 + BG_STYLES.length) % BG_STYLES.length;
+	    setBgStyle(BG_STYLES[newIndex]);
+	  };
 
-  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
-  const moderatorModel = modelsData.find(m => m.id === moderator);
+	  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
+	  const moderatorModel = modelsData.find(m => m.id === moderator);
+	  const inspectorModels = modelsData.filter(m => selectedCardIds.has(m.id));
 
-  // Dynamic layout radius calculation
-  const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
+	  useEffect(() => {
+	    if (inspectorModels.length === 0) {
+	      if (activeInspectorId !== null) setActiveInspectorId(null);
+	      return;
+	    }
+	    if (!activeInspectorId || !selectedCardIds.has(activeInspectorId)) {
+	      setActiveInspectorId(inspectorModels[0].id);
+	    }
+	  }, [inspectorModels.length, selectedCardIds, activeInspectorId]);
+
+	  // Dynamic layout radius calculation
+	  const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
 
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'council') {
@@ -675,12 +686,18 @@ Synthesis:`;
             }
           }
 
-          setSelectedCardIds(new Set(matched));
-          suppressClickRef.current = willTriggerCardClick;
-        } else if (!state.active) {
-          // Click without drag - clear selection
-          setSelectedCardIds(new Set());
-        }
+	          setSelectedCardIds(new Set(matched));
+	          if (matched.length > 0) {
+	            setActiveInspectorId(prev => (prev && matched.includes(prev)) ? prev : matched[0]);
+	          } else {
+	            setActiveInspectorId(null);
+	          }
+	          suppressClickRef.current = willTriggerCardClick;
+	        } else if (!state.active) {
+	          // Click without drag - clear selection
+	          setSelectedCardIds(new Set());
+	          setActiveInspectorId(null);
+	        }
 
         return null;
       });
@@ -728,12 +745,12 @@ Synthesis:`;
 
       {/* Content Wrapper with Sidebar Offset */}
       <div
-        style={{
-          paddingLeft: '1.5rem', // Static padding, sidebar will overlay
-          paddingRight: '1.5rem',
-          paddingTop: '4rem', // Reverted to 4rem
-        }}
-      >
+	        style={{
+	          paddingLeft: '1.5rem', // Static padding, sidebar will overlay
+	          paddingRight: activeInspectorId && mode === 'compare' ? '28rem' : '1.5rem',
+	          paddingTop: '4rem', // Reverted to 4rem
+	        }}
+	      >
         {/* Dock Backdrop */}
         {showDock && (
           <div
@@ -864,17 +881,18 @@ Synthesis:`;
                       suppressClickRef.current = false;
                       return;
                     }
-                    const isMulti = e.metaKey || e.ctrlKey;
-                    if (isMulti) {
-                      const newSelection = new Set(selectedCardIds);
-                      if (newSelection.has(model.id)) {
-                        newSelection.delete(model.id);
-                      } else {
-                        newSelection.add(model.id);
-                      }
-                      setSelectedCardIds(newSelection);
-                    } else {
-                      if (isCircle) {
+	                    const isMulti = e.metaKey || e.ctrlKey;
+	                    if (isMulti) {
+	                      const newSelection = new Set(selectedCardIds);
+	                      if (newSelection.has(model.id)) {
+	                        newSelection.delete(model.id);
+	                      } else {
+	                        newSelection.add(model.id);
+	                      }
+	                      setSelectedCardIds(newSelection);
+	                      setActiveInspectorId(model.id);
+	                    } else {
+	                      if (isCircle) {
                         // Immediately raise z-index on click
                         const cardElement = e.currentTarget.closest('.absolute');
                         if (cardElement) {
@@ -885,12 +903,13 @@ Synthesis:`;
                           if (next.has(model.id)) next.delete(model.id);
                           else next.add(model.id);
                           return next;
-                        });
-                        setExpanded(isExpanded ? null : model.id);
-                      }
-                      setSelectedCardIds(new Set([model.id]));
-                    }
-                  }}
+	                        });
+	                        setExpanded(isExpanded ? null : model.id);
+	                      }
+	                      setSelectedCardIds(new Set([model.id]));
+	                      setActiveInspectorId(model.id);
+	                    }
+	                  }}
                   className={`relative cursor-pointer card-hover ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
                   style={{
                     background: 'rgba(30, 41, 59, 0.85)',
@@ -1170,6 +1189,16 @@ Synthesis:`;
         </div>
 
       </div>
+
+      {activeInspectorId && inspectorModels.length > 0 && (
+        <ResponseInspector
+          models={inspectorModels}
+          activeId={activeInspectorId}
+          onSelect={setActiveInspectorId}
+          onClose={() => setSelectedCardIds(new Set())}
+          speaking={speaking}
+        />
+      )}
 
       <PromptInput
         inputRef={inputRef}
