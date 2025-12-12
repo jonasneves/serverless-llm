@@ -200,6 +200,55 @@ export default function Playground() {
   const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
   const dragSelectionActiveRef = useRef(false);
+  const pendingStreamRef = useRef<Record<string, { answer: string; thinking: string }>>({});
+  const flushStreamRafRef = useRef<number | null>(null);
+
+  const flushPendingStream = () => {
+    flushStreamRafRef.current = null;
+    const pending = pendingStreamRef.current;
+    pendingStreamRef.current = {};
+    const ids = Object.keys(pending);
+    if (ids.length === 0) return;
+
+    setModelsData(prev => prev.map(m => {
+      const delta = pending[m.id];
+      if (!delta) return m;
+      return {
+        ...m,
+        response: m.response + delta.answer,
+        thinking: (m.thinking || '') + delta.thinking,
+      };
+    }));
+  };
+
+  const scheduleFlushPendingStream = () => {
+    if (flushStreamRafRef.current == null) {
+      flushStreamRafRef.current = requestAnimationFrame(flushPendingStream);
+    }
+  };
+
+  const enqueueStreamDelta = (modelId: string, answerAdd: string, thinkingAdd: string) => {
+    if (!answerAdd && !thinkingAdd) return;
+    const existing = pendingStreamRef.current[modelId] || { answer: '', thinking: '' };
+    existing.answer += answerAdd;
+    existing.thinking += thinkingAdd;
+    pendingStreamRef.current[modelId] = existing;
+    scheduleFlushPendingStream();
+  };
+
+  const clearPendingStreamForModel = (modelId: string) => {
+    if (pendingStreamRef.current[modelId]) {
+      delete pendingStreamRef.current[modelId];
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (flushStreamRafRef.current != null) {
+        cancelAnimationFrame(flushStreamRafRef.current);
+      }
+    };
+  }, []);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId: string } | null>(null);
 
@@ -234,7 +283,10 @@ export default function Playground() {
   const sendMessage = async (text: string) => {
     if (!text.trim() || selected.length === 0 || isGenerating) return;
 
-    const sessionModelIds = selected.slice();
+    const selectionOverride = Array.from(selectedCardIds).filter(id =>
+      selected.includes(id) && (mode === 'compare' || id !== moderator)
+    );
+    const sessionModelIds = selectionOverride.length > 0 ? selectionOverride : selected.slice();
     sessionModelIdsRef.current = sessionModelIds;
 
     setIsGenerating(true);
@@ -245,6 +297,13 @@ export default function Playground() {
     setCouncilAggregateRankings(null);
     setDiscussionTurnsByModel({});
     currentDiscussionTurnRef.current = null;
+
+    // Reset any pending streamed chunks from a previous run.
+    pendingStreamRef.current = {};
+    if (flushStreamRafRef.current != null) {
+      cancelAnimationFrame(flushStreamRafRef.current);
+      flushStreamRafRef.current = null;
+    }
 
     // Initialize execution time tracking for all relevant models
     const startTime = performance.now();
@@ -316,16 +375,7 @@ export default function Playground() {
       thinkingStateRef.current[modelId] = state;
 
       if (thinkingAdd || answerAdd) {
-        setModelsData(prev => prev.map(m => {
-          if (m.id === modelId) {
-            return {
-              ...m,
-              response: m.response + answerAdd,
-              thinking: (m.thinking || '') + thinkingAdd,
-            };
-          }
-          return m;
-        }));
+        enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
       }
     };
 
@@ -432,6 +482,7 @@ export default function Playground() {
 
             if ((data as any).response) {
               const finalResponse = String((data as any).response ?? '');
+              clearPendingStreamForModel(modelId);
               setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: finalResponse } : m));
             }
           }
@@ -449,6 +500,7 @@ export default function Playground() {
               return next;
             });
             const errorText = String((data as any).error ?? 'Error generating response.');
+            clearPendingStreamForModel(modelId);
             setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
           }
 
@@ -490,6 +542,7 @@ export default function Playground() {
             const synthesis = String((data as any).response ?? '');
             setModeratorSynthesis(synthesis);
             if (moderator) {
+              clearPendingStreamForModel(moderator);
               setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
             }
             setIsSynthesizing(false);
@@ -507,6 +560,7 @@ export default function Playground() {
             const message = String((data as any).error ?? (data as any).message ?? 'Council error.');
             setModeratorSynthesis(message);
             if (moderator) {
+              clearPendingStreamForModel(moderator);
               setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
             }
             setPhaseLabel('Error');
@@ -516,9 +570,10 @@ export default function Playground() {
       }
 
       // Roundtable (discussion) mode
-      const participants = sessionModelIds.filter(id => id !== moderator);
+      // If the orchestrator model is selected, include it as a participant for consistency.
+      const participants = sessionModelIds;
       if (participants.length < 2) {
-        const msg = 'Select at least 2 participants besides the orchestrator.';
+        const msg = 'Select at least 2 participants for Roundtable mode.';
         setModeratorSynthesis(msg);
         if (moderator) {
           setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: msg } : m));
@@ -603,14 +658,15 @@ export default function Playground() {
         if (eventType === 'turn_error' && data.model_id) {
           const modelId = data.model_id as string;
           const now = performance.now();
-          setExecutionTimes(prev => ({
-            ...prev,
-            [modelId]: { ...prev[modelId], endTime: now }
-          }));
-          const errorText = String((data as any).error ?? 'Error generating response.');
-          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
-          setSpeaking(new Set());
-        }
+	          setExecutionTimes(prev => ({
+	            ...prev,
+	            [modelId]: { ...prev[modelId], endTime: now }
+	          }));
+	          const errorText = String((data as any).error ?? 'Error generating response.');
+	          clearPendingStreamForModel(modelId);
+	          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
+	          setSpeaking(new Set());
+	        }
 
         if (eventType === 'synthesis_start') {
           setPhaseLabel('Synthesis');
@@ -619,34 +675,41 @@ export default function Playground() {
         }
 
         if (eventType === 'discussion_complete') {
-          const synthesis = String((data as any).final_response ?? '');
-          setModeratorSynthesis(synthesis);
-          if (moderator) {
-            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
-          }
-          setPhaseLabel(null);
+	          const synthesis = String((data as any).final_response ?? '');
+	          setModeratorSynthesis(synthesis);
+	          if (moderator) {
+	            clearPendingStreamForModel(moderator);
+	            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
+	          }
+	          setPhaseLabel(null);
           setIsSynthesizing(false);
           setSpeaking(new Set());
         }
 
         if (eventType === 'error') {
-          const message = String((data as any).error ?? (data as any).message ?? 'Discussion error.');
-          setModeratorSynthesis(message);
-          if (moderator) {
-            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
-          }
-          setPhaseLabel('Error');
+	          const message = String((data as any).error ?? (data as any).message ?? 'Discussion error.');
+	          setModeratorSynthesis(message);
+	          if (moderator) {
+	            clearPendingStreamForModel(moderator);
+	            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
+	          }
+	          setPhaseLabel('Error');
           setIsSynthesizing(false);
           setSpeaking(new Set());
         }
       });
 
-    } catch (err) {
-      console.error('Chat error:', err);
-      setModelsData(prev => prev.map(m =>
-        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
-      ));
-    } finally {
+	    } catch (err) {
+	      console.error('Chat error:', err);
+	      pendingStreamRef.current = {};
+	      if (flushStreamRafRef.current != null) {
+	        cancelAnimationFrame(flushStreamRafRef.current);
+	        flushStreamRafRef.current = null;
+	      }
+	      setModelsData(prev => prev.map(m =>
+	        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
+	      ));
+	    } finally {
       const finalTime = performance.now();
       setExecutionTimes(prev => {
         const updated = { ...prev };
