@@ -330,6 +330,8 @@ class ToolOrchestrator:
                 raise Exception(f"Orchestrator API error: {response.status_code} - {error_text}")
 
             data = response.json()
+            if "choices" not in data or not data["choices"]:
+                raise Exception("No choices in orchestrator response")
             message = data["choices"][0]["message"]
 
             # Extract tool calls
@@ -418,6 +420,8 @@ class ToolOrchestrator:
                 return "Unable to generate final answer."
 
             data = response.json()
+            if "choices" not in data or not data["choices"]:
+                return "Unable to generate final answer (empty response)."
             return data["choices"][0]["message"]["content"]
         except httpx.HTTPError:
             return "Unable to generate final answer (network error)."

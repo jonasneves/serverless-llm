@@ -166,6 +166,9 @@ class ModelRouter:
             if "usage" not in data or "total_tokens" not in data["usage"]:
                 raise Exception(f"Missing usage data from {model_name}")
 
+            if "choices" not in data or not data["choices"]:
+                raise Exception(f"No choices in response from {model_name}")
+
             return {
                 "content": data["choices"][0]["message"]["content"],
                 "model_name": model_name,

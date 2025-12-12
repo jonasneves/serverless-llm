@@ -259,7 +259,10 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
                 return {"stream": response, "url": url}
             else:
                 data = response.json()
-                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                choices = data.get("choices", [])
+                if not choices:
+                    raise Exception(f"No choices returned from {model_id}")
+                content = choices[0].get("message", {}).get("content", "")
                 return {"content": content}
 
         except httpx.HTTPError as e:
@@ -292,7 +295,10 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
 
                 try:
                     chunk_data = json.loads(data)
-                    delta = chunk_data.get("choices", [{}])[0].get("delta", {})
+                    choices = chunk_data.get("choices", [])
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta", {})
                     content = delta.get("content", "")
 
                     if content:

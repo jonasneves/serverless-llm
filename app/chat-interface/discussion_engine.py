@@ -288,9 +288,11 @@ Discussion so far:
                             }
 
                         # Check for content chunk
-                        content = chunk.get('choices', [{}])[0].get('delta', {}).get('content')
-                        if content:
-                            yield {"type": "chunk", "content": content}
+                        choices = chunk.get('choices', [])
+                        if choices:
+                            content = choices[0].get('delta', {}).get('content')
+                            if content:
+                                yield {"type": "chunk", "content": content}
                     except json.JSONDecodeError:
                         continue
         except httpx.HTTPError as e:
@@ -376,9 +378,11 @@ Discussion so far:
                             }
 
                         # Check for content chunk
-                        content = chunk.get('choices', [{}])[0].get('delta', {}).get('content')
-                        if content:
-                            yield {"type": "chunk", "content": content}
+                        choices = chunk.get('choices', [])
+                        if choices:
+                            content = choices[0].get('delta', {}).get('content')
+                            if content:
+                                yield {"type": "chunk", "content": content}
                     except json.JSONDecodeError:
                         continue
         except httpx.HTTPError as e:

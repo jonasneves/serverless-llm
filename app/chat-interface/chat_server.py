@@ -42,6 +42,7 @@ from tool_orchestrator import ToolOrchestrator
 from verbalized_sampling_engine import VerbalizedSamplingEngine
 from confession_engine import ConfessionEngine
 from error_utils import sanitize_error_message
+from rate_limiter import get_rate_limiter
 
 
 # Configure logging
@@ -886,6 +887,10 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
             if "usage" not in data:
                 raise ValueError(f"Usage data not received from model {model_id}")
 
+            # Ensure choices are present
+            if "choices" not in data or not data["choices"]:
+                raise ValueError(f"No choices returned from model {model_id}")
+
             return {
                 "model": display_name,
                 "content": data["choices"][0]["message"]["content"],
@@ -962,89 +967,99 @@ async def stream_github_model_response(
     
     try:
         client = HTTPClient.get_client()
-        
+
         # Newer OpenAI models (o1, o3, o4, gpt-5) use max_completion_tokens instead of max_tokens
         # They also don't support custom temperature (only default=1)
         is_restricted_model = any(
-            pattern in model_id.lower() 
+            pattern in model_id.lower()
             for pattern in ['o1', 'o3', 'o4', 'gpt-5']
         )
-        
+
         payload = {
             "model": model_id,
             "messages": messages,
             "stream": True,
             "stream_options": {"include_usage": True}
         }
-        
+
         # These models don't support custom temperature
         if not is_restricted_model:
             payload["temperature"] = temperature
-        
+
         # Use correct token parameter based on model
         if is_restricted_model:
             payload["max_completion_tokens"] = max_tokens
         else:
             payload["max_tokens"] = max_tokens
-        
-        async with client.stream(
-            "POST",
-            GITHUB_MODELS_API_URL,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {github_token}",
-                "X-GitHub-Api-Version": "2022-11-28"
-            },
-            json=payload,
-            timeout=120.0
-        ) as response:
-            if response.status_code != 200:
-                error_bytes = await response.aread()
-                error_raw = error_bytes.decode(errors="ignore")
 
-                # Detect "unknown_model" and cache to avoid repeated calls.
-                try:
-                    error_json = json.loads(error_raw)
-                    err_obj = error_json.get("error") or {}
-                    code = str(err_obj.get("code", "")).lower()
-                    msg = str(err_obj.get("message", "")).lower()
-                except Exception:
-                    code = ""
-                    msg = error_raw.lower()
+        # Apply rate limiting for GitHub Models API
+        rate_limiter = await get_rate_limiter(GITHUB_MODELS_API_URL, github_token)
 
-                if code == "unknown_model" or "unknown model" in msg:
-                    UNSUPPORTED_GITHUB_MODELS.add(model_id)
-                    friendly = "This model id isn’t recognized by GitHub Models. It may be unavailable for your token or renamed."
-                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': friendly})}\n\n"
+        async with await rate_limiter.acquire():
+            async with client.stream(
+                "POST",
+                GITHUB_MODELS_API_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {github_token}",
+                    "X-GitHub-Api-Version": "2022-11-28"
+                },
+                json=payload,
+                timeout=120.0
+            ) as response:
+                if response.status_code == 429:
+                    rate_limiter.record_429()
+
+                if response.status_code != 200:
+                    error_bytes = await response.aread()
+                    error_raw = error_bytes.decode(errors="ignore")
+
+                    # Detect "unknown_model" and cache to avoid repeated calls.
+                    try:
+                        error_json = json.loads(error_raw)
+                        err_obj = error_json.get("error") or {}
+                        code = str(err_obj.get("code", "")).lower()
+                        msg = str(err_obj.get("message", "")).lower()
+                    except Exception:
+                        code = ""
+                        msg = error_raw.lower()
+
+                    if code == "unknown_model" or "unknown model" in msg:
+                        UNSUPPORTED_GITHUB_MODELS.add(model_id)
+                        friendly = "This model id isn't recognized by GitHub Models. It may be unavailable for your token or renamed."
+                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': friendly})}\n\n"
+                        return
+
+                    error_msg = sanitize_error_message(error_raw, GITHUB_MODELS_API_URL)
+                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
                     return
 
-                error_msg = sanitize_error_message(error_raw, GITHUB_MODELS_API_URL)
-                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
-                return
-            
-            async for line in response.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                    
-                data_str = line[6:]
-                if data_str.strip() == "[DONE]":
-                    break
-                    
-                try:
-                    data = json.loads(data_str)
-                    
-                    # Capture usage data if present
-                    if "usage" in data:
-                        usage_data = data["usage"]
-                    
-                    if "choices" in data and len(data["choices"]) > 0:
-                        delta = data["choices"][0].get("delta", {})
-                        content = delta.get("content", "")
-                        if content:
-                            total_content += content
-                            yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
-                except json.JSONDecodeError:
-                    pass
+                # Record success
+                rate_limiter.record_success()
+
+                async for line in response.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+
+                    data_str = line[6:]
+                    if data_str.strip() == "[DONE]":
+                        break
+
+                    try:
+                        data = json.loads(data_str)
+
+                        # Capture usage data if present
+                        if "usage" in data:
+                            usage_data = data["usage"]
+
+                        if "choices" in data and len(data["choices"]) > 0:
+                            delta = data["choices"][0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                total_content += content
+                                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
+                    except json.JSONDecodeError:
+                        pass
         
         # Send completion event
         elapsed = time.time() - start_time
