@@ -1344,14 +1344,14 @@ async def stream_discussion_events(
         if is_api_model:
             # Initialize GitHub Models API orchestrator
             # Use user-provided token if available, otherwise fall back to server env var
-            token = github_token or os.getenv("GH_MODELS_TOKEN")
+            token = github_token or get_default_github_token()
             if not token:
                 yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for API orchestrator. Please provide your token or contact the server admin.'})}\n\n"
                 return
 
             # Warn if using server's default token
-            if not github_token and os.getenv("GH_MODELS_TOKEN"):
-                yield f"data: {json.dumps({'event': 'info', 'message': 'Using default GitHub Models token (free quota). Configure your own for dedicated quota.'})}\n\n"
+            if not github_token and get_default_github_token():
+                yield f"data: {json.dumps({'event': 'info', 'message': 'Using default GitHub Models token. Configure your own for dedicated quota.'})}\n\n"
 
             orchestrator = GitHubModelsOrchestrator(
                 github_token=token,
@@ -1453,7 +1453,7 @@ async def stream_council_events(
         from council_engine import CouncilEngine
 
         # Get GitHub token
-        token = github_token or os.getenv("GH_MODELS_TOKEN")
+        token = github_token or get_default_github_token()
         if not token:
             yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for Council mode'})}\n\n"
             return
