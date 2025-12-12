@@ -220,9 +220,25 @@ export default function ResponseInspector({
         )}
 
         {isStreaming ? (
-          <p className="text-sm text-slate-300 whitespace-pre-wrap">
-            <Typewriter text={activeModel.response} speed={20} />
-          </p>
+          activeModel.response.trim().length > 0 ? (
+            <p className="text-sm text-slate-300 whitespace-pre-wrap">
+              <Typewriter text={activeModel.response} speed={20} />
+            </p>
+          ) : activeModel.thinking && activeModel.thinking.trim().length > 0 ? (
+            <div className="space-y-3">
+              <details open className="rounded-lg border border-slate-700/50 bg-slate-900/40">
+                <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-300">
+                  Thinking (live)
+                </summary>
+                <pre className="px-3 pb-3 pt-1 text-xs text-slate-400 whitespace-pre-wrap">
+                  {activeModel.thinking}
+                </pre>
+              </details>
+              <div className="text-sm text-slate-500 italic">Waiting for final answer…</div>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-500 italic">Thinking…</div>
+          )
         ) : activeModel.response ? (
           <FormattedContent text={activeModel.response} thinkingText={activeModel.thinking} />
         ) : (

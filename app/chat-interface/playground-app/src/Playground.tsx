@@ -10,6 +10,7 @@ import ResponseInspector from './components/ResponseInspector';
 import SettingsModal from './components/SettingsModal';
 import { fetchChatStream, fetchCouncilStream, fetchDiscussionStream, streamSseEvents } from './utils/streaming';
 import StatusIndicator from './components/StatusIndicator';
+import TopicsDrawer from './components/TopicsDrawer';
 
 interface ModelsApiModel {
   id: string;
@@ -38,6 +39,7 @@ export default function Playground() {
   const arenaTargetYRef = useRef(0);
   const wheelRafRef = useRef<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showTopics, setShowTopics] = useState(false);
   const [githubToken, setGithubToken] = useState<string>(() => {
     try {
       return localStorage.getItem('github_models_token') || '';
@@ -268,6 +270,15 @@ export default function Playground() {
   const dragSelectionActiveRef = useRef(false);
   const pendingStreamRef = useRef<Record<string, { answer: string; thinking: string }>>({});
   const flushStreamRafRef = useRef<number | null>(null);
+
+  const handleSelectPrompt = (prompt: string) => {
+    if (inputRef.current) {
+      inputRef.current.value = prompt;
+      inputRef.current.focus();
+      setInputFocused(true);
+    }
+    setShowTopics(false);
+  };
 
   const flushPendingStream = () => {
     flushStreamRafRef.current = null;
@@ -875,7 +886,8 @@ export default function Playground() {
         if (eventType === 'analysis_complete') {
           setPhaseLabel('Orchestrating');
           if (data.analysis) {
-            const analysisText = (data.analysis as any).summary || 'Analysis complete.';
+            const analysisObj = data.analysis as any;
+            const analysisText = String(analysisObj?.reasoning ?? analysisObj?.summary ?? 'Analysis complete.');
             setModeratorSynthesis(analysisText);
           }
         }
@@ -1865,7 +1877,16 @@ export default function Playground() {
                       </div>
                       <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
                         {isSpeaking ? (
-                          <Typewriter text={model.response} speed={20} />
+                          model.response.trim().length > 0 ? (
+                            <Typewriter text={model.response} speed={20} />
+                          ) : model.thinking && model.thinking.trim().length > 0 ? (
+                            <span>
+                              <span className="text-slate-500 italic">Thinking… </span>
+                              {getTailSnippet(model.thinking.trim(), 220)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic">Thinking…</span>
+                          )
                         ) : (
                           model.response
                         )}
@@ -1909,27 +1930,36 @@ export default function Playground() {
                       backdropFilter: 'blur(16px)',
                       border: `1px solid ${effectiveColor}40`,
                       boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${effectiveColor}15`,
-                      zIndex: 200
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
-                      <span className="text-xs font-semibold text-slate-300">{model.name}</span>
+                      zIndex: 200,
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
+                        <span className="text-xs font-semibold text-slate-300">{model.name}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+                        {isSpeaking ? (
+                          model.response.trim().length > 0 ? (
+                            <Typewriter text={model.response} speed={20} />
+                          ) : model.thinking && model.thinking.trim().length > 0 ? (
+                            <span>
+                              <span className="text-slate-500 italic">Thinking… </span>
+                              {getTailSnippet(model.thinking.trim(), 280)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic">Thinking…</span>
+                          )
+                        ) : model.response ? (
+                          getTailSnippet(model.response)
+                        ) : (
+                          <span className="text-slate-500 italic">No response yet.</span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
+                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-                      {isSpeaking ? (
-                        <Typewriter text={model.response} speed={20} />
-                      ) : model.response ? (
-                        getTailSnippet(model.response)
-                      ) : (
-                        <span className="text-slate-500 italic">No response yet.</span>
-                      )}
-                    </p>
-                    <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
-                      <ExecutionTimeDisplay times={executionTimes[model.id]} />
-                    </div>
-                  </div>
-                )}
+                  )}
 
                 {isSpeaking && mode !== 'compare' && !hasError && (
                   <svg
@@ -2162,11 +2192,18 @@ export default function Playground() {
         setToken={setGithubToken}
       />
 
+      <TopicsDrawer
+        open={showTopics}
+        onClose={() => setShowTopics(false)}
+        onSelectPrompt={handleSelectPrompt}
+      />
+
       <PromptInput
         inputRef={inputRef}
         inputFocused={inputFocused}
         setInputFocused={setInputFocused}
         onSendMessage={sendMessage}
+        onOpenTopics={() => setShowTopics(true)}
       />
 
       {/* Custom Context Menu */}
