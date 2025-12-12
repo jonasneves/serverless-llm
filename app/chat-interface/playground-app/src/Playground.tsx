@@ -552,6 +552,7 @@ export default function Playground() {
     average_rank: number;
     votes_count: number;
   }> | null>(null);
+  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<string[]>([]);
   const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{
     turn_number: number;
     response: string;
@@ -627,6 +628,7 @@ export default function Playground() {
     setPhaseLabel(null);
     setModeratorSynthesis('');
     setCouncilAggregateRankings(null);
+    setCouncilAnonymousReviews([]);
     setDiscussionTurnsByModel({});
     resetFailedModels();
     currentDiscussionTurnRef.current = null;
@@ -803,6 +805,8 @@ export default function Playground() {
         }, currentController.signal);
 
         let councilSynthesis = '';
+        let stage2Expected = 0;
+        let stage2Received = 0;
 
         await streamSseEvents(response, (data) => {
           const eventType = data.event;
@@ -872,8 +876,12 @@ export default function Playground() {
           }
 
           if (eventType === 'stage2_start') {
-            setPhaseLabel('Stage 2 · Anonymous Review');
             const activeParticipants = participants.filter(id => !failedModelsRef.current.has(id));
+            stage2Expected = activeParticipants.length;
+            stage2Received = 0;
+            setCouncilAnonymousReviews([]);
+            setPhaseLabel(`Stage 2 · Anonymous Review (0/${stage2Expected})`);
+            setModeratorSynthesis(`Anonymous reviews in progress (0/${stage2Expected})…`);
             setSpeaking(new Set(activeParticipants));
           }
 
@@ -884,6 +892,15 @@ export default function Playground() {
               next.delete(modelId);
               return next;
             });
+            stage2Received += 1;
+            setPhaseLabel(`Stage 2 · Anonymous Review (${stage2Received}/${stage2Expected || participants.length})`);
+            setModeratorSynthesis(`Anonymous reviews in progress (${stage2Received}/${stage2Expected || participants.length})…`);
+
+            const rankingText = String((data as any).ranking ?? '');
+            if (rankingText.trim()) {
+              const label = `Anonymous review #${stage2Received}`;
+              setCouncilAnonymousReviews(prev => [...prev, `${label}\n\n${rankingText.trim()}`]);
+            }
           }
 
           if (eventType === 'ranking_error' && data.model_id) {
@@ -895,6 +912,11 @@ export default function Playground() {
             });
             // We don't necessarily show ranking errors in the card, but maybe log it?
             markModelFailed(modelId);
+            stage2Received += 1;
+            setPhaseLabel(`Stage 2 · Anonymous Review (${stage2Received}/${stage2Expected || participants.length})`);
+            setModeratorSynthesis(`Anonymous reviews in progress (${stage2Received}/${stage2Expected || participants.length})…`);
+            const errorText = String((data as any).error ?? 'Ranking error.');
+            setCouncilAnonymousReviews(prev => [...prev, `Anonymous review #${stage2Received}\n\n[Error] ${errorText}`]);
           }
 
           if (eventType === 'stage2_complete') {
@@ -2285,6 +2307,7 @@ export default function Playground() {
           mode={mode}
           moderatorId={moderator}
           councilAggregateRankings={councilAggregateRankings}
+          councilAnonymousReviews={councilAnonymousReviews}
           discussionTurnsByModel={discussionTurnsByModel}
           pinned={pinnedModels.has(activeInspectorId)}
           onTogglePin={() => {

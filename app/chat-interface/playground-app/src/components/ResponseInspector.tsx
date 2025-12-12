@@ -17,6 +17,7 @@ interface ResponseInspectorProps {
     average_rank: number;
     votes_count: number;
   }> | null;
+  councilAnonymousReviews: string[];
   discussionTurnsByModel: Record<string, Array<{
     turn_number: number;
     response: string;
@@ -37,6 +38,7 @@ export default function ResponseInspector({
   mode,
   moderatorId,
   councilAggregateRankings,
+  councilAnonymousReviews,
   discussionTurnsByModel,
   pinned = false,
   onTogglePin,
@@ -52,6 +54,7 @@ export default function ResponseInspector({
 
   const isStreaming = speaking.has(activeModel.id);
   const showCouncilStats = mode === 'council' && activeModel.id === moderatorId && councilAggregateRankings && councilAggregateRankings.length > 0;
+  const showCouncilReviews = mode === 'council' && activeModel.id === moderatorId && councilAnonymousReviews.length > 0;
   const turnsForActive = mode === 'roundtable' ? (discussionTurnsByModel[activeModel.id] || []) : [];
 
   /* Drag to toggle side logic */
@@ -165,6 +168,26 @@ export default function ResponseInspector({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 markdown-content">
+        {showCouncilReviews && (
+          <details className="mb-3 rounded-lg border border-slate-700/50 bg-slate-900/40">
+            <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-300">
+              Anonymous reviews ({councilAnonymousReviews.length})
+            </summary>
+            <div className="px-3 pb-3 pt-1 space-y-3">
+              {councilAnonymousReviews.map((text, idx) => (
+                <details key={idx} className="rounded-md border border-slate-700/40 bg-slate-950/20">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-[11px] font-semibold text-slate-300">
+                    Review {idx + 1}
+                  </summary>
+                  <pre className="px-3 pb-3 pt-1 text-xs text-slate-400 whitespace-pre-wrap">
+                    {text}
+                  </pre>
+                </details>
+              ))}
+            </div>
+          </details>
+        )}
+
         {showCouncilStats && (
           <details className="mb-3 rounded-lg border border-slate-700/50 bg-slate-900/40">
             <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-300">
