@@ -10,6 +10,7 @@ export interface ChatStreamPayload {
   messages: Array<{ role: string; content: string }>;
   max_tokens: number;
   temperature: number;
+  github_token?: string | null;
 }
 
 export const fetchChatStream = async (payload: ChatStreamPayload): Promise<Response> => {
@@ -56,4 +57,3 @@ export const streamSseEvents = async (
     }
   }
 };
-
