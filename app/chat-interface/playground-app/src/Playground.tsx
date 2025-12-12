@@ -153,6 +153,7 @@ export default function Playground() {
 	  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 	  const suppressClickRef = useRef(false);
 	  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
+	  const sessionModelIdsRef = useRef<string[]>([]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId: string } | null>(null);
 
@@ -167,25 +168,27 @@ export default function Playground() {
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
   const [lastUserPrompt, setLastUserPrompt] = useState<string>('');
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || selected.length === 0 || isGenerating) return;
+	  const sendMessage = async (text: string) => {
+	    if (!text.trim() || selected.length === 0 || isGenerating) return;
+	    const sessionModelIds = selected.slice();
+	    sessionModelIdsRef.current = sessionModelIds;
 
-    setIsGenerating(true);
-    setExpanded(null);
-    setSpeaking(new Set(selected)); // Mark all selected models as speaking
-    setLastUserPrompt(text); // Store the prompt for synthesis
-    setModeratorSynthesis(''); // Reset moderator synthesis
+	    setIsGenerating(true);
+	    setExpanded(null);
+	    setSpeaking(new Set(sessionModelIds)); // Mark all selected models as speaking
+	    setLastUserPrompt(text); // Store the prompt for synthesis
+	    setModeratorSynthesis(''); // Reset moderator synthesis
 
-    // Initialize execution time tracking for all selected models
-    const startTime = performance.now();
-    const initialTimes: Record<string, ExecutionTimeData> = {};
-	    selected.forEach(modelId => {
+	    // Initialize execution time tracking for all selected models
+	    const startTime = performance.now();
+	    const initialTimes: Record<string, ExecutionTimeData> = {};
+	    sessionModelIds.forEach(modelId => {
 	      initialTimes[modelId] = { startTime };
 	    });
 	    setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
 	
 	    // Reset thinking state for streaming
-	    selected.forEach(modelId => {
+	    sessionModelIds.forEach(modelId => {
 	      thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
 	    });
 
@@ -194,22 +197,22 @@ export default function Playground() {
 
 	    // Reset responses for selected models
 	    setModelsData(prev => prev.map(m =>
-	      selected.includes(m.id) ? { ...m, response: '', thinking: '' } : m
+	      sessionModelIds.includes(m.id) ? { ...m, response: '', thinking: '' } : m
 	    ));
 
-    // Determine first active model for visualization if needed (optional)
-    const firstActive = selected[0];
-    if (firstActive) {
-      setExpanded(firstActive);
-    }
+	    // Determine first active model for visualization if needed (optional)
+	    const firstActive = sessionModelIds[0];
+	    if (firstActive) {
+	      setExpanded(firstActive);
+	    }
 
-    try {
-      const response = await fetchChatStream({
-        models: selected,
-        messages: [{ role: 'user', content: text }],
-        max_tokens: GENERATION_DEFAULTS.maxTokens,
-        temperature: GENERATION_DEFAULTS.temperature
-      });
+	    try {
+	      const response = await fetchChatStream({
+	        models: sessionModelIds,
+	        messages: [{ role: 'user', content: text }],
+	        max_tokens: GENERATION_DEFAULTS.maxTokens,
+	        temperature: GENERATION_DEFAULTS.temperature
+	      });
 
       await streamSseEvents(response, (data) => {
 	        if (data.event === 'token' && data.model_id) {
@@ -296,22 +299,22 @@ export default function Playground() {
           });
         }
       });
-    } catch (err) {
-      console.error('Chat error:', err);
-      setModelsData(prev => prev.map(m =>
-        selected.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
-      ));
-    } finally {
-      // Mark end time for any models that didn't receive a 'done' event
-      const finalTime = performance.now();
-      setExecutionTimes(prev => {
-        const updated = { ...prev };
-        selected.forEach(modelId => {
-          if (updated[modelId] && !updated[modelId].endTime) {
-            updated[modelId] = { ...updated[modelId], endTime: finalTime };
-          }
-        });
-        return updated;
+	    } catch (err) {
+	      console.error('Chat error:', err);
+	      setModelsData(prev => prev.map(m =>
+	        sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
+	      ));
+	    } finally {
+	      // Mark end time for any models that didn't receive a 'done' event
+	      const finalTime = performance.now();
+	      setExecutionTimes(prev => {
+	        const updated = { ...prev };
+	        sessionModelIdsRef.current.forEach(modelId => {
+	          if (updated[modelId] && !updated[modelId].endTime) {
+	            updated[modelId] = { ...updated[modelId], endTime: finalTime };
+	          }
+	        });
+	        return updated;
       });
       setIsGenerating(false);
       setSpeaking(new Set()); // Clear speaking state
@@ -373,25 +376,26 @@ Synthesis:`;
     }
   };
 
-  // Effect to trigger moderator synthesis when all models complete (in Council/Roundtable mode)
-  useEffect(() => {
-    // Only in Council or Roundtable mode, after generation completes
-    if (mode === 'compare' || isGenerating || !lastUserPrompt || !moderator) return;
+	  // Effect to trigger moderator synthesis when all models complete (in Council/Roundtable mode)
+	  useEffect(() => {
+	    // Only in Council or Roundtable mode, after generation completes
+	    if (mode === 'compare' || !lastUserPrompt || !moderator) return;
 
-    // Check if we have responses from all selected models
-    const participantModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
-    const allHaveResponses = participantModels.length > 0 &&
-      participantModels.every(m => m.response && m.response.trim().length > 0);
+	    const participantIds = sessionModelIdsRef.current.filter(id => id !== moderator && selected.includes(id));
+	    const participantModels = modelsData.filter(m => participantIds.includes(m.id));
+	    const allHaveResponses = participantModels.length > 0 &&
+	      participantModels.every(m => m.response && m.response.trim().length > 0);
+	    const allStoppedSpeaking = participantIds.every(id => !speaking.has(id));
 
-    // Only synthesize if we haven't already and all models have responded
-    if (allHaveResponses && !moderatorSynthesis && !isSynthesizing) {
-      const responses: Record<string, string> = {};
-      participantModels.forEach(m => {
-        responses[m.id] = m.response;
-      });
-      generateModeratorSynthesis(lastUserPrompt, responses);
-    }
-  }, [isGenerating, mode, modelsData, selected, moderator, lastUserPrompt, moderatorSynthesis, isSynthesizing]);
+	    // Only synthesize if we haven't already and all models have responded
+	    if (allHaveResponses && allStoppedSpeaking && !moderatorSynthesis && !isSynthesizing) {
+	      const responses: Record<string, string> = {};
+	      participantModels.forEach(m => {
+	        responses[m.id] = m.response;
+	      });
+	      generateModeratorSynthesis(lastUserPrompt, responses);
+	    }
+	  }, [mode, modelsData, selected, moderator, lastUserPrompt, moderatorSynthesis, isSynthesizing, speaking]);
 
   // Handle Escape key to close dock and Delete/Backspace to remove selected models
   useEffect(() => {
@@ -816,12 +820,13 @@ Synthesis:`;
           }}
         >
           {/* Model cards - rendered for all modes with transitions */}
-          {selectedModels.map((model, index) => {
-            const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
-            const isCircle = mode !== 'compare';
-            const isSpeaking = speaking.has(model.id); // Check set membership
-            const isExpanded = expanded === model.id;
-            const isSelected = selectedCardIds.has(model.id);
+	          {selectedModels.map((model, index) => {
+	            const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
+	            const isCircle = mode !== 'compare';
+	            const isSpeaking = speaking.has(model.id); // Check set membership
+	            const isExpanded = expanded === model.id;
+	            const isSelected = selectedCardIds.has(model.id);
+	            const isDone = !isSpeaking && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
 
             // Calculate grid position for compare mode
             const cols = gridCols; // Use dynamic gridCols state
@@ -973,24 +978,40 @@ Synthesis:`;
                     </div>
                   )}
 
-                  {/* Circle mode content */}
-                  {isCircle && (
-                    <div className="absolute inset-0 flex items-center justify-center" style={{
-                      opacity: isCircle ? 1 : 0,
-                      transition: 'opacity 0.3s ease-out'
-                    }}>
-                      <div className="text-center px-2">
-                        <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-                        {isSpeaking && (
-                          <div className="flex items-center justify-center gap-1 mt-1">
-                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
-                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
-                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+	                  {/* Circle mode content */}
+	                  {isCircle && (
+	                    <div className="absolute inset-0 flex items-center justify-center" style={{
+	                      opacity: isCircle ? 1 : 0,
+	                      transition: 'opacity 0.3s ease-out'
+	                    }}>
+	                      <div className="text-center px-2">
+	                        <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
+	                        {isSpeaking && (
+	                          <div className="flex items-center justify-center gap-1 mt-1">
+	                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '0ms' }} />
+	                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '150ms' }} />
+	                            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: model.color, animationDelay: '300ms' }} />
+	                          </div>
+	                        )}
+	                        {!isSpeaking && isDone && (
+	                          <div className="flex items-center justify-center mt-1">
+	                            <svg
+	                              className="w-3 h-3"
+	                              viewBox="0 0 24 24"
+	                              fill="none"
+	                              stroke={model.color}
+	                              strokeWidth="3"
+	                              strokeLinecap="round"
+	                              strokeLinejoin="round"
+	                              style={{ opacity: 0.85 }}
+	                            >
+	                              <polyline points="20 6 9 17 4 12" />
+	                            </svg>
+	                          </div>
+	                        )}
+	                      </div>
+	                    </div>
+	                  )}
                 </div>
 
                 {/* Expanded response panel */}
