@@ -279,11 +279,27 @@ export default function Playground() {
     response: string;
     evaluation?: any;
   }>>>({});
+  const [failedModels, setFailedModels] = useState<Set<string>>(new Set());
+  const failedModelsRef = useRef<Set<string>>(new Set());
   const currentDiscussionTurnRef = useRef<{ modelId: string; turnNumber: number } | null>(null);
 
   const compareCardRectsRef = useRef<Record<string, DOMRect>>({});
   const prevModeRef = useRef<Mode>(mode);
   const [orchestratorEntryOffset, setOrchestratorEntryOffset] = useState<{ x: number; y: number } | null>(null);
+  const resetFailedModels = () => {
+    const empty = new Set<string>();
+    failedModelsRef.current = empty;
+    setFailedModels(empty);
+  };
+  const markModelFailed = (modelId: string) => {
+    setFailedModels(prev => {
+      if (prev.has(modelId)) return prev;
+      const next = new Set(prev);
+      next.add(modelId);
+      failedModelsRef.current = next;
+      return next;
+    });
+  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || selected.length === 0 || isGenerating) return;
@@ -301,6 +317,7 @@ export default function Playground() {
     setModeratorSynthesis('');
     setCouncilAggregateRankings(null);
     setDiscussionTurnsByModel({});
+    resetFailedModels();
     currentDiscussionTurnRef.current = null;
 
     // Reset any pending streamed chunks from a previous run.
@@ -507,11 +524,13 @@ export default function Playground() {
             const errorText = String((data as any).error ?? 'Error generating response.');
             clearPendingStreamForModel(modelId);
             setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
+            markModelFailed(modelId);
           }
 
           if (eventType === 'stage2_start') {
             setPhaseLabel('Stage 2 · Anonymous Review');
-            setSpeaking(new Set(participants));
+            const activeParticipants = participants.filter(id => !failedModelsRef.current.has(id));
+            setSpeaking(new Set(activeParticipants));
           }
 
           if (eventType === 'ranking_response' && data.model_id) {
@@ -530,6 +549,9 @@ export default function Playground() {
               next.delete(modelId);
               return next;
             });
+            markModelFailed(modelId);
+            const errorText = String((data as any).error ?? 'Ranking error.');
+            setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
           }
 
           if (eventType === 'stage2_complete') {
@@ -663,15 +685,16 @@ export default function Playground() {
         if (eventType === 'turn_error' && data.model_id) {
           const modelId = data.model_id as string;
           const now = performance.now();
-	          setExecutionTimes(prev => ({
-	            ...prev,
-	            [modelId]: { ...prev[modelId], endTime: now }
-	          }));
-	          const errorText = String((data as any).error ?? 'Error generating response.');
-	          clearPendingStreamForModel(modelId);
-	          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
-	          setSpeaking(new Set());
-	        }
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now }
+          }));
+          const errorText = String((data as any).error ?? 'Error generating response.');
+          clearPendingStreamForModel(modelId);
+          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
+          setSpeaking(new Set());
+          markModelFailed(modelId);
+        }
 
         if (eventType === 'synthesis_start') {
           setPhaseLabel('Synthesis');
@@ -1286,7 +1309,38 @@ export default function Playground() {
             const isSpeaking = speaking.has(model.id); // Check set membership
             const isExpanded = expanded === model.id;
             const isSelected = selectedCardIds.has(model.id);
-            const isDone = !isSpeaking && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
+            const hasError = failedModels.has(model.id);
+            const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
+            const statusState = hasError
+              ? 'waiting'
+              : isSpeaking
+                ? 'responding'
+                : isDone
+                  ? 'done'
+                  : 'idle';
+            const statusLabel = hasError
+              ? 'Error'
+              : isSpeaking
+                ? 'Responding'
+                : isDone
+                  ? 'Done'
+                  : 'Ready';
+            const processingColor = '#fbbf24';
+            const isProcessing = isSpeaking && !hasError;
+            const baseBackground = 'rgba(30, 41, 59, 0.85)';
+            const cardBackground = isProcessing
+              ? `linear-gradient(135deg, ${processingColor}14, ${baseBackground})`
+              : baseBackground;
+            const cardBorder = isProcessing
+              ? `1px solid ${processingColor}99`
+              : isSelected
+                ? `1px solid ${model.color}d0`
+                : '1px solid rgba(71, 85, 105, 0.5)';
+            const cardShadow = isProcessing
+              ? `0 0 24px ${processingColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
+              : isSelected
+                ? `0 0 20px ${model.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
+                : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)';
 
             // Calculate grid position for compare mode
             const cols = gridCols; // Use dynamic gridCols state
@@ -1330,7 +1384,7 @@ export default function Playground() {
                   <div
                     className="absolute inset-0 rounded-full animate-pulse"
                     style={{
-                      background: `radial-gradient(circle, ${model.color}40 0%, transparent 70%)`,
+                      background: `radial-gradient(circle, ${processingColor}2b 0%, transparent 70%)`,
                       transform: 'scale(2)',
                       filter: 'blur(15px)'
                     }}
@@ -1371,20 +1425,12 @@ export default function Playground() {
                   }}
                   className={`relative cursor-pointer card-hover ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
                   style={{
-                    background: 'rgba(30, 41, 59, 0.85)',
+                    background: cardBackground,
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
-                    border: isSelected
-                      ? `1px solid ${model.color}d0`
-                      : isCircle && isSpeaking
-                        ? `1px solid ${model.color}`
-                        : '1px solid rgba(71, 85, 105, 0.5)',
-                    boxShadow: isSelected
-                      ? `0 0 20px ${model.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
-                      : isCircle && isSpeaking
-                        ? `0 0 30px ${model.color}40, inset 0 1px 1px rgba(255,255,255,0.1)`
-                        : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
-                    transform: isSelected || (isCircle && isSpeaking) ? 'scale(1.05)' : 'scale(1)',
+                    border: cardBorder,
+                    boxShadow: cardShadow,
+                    transform: isSelected || isProcessing ? 'scale(1.05)' : 'scale(1)',
                     width: isCircle ? '96px' : '256px',
                     height: isCircle ? '96px' : '200px',
                     borderRadius: isCircle ? '50%' : '12px',
@@ -1432,10 +1478,10 @@ export default function Playground() {
                           )}
                         </div>
                         <StatusIndicator
-                          state={isSpeaking ? 'responding' : isDone ? 'done' : 'idle'}
+                          state={statusState}
                           color={model.color}
                           size={16}
-                          label={isSpeaking ? 'Responding' : isDone ? 'Done' : 'Ready'}
+                          label={statusLabel}
                         />
                       </div>
 	                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
@@ -1459,14 +1505,9 @@ export default function Playground() {
                     }}>
                       <div className="text-center px-2">
                         <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-                        {isSpeaking && (
+                        {(isSpeaking || isDone || hasError) && (
                           <div className="flex items-center justify-center mt-1">
-                            <StatusIndicator state="responding" color={model.color} size={16} />
-                          </div>
-                        )}
-                        {!isSpeaking && isDone && (
-                          <div className="flex items-center justify-center mt-1">
-                            <StatusIndicator state="done" color={model.color} size={16} />
+                            <StatusIndicator state={statusState} color={model.color} size={16} label={statusLabel} />
                           </div>
                         )}
                       </div>
@@ -1526,8 +1567,8 @@ export default function Playground() {
                 >
                   <defs>
                     <linearGradient id={`grad-${model.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor={model.color} stopOpacity="0.8" />
-                      <stop offset="100%" stopColor={model.color} stopOpacity="0.1" />
+                      <stop offset="0%" stopColor={processingColor} stopOpacity="0.45" />
+                      <stop offset="100%" stopColor={processingColor} stopOpacity="0.12" />
                     </linearGradient>
                   </defs>
                   <line
@@ -1538,6 +1579,7 @@ export default function Playground() {
                     stroke={`url(#grad-${model.id})`}
                     strokeWidth="2"
                     strokeDasharray="6,4"
+                    strokeLinecap="round"
                     className="animate-flow"
                   />
                 </svg>
@@ -1757,7 +1799,7 @@ export default function Playground() {
           to { stroke-dashoffset: 0; }
         }
         .animate-flow {
-          animation: flow 0.5s linear infinite;
+          animation: flow 1s linear infinite;
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
