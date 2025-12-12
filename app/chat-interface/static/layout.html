@@ -113,20 +113,17 @@
         <a href="/" class="mode-link {% if request.url.path == '/' %}active{% endif %}">
           Compare
         </a>
-        <a href="/council" class="mode-link {% if request.url.path == '/council' %}active{% endif %}">
-          Council
-        </a>
-        <a href="/roundtable" class="mode-link {% if request.url.path == '/roundtable' %}active{% endif %}">
-          Roundtable
-        </a>
-        <a href="/autogen" class="mode-link {% if request.url.path == '/autogen' %}active{% endif %}">
-          Agents
+        <a href="/playground" class="mode-link {% if request.url.path == '/playground' %}active{% endif %}"
+          style="position: relative;">
+          Arena
+          <span
+            style="position: absolute; top: -6px; right: -20px; background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">New</span>
         </a>
 
         <!-- Lab (Experimental Modes) Dropdown -->
         <div class="mode-dropdown">
           <button
-            class="mode-link dropdown-trigger {% if request.url.path in ['/variations', '/confessions'] %}active{% endif %}">
+            class="mode-link dropdown-trigger {% if request.url.path in ['/council', '/roundtable', '/autogen', '/variations', '/confessions'] %}active{% endif %}">
             Lab
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               style="margin-left: 4px;">
@@ -134,6 +131,25 @@
             </svg>
           </button>
           <div class="dropdown-menu">
+            <a href="/council" class="dropdown-item {% if request.url.path == '/council' %}active{% endif %}">
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Council</span>
+                <span class="dropdown-item-desc">Anonymized peer review</span>
+              </div>
+            </a>
+            <a href="/roundtable" class="dropdown-item {% if request.url.path == '/roundtable' %}active{% endif %}">
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Roundtable</span>
+                <span class="dropdown-item-desc">Multi-model discussion</span>
+              </div>
+            </a>
+            <a href="/autogen" class="dropdown-item {% if request.url.path == '/autogen' %}active{% endif %}">
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Agents</span>
+                <span class="dropdown-item-desc">Tool-using orchestration</span>
+              </div>
+            </a>
+            <div style="height: 1px; background: var(--border-color); margin: 6px 0;"></div>
             <a href="/variations" class="dropdown-item {% if request.url.path == '/variations' %}active{% endif %}">
               <div class="dropdown-item-content">
                 <span class="dropdown-item-title">Variations</span>

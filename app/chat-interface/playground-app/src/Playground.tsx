@@ -28,8 +28,9 @@ export default function Playground() {
 
   const [showDock, setShowDock] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
-  const [arenaOffsetY, setArenaOffsetY] = useState(0); // Vertical scroll offset for arena
-  const wheelDeltaRef = useRef(0);
+  // Arena vertical offset is visual-only; keep it in refs to avoid full re-renders on scroll.
+  const arenaOffsetYRef = useRef(0);
+  const arenaTargetYRef = useRef(0);
   const wheelRafRef = useRef<number | null>(null);
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
@@ -365,23 +366,43 @@ Synthesis:`;
 
   // Handle wheel scroll to move arena up/down
   useEffect(() => {
+    const applyOffset = (offset: number) => {
+      const el = visualizationAreaRef.current;
+      if (!el) return;
+      el.style.setProperty('--arena-offset-y', `${offset}px`);
+    };
+
+    const step = () => {
+      const current = arenaOffsetYRef.current;
+      const target = arenaTargetYRef.current;
+      const diff = target - current;
+
+      if (Math.abs(diff) < 0.5) {
+        arenaOffsetYRef.current = target;
+        applyOffset(target);
+        wheelRafRef.current = null;
+        return;
+      }
+
+      // Ease toward target for a more natural feel.
+      const next = current + diff * 0.35;
+      arenaOffsetYRef.current = next;
+      applyOffset(next);
+      wheelRafRef.current = requestAnimationFrame(step);
+    };
+
     const handleWheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement | null;
       // Let native scroll work inside text inputs
       if (target && target.closest('input, textarea')) return;
 
       event.preventDefault();
-      wheelDeltaRef.current += event.deltaY * 0.5; // Adjust sensitivity
+      const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
+      const nextTarget = arenaTargetYRef.current - delta;
+      arenaTargetYRef.current = Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, nextTarget));
 
       if (wheelRafRef.current == null) {
-        wheelRafRef.current = requestAnimationFrame(() => {
-          setArenaOffsetY(prev => {
-            const next = prev - wheelDeltaRef.current;
-            return Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, next));
-          });
-          wheelDeltaRef.current = 0;
-          wheelRafRef.current = null;
-        });
+        wheelRafRef.current = requestAnimationFrame(step);
       }
     };
 
@@ -482,12 +503,12 @@ Synthesis:`;
 
   // Handle mouse down for selection box
   useEffect(() => {
-    const handleMouseDown = (event: MouseEvent) => {
-      if (event.button !== 0) return; // Only left mouse button
-      if (!rootContainerRef.current || !visualizationAreaRef.current) return;
+	    const handleMouseDown = (event: MouseEvent) => {
+	      if (event.button !== 0) return; // Only left mouse button
+	      if (!rootContainerRef.current || !visualizationAreaRef.current) return;
 
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
+	      const target = event.target as HTMLElement | null;
+	      if (!target) return;
 
       // Don't start selection if clicking on cards, buttons, inputs, or other interactive elements
       const clickedOnCard = target.closest('[data-card]');
@@ -496,14 +517,21 @@ Synthesis:`;
       if (clickedOnCard || clickedOnInteractive || clickedOnDraggable) return;
 
       // Only allow selection within the root container
-      const clickedOnContainer = rootContainerRef.current.contains(target);
-      if (!clickedOnContainer) return;
+	      const clickedOnContainer = rootContainerRef.current.contains(target);
+	      if (!clickedOnContainer) return;
 
-      const rootBounds = rootContainerRef.current.getBoundingClientRect();
-      const point = {
-        x: event.clientX - rootBounds.left,
-        y: event.clientY - rootBounds.top
-      };
+	      // Stop any scroll inertia so selection origin stays under cursor.
+	      arenaTargetYRef.current = arenaOffsetYRef.current;
+	      if (wheelRafRef.current != null) {
+	        cancelAnimationFrame(wheelRafRef.current);
+	        wheelRafRef.current = null;
+	      }
+
+	      const rootBounds = rootContainerRef.current.getBoundingClientRect();
+	      const point = {
+	        x: event.clientX - rootBounds.left,
+	        y: event.clientY - rootBounds.top
+	      };
 
       // Prevent text selection when starting drag
       event.preventDefault();
@@ -675,14 +703,15 @@ Synthesis:`;
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative w-full z-[40] transition-all duration-300 ${mode === 'compare' ? '' : ''} ${isDraggingOver ? 'scale-[1.02]' : ''}`}
+          className={`relative w-full z-[40] transition-all duration-300 ${mode === 'compare' ? '' : ''}`}
           style={{
             // Base styles for all modes
             position: 'relative',
             display: 'flex',
             alignItems: mode === 'compare' ? 'flex-start' : 'center', // Top-align for grid to prevent upward growth
             justifyContent: 'center',
-            transform: `translateY(${arenaOffsetY}px)`,
+            ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
+            transform: `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
             willChange: 'transform',
             border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
             borderRadius: isDraggingOver ? '24px' : '0px',
