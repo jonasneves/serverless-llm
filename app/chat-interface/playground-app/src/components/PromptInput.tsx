@@ -36,8 +36,10 @@ export default function PromptInput({
               <div key={i} className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    if (inputRef.current) inputRef.current.value = s.prompt;
-                    onSendMessage(s.prompt);
+                    if (inputRef.current) {
+                      inputRef.current.value = s.prompt;
+                      inputRef.current.focus();
+                    }
                   }}
                   className="hover:text-blue-400 transition-colors cursor-pointer px-1 py-0.5 rounded hover:bg-white/5"
                 >

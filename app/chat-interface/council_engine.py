@@ -289,7 +289,8 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         self,
         query: str,
         participants: List[str],
-        max_tokens: int = 2048
+        max_tokens: int = 2048,
+        completed_responses: Dict[str, str] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Stage 1: Collect independent responses from all models in parallel with streaming
@@ -298,6 +299,7 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
             query: User query
             participants: List of model IDs to participate
             max_tokens: Max tokens per response
+            completed_responses: Dict[model_id, response] for already finished models
 
         Yields:
             Events: stage1_start, model_start, model_chunk, model_response, stage1_complete
@@ -307,9 +309,39 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         messages = [{"role": "user", "content": query}]
         stage1_results = []
         model_responses = {model_id: "" for model_id in participants}
-        active_models = set(participants)
+        
+        # Split participants into completed and active
+        completed_responses = completed_responses or {}
+        active_participants = []
+        
+        # First, process already completed models
+        for model_id in participants:
+            if model_id in completed_responses:
+                response = completed_responses[model_id]
+                model_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+                model_responses[model_id] = response
+                
+                # Emit events as if it just finished
+                # yield {"type": "model_start", "model_id": model_id, "model_name": model_name} # Optional?
+                stage1_results.append({
+                    "model_id": model_id,
+                    "model_name": model_name,
+                    "response": response
+                })
+                yield {
+                    "type": "model_response",
+                    "model_id": model_id,
+                    "model_name": model_name,
+                    "response": response
+                }
+            else:
+                active_participants.append(model_id)
 
-        # Create streaming tasks for all models
+        if not active_participants and stage1_results:
+             yield {"type": "stage1_complete", "results": stage1_results}
+             return
+
+        # Create streaming tasks for ACTIVE models only
         async def stream_model(model_id: str):
             """Stream a single model and yield events"""
             model_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
@@ -354,8 +386,8 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
                         "response": final_response
                     }
 
-        # Stream all models concurrently
-        tasks = [stream_model(model_id) for model_id in participants]
+        # Stream all active models concurrently
+        tasks = [stream_model(model_id) for model_id in active_participants]
 
         # Merge all streams
         async for event in self._merge_streams(tasks):
@@ -637,7 +669,8 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         participants: List[str],
         chairman_model: str = None,
         max_tokens: int = 2048,
-        enable_quips: bool = True
+        enable_quips: bool = True,
+        completed_responses: Dict[str, str] = None 
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Run the complete 3-stage council process with chairman quips
@@ -648,9 +681,7 @@ Provide a clear, well-reasoned final answer that represents the council's collec
             chairman_model: Optional chairman model (defaults to first participant)
             max_tokens: Max tokens per response
             enable_quips: Whether to emit chairman quips during waits
-
-        Yields:
-            All events from all stages, including chairman_quip events
+            completed_responses: Dict of already completed responses
         """
         import time
         
@@ -659,18 +690,18 @@ Provide a clear, well-reasoned final answer that represents the council's collec
             return
 
         chairman = chairman_model or participants[0]
-
         yield {"type": "council_start", "participants": participants, "chairman": chairman}
 
         # Track model completion for quips
-        completed_models = set()
-        active_models = set(participants)
+        completed_models = set(completed_responses.keys()) if completed_responses else set()
+        active_models = set([p for p in participants if p not in completed_models])
+        
         last_quip_time = time.time()
-        first_model_done = False
+        first_model_done = len(completed_models) > 0 # Initial done state/quip logic might need adjusting
         
         # Stage 1: Collect responses (with streaming and quips)
         stage1_results = []
-        async for event in self.stage1_collect_responses(query, participants, max_tokens):
+        async for event in self.stage1_collect_responses(query, participants, max_tokens, completed_responses):
             yield event
             
             # Track completions
@@ -678,7 +709,7 @@ Provide a clear, well-reasoned final answer that represents the council's collec
                 completed_models.add(event["model_id"])
                 active_models.discard(event["model_id"])
                 
-                # Quip when first model finishes
+                # Quip when first model finishes (only if it wasn't already done)
                 if enable_quips and not first_model_done:
                     first_model_done = True
                     quip = self.generate_quip("first_done", model_name=event["model_name"])

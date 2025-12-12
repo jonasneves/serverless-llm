@@ -13,11 +13,12 @@ export interface ChatStreamPayload {
   github_token?: string | null;
 }
 
-export const fetchChatStream = async (payload: ChatStreamPayload): Promise<Response> => {
+export const fetchChatStream = async (payload: ChatStreamPayload, signal?: AbortSignal): Promise<Response> => {
   return fetch('/api/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal,
   });
 };
 
@@ -27,13 +28,15 @@ export interface CouncilStreamPayload {
   chairman_model?: string | null;
   max_tokens: number;
   github_token?: string | null;
+  completed_responses?: Record<string, string> | null;
 }
 
-export const fetchCouncilStream = async (payload: CouncilStreamPayload): Promise<Response> => {
+export const fetchCouncilStream = async (payload: CouncilStreamPayload, signal?: AbortSignal): Promise<Response> => {
   return fetch('/api/chat/council/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal,
   });
 };
 

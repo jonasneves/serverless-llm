@@ -56,6 +56,9 @@ export default function Playground() {
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
   const dockRef = useRef<HTMLDivElement>(null); // Ref for the Model Dock
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [lastQuery, setLastQuery] = useState('');
+
   // Dynamic grid column calculation
   useEffect(() => {
     const resizeObserver = new ResizeObserver(entries => {
@@ -178,8 +181,50 @@ export default function Playground() {
 
   const handleModelToggle = (modelId: string) => {
     if (selected.includes(modelId)) {
-      setSelected(prev => prev.filter(id => id !== modelId));
+      // Removing a model
+      const isRemovingActive = isGenerating && sessionModelIdsRef.current.includes(modelId);
+
+      if (isRemovingActive && lastQuery) {
+        // We are removing a model while generating. Restart session without it.
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+
+        const remainingIds = sessionModelIdsRef.current.filter(id => id !== modelId);
+
+        // Collect existing responses to avoid re-generation
+        const previousResponses: Record<string, string> = {};
+        modelsData.forEach(m => {
+          if (remainingIds.includes(m.id) && m.response && !m.error) {
+            previousResponses[m.id] = m.response;
+          }
+        });
+
+        // Update selection state immediately
+        setSelected(prev => prev.filter(id => id !== modelId));
+        if (selectedCardIds.has(modelId)) {
+          setSelectedCardIds(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+        }
+
+        // Restart if we have enough participants (Council needs 2+)
+        if (mode === 'council' && remainingIds.length < 2) {
+          setIsGenerating(false);
+          setIsSynthesizing(false);
+          return;
+        }
+
+        // Trigger restart with override
+        sendMessage(lastQuery, previousResponses, remainingIds);
+
+      } else {
+        // Normal removal
+        setSelected(prev => prev.filter(id => id !== modelId));
+      }
+
     } else {
+      // Adding a model
       setSelected(prev => [...prev, modelId]);
     }
   };
@@ -464,15 +509,22 @@ export default function Playground() {
     });
   };
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || selected.length === 0 || isGenerating) return;
+  const sendMessage = async (text: string, previousResponses?: Record<string, string> | null, participantsOverride?: string[]) => {
+    if (!text.trim() || (selected.length === 0 && !participantsOverride) || (isGenerating && !participantsOverride)) return;
+    setLastQuery(text);
 
-    const selectionOverride = Array.from(selectedCardIds).filter(id =>
-      selected.includes(id) && (mode === 'compare' || id !== moderator)
-    );
-    const sessionModelIds = selectionOverride.length > 0 ? selectionOverride : selected.slice();
+    let sessionModelIds: string[];
+    if (participantsOverride) {
+      sessionModelIds = participantsOverride;
+    } else {
+      const selectionOverride = Array.from(selectedCardIds).filter(id =>
+        selected.includes(id) && (mode === 'compare' || id !== moderator)
+      );
+      sessionModelIds = selectionOverride.length > 0 ? selectionOverride : selected.slice();
+    }
     sessionModelIdsRef.current = sessionModelIds;
 
+    abortControllerRef.current = new AbortController();
     setIsGenerating(true);
     setIsSynthesizing(false);
     setHoveredCard(null);
@@ -490,16 +542,32 @@ export default function Playground() {
       flushStreamRafRef.current = null;
     }
 
-    // Initialize execution time tracking for all relevant models
-    const startTime = performance.now();
-    const initialTimes: Record<string, ExecutionTimeData> = {};
-    sessionModelIds.forEach(modelId => {
-      initialTimes[modelId] = { startTime };
+    // Prepare UI state for streaming
+    setModelsData(prev => prev.map(m => {
+      if (sessionModelIds.includes(m.id) || m.id === moderator) {
+        // Validation: If passing previousResponses, preserve valid responses
+        if (previousResponses && previousResponses[m.id]) {
+          return { ...m, response: previousResponses[m.id], thinking: undefined, error: undefined };
+        }
+        return { ...m, response: '', thinking: undefined, error: undefined };
+      }
+      return m;
+    }));
+
+    // Reset execution times for new run
+    setExecutionTimes(prev => {
+      const next = { ...prev };
+      const startTime = performance.now();
+      sessionModelIds.forEach(id => {
+        // Keep old times if we have a previous response? Maybe not critical.
+        // Doing a full reset is safer for now.
+        next[id] = { startTime: startTime };
+      });
+      if (moderator && !next[moderator]) {
+        next[moderator] = { startTime: startTime };
+      }
+      return next;
     });
-    if (moderator && !initialTimes[moderator]) {
-      initialTimes[moderator] = { startTime };
-    }
-    setExecutionTimes(prev => ({ ...prev, ...initialTimes }));
 
     // Reset thinking state for streaming
     const thinkingResetIds = new Set(sessionModelIds);
@@ -510,13 +578,6 @@ export default function Playground() {
 
     // Track which models have received their first token
     const firstTokenReceived = new Set<string>();
-
-    // Reset responses for models participating in this run (and chairman/orchestrator)
-    setModelsData(prev => prev.map(m =>
-      sessionModelIds.includes(m.id) || m.id === moderator
-        ? { ...m, response: '', thinking: '' }
-        : m
-    ));
 
     const applyThinkingChunk = (modelId: string, rawChunk: string) => {
       const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
@@ -574,7 +635,7 @@ export default function Playground() {
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           temperature: GENERATION_DEFAULTS.temperature,
           github_token: githubToken || null
-        });
+        }, abortControllerRef.current.signal);
 
         await streamSseEvents(response, (data) => {
           if (data.event === 'token' && data.model_id) {
@@ -628,7 +689,8 @@ export default function Playground() {
           chairman_model: moderator || null,
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           github_token: githubToken || null,
-        });
+          completed_responses: previousResponses || null,
+        }, abortControllerRef.current.signal);
 
         await streamSseEvents(response, (data) => {
           const eventType = data.event;
@@ -1975,7 +2037,9 @@ export default function Playground() {
                     ) : isSynthesizing ? (
                       <span className="text-slate-500 italic">Synthesizing responses...</span>
                     ) : isGenerating ? (
-                      <span className="text-slate-500 italic">Waiting for model responses...</span>
+                      <span className="text-slate-500 italic">
+                        {phaseLabel === 'Stage 1 · Responses' ? 'Waiting for model responses...' : (phaseLabel || 'Orchestrating...')}
+                      </span>
                     ) : (
                       <span className="text-slate-500 italic">Send a prompt to see the synthesis.</span>
                     )}

@@ -5,6 +5,7 @@ export interface Model {
   response: string;
   thinking?: string;
   type?: 'local' | 'api';
+  error?: string;
 }
 
 export type Mode = 'compare' | 'council' | 'roundtable';

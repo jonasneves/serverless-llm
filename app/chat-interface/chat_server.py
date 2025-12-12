@@ -416,6 +416,7 @@ class CouncilRequest(BaseModel):
     chairman_model: Optional[str] = None  # Optional chairman model (defaults to first participant)
     max_tokens: int = 2048  # Max tokens per response
     github_token: Optional[str] = None  # User-provided GitHub token for API models
+    completed_responses: Optional[Dict[str, str]] = None  # Already generated responses
 
 class OrchestratorRequest(GenerationParams):
     query: str
@@ -1430,7 +1431,8 @@ async def stream_council_events(
     participants: List[str],
     chairman_model: Optional[str] = None,
     max_tokens: int = 2048,
-    github_token: Optional[str] = None
+    github_token: Optional[str] = None,
+    completed_responses: Optional[Dict[str, str]] = None
 ) -> AsyncGenerator[str, None]:
     """
     Stream council events as Server-Sent Events
@@ -1457,11 +1459,11 @@ async def stream_council_events(
         )
 
         # Run council process with streaming
-        async for event in engine.run_council(query, participants, chairman_model, max_tokens):
-            yield f"data: {json.dumps({'event': event['type'], **event})}\n\n"
+        async for event in engine.run_council(query, participants, chairman_model, max_tokens, completed_responses=completed_responses):
+            yield f"data: {json.dumps(event)}\n\n"
 
     except Exception as e:
-        logger.error(f"Council error: {e}", exc_info=True)
+        logger.error(f"Council Error: {e}")
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
 
 
