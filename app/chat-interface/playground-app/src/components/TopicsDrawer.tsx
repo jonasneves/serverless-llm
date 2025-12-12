@@ -83,6 +83,16 @@ export default function TopicsDrawer({ open, onClose, onSelectPrompt }: TopicsDr
     return () => window.removeEventListener('keydown', handleKey);
   }, [open, onClose]);
 
+  // Lock background scroll while open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open || fetchedTrendingRef.current) return;
     let cancelled = false;
@@ -128,10 +138,13 @@ export default function TopicsDrawer({ open, onClose, onSelectPrompt }: TopicsDr
 
   return (
     <div
+      data-no-arena-scroll
       className="fixed inset-0 z-[110] flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-[2px]"
       onClick={onClose}
+      onWheelCapture={(e) => e.stopPropagation()}
     >
       <div
+        data-no-arena-scroll
         className="w-[min(960px,calc(100vw-1.5rem))] max-h-[80vh] rounded-2xl border border-slate-700/70 bg-slate-950/90 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
