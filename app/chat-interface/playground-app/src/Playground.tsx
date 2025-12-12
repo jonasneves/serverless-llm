@@ -1790,11 +1790,9 @@ export default function Playground() {
                     }}>
                       <div className="text-center px-2">
                         <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-                        {(isSpeaking || isDone || hasError) && (
-                          <div className="flex items-center justify-center mt-3">
-                            <StatusIndicator state={statusState} color={effectiveColor} size={14} />
-                          </div>
-                        )}
+                        <div className="flex items-center justify-center mt-3">
+                          <StatusIndicator state={statusState} color={effectiveColor} size={14} />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1904,7 +1902,7 @@ export default function Playground() {
               onMouseEnter={() => setHoveredCard('moderator')}
               onMouseLeave={() => setHoveredCard(null)}
             >
-              <div className="relative w-32 h-32 flex items-center justify-center">
+              <div className="relative w-24 h-24 flex items-center justify-center">
                 {/* Outer glow rings */}
                 <div
                   className="absolute inset-0 rounded-full animate-pulse"
@@ -1917,7 +1915,7 @@ export default function Playground() {
 
                 {/* Main moderator card */}
                 <div
-                  className="relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300"
+                  className="relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300"
                   style={{
                     background: 'rgba(15, 23, 42, 0.9)',
                     backdropFilter: 'blur(16px)',
@@ -1935,20 +1933,19 @@ export default function Playground() {
                   />
                   <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
 
-                  <div className="relative text-center z-10">
-                    <div className="text-sm font-semibold text-slate-200">
+                  <div className="relative text-center z-10 flex flex-col items-center gap-1">
+                    <div className="text-[10px] font-semibold text-slate-200 leading-tight">
                       {moderatorModel.name}
                     </div>
+                    <StatusIndicator
+                      state={orchestratorStatus}
+                      color={moderatorModel.color}
+                      size={14}
+                    />
                   </div>
                 </div>
               </div>
-              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1" style={{ top: 'calc(100% + 12px)' }}>
-                <StatusIndicator
-                  state={orchestratorStatus}
-                  color={moderatorModel.color}
-                  size={18}
-                  label={orchestratorPhaseLabel}
-                />
+              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 w-max max-w-[200px]" style={{ top: 'calc(100% + 12px)' }}>
                 <span className="text-[10px] text-slate-500">{orchestratorPhaseLabel}</span>
               </div>
 
