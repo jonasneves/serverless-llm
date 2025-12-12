@@ -996,6 +996,11 @@ async def stream_github_model_response(
         rate_limiter = await get_rate_limiter(GITHUB_MODELS_API_URL, github_token)
 
         async with await rate_limiter.acquire():
+            # Check if we had to wait and inform the user
+            wait_msg = rate_limiter.get_wait_message()
+            if wait_msg:
+                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'info', 'content': wait_msg})}\n\n"
+
             async with client.stream(
                 "POST",
                 GITHUB_MODELS_API_URL,

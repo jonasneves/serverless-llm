@@ -761,6 +761,12 @@ export default function Playground() {
         }, currentController.signal);
 
         await streamSseEvents(response, (data) => {
+          // Handle info messages (like rate limiting notifications)
+          if (data.event === 'info' && data.content) {
+            setPhaseLabel(String(data.content));
+            setTimeout(() => setPhaseLabel(null), 5000);
+          }
+
           if (data.event === 'token' && data.model_id) {
             const modelId = data.model_id as string;
             const now = performance.now();
