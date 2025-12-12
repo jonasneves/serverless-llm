@@ -16,6 +16,10 @@ def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
 
     error_lower = (error_text or "").lower()
 
+    # Handle unsupported parameter errors (API compatibility issues)
+    if "unsupported parameter" in error_lower or "unsupported_parameter" in error_lower:
+        return "API parameter error. This model may require different request parameters. Please try another model or contact support."
+
     # Handle rate limiting (429)
     if "429" in error_text or "too many requests" in error_lower or "rate limit" in error_lower:
         is_github_api = "github" in endpoint.lower()

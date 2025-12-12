@@ -14,6 +14,7 @@ from datetime import datetime
 from orchestrator import GitHubModelsOrchestrator, QueryAnalysis, TurnEvaluation, SynthesisResult, TokenUsage
 from model_profiles import MODEL_PROFILES, rank_models_for_query
 from error_utils import sanitize_error_message
+from rate_limiter import get_rate_limiter
 
 
 @dataclass
@@ -333,16 +334,23 @@ Discussion so far:
 
         client = HTTPClient.get_client()
 
-        try:
-            async with client.stream("POST", url, headers=headers, json=payload, timeout=self.timeout_per_turn) as response:
-                if response.status_code == 429:
-                    rate_limit_reset = response.headers.get("x-ratelimit-reset")
-                    raise Exception(f"Rate limit exceeded for {model_id}. Reset at: {rate_limit_reset}")
+        # Apply rate limiting for GitHub Models API
+        rate_limiter = await get_rate_limiter(url, self.orchestrator.github_token or "default")
 
-                if response.status_code != 200:
-                    error_raw = (await response.aread()).decode("utf-8", "ignore")
-                    error_msg = sanitize_error_message(error_raw, url)
-                    raise Exception(error_msg)
+        try:
+            async with await rate_limiter.acquire():
+                async with client.stream("POST", url, headers=headers, json=payload, timeout=self.timeout_per_turn) as response:
+                    if response.status_code == 429:
+                        rate_limiter.record_429()
+                        rate_limit_reset = response.headers.get("x-ratelimit-reset")
+                        raise Exception(f"Rate limit exceeded for {model_id}. Reset at: {rate_limit_reset}")
+
+                    if response.status_code != 200:
+                        error_raw = (await response.aread()).decode("utf-8", "ignore")
+                        error_msg = sanitize_error_message(error_raw, url)
+                        raise Exception(error_msg)
+
+                    rate_limiter.record_success()
 
                 async for line in response.aiter_lines():
                     if not line or not line.startswith('data: '):

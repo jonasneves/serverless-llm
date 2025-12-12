@@ -15,6 +15,7 @@ import random
 from collections import defaultdict
 from model_profiles import MODEL_PROFILES
 from error_utils import sanitize_error_message
+from rate_limiter import get_rate_limiter
 
 # Pre-defined quip templates for faster response (used as fallback)
 CHAIRMAN_QUIP_TEMPLATES = {
@@ -226,13 +227,34 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         client = HTTPClient.get_client()
 
         try:
-            response = await client.post(url, headers=headers, json=payload, timeout=self.timeout)
+            # Use rate limiter for GitHub Models API
+            if self.is_api_model(model_id):
+                rate_limiter = await get_rate_limiter(url, self.github_token or "default")
+                async with await rate_limiter.acquire():
+                    response = await client.post(url, headers=headers, json=payload, timeout=self.timeout)
 
-            if response.status_code != 200:
-                error_raw = (await response.aread()).decode(errors="ignore")
-                error_msg = sanitize_error_message(error_raw, url)
-                raise Exception(error_msg)
+                    if response.status_code == 429:
+                        rate_limiter.record_429()
+                        error_raw = (await response.aread()).decode(errors="ignore")
+                        error_msg = sanitize_error_message(error_raw, url)
+                        raise Exception(error_msg)
 
+                    if response.status_code != 200:
+                        error_raw = (await response.aread()).decode(errors="ignore")
+                        error_msg = sanitize_error_message(error_raw, url)
+                        raise Exception(error_msg)
+
+                    rate_limiter.record_success()
+            else:
+                # Local model - no rate limiting needed
+                response = await client.post(url, headers=headers, json=payload, timeout=self.timeout)
+
+                if response.status_code != 200:
+                    error_raw = (await response.aread()).decode(errors="ignore")
+                    error_msg = sanitize_error_message(error_raw, url)
+                    raise Exception(error_msg)
+
+            # Process response (same for both API and local models)
             if stream:
                 return {"stream": response, "url": url}
             else:
