@@ -748,6 +748,25 @@ export default function Playground() {
       }
     };
 
+    // Helper to add icon to system messages
+    const addIconToMessage = (message: string): string => {
+      const lowerMsg = message.toLowerCase();
+
+      // Rate limiting / waiting icon (clock)
+      if (lowerMsg.includes('rate limit') || lowerMsg.includes('waiting')) {
+        const clockIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: text-bottom; margin-right: 6px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+        return clockIcon + message;
+      }
+
+      // Error / warning icon
+      if (lowerMsg.includes('error') || lowerMsg.includes('failed')) {
+        const warningIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: text-bottom; margin-right: 6px;"><path d="M12 2L2 20h20L12 2z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+        return warningIcon + message;
+      }
+
+      return message;
+    };
+
     try {
       if (mode === 'compare') {
         setSpeaking(new Set(sessionModelIds));
@@ -763,8 +782,19 @@ export default function Playground() {
         await streamSseEvents(response, (data) => {
           // Handle info messages (like rate limiting notifications)
           if (data.event === 'info' && data.content) {
-            setPhaseLabel(String(data.content));
-            setTimeout(() => setPhaseLabel(null), 5000);
+            console.log('[Rate Limit Info]', data.content);
+            const rawMessage = String(data.content);
+            const messageWithIcon = addIconToMessage(rawMessage);
+            setPhaseLabel(messageWithIcon);
+
+            // For rate limit messages, also update the model's status
+            if (data.model_id) {
+              setModelsData(prev => prev.map(m =>
+                m.id === data.model_id
+                  ? { ...m, response: messageWithIcon }
+                  : m
+              ));
+            }
           }
 
           if (data.event === 'token' && data.model_id) {
@@ -777,6 +807,11 @@ export default function Playground() {
                 ...prev,
                 [modelId]: { ...prev[modelId], firstTokenTime: now }
               }));
+
+              // Clear any info/rate-limit messages when first token arrives
+              setModelsData(prev => prev.map(m =>
+                m.id === modelId ? { ...m, response: '' } : m
+              ));
             }
 
             applyThinkingChunk(modelId, String(data.content ?? ''));
@@ -1751,7 +1786,10 @@ export default function Playground() {
             transition: 'transform 0s linear',
 
             // Mode-specific styles override base
-            ...(mode === 'compare' ? {} : {
+            ...(mode === 'compare' ? {
+              minHeight: '300px', // Minimum height to ensure clickable background
+              paddingBottom: '120px', // Extra space at bottom for right-click menu access
+            } : {
               height: `${LAYOUT.arenaHeight}px`,
               minHeight: `${LAYOUT.arenaHeight}px`,
               maxHeight: '100vh',
@@ -2050,7 +2088,11 @@ export default function Playground() {
                       <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
                         {isSpeaking ? (
                           model.response.trim().length > 0 ? (
-                            <Typewriter text={model.response} speed={20} />
+                            model.response.startsWith('<svg') ? (
+                              <span dangerouslySetInnerHTML={{ __html: model.response }} />
+                            ) : (
+                              <Typewriter text={model.response} speed={20} />
+                            )
                           ) : model.thinking && model.thinking.trim().length > 0 ? (
                             <span>
                               <span className="text-slate-500 italic">Thinking… </span>
@@ -2060,7 +2102,11 @@ export default function Playground() {
                             <span className="text-slate-500 italic">Thinking…</span>
                           )
                         ) : (
-                          model.response
+                          model.response.startsWith('<svg') ? (
+                            <span dangerouslySetInnerHTML={{ __html: model.response }} />
+                          ) : (
+                            model.response
+                          )
                         )}
                       </p>
                       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
@@ -2103,35 +2149,43 @@ export default function Playground() {
                       border: `1px solid ${effectiveColor}40`,
                       boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${effectiveColor}15`,
                       zIndex: 200,
-                      }}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
-                        <span className="text-xs font-semibold text-slate-300">{model.name}</span>
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-                        {isSpeaking ? (
-                          model.response.trim().length > 0 ? (
-                            <Typewriter text={model.response} speed={20} />
-                          ) : model.thinking && model.thinking.trim().length > 0 ? (
-                            <span>
-                              <span className="text-slate-500 italic">Thinking… </span>
-                              {getTailSnippet(model.thinking.trim(), 280)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 italic">Thinking…</span>
-                          )
-                        ) : model.response ? (
-                          getTailSnippet(model.response)
-                        ) : (
-                          <span className="text-slate-500 italic">No response yet.</span>
-                        )}
-                      </p>
-                      <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
-                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
-                      </div>
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
+                      <span className="text-xs font-semibold text-slate-300">{model.name}</span>
                     </div>
-                  )}
+                    <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+                      {isSpeaking ? (
+                        model.response.trim().length > 0 ? (
+                          model.response.startsWith('<svg') ? (
+                            <span dangerouslySetInnerHTML={{ __html: model.response }} />
+                          ) : (
+                            <Typewriter text={model.response} speed={20} />
+                          )
+                        ) : model.thinking && model.thinking.trim().length > 0 ? (
+                          <span>
+                            <span className="text-slate-500 italic">Thinking… </span>
+                            {getTailSnippet(model.thinking.trim(), 280)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 italic">Thinking…</span>
+                        )
+                      ) : model.response ? (
+                        model.response.startsWith('<svg') ? (
+                          <span dangerouslySetInnerHTML={{ __html: model.response }} />
+                        ) : (
+                          getTailSnippet(model.response)
+                        )
+                      ) : (
+                        <span className="text-slate-500 italic">No response yet.</span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
+                      <ExecutionTimeDisplay times={executionTimes[model.id]} />
+                    </div>
+                  </div>
+                )}
 
                 {isSpeaking && mode !== 'compare' && !hasError && (
                   <svg
@@ -2271,9 +2325,13 @@ export default function Playground() {
                     ) : isSynthesizing ? (
                       <span className="text-slate-500 italic">Synthesizing responses...</span>
                     ) : isGenerating ? (
-                      <span className="text-slate-500 italic">
-                        {phaseLabel === 'Stage 1 · Responses' ? 'Waiting for model responses...' : (phaseLabel || 'Orchestrating...')}
-                      </span>
+                      phaseLabel && phaseLabel.startsWith('<svg') ? (
+                        <span className="text-slate-500 italic" dangerouslySetInnerHTML={{ __html: phaseLabel }} />
+                      ) : (
+                        <span className="text-slate-500 italic">
+                          {phaseLabel === 'Stage 1 · Responses' ? 'Waiting for model responses...' : (phaseLabel || 'Orchestrating...')}
+                        </span>
+                      )
                     ) : (
                       <span className="text-slate-500 italic">Send a prompt to see the synthesis.</span>
                     )}
@@ -2390,7 +2448,7 @@ export default function Playground() {
           onClick={(e) => e.stopPropagation()}
         >
           {contextMenu.type === 'background' ? (
-            // Background context menu
+            // Background context menu - Add Model option
             <button
               className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
               onClick={() => {
@@ -2404,19 +2462,38 @@ export default function Playground() {
               Add Model
             </button>
           ) : contextMenu.modelId ? (
-            // Model context menu
-            <button
-              className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
-              onClick={() => {
-                setModerator(contextMenu.modelId!);
-                setContextMenu(null);
-              }}
-            >
-              <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              Set as Orchestrator
-            </button>
+            // Model context menu - different options based on mode
+            <>
+              {/* Set as Orchestrator - only in Council/Roundtable modes */}
+              {mode !== 'compare' && (
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    setModerator(contextMenu.modelId!);
+                    setContextMenu(null);
+                  }}
+                >
+                  <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                  Set as Orchestrator
+                </button>
+              )}
+
+              {/* Remove Model option - available in all modes */}
+              <button
+                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                onClick={() => {
+                  handleModelToggle(contextMenu.modelId!);
+                  setContextMenu(null);
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Remove
+              </button>
+            </>
           ) : null}
         </div>
       )}

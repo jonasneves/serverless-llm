@@ -82,7 +82,7 @@ class RateLimiter:
                 if time_since_last < self.config.min_request_interval:
                     wait_time = self.config.min_request_interval - time_since_last
                     logger.info(f"Minimum interval: waiting {wait_time:.1f}s before next request")
-                    wait_message = f"⏳ Rate limiting: waiting {int(wait_time)}s between requests (GitHub free tier has strict limits)"
+                    wait_message = f"Rate limiting: waiting {int(wait_time)}s between requests (GitHub free tier has strict limits)"
                     await asyncio.sleep(wait_time)
                     now = time.time()  # Update now after sleep
 
@@ -103,7 +103,7 @@ class RateLimiter:
                 wait_time = 60 - (now - oldest)
                 if wait_time > 0:
                     logger.info(f"Rate limit: waiting {wait_time:.1f}s before next request")
-                    wait_message = f"⏳ Rate limit: waiting {int(wait_time)}s (hit {self.config.requests_per_minute} requests/min limit). Add your own GitHub token in Settings for higher quota."
+                    wait_message = f"Rate limit: waiting {int(wait_time)}s (hit {self.config.requests_per_minute} requests/min limit). Add your own GitHub token in Settings for higher quota."
                     await asyncio.sleep(wait_time + 0.1)  # Add small buffer
                     self._clean_old_requests()
                     now = time.time()  # Update now after sleep
@@ -115,7 +115,7 @@ class RateLimiter:
                 if time_since_429 < 60:  # Within last minute
                     backoff = min(2 ** self.consecutive_429s, 32)  # Cap at 32 seconds
                     logger.warning(f"Exponential backoff: waiting {backoff}s after {self.consecutive_429s} consecutive 429s")
-                    wait_message = f"⚠️ Rate limited by GitHub! Waiting {backoff}s (attempt {self.consecutive_429s}). Add your own token in Settings to avoid this."
+                    wait_message = f"Rate limited by GitHub! Waiting {backoff}s (attempt {self.consecutive_429s}). Add your own token in Settings to avoid this."
                     await asyncio.sleep(backoff)
                     now = time.time()  # Update now after sleep
                 else:
@@ -161,15 +161,20 @@ class RateLimiter:
                 time_since_last = now - self.last_request_time
                 if time_since_last < self.config.min_request_interval:
                     wait_time = int(self.config.min_request_interval - time_since_last)
-                    return f"⏳ Rate limiting: waiting ~{wait_time}s (GitHub free tier limit). Add your own token in Settings for higher quota."
+                    msg = f"Rate limiting: waiting ~{wait_time}s (GitHub free tier limit). Add your own token in Settings for higher quota."
+                    logger.info(f"check_will_wait: Will need to wait {wait_time}s due to minimum interval")
+                    return msg
 
             # Check exponential backoff
             if self.consecutive_429s > 0:
                 time_since_429 = now - self.last_429_time
                 if time_since_429 < 60:
                     backoff = min(2 ** self.consecutive_429s, 32)
-                    return f"⚠️ Rate limited! Waiting ~{backoff}s (attempt {self.consecutive_429s +1}). Add your own token in Settings to avoid this."
+                    msg = f"Rate limited! Waiting ~{backoff}s (attempt {self.consecutive_429s + 1}). Add your own token in Settings to avoid this."
+                    logger.info(f"check_will_wait: Will need exponential backoff of {backoff}s")
+                    return msg
 
+            logger.debug("check_will_wait: No waiting needed")
             return None
 
     def record_429(self):
