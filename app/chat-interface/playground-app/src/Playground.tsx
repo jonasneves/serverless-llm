@@ -787,11 +787,11 @@ export default function Playground() {
             const messageWithIcon = addIconToMessage(rawMessage);
             setPhaseLabel(messageWithIcon);
 
-            // For rate limit messages, also update the model's status
+            // For rate limit messages, update the model's statusMessage (not response)
             if (data.model_id) {
               setModelsData(prev => prev.map(m =>
                 m.id === data.model_id
-                  ? { ...m, response: messageWithIcon }
+                  ? { ...m, statusMessage: messageWithIcon }
                   : m
               ));
             }
@@ -808,9 +808,9 @@ export default function Playground() {
                 [modelId]: { ...prev[modelId], firstTokenTime: now }
               }));
 
-              // Clear any info/rate-limit messages when first token arrives
+              // Clear any statusMessage (rate-limit messages) when first token arrives
               setModelsData(prev => prev.map(m =>
-                m.id === modelId ? { ...m, response: '' } : m
+                m.id === modelId ? { ...m, statusMessage: undefined } : m
               ));
             }
 
@@ -2086,7 +2086,14 @@ export default function Playground() {
                         </div>
                       </div>
                       <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
-                        {isSpeaking ? (
+                        {model.statusMessage ? (
+                          // Show temporary status message (rate limiting, etc.)
+                          model.statusMessage.startsWith('<svg') ? (
+                            <span dangerouslySetInnerHTML={{ __html: model.statusMessage }} />
+                          ) : (
+                            model.statusMessage
+                          )
+                        ) : isSpeaking ? (
                           model.response.trim().length > 0 ? (
                             model.response.startsWith('<svg') ? (
                               <span dangerouslySetInnerHTML={{ __html: model.response }} />
@@ -2156,7 +2163,14 @@ export default function Playground() {
                       <span className="text-xs font-semibold text-slate-300">{model.name}</span>
                     </div>
                     <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-                      {isSpeaking ? (
+                      {model.statusMessage ? (
+                        // Show temporary status message (rate limiting, etc.)
+                        model.statusMessage.startsWith('<svg') ? (
+                          <span dangerouslySetInnerHTML={{ __html: model.statusMessage }} />
+                        ) : (
+                          model.statusMessage
+                        )
+                      ) : isSpeaking ? (
                         model.response.trim().length > 0 ? (
                           model.response.startsWith('<svg') ? (
                             <span dangerouslySetInnerHTML={{ __html: model.response }} />

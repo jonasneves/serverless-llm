@@ -6,6 +6,7 @@ export interface Model {
   thinking?: string;
   type?: 'local' | 'api';
   error?: string;
+  statusMessage?: string; // Temporary system messages (rate limiting, etc.) - not part of conversation history
 }
 
 export type Mode = 'compare' | 'council' | 'roundtable';
