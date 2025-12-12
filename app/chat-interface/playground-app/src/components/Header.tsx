@@ -4,7 +4,6 @@ interface HeaderProps {
   mode: Mode;
   setMode: (mode: Mode) => void;
   setExpanded: (expanded: string | null) => void;
-  setSpeaking: (speaking: Set<string>) => void;
   setDragSelection: (selection: any) => void;
   cycleBgStyle: (direction: 'prev' | 'next') => void;
   showDock: boolean;
@@ -16,7 +15,6 @@ export default function Header({
   mode,
   setMode,
   setExpanded,
-  setSpeaking,
   setDragSelection,
   cycleBgStyle,
   showDock,
@@ -79,7 +77,7 @@ export default function Header({
             {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
               <button
                 key={m}
-                onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setSpeaking(new Set()); setDragSelection(null); }}
+                onClick={() => { setMode(m.toLowerCase() as Mode); setExpanded(null); setDragSelection(null); }}
                 className={`relative z-10 py-1.5 text-xs font-medium transition-colors duration-200 ${mode === m.toLowerCase()
                   ? 'text-white'
                   : 'text-slate-400 hover:text-slate-200'

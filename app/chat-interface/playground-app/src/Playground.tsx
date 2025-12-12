@@ -379,13 +379,13 @@ Provide a concise synthesis (2-3 sentences) that:
 Synthesis:`;
 
     try {
-      const response = await fetchChatStream({
-        models: [moderator],
-        messages: [{ role: 'user', content: synthesisPrompt }],
-        max_tokens: GENERATION_DEFAULTS.maxTokens,
-        temperature: 0.5, // Slightly lower for more coherent synthesis
-        github_token: githubToken || null
-      });
+	      const response = await fetchChatStream({
+	        models: [moderator],
+	        messages: [{ role: 'user', content: synthesisPrompt }],
+	        max_tokens: GENERATION_DEFAULTS.maxTokens,
+	        temperature: GENERATION_DEFAULTS.temperature,
+	        github_token: githubToken || null
+	      });
 
       await streamSseEvents(response, (data) => {
         if (data.event === 'token' && data.model_id === moderator) {
@@ -752,20 +752,18 @@ Synthesis:`;
         ...(bgStyle === 'none' ? { background: MODE_COLORS[mode] } : {}),
         ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}),
       }}
-      onClick={(e) => {
-        // Only deselect if clicking directly on the background
-        if (e.target === e.currentTarget) {
-          setExpanded(null);
-          setSpeaking(new Set());
-        }
-      }}
+	      onClick={(e) => {
+	        // Only deselect if clicking directly on the background
+	        if (e.target === e.currentTarget) {
+	          setExpanded(null);
+	        }
+	      }}
     >
       {/* Header */}
       <Header
         mode={mode}
         setMode={setMode}
         setExpanded={setExpanded}
-        setSpeaking={setSpeaking}
         setDragSelection={setDragSelection}
         cycleBgStyle={cycleBgStyle}
         showDock={showDock}
@@ -834,14 +832,13 @@ Synthesis:`;
             // Deselect if clicking on the background (cards use stopPropagation to prevent this)
             const target = e.target as HTMLElement;
             // Check if click is on background container or SVG elements (connection lines)
-            const isSVG = target.tagName === 'svg' || target.closest('svg');
-            if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
-              setExpanded(null);
-              setSpeaking(new Set());
-              if (!suppressClickRef.current) {
-                setSelectedCardIds(new Set());
-              }
-              suppressClickRef.current = false;
+	            const isSVG = target.tagName === 'svg' || target.closest('svg');
+	            if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
+	              setExpanded(null);
+	              if (!suppressClickRef.current) {
+	                setSelectedCardIds(new Set());
+	              }
+	              suppressClickRef.current = false;
             }
           }}
         >
@@ -923,20 +920,14 @@ Synthesis:`;
                       setSelectedCardIds(newSelection);
                       setActiveInspectorId(model.id);
                     } else {
-                      if (isCircle) {
-                        // Immediately raise z-index on click
-                        const cardElement = e.currentTarget.closest('.absolute');
-                        if (cardElement) {
-                          (cardElement as HTMLElement).style.zIndex = '100';
-                        }
-                        setSpeaking(prev => {
-                          const next = new Set(prev);
-                          if (next.has(model.id)) next.delete(model.id);
-                          else next.add(model.id);
-                          return next;
-                        });
-                        setExpanded(isExpanded ? null : model.id);
-                      }
+	                      if (isCircle) {
+	                        // Immediately raise z-index on click
+	                        const cardElement = e.currentTarget.closest('.absolute');
+	                        if (cardElement) {
+	                          (cardElement as HTMLElement).style.zIndex = '100';
+	                        }
+	                        setExpanded(isExpanded ? null : model.id);
+	                      }
                       setSelectedCardIds(new Set([model.id]));
                       setActiveInspectorId(model.id);
                     }
