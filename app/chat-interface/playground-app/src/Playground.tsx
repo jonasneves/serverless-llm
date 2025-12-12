@@ -62,7 +62,7 @@ export default function Playground() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastQuery, setLastQuery] = useState('');
-  const [conversationHistory, setConversationHistory] = useState<ChatHistoryEntry[]>([]);
+  const [_conversationHistory, setConversationHistory] = useState<ChatHistoryEntry[]>([]);
   const conversationHistoryRef = useRef<ChatHistoryEntry[]>([]);
 
   const pushHistoryEntries = (entries: ChatHistoryEntry[]) => {
@@ -258,7 +258,7 @@ export default function Playground() {
         }
 
         // Trigger restart with override
-        sendMessage(lastQuery, previousResponses, remainingIds);
+        sendMessage(lastQuery, previousResponses, remainingIds, { skipHistory: true });
 
       } else {
         // Normal removal
@@ -567,7 +567,17 @@ export default function Playground() {
     options?: { skipHistory?: boolean }
   ) => {
     if (!text.trim() || (selected.length === 0 && !participantsOverride) || (isGenerating && !participantsOverride)) return;
+    const skipHistory = options?.skipHistory ?? false;
+    const userEntry: ChatHistoryEntry = { role: 'user', content: text };
+    const baseHistory = skipHistory ? conversationHistoryRef.current : [...conversationHistoryRef.current, userEntry];
+    if (!skipHistory) {
+      pushHistoryEntries([userEntry]);
+    }
+    const historyContext = historyToText(baseHistory);
     setLastQuery(text);
+    const contextualQuery = historyContext
+      ? `${historyContext}\n\nContinue the conversation above and respond to the latest user request.`
+      : text;
 
     let sessionModelIds: string[];
     if (participantsOverride) {
@@ -579,6 +589,15 @@ export default function Playground() {
       sessionModelIds = selectionOverride.length > 0 ? selectionOverride : selected.slice();
     }
     sessionModelIdsRef.current = sessionModelIds;
+
+    const sessionResponses: Record<string, string> = {};
+    const recordResponse = (modelId: string, text: string, opts?: { replace?: boolean; label?: string }) => {
+      if (!text) return;
+      const addition = opts?.label ? `${opts.label}: ${text}` : text;
+      sessionResponses[modelId] = opts?.replace
+        ? addition
+        : (sessionResponses[modelId] ? `${sessionResponses[modelId]}\n\n${addition}` : addition);
+    };
 
     const currentController = new AbortController();
     abortControllerRef.current = currentController;
@@ -677,6 +696,10 @@ export default function Playground() {
 
       thinkingStateRef.current[modelId] = state;
 
+      if (answerAdd) {
+        recordResponse(modelId, answerAdd);
+      }
+
       if (thinkingAdd || answerAdd) {
         enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
       }
@@ -688,7 +711,7 @@ export default function Playground() {
 
         const response = await fetchChatStream({
           models: sessionModelIds,
-          messages: [{ role: 'user', content: text }],
+          messages: baseHistory.map(msg => ({ role: msg.role, content: msg.content })),
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           temperature: GENERATION_DEFAULTS.temperature,
           github_token: githubToken || null
@@ -724,6 +747,12 @@ export default function Playground() {
             });
           }
         });
+        if (!skipHistory) {
+          const summary = summarizeSessionResponses(sessionResponses, sessionModelIds);
+          if (summary) {
+            pushHistoryEntries([{ role: 'assistant', content: summary }]);
+          }
+        }
         return;
       }
 
@@ -745,7 +774,7 @@ export default function Playground() {
           : (moderator || (participants.length > 0 ? participants[0] : null));
 
         const response = await fetchCouncilStream({
-          query: text,
+          query: contextualQuery,
           participants,
           chairman_model: effectiveChairman,
           max_tokens: GENERATION_DEFAULTS.maxTokens,
@@ -793,6 +822,7 @@ export default function Playground() {
             });
 
             const responseText = String((data as any).response ?? '');
+            recordResponse(modelId, responseText, { replace: true });
             if (previousResponses && previousResponses[modelId]) {
               // Already set
             } else {
@@ -816,6 +846,7 @@ export default function Playground() {
             clearPendingStreamForModel(modelId);
             setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText, error: errorText } : m));
             markModelFailed(modelId);
+            recordResponse(modelId, errorText, { replace: true });
           }
 
           if (eventType === 'stage2_start') {
@@ -867,6 +898,7 @@ export default function Playground() {
             if (moderator) {
               clearPendingStreamForModel(moderator);
               setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
+              recordResponse(moderator, synthesis, { replace: true });
             }
             setIsSynthesizing(false);
           }
@@ -889,6 +921,13 @@ export default function Playground() {
             setPhaseLabel('Error');
           }
         });
+        if (!skipHistory) {
+          const summaryOrder = [...participants, effectiveChairman || ''];
+          const summary = summarizeSessionResponses(sessionResponses, summaryOrder);
+          if (summary) {
+            pushHistoryEntries([{ role: 'assistant', content: summary }]);
+          }
+        }
         return;
       }
 
@@ -908,7 +947,7 @@ export default function Playground() {
       if (moderator) setSpeaking(prev => new Set(prev).add(moderator));
 
       const response = await fetchDiscussionStream({
-        query: text,
+        query: contextualQuery,
         max_tokens: GENERATION_DEFAULTS.maxTokens,
         temperature: GENERATION_DEFAULTS.temperature,
         orchestrator_model: moderator || null,
@@ -978,6 +1017,7 @@ export default function Playground() {
           // Update main card response
           setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response } : m));
           setSpeaking(new Set());
+          recordResponse(modelId, response, { label: `Round ${currentTurn + 1}` });
         }
 
         if (eventType === 'turn_error' && data.model_id) {
@@ -992,6 +1032,7 @@ export default function Playground() {
           setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
           setSpeaking(new Set());
           markModelFailed(modelId);
+          recordResponse(modelId, errorText, { replace: true });
         }
 
         if (eventType === 'synthesis_start') {
@@ -1006,6 +1047,7 @@ export default function Playground() {
           if (moderator) {
             clearPendingStreamForModel(moderator);
             setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
+            recordResponse(moderator, synthesis, { replace: true });
           }
           setPhaseLabel(null);
           setIsSynthesizing(false);
@@ -1024,6 +1066,13 @@ export default function Playground() {
           setSpeaking(new Set());
         }
       });
+      if (!skipHistory) {
+        const summaryOrder = [...participants, moderator || ''];
+        const summary = summarizeSessionResponses(sessionResponses, summaryOrder);
+        if (summary) {
+          pushHistoryEntries([{ role: 'assistant', content: summary }]);
+        }
+      }
 
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
