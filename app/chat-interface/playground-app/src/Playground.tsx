@@ -22,7 +22,11 @@ interface ModelsApiResponse {
   models: ModelsApiModel[];
 }
 
-type ChatHistoryEntry = { role: 'user' | 'assistant'; content: string };
+type ChatHistoryEntry = {
+  role: 'user' | 'assistant';
+  content: string;
+  kind?: 'compare_summary' | 'council_synthesis' | 'roundtable_synthesis';
+};
 
 export default function Playground() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
@@ -73,7 +77,22 @@ export default function Playground() {
   };
 
   const historyToText = (history: ChatHistoryEntry[]) =>
-    history.map(entry => `${entry.role === 'user' ? 'User' : 'Models'}: ${entry.content}`).join('\n\n');
+    history.map(entry => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`).join('\n\n');
+
+  const buildCarryoverHistory = (history: ChatHistoryEntry[], targetMode: Mode) => {
+    if (targetMode === 'compare') return history;
+
+    const users = history.filter(e => e.role === 'user');
+    const lastSynthesis = [...history]
+      .reverse()
+      .find(e =>
+        e.role === 'assistant'
+        && (e.kind === 'council_synthesis' || e.kind === 'roundtable_synthesis')
+        && e.content.trim().length > 0
+      );
+
+    return lastSynthesis ? [...users, lastSynthesis] : users;
+  };
 
   const modelIdToName = (id: string) => modelsData.find(m => m.id === id)?.name || id;
 
@@ -573,7 +592,8 @@ export default function Playground() {
     if (!skipHistory) {
       pushHistoryEntries([userEntry]);
     }
-    const historyContext = historyToText(baseHistory);
+    const carryoverHistory = buildCarryoverHistory(baseHistory, mode);
+    const historyContext = historyToText(carryoverHistory);
     setLastQuery(text);
     const contextualQuery = historyContext
       ? `${historyContext}\n\nContinue the conversation above and respond to the latest user request.`
@@ -750,7 +770,7 @@ export default function Playground() {
         if (!skipHistory) {
           const summary = summarizeSessionResponses(sessionResponses, sessionModelIds);
           if (summary) {
-            pushHistoryEntries([{ role: 'assistant', content: summary }]);
+            pushHistoryEntries([{ role: 'assistant', content: summary, kind: 'compare_summary' }]);
           }
         }
         return;
@@ -781,6 +801,8 @@ export default function Playground() {
           github_token: githubToken || null,
           completed_responses: previousResponses || null,
         }, currentController.signal);
+
+        let councilSynthesis = '';
 
         await streamSseEvents(response, (data) => {
           const eventType = data.event;
@@ -895,6 +917,7 @@ export default function Playground() {
           if (eventType === 'stage3_complete' || eventType === 'stage3_error') {
             const synthesis = String((data as any).response ?? (data as any).error ?? 'Synthesis error.');
             setModeratorSynthesis(synthesis);
+            councilSynthesis = synthesis;
             if (moderator) {
               clearPendingStreamForModel(moderator);
               setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
@@ -922,10 +945,9 @@ export default function Playground() {
           }
         });
         if (!skipHistory) {
-          const summaryOrder = [...participants, effectiveChairman || ''];
-          const summary = summarizeSessionResponses(sessionResponses, summaryOrder);
-          if (summary) {
-            pushHistoryEntries([{ role: 'assistant', content: summary }]);
+          const trimmed = councilSynthesis.trim();
+          if (trimmed) {
+            pushHistoryEntries([{ role: 'assistant', content: trimmed, kind: 'council_synthesis' }]);
           }
         }
         return;
@@ -957,6 +979,8 @@ export default function Playground() {
       }, currentController.signal);
 
       let currentTurn = 0;
+
+      let roundtableSynthesis = '';
 
       await streamSseEvents(response, (data) => {
         const eventType = data.event;
@@ -1044,6 +1068,7 @@ export default function Playground() {
         if (eventType === 'discussion_complete') {
           const synthesis = String((data as any).final_response ?? '');
           setModeratorSynthesis(synthesis);
+          roundtableSynthesis = synthesis;
           if (moderator) {
             clearPendingStreamForModel(moderator);
             setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
@@ -1067,10 +1092,9 @@ export default function Playground() {
         }
       });
       if (!skipHistory) {
-        const summaryOrder = [...participants, moderator || ''];
-        const summary = summarizeSessionResponses(sessionResponses, summaryOrder);
-        if (summary) {
-          pushHistoryEntries([{ role: 'assistant', content: summary }]);
+        const trimmed = roundtableSynthesis.trim();
+        if (trimmed) {
+          pushHistoryEntries([{ role: 'assistant', content: trimmed, kind: 'roundtable_synthesis' }]);
         }
       }
 
