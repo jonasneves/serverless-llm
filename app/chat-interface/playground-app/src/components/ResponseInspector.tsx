@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { Model, Mode } from '../types';
 import FormattedContent from './FormattedContent';
 import Typewriter from './Typewriter';
@@ -54,15 +54,69 @@ export default function ResponseInspector({
   const showCouncilStats = mode === 'council' && activeModel.id === moderatorId && councilAggregateRankings && councilAggregateRankings.length > 0;
   const turnsForActive = mode === 'roundtable' ? (discussionTurnsByModel[activeModel.id] || []) : [];
 
+  /* Drag to toggle side logic */
+  const [dragOffset, setDragOffset] = useState(0);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+
+  const handleHeaderPointerDown = (e: React.PointerEvent) => {
+    // Only allow left click
+    if (e.button !== 0) return;
+    // Don't drag if clicking buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+
+    isDraggingRef.current = true;
+    startXRef.current = e.clientX;
+    (e.target as Element).setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+
+  const handleHeaderPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const delta = e.clientX - startXRef.current;
+    setDragOffset(delta);
+  };
+
+  const handleHeaderPointerUp = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+
+    // Check if we dragged far enough to switch sides
+    const delta = e.clientX - startXRef.current;
+
+    let shouldToggle = false;
+    if (position === 'right' && delta < -200) {
+      shouldToggle = true;
+    } else if (position === 'left' && delta > 200) {
+      shouldToggle = true;
+    }
+
+    if (shouldToggle && onTogglePosition) {
+      onTogglePosition();
+    }
+
+    setDragOffset(0);
+  };
+
   return (
     <aside
       data-no-arena-scroll
-      className={`fixed top-20 bottom-20 sm:top-24 sm:bottom-24 sm:w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col transition-all duration-300 ${position === 'left' ? 'left-3 sm:left-6 right-auto' : 'right-3 sm:right-6 left-auto'
+      className={`fixed top-20 bottom-20 sm:top-24 sm:bottom-24 sm:w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col ${position === 'left' ? 'left-3 sm:left-6 right-auto' : 'right-3 sm:right-6 left-auto'
         }`}
       onClick={(e) => e.stopPropagation()}
+      style={{
+        transform: dragOffset ? `translateX(${dragOffset}px)` : 'none',
+        transition: isDraggingRef.current ? 'none' : 'transform 300ms cubic-bezier(0.2, 0, 0.2, 1), left 300ms, right 300ms',
+        cursor: isDraggingRef.current ? 'grabbing' : 'default',
+      }}
     >
-      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-800/60">
-        <div className="inspector-tabs flex gap-1 overflow-x-auto pb-1">
+      <div
+        className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-800/60 cursor-grab active:cursor-grabbing"
+        onPointerDown={handleHeaderPointerDown}
+        onPointerMove={handleHeaderPointerMove}
+        onPointerUp={handleHeaderPointerUp}
+      >
+        <div className="inspector-tabs flex gap-1 overflow-x-auto pb-1 no-scrollbar" onPointerDown={(e) => e.stopPropagation()}>
           {models.map(m => (
             <button
               key={m.id}
@@ -77,20 +131,6 @@ export default function ResponseInspector({
           ))}
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePosition && (
-            <button
-              onClick={onTogglePosition}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
-              aria-label={position === 'left' ? "Move to right" : "Move to left"}
-              title={position === 'left' ? "Move to right" : "Move to left"}
-            >
-              {position === 'left' ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-              )}
-            </button>
-          )}
           {onTogglePin && (
             <button
               onClick={onTogglePin}

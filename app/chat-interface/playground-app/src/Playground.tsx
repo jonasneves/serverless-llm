@@ -1427,9 +1427,9 @@ export default function Playground() {
       {/* Content Wrapper with Sidebar Offset */}
       <div
         style={{
-          paddingLeft: '1.5rem', // Static padding, sidebar will overlay
-          paddingRight: activeInspectorId && mode === 'compare' ? '28rem' : '1.5rem',
-          paddingTop: '4rem', // Reverted to 4rem
+          paddingLeft: activeInspectorId && mode === 'compare' && inspectorPosition === 'left' ? '28rem' : '1.5rem',
+          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : '1.5rem',
+          paddingTop: '4rem',
         }}
       >
         {/* Dock Backdrop */}
