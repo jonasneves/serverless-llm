@@ -958,7 +958,6 @@ Synthesis:`;
 	                onContextMenu={(e) => {
 	                  e.preventDefault();
 	                  e.stopPropagation();
-	                  if (mode === 'compare') return;
 	                  setContextMenu({
 	                    x: e.clientX,
 	                    y: e.clientY,
@@ -1068,9 +1067,19 @@ Synthesis:`;
                       opacity: isCircle ? 0 : 1,
                       transition: 'opacity 0.3s ease-out'
                     }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-semibold text-slate-200">{model.name}</span>
-                        <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
+	                      <div className="flex items-center justify-between mb-3 gap-2">
+	                        <div className="flex items-center gap-1.5 min-w-0">
+	                          <span className="text-xs font-semibold text-slate-200 truncate">{model.name}</span>
+	                          {mode === 'compare' && moderator === model.id && (
+	                            <span
+	                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-300 border border-yellow-500/30"
+	                              title="Orchestrator used for Council/Roundtable"
+	                            >
+	                              Orchestrator
+	                            </span>
+	                          )}
+	                        </div>
+	                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: model.color }} />
 	                      </div>
 	                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
 	                        {isSpeaking ? (
@@ -1346,12 +1355,12 @@ Synthesis:`;
         onSendMessage={sendMessage}
       />
 
-	      {/* Custom Context Menu (circle modes only) */}
-	      {contextMenu && mode !== 'compare' && (
-	        <div
-	          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
-	          style={{ top: contextMenu.y, left: contextMenu.x }}
-	          onClick={(e) => e.stopPropagation()}
+		      {/* Custom Context Menu */}
+		      {contextMenu && (
+		        <div
+		          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
+		          style={{ top: contextMenu.y, left: contextMenu.x }}
+		          onClick={(e) => e.stopPropagation()}
         >
           <button
             className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
@@ -1363,10 +1372,12 @@ Synthesis:`;
             <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
-            Promote to {mode === 'council' ? 'Chairman' : 'Moderator'}
-          </button>
-        </div>
-      )}
+	            {mode === 'compare'
+	              ? 'Set as Orchestrator'
+	              : `Promote to ${mode === 'council' ? 'Chairman' : 'Moderator'}`}
+	          </button>
+	        </div>
+	      )}
 
       <style>{`
         @keyframes ticker {
