@@ -147,6 +147,9 @@ export default function Playground() {
   }, []);
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [chairmanSynthesis, setChairmanSynthesis] = useState<string>('');
+  const [lastUserPrompt, setLastUserPrompt] = useState<string>('');
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || selected.length === 0 || isGenerating) return;
@@ -154,6 +157,8 @@ export default function Playground() {
     setIsGenerating(true);
     setExpanded(null);
     setSpeaking(new Set(selected)); // Mark all selected models as speaking
+    setLastUserPrompt(text); // Store the prompt for synthesis
+    setChairmanSynthesis(''); // Reset chairman synthesis
 
     // Initialize execution time tracking for all selected models
     const startTime = performance.now();
@@ -274,6 +279,111 @@ export default function Playground() {
     }
   };
 
+  // Function to generate chairman synthesis after all models complete
+  const generateChairmanSynthesis = async (userPrompt: string, modelResponses: Record<string, string>) => {
+    if (!chairman || mode === 'compare') return;
+
+    const chairmanModelData = modelsData.find(m => m.id === chairman);
+    if (!chairmanModelData) return;
+
+    setIsSynthesizing(true);
+    setSpeaking(new Set([chairman]));
+    setChairmanSynthesis('');
+
+    // Build the synthesis prompt
+    const responseSummaries = Object.entries(modelResponses)
+      .map(([modelId, response]) => {
+        const model = modelsData.find(m => m.id === modelId);
+        return `**${model?.name || modelId}**: ${response}`;
+      })
+      .join('\n\n');
+
+    const synthesisPrompt = `You are the chairman synthesizing multiple AI model responses to a user's question.
+
+User's Question: "${userPrompt}"
+
+Model Responses:
+${responseSummaries}
+
+Provide a concise synthesis (2-3 sentences) that:
+1. Identifies common themes or consensus points
+2. Notes any significant differences in perspectives
+3. Offers a balanced conclusion
+
+Synthesis:`;
+
+    try {
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          models: [chairman],
+          messages: [{ role: 'user', content: synthesisPrompt }],
+          max_tokens: GENERATION_DEFAULTS.maxTokens,
+          temperature: 0.5 // Slightly lower for more coherent synthesis
+        })
+      });
+
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6);
+              if (jsonStr === '[DONE]') continue;
+
+              const data = JSON.parse(jsonStr);
+
+              if (data.event === 'token' && data.model_id === chairman) {
+                setChairmanSynthesis(prev => prev + data.content);
+              }
+            } catch (e) {
+              console.error('Error parsing SSE:', e);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Synthesis error:', err);
+      setChairmanSynthesis('Unable to generate synthesis.');
+    } finally {
+      setIsSynthesizing(false);
+      setSpeaking(new Set());
+    }
+  };
+
+  // Effect to trigger chairman synthesis when all models complete (in Council/Roundtable mode)
+  useEffect(() => {
+    // Only in Council or Roundtable mode, after generation completes
+    if (mode === 'compare' || isGenerating || !lastUserPrompt || !chairman) return;
+
+    // Check if we have responses from all selected models
+    const participantModels = modelsData.filter(m => selected.includes(m.id) && m.id !== chairman);
+    const allHaveResponses = participantModels.length > 0 &&
+      participantModels.every(m => m.response && m.response.trim().length > 0);
+
+    // Only synthesize if we haven't already and all models have responded
+    if (allHaveResponses && !chairmanSynthesis && !isSynthesizing) {
+      const responses: Record<string, string> = {};
+      participantModels.forEach(m => {
+        responses[m.id] = m.response;
+      });
+      generateChairmanSynthesis(lastUserPrompt, responses);
+    }
+  }, [isGenerating, mode, modelsData, selected, chairman, lastUserPrompt, chairmanSynthesis, isSynthesizing]);
+
   // Handle Escape key to close dock
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -357,8 +467,6 @@ export default function Playground() {
     const y = Math.sin(angle * Math.PI / 180) * radius;
     return { x, y, angle };
   };
-
-  const chairmanSynthesis = "After considering all perspectives, the consensus emerges: model efficiency isn't just about size—it's about the intersection of architecture, data quality, and deployment constraints. Each approach offers valid trade-offs depending on use case requirements.";
 
   const bgClass = bgStyle === 'none' ? '' : `bg-${bgStyle}`;
 
