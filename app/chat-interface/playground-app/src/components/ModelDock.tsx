@@ -54,7 +54,7 @@ export default function ModelDock({
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-700/50">
         <h2 className="text-sm font-semibold text-slate-200">Available Models</h2>
-        <p className="text-[10px] text-slate-500 mt-0.5">Click or drag to add to arena</p>
+        <p className="text-[10px] text-slate-500 mt-0.5">Click to add to arena</p>
       </div>
 
       {/* Scrollable content */}

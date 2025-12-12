@@ -212,6 +212,8 @@ export default function Playground() {
         if (mode === 'council' && remainingIds.length < 2) {
           setIsGenerating(false);
           setIsSynthesizing(false);
+          setModeratorSynthesis('Council requires at least 2 participants.');
+          setPhaseLabel('Error');
           return;
         }
 
@@ -524,7 +526,8 @@ export default function Playground() {
     }
     sessionModelIdsRef.current = sessionModelIds;
 
-    abortControllerRef.current = new AbortController();
+    const currentController = new AbortController();
+    abortControllerRef.current = currentController;
     setIsGenerating(true);
     setIsSynthesizing(false);
     setHoveredCard(null);
@@ -635,7 +638,7 @@ export default function Playground() {
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           temperature: GENERATION_DEFAULTS.temperature,
           github_token: githubToken || null
-        }, abortControllerRef.current.signal);
+        }, currentController.signal);
 
         await streamSseEvents(response, (data) => {
           if (data.event === 'token' && data.model_id) {
@@ -683,20 +686,28 @@ export default function Playground() {
         }
         setSpeaking(new Set(participants));
 
+        const effectiveChairman = participantsOverride && participants.length > 0
+          ? participants[0]
+          : (moderator || (participants.length > 0 ? participants[0] : null));
+
         const response = await fetchCouncilStream({
           query: text,
           participants,
-          chairman_model: moderator || null,
+          chairman_model: effectiveChairman,
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           github_token: githubToken || null,
           completed_responses: previousResponses || null,
-        }, abortControllerRef.current.signal);
+        }, currentController.signal);
 
         await streamSseEvents(response, (data) => {
           const eventType = data.event;
 
           if (eventType === 'stage1_start') {
             setPhaseLabel('Stage 1 · Responses');
+          }
+
+          if (eventType === 'model_start' && data.model_id) {
+            // ...
           }
 
           if (eventType === 'model_chunk' && data.model_id) {
@@ -727,10 +738,11 @@ export default function Playground() {
               return next;
             });
 
-            if ((data as any).response) {
-              const finalResponse = String((data as any).response ?? '');
-              clearPendingStreamForModel(modelId);
-              setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: finalResponse } : m));
+            const responseText = String((data as any).response ?? '');
+            if (previousResponses && previousResponses[modelId]) {
+              // Already set
+            } else {
+              setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: responseText } : m));
             }
           }
 
@@ -748,7 +760,7 @@ export default function Playground() {
             });
             const errorText = String((data as any).error ?? 'Error generating response.');
             clearPendingStreamForModel(modelId);
-            setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
+            setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText, error: errorText } : m));
             markModelFailed(modelId);
           }
 
@@ -774,9 +786,8 @@ export default function Playground() {
               next.delete(modelId);
               return next;
             });
+            // We don't necessarily show ranking errors in the card, but maybe log it?
             markModelFailed(modelId);
-            const errorText = String((data as any).error ?? 'Ranking error.');
-            setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
           }
 
           if (eventType === 'stage2_complete') {
@@ -784,14 +795,20 @@ export default function Playground() {
             if (aggregate) setCouncilAggregateRankings(aggregate as any);
           }
 
+          if (eventType === 'chairman_quip') {
+            const quip = String((data as any).quip ?? '');
+            setModeratorSynthesis(quip);
+          }
+
           if (eventType === 'stage3_start') {
             setPhaseLabel('Stage 3 · Synthesis');
             setIsSynthesizing(true);
+            setModeratorSynthesis('');
             if (moderator) setSpeaking(new Set([moderator]));
           }
 
-          if (eventType === 'stage3_complete') {
-            const synthesis = String((data as any).response ?? '');
+          if (eventType === 'stage3_complete' || eventType === 'stage3_error') {
+            const synthesis = String((data as any).response ?? (data as any).error ?? 'Synthesis error.');
             setModeratorSynthesis(synthesis);
             if (moderator) {
               clearPendingStreamForModel(moderator);
@@ -833,43 +850,39 @@ export default function Playground() {
         setPhaseLabel('Error');
         return;
       }
+      setSpeaking(new Set(participants));
+      if (moderator) setSpeaking(prev => new Set(prev).add(moderator));
 
       const response = await fetchDiscussionStream({
         query: text,
-        orchestrator_model: moderator || null,
-        participants,
-        turns: 2,
         max_tokens: GENERATION_DEFAULTS.maxTokens,
         temperature: GENERATION_DEFAULTS.temperature,
+        orchestrator_model: moderator || null,
         github_token: githubToken || null,
-      });
+        participants,
+        turns: 2
+      }, currentController.signal);
+
+      let currentTurn = 0;
 
       await streamSseEvents(response, (data) => {
         const eventType = data.event;
 
         if (eventType === 'analysis_start') {
-          setPhaseLabel('Analysis');
+          setPhaseLabel('Analyzing Query');
         }
 
         if (eventType === 'analysis_complete') {
-          setPhaseLabel('Discussion');
+          setPhaseLabel('Orchestrating');
+          if (data.analysis) {
+            const analysisText = (data.analysis as any).summary || 'Analysis complete.';
+            setModeratorSynthesis(analysisText);
+          }
         }
 
-        if (eventType === 'turn_start' && data.model_id) {
-          const modelId = data.model_id as string;
-          const turnNumber = Number((data as any).turn_number ?? 0);
-          currentDiscussionTurnRef.current = { modelId, turnNumber };
-          setSpeaking(new Set([modelId]));
-          setPhaseLabel(`Turn ${turnNumber + 1}`);
-
-          thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
-
-          setModelsData(prev => prev.map(m => {
-            if (m.id !== modelId) return m;
-            const needsSep = m.response.trim().length > 0;
-            const sep = needsSep ? `\n\n--- Turn ${turnNumber + 1} ---\n\n` : '';
-            return { ...m, response: m.response + sep };
-          }));
+        if (eventType === 'turn_start') {
+          currentTurn = (data as any).turn_number || currentTurn;
+          setPhaseLabel(`Round ${currentTurn}`);
         }
 
         if (eventType === 'turn_chunk' && data.model_id) {
@@ -882,28 +895,33 @@ export default function Playground() {
               [modelId]: { ...prev[modelId], firstTokenTime: now }
             }));
           }
-          applyThinkingChunk(modelId, String((data as any).chunk ?? ''));
+          if (currentDiscussionTurnRef.current?.modelId !== modelId) {
+            currentDiscussionTurnRef.current = { modelId, turnNumber: currentTurn };
+          }
+          applyThinkingChunk(modelId, String(data.chunk ?? ''));
         }
 
-        if (eventType === 'turn_complete' && (data as any).turn) {
-          const turn = (data as any).turn as any;
-          const modelId = String(turn.model_id ?? data.model_id ?? '');
+        if (eventType === 'turn_complete' && data.model_id) {
+          const modelId = data.model_id as string;
           const now = performance.now();
           if (modelId) {
             setExecutionTimes(prev => ({
               ...prev,
               [modelId]: { ...prev[modelId], endTime: now }
             }));
-            setDiscussionTurnsByModel(prev => {
-              const existing = prev[modelId] ? [...prev[modelId]] : [];
-              existing.push({
-                turn_number: Number(turn.turn_number ?? 0),
-                response: String(turn.response ?? ''),
-                evaluation: (data as any).evaluation ?? undefined,
-              });
-              return { ...prev, [modelId]: existing };
-            });
           }
+          const response = String((data as any).response ?? '');
+
+          setDiscussionTurnsByModel(prev => {
+            const existing = prev[modelId] || [];
+            return {
+              ...prev,
+              [modelId]: [...existing, { turn_number: currentTurn, response }]
+            };
+          });
+
+          // Update main card response
+          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response } : m));
           setSpeaking(new Set());
         }
 

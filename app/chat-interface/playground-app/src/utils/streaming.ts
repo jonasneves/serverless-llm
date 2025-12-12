@@ -50,11 +50,12 @@ export interface DiscussionStreamPayload {
   github_token?: string | null;
 }
 
-export const fetchDiscussionStream = async (payload: DiscussionStreamPayload): Promise<Response> => {
+export const fetchDiscussionStream = async (payload: DiscussionStreamPayload, signal?: AbortSignal): Promise<Response> => {
   return fetch('/api/chat/discussion/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal,
   });
 };
 
