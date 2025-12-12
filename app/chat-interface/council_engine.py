@@ -497,6 +497,7 @@ Here are the responses from different models (anonymized):
 Your task:
 1. Evaluate each response individually. For each response, explain what it does well and what it does poorly.
 2. At the very end, provide a final ranking.
+3. Do NOT reveal your identity. Do NOT mention your model name. Do NOT quote or repeat the prompt.
 
 IMPORTANT: Your final ranking MUST be formatted EXACTLY as follows:
 - Start with "FINAL RANKING:" (all caps, with colon)
@@ -514,23 +515,30 @@ FINAL RANKING:
 
 Now provide your evaluation and ranking:"""
 
-        messages = [{"role": "user", "content": ranking_prompt}]
+        messages = [
+            {
+                "role": "system",
+                "content": "You are an anonymous reviewer. Follow instructions exactly. Output only your review and FINAL RANKING."
+            },
+            {"role": "user", "content": ranking_prompt},
+        ]
 
-        # Get rankings from all models in parallel
-        tasks = []
+        # Run rankings concurrently and stream results as they complete
+        tasks_by_id: Dict[asyncio.Task, str] = {}
         for model_id in participants:
-            tasks.append(self._call_model(model_id, messages))
+            task = asyncio.create_task(asyncio.wait_for(self._call_model(model_id, messages), timeout=self.timeout))
+            tasks_by_id[task] = model_id
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Process rankings
         stage2_results = []
-        for model_id, result in zip(participants, results):
-            if isinstance(result, Exception):
+        for task in asyncio.as_completed(tasks_by_id.keys()):
+            model_id = tasks_by_id[task]
+            try:
+                result = await task
+            except Exception as e:
                 yield {
                     "type": "ranking_error",
                     "model_id": model_id,
-                    "error": str(result)
+                    "error": str(e)
                 }
             else:
                 ranking_text = result.get("content", "")
@@ -636,14 +644,21 @@ STAGE 1 - Individual Responses:
 STAGE 2 - Peer Rankings:
 {stage2_text}
 
-Your task as Chairman is to synthesize all of this information into a single, comprehensive, accurate answer. Consider:
-- The individual responses and their insights
-- The peer rankings and what they reveal about quality
-- Any patterns of agreement or disagreement
+Your task:
+- Synthesize the best final answer using the Stage 1 responses and the Stage 2 peer reviews.
+- Do NOT repeat or quote any of the prompt text above.
+- Do NOT include analysis, chain-of-thought, rankings, or meta-commentary.
+- Output ONLY the final answer to the original question as plain text.
 
-Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
+Final answer:"""
 
-        messages = [{"role": "user", "content": chairman_prompt}]
+        messages = [
+            {
+                "role": "system",
+                "content": "You are the council chairman. Return only the final answer, with no extra sections."
+            },
+            {"role": "user", "content": chairman_prompt},
+        ]
 
         try:
             result = await self._call_model(chairman_model, messages, max_tokens=4096)

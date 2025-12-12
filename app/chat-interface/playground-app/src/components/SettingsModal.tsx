@@ -5,9 +5,18 @@ interface SettingsModalProps {
   onClose: () => void;
   token: string;
   setToken: (token: string) => void;
+  showCouncilReviewerNames: boolean;
+  setShowCouncilReviewerNames: (value: boolean) => void;
 }
 
-export default function SettingsModal({ open, onClose, token, setToken }: SettingsModalProps) {
+export default function SettingsModal({
+  open,
+  onClose,
+  token,
+  setToken,
+  showCouncilReviewerNames,
+  setShowCouncilReviewerNames,
+}: SettingsModalProps) {
   const [showToken, setShowToken] = useState(false);
 
   useEffect(() => {
@@ -84,6 +93,24 @@ export default function SettingsModal({ open, onClose, token, setToken }: Settin
             >
               Create a token (user_models:read)
             </a>
+          </div>
+
+          <div className="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4">
+            <h3 className="text-sm font-semibold text-slate-200 mb-1">Council</h3>
+            <label className="flex items-start gap-3 text-xs text-slate-300">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-700/60 bg-slate-950/60"
+                checked={showCouncilReviewerNames}
+                onChange={(e) => setShowCouncilReviewerNames(e.target.checked)}
+              />
+              <span>
+                Show reviewer model names in anonymous reviews (UI only).
+                <span className="block text-slate-500 mt-1">
+                  Models remain blinded; this only affects what you see.
+                </span>
+              </span>
+            </label>
           </div>
         </div>
       </div>

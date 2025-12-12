@@ -17,7 +17,13 @@ interface ResponseInspectorProps {
     average_rank: number;
     votes_count: number;
   }> | null;
-  councilAnonymousReviews: string[];
+  councilAnonymousReviews: Array<{
+    reviewer_model_id: string;
+    reviewer_model_name: string;
+    text: string;
+    error?: boolean;
+  }>;
+  showCouncilReviewerNames: boolean;
   discussionTurnsByModel: Record<string, Array<{
     turn_number: number;
     response: string;
@@ -39,6 +45,7 @@ export default function ResponseInspector({
   moderatorId,
   councilAggregateRankings,
   councilAnonymousReviews,
+  showCouncilReviewerNames,
   discussionTurnsByModel,
   pinned = false,
   onTogglePin,
@@ -174,13 +181,14 @@ export default function ResponseInspector({
               Anonymous reviews ({councilAnonymousReviews.length})
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-3">
-              {councilAnonymousReviews.map((text, idx) => (
+              {councilAnonymousReviews.map((review, idx) => (
                 <details key={idx} className="rounded-md border border-slate-700/40 bg-slate-950/20">
                   <summary className="cursor-pointer select-none px-3 py-2 text-[11px] font-semibold text-slate-300">
-                    Review {idx + 1}
+                    {showCouncilReviewerNames ? review.reviewer_model_name : `Review ${idx + 1}`}
+                    {review.error ? <span className="text-slate-500"> · error</span> : null}
                   </summary>
                   <pre className="px-3 pb-3 pt-1 text-xs text-slate-400 whitespace-pre-wrap">
-                    {text}
+                    {review.text}
                   </pre>
                 </details>
               ))}

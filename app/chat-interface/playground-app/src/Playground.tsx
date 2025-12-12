@@ -56,9 +56,25 @@ export default function Playground() {
     return (localStorage.getItem('inspector_position') as 'left' | 'right') || 'right';
   });
 
+  const [showCouncilReviewerNames, setShowCouncilReviewerNames] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('show_council_reviewer_names') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   useEffect(() => {
     localStorage.setItem('inspector_position', inspectorPosition);
   }, [inspectorPosition]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('show_council_reviewer_names', String(showCouncilReviewerNames));
+    } catch {
+      // ignore
+    }
+  }, [showCouncilReviewerNames]);
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
@@ -552,7 +568,12 @@ export default function Playground() {
     average_rank: number;
     votes_count: number;
   }> | null>(null);
-  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<string[]>([]);
+  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<Array<{
+    reviewer_model_id: string;
+    reviewer_model_name: string;
+    text: string;
+    error?: boolean;
+  }>>([]);
   const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{
     turn_number: number;
     response: string;
@@ -898,8 +919,11 @@ export default function Playground() {
 
             const rankingText = String((data as any).ranking ?? '');
             if (rankingText.trim()) {
-              const label = `Anonymous review #${stage2Received}`;
-              setCouncilAnonymousReviews(prev => [...prev, `${label}\n\n${rankingText.trim()}`]);
+              const reviewerName = String((data as any).model_name ?? modelId);
+              setCouncilAnonymousReviews(prev => [
+                ...prev,
+                { reviewer_model_id: modelId, reviewer_model_name: reviewerName, text: rankingText.trim() }
+              ]);
             }
           }
 
@@ -916,7 +940,11 @@ export default function Playground() {
             setPhaseLabel(`Stage 2 · Anonymous Review (${stage2Received}/${stage2Expected || participants.length})`);
             setModeratorSynthesis(`Anonymous reviews in progress (${stage2Received}/${stage2Expected || participants.length})…`);
             const errorText = String((data as any).error ?? 'Ranking error.');
-            setCouncilAnonymousReviews(prev => [...prev, `Anonymous review #${stage2Received}\n\n[Error] ${errorText}`]);
+            const reviewerName = String((data as any).model_name ?? modelId);
+            setCouncilAnonymousReviews(prev => [
+              ...prev,
+              { reviewer_model_id: modelId, reviewer_model_name: reviewerName, text: errorText, error: true }
+            ]);
           }
 
           if (eventType === 'stage2_complete') {
@@ -2308,6 +2336,7 @@ export default function Playground() {
           moderatorId={moderator}
           councilAggregateRankings={councilAggregateRankings}
           councilAnonymousReviews={councilAnonymousReviews}
+          showCouncilReviewerNames={showCouncilReviewerNames}
           discussionTurnsByModel={discussionTurnsByModel}
           pinned={pinnedModels.has(activeInspectorId)}
           onTogglePin={() => {
@@ -2329,6 +2358,8 @@ export default function Playground() {
         onClose={() => setShowSettings(false)}
         token={githubToken}
         setToken={setGithubToken}
+        showCouncilReviewerNames={showCouncilReviewerNames}
+        setShowCouncilReviewerNames={setShowCouncilReviewerNames}
       />
 
       <TopicsDrawer
