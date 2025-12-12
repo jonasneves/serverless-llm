@@ -448,18 +448,21 @@ Synthesis:`;
     };
   }, [showDock, selectedCardIds]);
 
-  // Handle wheel scroll to move arena up/down
-  useEffect(() => {
-    const applyOffset = (offset: number) => {
-      const el = visualizationAreaRef.current;
-      if (!el) return;
-      el.style.setProperty('--arena-offset-y', `${offset}px`);
-    };
+	  // Handle wheel scroll to move arena up/down
+	  useEffect(() => {
+	    const applyOffset = (offset: number) => {
+	      const el = visualizationAreaRef.current;
+	      if (!el) return;
+	      el.style.setProperty('--arena-offset-y', `${offset}px`);
+	    };
 
-    const step = () => {
-      const current = arenaOffsetYRef.current;
-      const target = arenaTargetYRef.current;
-      const diff = target - current;
+	    const clampTarget = (value: number) =>
+	      Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, value));
+
+	    const step = () => {
+	      const current = arenaOffsetYRef.current;
+	      const target = arenaTargetYRef.current;
+	      const diff = target - current;
 
       if (Math.abs(diff) < 0.5) {
         arenaOffsetYRef.current = target;
@@ -470,34 +473,86 @@ Synthesis:`;
 
       // Ease toward target for a more natural feel.
       const next = current + diff * 0.35;
-      arenaOffsetYRef.current = next;
-      applyOffset(next);
-      wheelRafRef.current = requestAnimationFrame(step);
-    };
+	      arenaOffsetYRef.current = next;
+	      applyOffset(next);
+	      wheelRafRef.current = requestAnimationFrame(step);
+	    };
 
-    const handleWheel = (event: WheelEvent) => {
-      const target = event.target as HTMLElement | null;
-      // Let native scroll work inside text inputs
-      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
+	    const ensureRaf = () => {
+	      if (wheelRafRef.current == null) {
+	        wheelRafRef.current = requestAnimationFrame(step);
+	      }
+	    };
 
-      event.preventDefault();
-      const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
-      const nextTarget = arenaTargetYRef.current - delta;
-      arenaTargetYRef.current = Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, nextTarget));
+	    const handleWheel = (event: WheelEvent) => {
+	      const target = event.target as HTMLElement | null;
+	      // Let native scroll work inside text inputs
+	      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
 
-      if (wheelRafRef.current == null) {
-        wheelRafRef.current = requestAnimationFrame(step);
-      }
-    };
+	      event.preventDefault();
+	      const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
+	      const nextTarget = arenaTargetYRef.current - delta;
+	      arenaTargetYRef.current = clampTarget(nextTarget);
+	      ensureRaf();
+	    };
 
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      if (wheelRafRef.current != null) {
-        cancelAnimationFrame(wheelRafRef.current);
-      }
-    };
-  }, []);
+	    // Touch / mobile panning (single-finger vertical)
+	    let touchActive = false;
+	    let lastTouchY = 0;
+
+	    const shouldIgnoreTouch = (target: HTMLElement | null) => {
+	      if (!target) return false;
+	      return Boolean(
+	        target.closest('input, textarea, [data-no-arena-scroll], [data-card], button, a, select, [role="button"]')
+	      );
+	    };
+
+	    const handleTouchStart = (event: TouchEvent) => {
+	      if (event.touches.length !== 1) return;
+	      const target = event.target as HTMLElement | null;
+	      if (shouldIgnoreTouch(target)) return;
+	      touchActive = true;
+	      lastTouchY = event.touches[0].clientY;
+	    };
+
+	    const handleTouchMove = (event: TouchEvent) => {
+	      if (!touchActive || event.touches.length !== 1) return;
+	      const target = event.target as HTMLElement | null;
+	      if (shouldIgnoreTouch(target)) {
+	        touchActive = false;
+	        return;
+	      }
+
+	      const touchY = event.touches[0].clientY;
+	      const deltaY = touchY - lastTouchY;
+	      lastTouchY = touchY;
+
+	      event.preventDefault();
+	      arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
+	      ensureRaf();
+	    };
+
+	    const handleTouchEnd = () => {
+	      touchActive = false;
+	    };
+
+	    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+	    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+	    window.addEventListener('touchend', handleTouchEnd);
+	    window.addEventListener('touchcancel', handleTouchEnd);
+
+	    window.addEventListener('wheel', handleWheel, { passive: false });
+	    return () => {
+	      window.removeEventListener('touchstart', handleTouchStart);
+	      window.removeEventListener('touchmove', handleTouchMove);
+	      window.removeEventListener('touchend', handleTouchEnd);
+	      window.removeEventListener('touchcancel', handleTouchEnd);
+	      window.removeEventListener('wheel', handleWheel);
+	      if (wheelRafRef.current != null) {
+	        cancelAnimationFrame(wheelRafRef.current);
+	      }
+	    };
+	  }, []);
 
   // Load background style from localStorage or use default
   const [bgStyle, setBgStyle] = useState<BackgroundStyle>(() => {
