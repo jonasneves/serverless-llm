@@ -120,6 +120,19 @@ export default function Playground() {
   // Available models are those in CONFIG but NOT in selected
   const availableModels = modelsData.filter(m => !selected.includes(m.id));
 
+  const totalModelsByType = {
+    local: modelsData.filter(m => m.type === 'local').length,
+    api: modelsData.filter(m => m.type === 'api').length,
+  };
+  const selectedModelsByType = {
+    local: modelsData.filter(m => m.type === 'local' && selected.includes(m.id)).length,
+    api: modelsData.filter(m => m.type === 'api' && selected.includes(m.id)).length,
+  };
+  const allSelectedByType = {
+    local: totalModelsByType.local > 0 && selectedModelsByType.local === totalModelsByType.local,
+    api: totalModelsByType.api > 0 && selectedModelsByType.api === totalModelsByType.api,
+  };
+
   const handleDragStart = (e: React.DragEvent, modelId: string) => {
     setDraggedModelId(modelId);
     e.dataTransfer.effectAllowed = 'move';
@@ -154,10 +167,20 @@ export default function Playground() {
   };
 
   const handleAddGroup = (type: 'local' | 'api') => {
+    const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
+    const isAllSelected = idsOfType.length > 0 && idsOfType.every(id => selected.includes(id));
+
+    if (isAllSelected) {
+      setSelected(prev => prev.filter(id => !idsOfType.includes(id)));
+      return;
+    }
+
     const modelsToAdd = availableModels
       .filter(m => m.type === type)
       .map(m => m.id);
-    setSelected(prev => [...prev, ...modelsToAdd]);
+    if (modelsToAdd.length > 0) {
+      setSelected(prev => [...prev, ...modelsToAdd]);
+    }
   };
   const [expanded, setExpanded] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
@@ -222,11 +245,7 @@ export default function Playground() {
       sessionModelIds.includes(m.id) ? { ...m, response: '', thinking: '' } : m
     ));
 
-    // Determine first active model for visualization if needed (optional)
-    const firstActive = sessionModelIds[0];
-    if (firstActive) {
-      setExpanded(firstActive);
-    }
+	    // Leave all cards collapsed on send; users can open any model manually.
 
     try {
       const response = await fetchChatStream({
@@ -575,7 +594,9 @@ Synthesis:`;
     setBgStyle(BG_STYLES[newIndex]);
   };
 
-  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
+  const selectedModels = modelsData.filter(m =>
+    selected.includes(m.id) && (mode === 'compare' || m.id !== moderator)
+  );
   const moderatorModel = modelsData.find(m => m.id === moderator);
   const inspectorModels = modelsData.filter(m => selectedCardIds.has(m.id));
 
@@ -853,6 +874,8 @@ Synthesis:`;
         <ModelDock
           showDock={showDock}
           availableModels={availableModels}
+          allSelectedByType={allSelectedByType}
+          totalModelsByType={totalModelsByType}
           handleDragStart={handleDragStart}
           handleModelToggle={handleModelToggle}
           handleAddGroup={handleAddGroup}
@@ -931,16 +954,17 @@ Synthesis:`;
                   if (el) cardRefs.current.set(model.id, el);
                   else cardRefs.current.delete(model.id);
                 }}
-                className="absolute transition-all duration-700 ease-out"
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setContextMenu({
-                    x: e.clientX,
-                    y: e.clientY,
-                    modelId: model.id
-                  });
-                }}
+	                className="absolute transition-all duration-700 ease-out"
+	                onContextMenu={(e) => {
+	                  e.preventDefault();
+	                  e.stopPropagation();
+	                  if (mode === 'compare') return;
+	                  setContextMenu({
+	                    x: e.clientX,
+	                    y: e.clientY,
+	                    modelId: model.id
+	                  });
+	                }}
                 style={{
                   transform: mode === 'compare'
                     ? `translate(calc(-50% + ${pos.x}px), ${pos.y}px)`
@@ -1322,12 +1346,12 @@ Synthesis:`;
         onSendMessage={sendMessage}
       />
 
-      {/* Custom Context Menu */}
-      {contextMenu && (
-        <div
-          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()}
+	      {/* Custom Context Menu (circle modes only) */}
+	      {contextMenu && mode !== 'compare' && (
+	        <div
+	          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
+	          style={{ top: contextMenu.y, left: contextMenu.x }}
+	          onClick={(e) => e.stopPropagation()}
         >
           <button
             className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"

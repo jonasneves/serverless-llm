@@ -3,6 +3,8 @@ import { Model } from '../types';
 interface ModelDockProps {
   showDock: boolean;
   availableModels: Model[];
+  allSelectedByType: Record<'local' | 'api', boolean>;
+  totalModelsByType: Record<'local' | 'api', number>;
   handleDragStart: (e: React.DragEvent, modelId: string) => void;
   handleModelToggle: (modelId: string) => void;
   handleAddGroup: (type: 'local' | 'api') => void;
@@ -12,6 +14,8 @@ interface ModelDockProps {
 export default function ModelDock({ 
   showDock, 
   availableModels, 
+  allSelectedByType,
+  totalModelsByType,
   handleDragStart, 
   handleModelToggle, 
   handleAddGroup,
@@ -49,15 +53,18 @@ export default function ModelDock({
     >
       {sections.map(section => {
         const modelsForSection = availableModels.filter(m => m.type === section.type);
+        const allSelected = allSelectedByType[section.type];
+        const hasAny = totalModelsByType[section.type] > 0;
         return (
           <div key={section.type} className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-slate-400 tracking-wider">{section.title}</h3>
               <button
                 onClick={() => handleAddGroup(section.type)}
-                className={section.addAllClass}
+                className={`${section.addAllClass} ${!hasAny ? 'opacity-40 cursor-not-allowed' : ''}`}
+                disabled={!hasAny}
               >
-                + ALL
+                {allSelected ? '− ALL' : '+ ALL'}
               </button>
             </div>
             <div className="flex flex-col gap-2">
