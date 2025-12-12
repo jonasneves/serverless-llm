@@ -22,13 +22,15 @@ export default function Playground() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
   const [mode, setMode] = useState<Mode>('compare');
   const [selected, setSelected] = useState<string[]>([]);
-  const [chairman, setChairman] = useState<string>('');
+  const [moderator, setModerator] = useState<string>('');
   const [draggedModelId, setDraggedModelId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const [showDock, setShowDock] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
   const [arenaOffsetY, setArenaOffsetY] = useState(0); // Vertical scroll offset for arena
+  const wheelDeltaRef = useRef(0);
+  const wheelRafRef = useRef<number | null>(null);
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
@@ -80,12 +82,12 @@ export default function Playground() {
         const defaultSelectedIds = apiModels.filter((m: Model) => m.type === 'local').map((m: Model) => m.id);
         setSelected(defaultSelectedIds);
 
-        // Set default chairman to an API model if available, otherwise the first model
-        const apiChairmanCandidate = apiModels.find((m: Model) => m.type === 'api');
-        if (apiChairmanCandidate) {
-          setChairman(apiChairmanCandidate.id);
+        // Set default moderator to an API model if available, otherwise the first model
+        const apiModeratorCandidate = apiModels.find((m: Model) => m.type === 'api');
+        if (apiModeratorCandidate) {
+          setModerator(apiModeratorCandidate.id);
         } else if (apiModels.length > 0) {
-          setChairman(apiModels[0].id);
+          setModerator(apiModels[0].id);
         }
       })
       .catch(err => console.error("Failed to fetch models:", err));
@@ -158,7 +160,7 @@ export default function Playground() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
-  const [chairmanSynthesis, setChairmanSynthesis] = useState<string>('');
+  const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
   const [lastUserPrompt, setLastUserPrompt] = useState<string>('');
 
   const sendMessage = async (text: string) => {
@@ -168,7 +170,7 @@ export default function Playground() {
     setExpanded(null);
     setSpeaking(new Set(selected)); // Mark all selected models as speaking
     setLastUserPrompt(text); // Store the prompt for synthesis
-    setChairmanSynthesis(''); // Reset chairman synthesis
+    setModeratorSynthesis(''); // Reset moderator synthesis
 
     // Initialize execution time tracking for all selected models
     const startTime = performance.now();
@@ -260,16 +262,16 @@ export default function Playground() {
     }
   };
 
-  // Function to generate chairman synthesis after all models complete
-  const generateChairmanSynthesis = async (userPrompt: string, modelResponses: Record<string, string>) => {
-    if (!chairman || mode === 'compare') return;
+  // Function to generate moderator synthesis after all models complete
+  const generateModeratorSynthesis = async (userPrompt: string, modelResponses: Record<string, string>) => {
+    if (!moderator || mode === 'compare') return;
 
-    const chairmanModelData = modelsData.find(m => m.id === chairman);
-    if (!chairmanModelData) return;
+    const moderatorModelData = modelsData.find(m => m.id === moderator);
+    if (!moderatorModelData) return;
 
     setIsSynthesizing(true);
-    setSpeaking(new Set([chairman]));
-    setChairmanSynthesis('');
+    setSpeaking(new Set([moderator]));
+    setModeratorSynthesis('');
 
     // Build the synthesis prompt
     const responseSummaries = Object.entries(modelResponses)
@@ -279,7 +281,7 @@ export default function Playground() {
       })
       .join('\n\n');
 
-    const synthesisPrompt = `You are the chairman synthesizing multiple AI model responses to a user's question.
+    const synthesisPrompt = `You are the moderator synthesizing multiple AI model responses to a user's question.
 
 User's Question: "${userPrompt}"
 
@@ -295,74 +297,100 @@ Synthesis:`;
 
     try {
       const response = await fetchChatStream({
-        models: [chairman],
+        models: [moderator],
         messages: [{ role: 'user', content: synthesisPrompt }],
         max_tokens: GENERATION_DEFAULTS.maxTokens,
         temperature: 0.5 // Slightly lower for more coherent synthesis
       });
 
       await streamSseEvents(response, (data) => {
-        if (data.event === 'token' && data.model_id === chairman) {
-          setChairmanSynthesis(prev => prev + (data.content ?? ''));
+        if (data.event === 'token' && data.model_id === moderator) {
+          setModeratorSynthesis(prev => prev + (data.content ?? ''));
         }
       });
     } catch (err) {
       console.error('Synthesis error:', err);
-      setChairmanSynthesis('Unable to generate synthesis.');
+      setModeratorSynthesis('Unable to generate synthesis.');
     } finally {
       setIsSynthesizing(false);
       setSpeaking(new Set());
     }
   };
 
-  // Effect to trigger chairman synthesis when all models complete (in Council/Roundtable mode)
+  // Effect to trigger moderator synthesis when all models complete (in Council/Roundtable mode)
   useEffect(() => {
     // Only in Council or Roundtable mode, after generation completes
-    if (mode === 'compare' || isGenerating || !lastUserPrompt || !chairman) return;
+    if (mode === 'compare' || isGenerating || !lastUserPrompt || !moderator) return;
 
     // Check if we have responses from all selected models
-    const participantModels = modelsData.filter(m => selected.includes(m.id) && m.id !== chairman);
+    const participantModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
     const allHaveResponses = participantModels.length > 0 &&
       participantModels.every(m => m.response && m.response.trim().length > 0);
 
     // Only synthesize if we haven't already and all models have responded
-    if (allHaveResponses && !chairmanSynthesis && !isSynthesizing) {
+    if (allHaveResponses && !moderatorSynthesis && !isSynthesizing) {
       const responses: Record<string, string> = {};
       participantModels.forEach(m => {
         responses[m.id] = m.response;
       });
-      generateChairmanSynthesis(lastUserPrompt, responses);
+      generateModeratorSynthesis(lastUserPrompt, responses);
     }
-  }, [isGenerating, mode, modelsData, selected, chairman, lastUserPrompt, chairmanSynthesis, isSynthesizing]);
+  }, [isGenerating, mode, modelsData, selected, moderator, lastUserPrompt, moderatorSynthesis, isSynthesizing]);
 
-  // Handle Escape key to close dock
+  // Handle Escape key to close dock and Delete/Backspace to remove selected models
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Escape closes dock
       if (event.key === 'Escape' && showDock) {
         setShowDock(false);
+      }
+
+      // Delete or Backspace removes selected cards from arena
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCardIds.size > 0) {
+        // Don't trigger if user is typing in an input
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+        event.preventDefault();
+        // Remove all selected cards from the arena
+        setSelected(prev => prev.filter(id => !selectedCardIds.has(id)));
+        setSelectedCardIds(new Set());
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showDock]);
+  }, [showDock, selectedCardIds]);
 
   // Handle wheel scroll to move arena up/down
   useEffect(() => {
     const handleWheel = (event: WheelEvent) => {
+      const target = event.target as HTMLElement | null;
+      // Let native scroll work inside text inputs
+      if (target && target.closest('input, textarea')) return;
+
       event.preventDefault();
-      setArenaOffsetY(prev => {
-        const delta = event.deltaY * 0.5; // Adjust sensitivity
-        const newOffset = prev - delta;
-        // Clamp to prevent scrolling too far
-        return Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, newOffset));
-      });
+      wheelDeltaRef.current += event.deltaY * 0.5; // Adjust sensitivity
+
+      if (wheelRafRef.current == null) {
+        wheelRafRef.current = requestAnimationFrame(() => {
+          setArenaOffsetY(prev => {
+            const next = prev - wheelDeltaRef.current;
+            return Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, next));
+          });
+          wheelDeltaRef.current = 0;
+          wheelRafRef.current = null;
+        });
+      }
     };
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       window.removeEventListener('wheel', handleWheel);
+      if (wheelRafRef.current != null) {
+        cancelAnimationFrame(wheelRafRef.current);
+      }
     };
   }, []);
 
@@ -387,8 +415,8 @@ Synthesis:`;
     setBgStyle(BG_STYLES[newIndex]);
   };
 
-  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== chairman);
-  const chairmanModel = modelsData.find(m => m.id === chairman);
+  const selectedModels = modelsData.filter(m => selected.includes(m.id) && m.id !== moderator);
+  const moderatorModel = modelsData.find(m => m.id === moderator);
 
   // Dynamic layout radius calculation
   const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
@@ -396,7 +424,7 @@ Synthesis:`;
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'council') {
       // Semi-circle (Parliament style)
-      // Spread models across a ~220 degree arc to center them above the chairman
+      // Spread models across a ~220 degree arc to center them above the moderator
       // Range 250-470 minus 90 gives 160 to 380 degrees (Left-ish to Right-ish over the top)
       const startAngle = 250;
       const endAngle = 470;
@@ -654,10 +682,11 @@ Synthesis:`;
             display: 'flex',
             alignItems: mode === 'compare' ? 'flex-start' : 'center', // Top-align for grid to prevent upward growth
             justifyContent: 'center',
-            marginTop: `${arenaOffsetY}px`,
+            transform: `translateY(${arenaOffsetY}px)`,
+            willChange: 'transform',
             border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
             borderRadius: isDraggingOver ? '24px' : '0px',
-            transition: 'margin-top 0.1s ease-out',
+            transition: 'transform 0s linear',
 
             // Mode-specific styles override base
             ...(mode === 'compare' ? {} : {
@@ -797,7 +826,7 @@ Synthesis:`;
                     width: isCircle ? '96px' : '256px',
                     height: isCircle ? '96px' : '200px',
                     borderRadius: isCircle ? '50%' : '12px',
-                    transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.7s cubic-bezier(0.4, 0, 0.2, 1), width 0.7s cubic-bezier(0.4, 0, 0.2, 1), height 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out, width 0.7s cubic-bezier(0.4, 0, 0.2, 1), height 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 >
                   {/* Remove Button (Top Right) */}
@@ -927,8 +956,8 @@ Synthesis:`;
             );
           })}
 
-          {/* Chairman in center */}
-          {mode !== 'compare' && chairmanModel && (
+          {/* Moderator in center */}
+          {mode !== 'compare' && moderatorModel && (
             <div
               data-card
               className="absolute z-20 transition-all duration-700 ease-out cursor-pointer"
@@ -940,50 +969,50 @@ Synthesis:`;
               }}
               onClick={(e) => {
                 e.stopPropagation(); // Prevent background click handler from firing
-                setExpanded(expanded === 'chairman' ? null : 'chairman');
+                setExpanded(expanded === 'moderator' ? null : 'moderator');
               }}
             >
               {/* Outer glow rings */}
               <div className="absolute inset-0 rounded-full animate-pulse" style={{
-                background: `radial-gradient(circle, ${chairmanModel.color}20 0%, transparent 70%)`,
+                background: `radial-gradient(circle, ${moderatorModel.color}20 0%, transparent 70%)`,
                 transform: 'scale(2)',
                 filter: 'blur(20px)'
               }} />
 
-              {/* Main chairman card */}
+              {/* Main moderator card */}
               <div
                 className="relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300"
                 style={{
                   background: 'rgba(15, 23, 42, 0.9)',
                   backdropFilter: 'blur(16px)',
-                  border: `2px solid ${chairmanModel.color}60`,
-                  boxShadow: `0 0 40px ${chairmanModel.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
+                  border: `2px solid ${moderatorModel.color}60`,
+                  boxShadow: `0 0 40px ${moderatorModel.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
                 }}
               >
                 {/* Rotating ring */}
                 <div
                   className="absolute inset-[-4px] rounded-full"
                   style={{
-                    background: `conic-gradient(from 0deg, transparent, ${chairmanModel.color}60, transparent)`,
+                    background: `conic-gradient(from 0deg, transparent, ${moderatorModel.color}60, transparent)`,
                     animation: 'spin 4s linear infinite'
                   }}
                 />
                 <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
 
                 <div className="relative text-center z-10">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Chairman</div>
-                  <div className="text-sm font-semibold">{chairmanModel.name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Moderator</div>
+                  <div className="text-sm font-semibold">{moderatorModel.name}</div>
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <div className={`w-1.5 h-1.5 rounded-full ${isSynthesizing ? 'animate-pulse bg-emerald-400' : 'bg-slate-600'}`} />
                     <span className="text-[10px] text-slate-500">
-                      {isSynthesizing ? "Synthesizing..." : isGenerating ? "Observing" : chairmanSynthesis ? "Done" : "Presiding"}
+                      {isSynthesizing ? "Synthesizing..." : isGenerating ? "Observing" : moderatorSynthesis ? "Done" : "Presiding"}
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Expanded synthesis */}
-              {expanded === 'chairman' && (
+              {expanded === 'moderator' && (
                 <div
                   data-card
                   onClick={(e) => e.stopPropagation()}
@@ -991,14 +1020,14 @@ Synthesis:`;
                   style={{
                     background: 'rgba(15, 23, 42, 0.95)',
                     backdropFilter: 'blur(16px)',
-                    border: `1px solid ${chairmanModel.color}40`,
-                    boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${chairmanModel.color}20`
+                    border: `1px solid ${moderatorModel.color}40`,
+                    boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${moderatorModel.color}20`
                   }}
                 >
                   <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Synthesis</div>
                   <p className="text-sm text-slate-300 leading-relaxed">
-                    {chairmanSynthesis ? (
-                      <Typewriter text={chairmanSynthesis} speed={20} />
+                    {moderatorSynthesis ? (
+                      <Typewriter text={moderatorSynthesis} speed={20} />
                     ) : isSynthesizing ? (
                       <span className="text-slate-500 italic">Synthesizing responses...</span>
                     ) : isGenerating ? (
@@ -1075,14 +1104,14 @@ Synthesis:`;
           <button
             className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
             onClick={() => {
-              setChairman(contextMenu.modelId);
+              setModerator(contextMenu.modelId);
               setContextMenu(null);
             }}
           >
             <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
-            Promote to Chairman
+            Promote to Moderator
           </button>
         </div>
       )}
