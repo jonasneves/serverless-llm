@@ -13,6 +13,7 @@ import aiohttp
 from typing import List, Dict, Any, Optional, Type
 from pydantic import BaseModel, Field
 from enum import Enum
+from rate_limiter import get_rate_limiter
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -210,57 +211,73 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
             # Use streaming for all models - collect the response
             collected_content = ""
             usage_data = None
-            
+
             # Only send auth headers to API models, local models don't need them
             headers = self._get_headers() if not is_local_model else None
-            
-            async with client.stream(
-                "POST",
-                self.api_url,
-                headers=headers,
-                json=payload,
-                timeout=120.0
-            ) as response:
-                if response.status_code == 429:
-                    error_text = await response.aread()
-                    rate_limit_reset = response.headers.get("x-ratelimit-reset")
 
-                    # Provide helpful message about default token
-                    quota_msg = ""
-                    if self._default_env_token and self.github_token == self._default_env_token:
-                        quota_msg = " Configure your own token for dedicated quota."
+            # Apply rate limiting for GitHub Models API
+            if not is_local_model:
+                rate_limiter = await get_rate_limiter(self.api_url, self.github_token or "default")
+                semaphore = await rate_limiter.acquire()
+            else:
+                # For local models, create a dummy context manager
+                from contextlib import nullcontext
+                semaphore = nullcontext()
 
-                    raise Exception(f"GitHub Models rate limit exceeded. Reset at: {rate_limit_reset}.{quota_msg}")
-                
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    error_text = error_text.decode()
-                    if "context window" in error_text.lower() or "exceed" in error_text.lower():
-                        raise Exception(f"Orchestrator model context limit exceeded. Try using an API orchestrator (like GPT-4o) or increase the local model's N_CTX. Details: {error_text}")
-                    raise Exception(f"Orchestrator API error {response.status_code}: {error_text}")
-                
-                async for line in response.aiter_lines():
-                    if not line or not line.startswith("data: "):
-                        continue
-                    
-                    data_str = line[6:]  # Remove "data: " prefix
-                    if data_str == "[DONE]":
-                        break
-                    
-                    try:
-                        chunk = json.loads(data_str)
-                        
-                        # Collect content from delta
-                        if "choices" in chunk and len(chunk["choices"]) > 0:
-                            delta = chunk["choices"][0].get("delta", {})
-                            if "content" in delta:
-                                collected_content += delta["content"]
-                        
-                        # Capture usage data (usually in the last chunk)
-                        if "usage" in chunk:
-                            usage_data = chunk["usage"]
-                    except json.JSONDecodeError:
-                        continue
+            async with semaphore:
+                async with client.stream(
+                    "POST",
+                    self.api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=120.0
+                ) as response:
+                    if response.status_code == 429:
+                        if not is_local_model:
+                            rate_limiter.record_429()
+                        error_text = await response.aread()
+                        rate_limit_reset = response.headers.get("x-ratelimit-reset")
+
+                        # Provide helpful message about default token
+                        quota_msg = ""
+                        if self._default_env_token and self.github_token == self._default_env_token:
+                            quota_msg = " Configure your own token for dedicated quota."
+
+                        raise Exception(f"GitHub Models rate limit exceeded. Reset at: {rate_limit_reset}.{quota_msg}")
+
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        error_text = error_text.decode()
+                        if "context window" in error_text.lower() or "exceed" in error_text.lower():
+                            raise Exception(f"Orchestrator model context limit exceeded. Try using an API orchestrator (like GPT-4o) or increase the local model's N_CTX. Details: {error_text}")
+                        raise Exception(f"Orchestrator API error {response.status_code}: {error_text}")
+
+                    # Record success
+                    if not is_local_model:
+                        rate_limiter.record_success()
+
+                    async for line in response.aiter_lines():
+                        if not line or not line.startswith("data: "):
+                            continue
+
+                        data_str = line[6:]  # Remove "data: " prefix
+                        if data_str == "[DONE]":
+                            break
+
+                        try:
+                            chunk = json.loads(data_str)
+
+                            # Collect content from delta
+                            if "choices" in chunk and len(chunk["choices"]) > 0:
+                                delta = chunk["choices"][0].get("delta", {})
+                                if "content" in delta:
+                                    collected_content += delta["content"]
+
+                            # Capture usage data (usually in the last chunk)
+                            if "usage" in chunk:
+                                usage_data = chunk["usage"]
+                        except json.JSONDecodeError:
+                            continue
             
             # Build response data in standard format
             data = {

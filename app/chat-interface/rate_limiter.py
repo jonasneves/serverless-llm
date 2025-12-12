@@ -14,9 +14,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RateLimitConfig:
     """Rate limit configuration for a specific endpoint"""
-    requests_per_minute: int = 10
-    concurrent_requests: int = 2
+    requests_per_minute: int = 8  # Reduced from 10 to be more conservative
+    concurrent_requests: int = 1  # Reduced from 2 to prevent bursts
     requests_per_day: int = 50
+    min_request_interval: float = 8.0  # Minimum seconds between requests (60s / 8 requests = 7.5s)
 
 
 class RateLimiter:
@@ -51,6 +52,7 @@ class RateLimiter:
         # Exponential backoff state
         self.consecutive_429s = 0
         self.last_429_time = 0
+        self.last_request_time = 0
 
     def _clean_old_requests(self):
         """Remove request timestamps older than 1 minute and 1 day"""
@@ -71,6 +73,15 @@ class RateLimiter:
 
             now = time.time()
 
+            # Enforce minimum interval between requests
+            if self.last_request_time > 0:
+                time_since_last = now - self.last_request_time
+                if time_since_last < self.config.min_request_interval:
+                    wait_time = self.config.min_request_interval - time_since_last
+                    logger.info(f"Minimum interval: waiting {wait_time:.1f}s before next request")
+                    await asyncio.sleep(wait_time)
+                    now = time.time()  # Update now after sleep
+
             # Check daily limit
             if len(self.daily_requests) >= self.config.requests_per_day:
                 oldest_daily = self.daily_requests[0]
@@ -90,6 +101,7 @@ class RateLimiter:
                     logger.info(f"Rate limit: waiting {wait_time:.1f}s before next request")
                     await asyncio.sleep(wait_time + 0.1)  # Add small buffer
                     self._clean_old_requests()
+                    now = time.time()  # Update now after sleep
 
             # Exponential backoff if we recently hit 429
             if self.consecutive_429s > 0:
@@ -99,11 +111,13 @@ class RateLimiter:
                     backoff = min(2 ** self.consecutive_429s, 32)  # Cap at 32 seconds
                     logger.warning(f"Exponential backoff: waiting {backoff}s after {self.consecutive_429s} consecutive 429s")
                     await asyncio.sleep(backoff)
+                    now = time.time()  # Update now after sleep
                 else:
                     # Reset if it's been a while
                     self.consecutive_429s = 0
 
             # Record this request
+            self.last_request_time = now
             self.request_times.append(now)
             self.daily_requests.append(now)
 
