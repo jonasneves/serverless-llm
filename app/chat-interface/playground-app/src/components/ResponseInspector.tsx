@@ -29,6 +29,7 @@ export default function ResponseInspector({
 
   return (
     <aside
+      data-no-arena-scroll
       className="fixed right-6 top-24 bottom-24 w-[420px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col"
       onClick={(e) => e.stopPropagation()}
     >

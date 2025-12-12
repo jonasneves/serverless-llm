@@ -446,10 +446,10 @@ Synthesis:`;
       wheelRafRef.current = requestAnimationFrame(step);
     };
 
-    const handleWheel = (event: WheelEvent) => {
-      const target = event.target as HTMLElement | null;
-      // Let native scroll work inside text inputs
-      if (target && target.closest('input, textarea')) return;
+	    const handleWheel = (event: WheelEvent) => {
+	      const target = event.target as HTMLElement | null;
+	      // Let native scroll work inside text inputs
+	      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
 
       event.preventDefault();
       const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
