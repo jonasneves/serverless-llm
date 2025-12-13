@@ -15,6 +15,7 @@ import { usePersistedSetting } from './hooks/usePersistedSetting';
 import { useConversationHistory } from './hooks/useConversationHistory';
 import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
+import { useSelectionBox } from './hooks/useSelectionBox';
 
 export default function Playground() {
   const {
@@ -235,11 +236,6 @@ export default function Playground() {
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [activeInspectorId, setActiveInspectorId] = useState<string | null>(null);
   const [pinnedModels, setPinnedModels] = useState<Set<string>>(new Set()); // Set of pinned model IDs
-  const [dragSelection, setDragSelection] = useState<{
-    origin: { x: number; y: number };
-    current: { x: number; y: number };
-    active: boolean;
-  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
@@ -247,12 +243,31 @@ export default function Playground() {
   const suppressClickRef = useRef(false);
   const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
-  const dragSelectionActiveRef = useRef(false);
   const {
     enqueueStreamDelta,
     clearPendingStreamForModel,
     resetPendingStream,
   } = useStreamAccumulator(setModelsData);
+
+  const {
+    selectionRect,
+    isSelecting,
+    dragSelectionActiveRef,
+    clearSelection,
+  } = useSelectionBox({
+    rootContainerRef,
+    visualizationAreaRef,
+    arenaOffsetYRef,
+    arenaTargetYRef,
+    wheelRafRef,
+    selectedModels,
+    cardRefs,
+    selectedCardIds,
+    setSelectedCardIds,
+    pinnedModels,
+    setActiveInspectorId,
+    suppressClickRef,
+  });
 
   const handleSelectPrompt = (prompt: string) => {
     if (inputRef.current) {
@@ -411,10 +426,6 @@ export default function Playground() {
   useEffect(() => () => resetPendingStream(), [resetPendingStream]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId?: string; type?: 'background' } | null>(null);
-
-  useEffect(() => {
-    dragSelectionActiveRef.current = dragSelection != null;
-  }, [dragSelection]);
 
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
@@ -787,196 +798,6 @@ export default function Playground() {
     return `…${text.slice(text.length - maxChars)}`;
   };
 
-  // Normalize rectangle coordinates
-  const normalizeRect = (a: { x: number; y: number }, b: { x: number; y: number }) => {
-    const left = Math.min(a.x, b.x);
-    const top = Math.min(a.y, b.y);
-    const right = Math.max(a.x, b.x);
-    const bottom = Math.max(a.y, b.y);
-    return {
-      left,
-      top,
-      right,
-      bottom,
-      width: right - left,
-      height: bottom - top
-    };
-  };
-
-  // Calculate selection rectangle (relative to root container)
-  const selectionRect = dragSelection && dragSelection.active
-    ? (() => {
-      const rect = normalizeRect(dragSelection.origin, dragSelection.current);
-      if (rect.width <= 0 || rect.height <= 0) {
-        return null;
-      }
-      return {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height
-      };
-    })()
-    : null;
-
-  // Handle mouse down for selection box
-  useEffect(() => {
-    const handleMouseDown = (event: MouseEvent) => {
-      if (event.button !== 0) return; // Only left mouse button
-      if (!rootContainerRef.current || !visualizationAreaRef.current) return;
-
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-
-      // Don't start selection if clicking on cards, buttons, inputs, or other interactive elements
-      const clickedOnCard = target.closest('[data-card]');
-      const clickedOnInteractive = target.closest('button, a, input, textarea, select, [role="button"]');
-      const clickedOnDraggable = target.closest('[draggable]');
-      const clickedInNoSelectArea = target.closest('[data-no-arena-scroll]');
-      if (clickedOnCard || clickedOnInteractive || clickedOnDraggable || clickedInNoSelectArea) return;
-
-      // Only allow selection within the root container
-      const clickedOnContainer = rootContainerRef.current.contains(target);
-      if (!clickedOnContainer) return;
-
-      // Stop any scroll inertia so selection origin stays under cursor.
-      arenaTargetYRef.current = arenaOffsetYRef.current;
-      if (wheelRafRef.current != null) {
-        cancelAnimationFrame(wheelRafRef.current);
-        wheelRafRef.current = null;
-      }
-
-      const rootBounds = rootContainerRef.current.getBoundingClientRect();
-      const point = {
-        x: event.clientX - rootBounds.left,
-        y: event.clientY - rootBounds.top
-      };
-
-      // Prevent text selection when starting drag
-      event.preventDefault();
-
-      dragSelectionActiveRef.current = true;
-      suppressClickRef.current = false;
-      setDragSelection({
-        origin: point,
-        current: point,
-        active: false
-      });
-    };
-
-    window.addEventListener('mousedown', handleMouseDown, true);
-    return () => window.removeEventListener('mousedown', handleMouseDown, true);
-  }, []);
-
-  // Handle mouse move and mouse up for selection box
-  useEffect(() => {
-    if (!dragSelection || !rootContainerRef.current || !visualizationAreaRef.current) return;
-
-    // Prevent text selection during drag
-    const handleSelectStart = (e: Event) => {
-      e.preventDefault();
-    };
-    document.addEventListener('selectstart', handleSelectStart);
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const rootBounds = rootContainerRef.current!.getBoundingClientRect();
-      const point = {
-        x: event.clientX - rootBounds.left,
-        y: event.clientY - rootBounds.top
-      };
-
-      setDragSelection((state) => {
-        if (!state) return state;
-        const rect = normalizeRect(state.origin, point);
-        const active = state.active || rect.width > 4 || rect.height > 4;
-        return { ...state, current: point, active };
-      });
-    };
-
-    const handleMouseUp = (event: MouseEvent) => {
-      dragSelectionActiveRef.current = false;
-      const rootBounds = rootContainerRef.current!.getBoundingClientRect();
-      const point = {
-        x: event.clientX - rootBounds.left,
-        y: event.clientY - rootBounds.top
-      };
-
-      const upTarget = event.target as HTMLElement | null;
-      const willTriggerCardClick = Boolean(upTarget && upTarget.closest('[data-card]'));
-
-      setDragSelection((state) => {
-        if (!state) return null;
-
-        const rect = normalizeRect(state.origin, point);
-        let selectionRectScreen: { left: number; right: number; top: number; bottom: number } | null = null; // Declare here
-
-        if (state.active && rect.width > 0 && rect.height > 0) {
-          const matched: string[] = [];
-
-          // Convert selection rect from root container coordinates to screen coordinates
-          const currentRootBounds = rootContainerRef.current!.getBoundingClientRect();
-          selectionRectScreen = { // Assign value here
-            left: currentRootBounds.left + rect.left,
-            right: currentRootBounds.left + rect.right,
-            top: currentRootBounds.top + rect.top,
-            bottom: currentRootBounds.top + rect.bottom
-          };
-
-          // Check all model cards
-          for (const model of selectedModels) {
-            const cardElement = cardRefs.current.get(model.id);
-            if (!cardElement) continue;
-
-            const cardBounds = cardElement.getBoundingClientRect();
-
-            const intersects = !(
-              cardBounds.right < selectionRectScreen!.left || // Use non-null assertion
-              cardBounds.left > selectionRectScreen!.right ||
-              cardBounds.bottom < selectionRectScreen!.top ||
-              cardBounds.top > selectionRectScreen!.bottom
-            );
-
-            if (intersects) {
-              matched.push(model.id);
-            }
-          }
-
-          setSelectedCardIds(new Set(matched));
-          if (matched.length > 0) {
-            setActiveInspectorId(prev => (prev && matched.includes(prev)) ? prev : matched[0]);
-          } else {
-            setActiveInspectorId(null);
-          }
-          suppressClickRef.current = willTriggerCardClick;
-        } else if (!state.active) {
-          // Click without drag - keep only pinned models
-          const onlyPinned = new Set([...selectedCardIds].filter(id => pinnedModels.has(id)));
-          if (onlyPinned.size > 0) {
-            setSelectedCardIds(onlyPinned);
-            // Keep active inspector if it's pinned, otherwise clear
-            if (activeInspectorId && !pinnedModels.has(activeInspectorId)) {
-              setActiveInspectorId([...onlyPinned][0] || null);
-            }
-          } else {
-            setSelectedCardIds(new Set());
-            setActiveInspectorId(null);
-          }
-        }
-
-        return null;
-      });
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('selectstart', handleSelectStart);
-    };
-  }, [dragSelection, selectedModels]);
-
   return (
     <div
       ref={rootContainerRef}
@@ -985,7 +806,7 @@ export default function Playground() {
         backgroundColor: MODE_COLORS[mode],
         transition: 'background-color 1s ease',
         ...(bgStyle === 'none' ? { background: MODE_COLORS[mode] } : {}),
-        ...(dragSelection ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}),
+        ...(isSelecting ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}),
       }}
       onClick={(e) => {
         // Only deselect if clicking directly on the background
@@ -999,7 +820,7 @@ export default function Playground() {
         mode={mode}
         setMode={setMode}
         setHoveredCard={setHoveredCard}
-        setDragSelection={setDragSelection}
+        clearSelection={clearSelection}
         cycleBgStyle={cycleBgStyle}
         showDock={showDock}
         setShowDock={setShowDock}
@@ -1819,7 +1640,7 @@ export default function Playground() {
           transform: scale(1.05) !important;
         }
       `}</style>
-      {dragSelection && (
+      {isSelecting && (
         <style>{`
           body {
             user-select: none !important;

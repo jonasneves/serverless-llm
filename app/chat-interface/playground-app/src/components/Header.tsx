@@ -4,7 +4,7 @@ interface HeaderProps {
   mode: Mode;
   setMode: (mode: Mode) => void;
   setHoveredCard: (hovered: string | null) => void;
-  setDragSelection: (selection: any) => void;
+  clearSelection: () => void;
   cycleBgStyle: (direction: 'prev' | 'next') => void;
   showDock: boolean;
   setShowDock: (show: boolean) => void;
@@ -15,7 +15,7 @@ export default function Header({
   mode,
   setMode,
   setHoveredCard,
-  setDragSelection,
+  clearSelection,
   cycleBgStyle,
   showDock,
   setShowDock,
@@ -77,7 +77,7 @@ export default function Header({
             {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
               <button
                 key={m}
-                onClick={() => { setMode(m.toLowerCase() as Mode); setHoveredCard(null); setDragSelection(null); }}
+                onClick={() => { setMode(m.toLowerCase() as Mode); setHoveredCard(null); clearSelection(); }}
                 className={`relative z-10 py-2 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 ${mode === m.toLowerCase()
                   ? 'text-white'
                   : 'text-slate-400 hover:text-slate-200'
