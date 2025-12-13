@@ -16,6 +16,7 @@ import { useConversationHistory } from './hooks/useConversationHistory';
 import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
 import { useSelectionBox } from './hooks/useSelectionBox';
+import { useCardReorder } from './hooks/useCardReorder';
 
 export default function Playground() {
   const {
@@ -135,6 +136,26 @@ export default function Playground() {
 
   // Dynamic layout radius calculation (Moved up for scope access in drag handlers)
   const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
+
+  const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
+    if (currentMode === 'council') {
+      const startAngle = 250;
+      const endAngle = 470;
+      const angleRange = endAngle - startAngle;
+      const angle = (startAngle + (index * angleRange / (total - 1))) - 90;
+      const rad = angle * Math.PI / 180;
+      return {
+        x: Math.cos(rad) * radius,
+        y: Math.sin(rad) * radius,
+        angle
+      };
+    }
+
+    const angle = (index * 360 / total) - 90;
+    const x = Math.cos(angle * Math.PI / 180) * radius;
+    const y = Math.sin(angle * Math.PI / 180) * radius;
+    return { x, y, angle };
+  };
 
   /* HTML5 Drag & Drop Handlers (Dock -> Arena) */
   const handleDockDragStart = (e: React.DragEvent, modelId: string) => {
@@ -278,150 +299,15 @@ export default function Playground() {
     setShowTopics(false);
   };
 
-  /* Drag & Drop State (Pointer Events) */
-  const [dragState, setDragState] = useState<{
-    activeId: string;
-    startX: number;
-    startY: number;
-    // Current pointer position in screen coordinates
-    currX: number;
-    currY: number;
-    // The initial visual offset of the card center relative to pointer
-    offsetX: number;
-    offsetY: number;
-    // Container metrics to calculate relative transform
-    containerLeft: number;
-    containerTop: number;
-    containerWidth: number;
-    containerHeight: number;
-    // Card metrics for accurate positioning
-    cardHeight: number;
-  } | null>(null);
-
-  // Handle pointer down to start dragging
-  const handlePointerDown = (e: React.PointerEvent, modelId: string) => {
-    // Ignore right clicks or if we are clicking interactive elements
-    if (e.button !== 0) return;
-    const target = e.target as HTMLElement;
-    if (target.closest('button, a, input, textarea, select, [role="button"]')) return;
-
-    // Prevent default to avoid text selection and native drag
-    e.preventDefault();
-
-    const cardEl = cardRefs.current.get(modelId);
-    if (!cardEl || !visualizationAreaRef.current) return;
-
-    const rect = cardEl.getBoundingClientRect();
-    const vizRect = visualizationAreaRef.current.getBoundingClientRect();
-
-    // Calculate offset from the card's center to the pointer
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    setDragState({
-      activeId: modelId,
-      startX: e.clientX,
-      startY: e.clientY,
-      currX: e.clientX,
-      currY: e.clientY,
-      offsetX: centerX - e.clientX,
-      offsetY: centerY - e.clientY,
-      containerLeft: vizRect.left,
-      containerTop: vizRect.top,
-      containerWidth: vizRect.width,
-      containerHeight: vizRect.height,
-      cardHeight: rect.height,
-    });
-
-    // Capture pointer to ensure we get events even if mouse leaves window
-    (e.target as Element).setPointerCapture(e.pointerId);
-  };
-
-  // Global pointer move/up effects
-  useEffect(() => {
-    if (!dragState) return;
-
-    const handlePointerMove = (e: PointerEvent) => {
-      // Update visual position
-      setDragState(prev => prev ? { ...prev, currX: e.clientX, currY: e.clientY } : null);
-
-      if (!visualizationAreaRef.current) return;
-
-      // -- Reordering Logic --
-      // Calculate cursor position relative to the grid container
-      const vizRect = visualizationAreaRef.current.getBoundingClientRect();
-      const currentIndex = selected.indexOf(dragState.activeId);
-
-      let closestDist = Infinity;
-      let closestIndex = -1;
-
-      if (mode === 'compare') {
-        // --- Grid Mode Logic ---
-        // Center of container is x=0 in our grid coordinate system
-        // Y=0 is the top of the container
-        const relX = e.clientX - (vizRect.left + vizRect.width / 2);
-        const relY = e.clientY - vizRect.top;
-
-        const totalWidth = (LAYOUT.cardWidth + LAYOUT.gapX) * gridCols - LAYOUT.gapX;
-
-        selected.forEach((_, idx) => {
-          const r = Math.floor(idx / gridCols);
-          const c = idx % gridCols;
-          const slotX = c * (LAYOUT.cardWidth + LAYOUT.gapX) - totalWidth / 2 + LAYOUT.cardWidth / 2;
-          const slotY = r * (LAYOUT.cardHeight + LAYOUT.gapY);
-
-          // Slot center for distance calc
-          const slotCenterX = slotX;
-          const slotCenterY = slotY + LAYOUT.cardHeight / 2;
-
-          const dist = (relX - slotCenterX) ** 2 + (relY - slotCenterY) ** 2;
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestIndex = idx;
-          }
-        });
-      } else {
-        // --- Circle Mode Logic ---
-        // Both X and Y are relative to container center
-        const relX = e.clientX - (vizRect.left + vizRect.width / 2);
-        const relY = e.clientY - (vizRect.top + vizRect.height / 2);
-
-        // Use the same radius logic as render
-        const currentRadius = Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selected.length * LAYOUT.radiusPerModel);
-
-        selected.forEach((_, idx) => {
-          const pos = getCirclePosition(idx, selected.length, mode, currentRadius);
-          // pos.x and pos.y are center-relative
-          const dist = (relX - pos.x) ** 2 + (relY - pos.y) ** 2;
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestIndex = idx;
-          }
-        });
-      }
-
-      // If closest slot is different from current index, swap
-      if (closestIndex !== -1 && closestIndex !== currentIndex) {
-        const newSelected = [...selected];
-        // Move item
-        const [movedItem] = newSelected.splice(currentIndex, 1);
-        newSelected.splice(closestIndex, 0, movedItem);
-        setSelected(newSelected);
-      }
-    };
-
-    const handlePointerUp = () => {
-      setDragState(null);
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [dragState, selected, gridCols, mode, layoutRadius]);
+  const { dragState, handlePointerDown } = useCardReorder({
+    visualizationAreaRef,
+    cardRefs,
+    selected,
+    setSelected,
+    mode,
+    gridCols,
+    getCirclePosition,
+  });
 
   useEffect(() => () => resetPendingStream(), [resetPendingStream]);
 
@@ -764,31 +650,6 @@ export default function Playground() {
     }
     prevModeRef.current = mode;
   }, [mode, moderator, layoutRadius]);
-
-  const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
-    if (currentMode === 'council') {
-      // Semi-circle (Parliament style)
-      // Spread models across a ~220 degree arc to center them above the moderator
-      // Range 250-470 minus 90 gives 160 to 380 degrees (Left-ish to Right-ish over the top)
-      const startAngle = 250;
-      const endAngle = 470;
-      const angleRange = endAngle - startAngle;
-      const angle = (startAngle + (index * angleRange / (total - 1))) - 90; // -90 to rotate 0 to top
-
-      const rad = angle * Math.PI / 180;
-      return {
-        x: Math.cos(rad) * radius,
-        y: Math.sin(rad) * radius,
-        angle
-      };
-    }
-
-    // Roundtable (Full Circle - existing logic)
-    const angle = (index * 360 / total) - 90;
-    const x = Math.cos(angle * Math.PI / 180) * radius;
-    const y = Math.sin(angle * Math.PI / 180) * radius;
-    return { x, y, angle };
-  };
 
   const bgClass = bgStyle === 'none' ? '' : `bg-${bgStyle}`;
 
