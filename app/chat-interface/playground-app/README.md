@@ -22,6 +22,8 @@ npm run dev
 npm run type-check
 ```
 
+`npm run dev` proxies `/api/*` to `http://localhost:8080`, so run the FastAPI server on port 8080 for full functionality.
+
 ## Production Build
 
 ```bash
@@ -29,7 +31,15 @@ npm run type-check
 npm run build
 ```
 
-This builds the app and outputs to `../static/playground/` where it's served by the Flask app.
+This builds the app and outputs to `../static/playground/` where it's served by the FastAPI app.
+
+## Local Preview (Static)
+
+```bash
+npm run preview
+```
+
+This builds to `dist/` with a `/` base and runs `vite preview`.
 
 ## Features
 

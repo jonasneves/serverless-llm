@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
+    "build:local": "tsc && vite build --base=/ --outDir dist",
+    "preview": "npm run build:local && vite preview --outDir dist",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
