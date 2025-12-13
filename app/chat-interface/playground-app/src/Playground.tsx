@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
-import { BG_STYLES, MODE_COLORS, GENERATION_DEFAULTS, LAYOUT } from './constants';
+import { BG_STYLES, MODE_COLORS, LAYOUT } from './constants';
 import Typewriter from './components/Typewriter';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
@@ -8,17 +8,13 @@ import Header from './components/Header';
 import ExecutionTimeDisplay, { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import ResponseInspector from './components/ResponseInspector';
 import SettingsModal from './components/SettingsModal';
-import { fetchChatStream, fetchCouncilStream, fetchDiscussionStream, streamSseEvents } from './utils/streaming';
 import StatusIndicator from './components/StatusIndicator';
 import TopicsDrawer from './components/TopicsDrawer';
 import { useModelsManager } from './hooks/useModelsManager';
 import { usePersistedSetting } from './hooks/usePersistedSetting';
-
-type ChatHistoryEntry = {
-  role: 'user' | 'assistant';
-  content: string;
-  kind?: 'compare_summary' | 'council_synthesis' | 'roundtable_synthesis';
-};
+import { useConversationHistory } from './hooks/useConversationHistory';
+import { useStreamAccumulator } from './hooks/useStreamAccumulator';
+import { useSessionController } from './hooks/useSessionController';
 
 export default function Playground() {
   const {
@@ -76,33 +72,12 @@ export default function Playground() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastQuery, setLastQuery] = useState('');
-  const [_conversationHistory, setConversationHistory] = useState<ChatHistoryEntry[]>([]);
-  const conversationHistoryRef = useRef<ChatHistoryEntry[]>([]);
-
-  const pushHistoryEntries = (entries: ChatHistoryEntry[]) => {
-    if (!entries.length) return;
-    const next = [...conversationHistoryRef.current, ...entries];
-    conversationHistoryRef.current = next;
-    setConversationHistory(next);
-  };
-
-  const historyToText = (history: ChatHistoryEntry[]) =>
-    history.map(entry => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`).join('\n\n');
-
-  const buildCarryoverHistory = (history: ChatHistoryEntry[], targetMode: Mode) => {
-    if (targetMode === 'compare') return history;
-
-    const users = history.filter(e => e.role === 'user');
-    const lastSynthesis = [...history]
-      .reverse()
-      .find(e =>
-        e.role === 'assistant'
-        && (e.kind === 'council_synthesis' || e.kind === 'roundtable_synthesis')
-        && e.content.trim().length > 0
-      );
-
-    return lastSynthesis ? [...users, lastSynthesis] : users;
-  };
+  const {
+    historyRef: conversationHistoryRef,
+    pushHistoryEntries,
+    historyToText,
+    buildCarryoverHistory,
+  } = useConversationHistory();
 
   const summarizeSessionResponses = (responses: Record<string, string>, order: string[]) => {
     const seen = new Set<string>();
@@ -273,8 +248,11 @@ export default function Playground() {
   const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
   const dragSelectionActiveRef = useRef(false);
-  const pendingStreamRef = useRef<Record<string, { answer: string; thinking: string }>>({});
-  const flushStreamRafRef = useRef<number | null>(null);
+  const {
+    enqueueStreamDelta,
+    clearPendingStreamForModel,
+    resetPendingStream,
+  } = useStreamAccumulator(setModelsData);
 
   const handleSelectPrompt = (prompt: string) => {
     if (inputRef.current) {
@@ -283,45 +261,6 @@ export default function Playground() {
       setInputFocused(true);
     }
     setShowTopics(false);
-  };
-
-  const flushPendingStream = () => {
-    flushStreamRafRef.current = null;
-    const pending = pendingStreamRef.current;
-    pendingStreamRef.current = {};
-    const ids = Object.keys(pending);
-    if (ids.length === 0) return;
-
-    setModelsData(prev => prev.map(m => {
-      const delta = pending[m.id];
-      if (!delta) return m;
-      return {
-        ...m,
-        response: m.response + delta.answer,
-        thinking: (m.thinking || '') + delta.thinking,
-      };
-    }));
-  };
-
-  const scheduleFlushPendingStream = () => {
-    if (flushStreamRafRef.current == null) {
-      flushStreamRafRef.current = requestAnimationFrame(flushPendingStream);
-    }
-  };
-
-  const enqueueStreamDelta = (modelId: string, answerAdd: string, thinkingAdd: string) => {
-    if (!answerAdd && !thinkingAdd) return;
-    const existing = pendingStreamRef.current[modelId] || { answer: '', thinking: '' };
-    existing.answer += answerAdd;
-    existing.thinking += thinkingAdd;
-    pendingStreamRef.current[modelId] = existing;
-    scheduleFlushPendingStream();
-  };
-
-  const clearPendingStreamForModel = (modelId: string) => {
-    if (pendingStreamRef.current[modelId]) {
-      delete pendingStreamRef.current[modelId];
-    }
   };
 
   /* Drag & Drop State (Pointer Events) */
@@ -469,13 +408,7 @@ export default function Playground() {
     };
   }, [dragState, selected, gridCols, mode, layoutRadius]);
 
-  useEffect(() => {
-    return () => {
-      if (flushStreamRafRef.current != null) {
-        cancelAnimationFrame(flushStreamRafRef.current);
-      }
-    };
-  }, []);
+  useEffect(() => () => resetPendingStream(), [resetPendingStream]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId?: string; type?: 'background' } | null>(null);
 
@@ -533,636 +466,41 @@ export default function Playground() {
     });
   };
 
-  const sendMessage = async (
-    text: string,
-    previousResponses?: Record<string, string> | null,
-    participantsOverride?: string[],
-    options?: { skipHistory?: boolean }
-  ) => {
-    if (!text.trim() || (selected.length === 0 && !participantsOverride) || (isGenerating && !participantsOverride)) return;
-    const skipHistory = options?.skipHistory ?? false;
-    const userEntry: ChatHistoryEntry = { role: 'user', content: text };
-    const baseHistory = skipHistory ? conversationHistoryRef.current : [...conversationHistoryRef.current, userEntry];
-    if (!skipHistory) {
-      pushHistoryEntries([userEntry]);
-    }
-    const carryoverHistory = buildCarryoverHistory(baseHistory, mode);
-    const historyContext = historyToText(carryoverHistory);
-    setLastQuery(text);
-    const contextualQuery = historyContext
-      ? `${historyContext}\n\nContinue the conversation above and respond to the latest user request.`
-      : text;
-
-    let sessionModelIds: string[];
-    if (participantsOverride) {
-      sessionModelIds = participantsOverride;
-    } else {
-      const selectionOverride = Array.from(selectedCardIds).filter(id =>
-        selected.includes(id) && (mode === 'compare' || id !== moderator)
-      );
-      sessionModelIds = selectionOverride.length > 0 ? selectionOverride : selected.slice();
-    }
-    sessionModelIdsRef.current = sessionModelIds;
-
-    const sessionResponses: Record<string, string> = {};
-    const recordResponse = (modelId: string, text: string, opts?: { replace?: boolean; label?: string }) => {
-      if (!text) return;
-      const addition = opts?.label ? `${opts.label}: ${text}` : text;
-      sessionResponses[modelId] = opts?.replace
-        ? addition
-        : (sessionResponses[modelId] ? `${sessionResponses[modelId]}\n\n${addition}` : addition);
-    };
-
-    const currentController = new AbortController();
-    abortControllerRef.current = currentController;
-    setIsGenerating(true);
-    setIsSynthesizing(false);
-    setHoveredCard(null);
-    setPhaseLabel(null);
-    setModeratorSynthesis('');
-    setCouncilAggregateRankings(null);
-    setCouncilAnonymousReviews([]);
-    setDiscussionTurnsByModel({});
-    resetFailedModels();
-    currentDiscussionTurnRef.current = null;
-
-    // Reset any pending streamed chunks from a previous run.
-    pendingStreamRef.current = {};
-    if (flushStreamRafRef.current != null) {
-      cancelAnimationFrame(flushStreamRafRef.current);
-      flushStreamRafRef.current = null;
-    }
-
-    // Prepare UI state for streaming
-    setModelsData(prev => prev.map(m => {
-      if (sessionModelIds.includes(m.id) || m.id === moderator) {
-        // Validation: If passing previousResponses, preserve valid responses
-        if (previousResponses && previousResponses[m.id]) {
-          return { ...m, response: previousResponses[m.id], thinking: undefined, error: undefined };
-        }
-        return { ...m, response: '', thinking: undefined, error: undefined };
-      }
-      return m;
-    }));
-
-    // Reset execution times for new run
-    setExecutionTimes(prev => {
-      const next = { ...prev };
-      const startTime = performance.now();
-      sessionModelIds.forEach(id => {
-        // Keep old times if we have a previous response? Maybe not critical.
-        // Doing a full reset is safer for now.
-        next[id] = { startTime: startTime };
-      });
-      if (moderator && !next[moderator]) {
-        next[moderator] = { startTime: startTime };
-      }
-      return next;
-    });
-
-    // Reset thinking state for streaming
-    const thinkingResetIds = new Set(sessionModelIds);
-    if (moderator) thinkingResetIds.add(moderator);
-    thinkingResetIds.forEach(modelId => {
-      thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
-    });
-
-    // Track which models have received their first token
-    const firstTokenReceived = new Set<string>();
-
-    const applyThinkingChunk = (modelId: string, rawChunk: string) => {
-      const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
-      let textChunk = state.carry + rawChunk;
-      state.carry = '';
-
-      const lastLt = textChunk.lastIndexOf('<');
-      if (lastLt !== -1 && textChunk.length - lastLt < 8) {
-        const tail = textChunk.slice(lastLt);
-        if ('<think>'.startsWith(tail) || '</think>'.startsWith(tail)) {
-          state.carry = tail;
-          textChunk = textChunk.slice(0, lastLt);
-        }
-      }
-
-      let thinkingAdd = '';
-      let answerAdd = '';
-      let idx = 0;
-      while (idx < textChunk.length) {
-        if (!state.inThink) {
-          const start = textChunk.indexOf('<think>', idx);
-          if (start === -1) {
-            answerAdd += textChunk.slice(idx);
-            break;
-          }
-          answerAdd += textChunk.slice(idx, start);
-          state.inThink = true;
-          idx = start + 7;
-        } else {
-          const end = textChunk.indexOf('</think>', idx);
-          if (end === -1) {
-            thinkingAdd += textChunk.slice(idx);
-            break;
-          }
-          thinkingAdd += textChunk.slice(idx, end);
-          state.inThink = false;
-          idx = end + 8;
-        }
-      }
-
-      thinkingStateRef.current[modelId] = state;
-
-      if (answerAdd) {
-        recordResponse(modelId, answerAdd);
-      }
-
-      if (thinkingAdd || answerAdd) {
-        enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
-      }
-    };
-
-    // Helper to add icon to system messages
-    const addIconToMessage = (message: string): string => {
-      const lowerMsg = message.toLowerCase();
-
-      // Rate limiting / waiting icon (clock)
-      if (lowerMsg.includes('rate limit') || lowerMsg.includes('waiting')) {
-        const clockIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: text-bottom; margin-right: 6px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-        return clockIcon + message;
-      }
-
-      // Error / warning icon
-      if (lowerMsg.includes('error') || lowerMsg.includes('failed')) {
-        const warningIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: text-bottom; margin-right: 6px;"><path d="M12 2L2 20h20L12 2z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-        return warningIcon + message;
-      }
-
-      return message;
-    };
-
-    try {
-      if (mode === 'compare') {
-        setSpeaking(new Set(sessionModelIds));
-
-        const response = await fetchChatStream({
-          models: sessionModelIds,
-          messages: baseHistory.map(msg => ({ role: msg.role, content: msg.content })),
-          max_tokens: GENERATION_DEFAULTS.maxTokens,
-          temperature: GENERATION_DEFAULTS.temperature,
-          github_token: githubToken || null
-        }, currentController.signal);
-
-        await streamSseEvents(response, (data) => {
-          // Handle info messages (like rate limiting notifications)
-          if (data.event === 'info' && data.content) {
-            console.log('[Rate Limit Info]', data.content);
-            const rawMessage = String(data.content);
-            const messageWithIcon = addIconToMessage(rawMessage);
-            setPhaseLabel(messageWithIcon);
-
-            // For rate limit messages, update the model's statusMessage (not response)
-            if (data.model_id) {
-              setModelsData(prev => prev.map(m =>
-                m.id === data.model_id
-                  ? { ...m, statusMessage: messageWithIcon }
-                  : m
-              ));
-            }
-          }
-
-          if (data.event === 'token' && data.model_id) {
-            const modelId = data.model_id as string;
-            const now = performance.now();
-
-            if (!firstTokenReceived.has(modelId)) {
-              firstTokenReceived.add(modelId);
-              setExecutionTimes(prev => ({
-                ...prev,
-                [modelId]: { ...prev[modelId], firstTokenTime: now }
-              }));
-
-              // Clear any statusMessage (rate-limit messages) when first token arrives
-              setModelsData(prev => prev.map(m =>
-                m.id === modelId ? { ...m, statusMessage: undefined } : m
-              ));
-            }
-
-            applyThinkingChunk(modelId, String(data.content ?? ''));
-          }
-
-          if (data.event === 'done' && data.model_id) {
-            const now = performance.now();
-            const modelId = data.model_id as string;
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now }
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-          }
-        });
-        if (!skipHistory) {
-          const summary = summarizeSessionResponses(sessionResponses, sessionModelIds);
-          if (summary) {
-            pushHistoryEntries([{ role: 'assistant', content: summary, kind: 'compare_summary' }]);
-          }
-        }
-        return;
-      }
-
-      if (mode === 'council') {
-        const participants = sessionModelIds;
-        if (participants.length < 2) {
-          const msg = 'Select at least 2 participants for Council mode.';
-          setModeratorSynthesis(msg);
-          if (moderator) {
-            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: msg } : m));
-          }
-          setPhaseLabel('Error');
-          return;
-        }
-        setSpeaking(new Set(participants));
-
-        const effectiveChairman = participantsOverride && participants.length > 0
-          ? participants[0]
-          : (moderator || (participants.length > 0 ? participants[0] : null));
-
-        const response = await fetchCouncilStream({
-          query: contextualQuery,
-          participants,
-          chairman_model: effectiveChairman,
-          max_tokens: GENERATION_DEFAULTS.maxTokens,
-          github_token: githubToken || null,
-          completed_responses: previousResponses || null,
-        }, currentController.signal);
-
-        let councilSynthesis = '';
-        let stage2Expected = 0;
-        let stage2Received = 0;
-
-        await streamSseEvents(response, (data) => {
-          const eventType = data.event;
-
-          if (eventType === 'stage1_start') {
-            setPhaseLabel('Stage 1 · Responses');
-          }
-
-          if (eventType === 'model_start' && data.model_id) {
-            // ...
-          }
-
-          if (eventType === 'model_chunk' && data.model_id) {
-            const modelId = data.model_id as string;
-            const now = performance.now();
-
-            if (!firstTokenReceived.has(modelId)) {
-              firstTokenReceived.add(modelId);
-              setExecutionTimes(prev => ({
-                ...prev,
-                [modelId]: { ...prev[modelId], firstTokenTime: now }
-              }));
-            }
-
-            applyThinkingChunk(modelId, String((data as any).chunk ?? ''));
-          }
-
-          if (eventType === 'model_response' && data.model_id) {
-            const modelId = data.model_id as string;
-            const now = performance.now();
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now }
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-
-            const responseText = String((data as any).response ?? '');
-            recordResponse(modelId, responseText, { replace: true });
-            if (previousResponses && previousResponses[modelId]) {
-              // Already set
-            } else {
-              setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: responseText } : m));
-            }
-          }
-
-          if (eventType === 'model_error' && data.model_id) {
-            const modelId = data.model_id as string;
-            const now = performance.now();
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now }
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-            const errorText = String((data as any).error ?? 'Error generating response.');
-            clearPendingStreamForModel(modelId);
-            setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText, error: errorText } : m));
-            markModelFailed(modelId);
-            recordResponse(modelId, errorText, { replace: true });
-          }
-
-          if (eventType === 'stage2_start') {
-            const activeParticipants = participants.filter(id => !failedModelsRef.current.has(id));
-            stage2Expected = activeParticipants.length;
-            stage2Received = 0;
-            setCouncilAnonymousReviews([]);
-            setPhaseLabel(`Stage 2 · Anonymous Review (0/${stage2Expected})`);
-            setModeratorSynthesis(`Anonymous reviews in progress (0/${stage2Expected})…`);
-            setSpeaking(new Set(activeParticipants));
-          }
-
-          if (eventType === 'ranking_response' && data.model_id) {
-            const modelId = data.model_id as string;
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-            stage2Received += 1;
-            setPhaseLabel(`Stage 2 · Anonymous Review (${stage2Received}/${stage2Expected || participants.length})`);
-            setModeratorSynthesis(`Anonymous reviews in progress (${stage2Received}/${stage2Expected || participants.length})…`);
-
-            const rankingText = String((data as any).ranking ?? '');
-            if (rankingText.trim()) {
-              const reviewerName = String((data as any).model_name ?? modelId);
-              setCouncilAnonymousReviews(prev => [
-                ...prev,
-                { reviewer_model_id: modelId, reviewer_model_name: reviewerName, text: rankingText.trim() }
-              ]);
-            }
-          }
-
-          if (eventType === 'ranking_error' && data.model_id) {
-            const modelId = data.model_id as string;
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-            // We don't necessarily show ranking errors in the card, but maybe log it?
-            markModelFailed(modelId);
-            stage2Received += 1;
-            setPhaseLabel(`Stage 2 · Anonymous Review (${stage2Received}/${stage2Expected || participants.length})`);
-            setModeratorSynthesis(`Anonymous reviews in progress (${stage2Received}/${stage2Expected || participants.length})…`);
-            const errorText = String((data as any).error ?? 'Ranking error.');
-            const reviewerName = String((data as any).model_name ?? modelId);
-            setCouncilAnonymousReviews(prev => [
-              ...prev,
-              { reviewer_model_id: modelId, reviewer_model_name: reviewerName, text: errorText, error: true }
-            ]);
-          }
-
-          if (eventType === 'stage2_complete') {
-            const aggregate = (data as any).aggregate_rankings as any[] | undefined;
-            if (aggregate) setCouncilAggregateRankings(aggregate as any);
-          }
-
-          if (eventType === 'chairman_quip') {
-            const quip = String((data as any).quip ?? '');
-            setModeratorSynthesis(quip);
-          }
-
-          if (eventType === 'stage3_start') {
-            setPhaseLabel('Stage 3 · Synthesis');
-            setIsSynthesizing(true);
-            setModeratorSynthesis('');
-            if (moderator) setSpeaking(new Set([moderator]));
-          }
-
-          if (eventType === 'stage3_complete' || eventType === 'stage3_error') {
-            const synthesis = String((data as any).response ?? (data as any).error ?? 'Synthesis error.');
-            setModeratorSynthesis(synthesis);
-            councilSynthesis = synthesis;
-            if (moderator) {
-              clearPendingStreamForModel(moderator);
-              setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
-              recordResponse(moderator, synthesis, { replace: true });
-            }
-            setIsSynthesizing(false);
-          }
-
-          if (eventType === 'council_complete') {
-            setPhaseLabel(null);
-            setIsSynthesizing(false);
-            setSpeaking(new Set());
-            const aggregate = (data as any).aggregate_rankings as any[] | undefined;
-            if (aggregate) setCouncilAggregateRankings(aggregate as any);
-          }
-
-          if (eventType === 'error') {
-            const message = String((data as any).error ?? (data as any).message ?? 'Council error.');
-            setModeratorSynthesis(message);
-            if (moderator) {
-              clearPendingStreamForModel(moderator);
-              setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
-            }
-            setPhaseLabel('Error');
-          }
-        });
-        if (!skipHistory) {
-          const trimmed = councilSynthesis.trim();
-          if (trimmed) {
-            pushHistoryEntries([{ role: 'assistant', content: trimmed, kind: 'council_synthesis' }]);
-          }
-        }
-        return;
-      }
-
-      // Roundtable (discussion) mode
-      // If the orchestrator model is selected, include it as a participant for consistency.
-      const participants = sessionModelIds;
-      if (participants.length < 2) {
-        const msg = 'Select at least 2 participants for Roundtable mode.';
-        setModeratorSynthesis(msg);
-        if (moderator) {
-          setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: msg } : m));
-        }
-        setPhaseLabel('Error');
-        return;
-      }
-      setSpeaking(new Set(participants));
-      if (moderator) setSpeaking(prev => new Set(prev).add(moderator));
-
-      const response = await fetchDiscussionStream({
-        query: contextualQuery,
-        max_tokens: GENERATION_DEFAULTS.maxTokens,
-        temperature: GENERATION_DEFAULTS.temperature,
-        orchestrator_model: moderator || null,
-        github_token: githubToken || null,
-        participants,
-        turns: 2
-      }, currentController.signal);
-
-      let currentTurn = 0;
-
-      let roundtableSynthesis = '';
-
-      await streamSseEvents(response, (data) => {
-        const eventType = data.event;
-
-        if (eventType === 'analysis_start') {
-          setPhaseLabel('Analyzing Query');
-        }
-
-        if (eventType === 'analysis_complete') {
-          setPhaseLabel('Orchestrating');
-          if (data.analysis) {
-            const analysisObj = data.analysis as any;
-            const analysisText = String(analysisObj?.reasoning ?? analysisObj?.summary ?? 'Analysis complete.');
-            setModeratorSynthesis(analysisText);
-          }
-        }
-
-        if (eventType === 'turn_start') {
-          currentTurn = (data as any).turn_number || currentTurn;
-          setPhaseLabel(`Round ${currentTurn}`);
-        }
-
-        if (eventType === 'turn_chunk' && data.model_id) {
-          const modelId = data.model_id as string;
-          const now = performance.now();
-          if (!firstTokenReceived.has(modelId)) {
-            firstTokenReceived.add(modelId);
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], firstTokenTime: now }
-            }));
-          }
-          if (currentDiscussionTurnRef.current?.modelId !== modelId) {
-            currentDiscussionTurnRef.current = { modelId, turnNumber: currentTurn };
-          }
-          applyThinkingChunk(modelId, String(data.chunk ?? ''));
-        }
-
-        if (eventType === 'turn_complete' && data.model_id) {
-          const modelId = data.model_id as string;
-          const now = performance.now();
-          if (modelId) {
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now }
-            }));
-          }
-          const response = String((data as any).response ?? '');
-
-          setDiscussionTurnsByModel(prev => {
-            const existing = prev[modelId] || [];
-            return {
-              ...prev,
-              [modelId]: [...existing, { turn_number: currentTurn, response }]
-            };
-          });
-
-          // Update main card response
-          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response } : m));
-          setSpeaking(new Set());
-          recordResponse(modelId, response, { label: `Round ${currentTurn + 1}` });
-        }
-
-        if (eventType === 'turn_error' && data.model_id) {
-          const modelId = data.model_id as string;
-          const now = performance.now();
-          setExecutionTimes(prev => ({
-            ...prev,
-            [modelId]: { ...prev[modelId], endTime: now }
-          }));
-          const errorText = String((data as any).error ?? 'Error generating response.');
-          clearPendingStreamForModel(modelId);
-          setModelsData(prev => prev.map(m => m.id === modelId ? { ...m, response: errorText } : m));
-          setSpeaking(new Set());
-          markModelFailed(modelId);
-          recordResponse(modelId, errorText, { replace: true });
-        }
-
-        if (eventType === 'synthesis_start') {
-          setPhaseLabel('Synthesis');
-          setIsSynthesizing(true);
-          if (moderator) setSpeaking(new Set([moderator]));
-        }
-
-        if (eventType === 'discussion_complete') {
-          const synthesis = String((data as any).final_response ?? '');
-          setModeratorSynthesis(synthesis);
-          roundtableSynthesis = synthesis;
-          if (moderator) {
-            clearPendingStreamForModel(moderator);
-            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: synthesis } : m));
-            recordResponse(moderator, synthesis, { replace: true });
-          }
-          setPhaseLabel(null);
-          setIsSynthesizing(false);
-          setSpeaking(new Set());
-        }
-
-        if (eventType === 'error') {
-          const message = String((data as any).error ?? (data as any).message ?? 'Discussion error.');
-          setModeratorSynthesis(message);
-          if (moderator) {
-            clearPendingStreamForModel(moderator);
-            setModelsData(prev => prev.map(m => m.id === moderator ? { ...m, response: message } : m));
-          }
-          setPhaseLabel('Error');
-          setIsSynthesizing(false);
-          setSpeaking(new Set());
-        }
-      });
-      if (!skipHistory) {
-        const trimmed = roundtableSynthesis.trim();
-        if (trimmed) {
-          pushHistoryEntries([{ role: 'assistant', content: trimmed, kind: 'roundtable_synthesis' }]);
-        }
-      }
-
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        // Ignore usage aborts
-        return;
-      }
-      console.error('Chat error:', err);
-      // Only set error states if this is still the active controller
-      if (abortControllerRef.current === currentController) {
-        const errorMsg = (err as Error).message || String(err);
-        setModeratorSynthesis(`Session Error: ${errorMsg}`);
-        setPhaseLabel('Error');
-
-        pendingStreamRef.current = {};
-        if (flushStreamRafRef.current != null) {
-          cancelAnimationFrame(flushStreamRafRef.current);
-          flushStreamRafRef.current = null;
-        }
-        setModelsData(prev => prev.map(m =>
-          sessionModelIds.includes(m.id) && !m.response ? { ...m, response: 'Error generating response.' } : m
-        ));
-        sessionModelIds.forEach(id => markModelFailed(id));
-      }
-    } finally {
-      // ONLY reset state if we are still the active controller
-      if (abortControllerRef.current === currentController) {
-        const finalTime = performance.now();
-        setExecutionTimes(prev => {
-          const updated = { ...prev };
-          sessionModelIdsRef.current.forEach(modelId => {
-            if (updated[modelId] && !updated[modelId].endTime) {
-              updated[modelId] = { ...updated[modelId], endTime: finalTime };
-            }
-          });
-          return updated;
-        });
-        setIsGenerating(false);
-        setIsSynthesizing(false);
-        setPhaseLabel(prev => (prev === 'Error' ? prev : null));
-        setSpeaking(new Set());
-      }
-    }
-  };
+  const { sendMessage } = useSessionController({
+    mode,
+    moderator,
+    selected,
+    selectedCardIds,
+    githubToken,
+    isGenerating,
+    summarizeSessionResponses,
+    setLastQuery,
+    setHoveredCard,
+    setPhaseLabel,
+    setModeratorSynthesis,
+    setCouncilAggregateRankings,
+    setCouncilAnonymousReviews,
+    setDiscussionTurnsByModel,
+    resetFailedModels,
+    markModelFailed,
+    failedModelsRef,
+    currentDiscussionTurnRef,
+    sessionModelIdsRef,
+    abortControllerRef,
+    thinkingStateRef,
+    conversationHistoryRef,
+    pushHistoryEntries,
+    historyToText,
+    buildCarryoverHistory,
+    setModelsData,
+    setExecutionTimes,
+    setIsGenerating,
+    setIsSynthesizing,
+    setSpeaking,
+    enqueueStreamDelta,
+    clearPendingStreamForModel,
+    resetPendingStream,
+  });
 
   // Council/Roundtable synthesis is handled by backend streams.
 

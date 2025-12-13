@@ -44,3 +44,9 @@ export interface TrendingTopic {
   publishedAt?: string;
   tags?: string[];
 }
+
+export type ChatHistoryEntry = {
+  role: 'user' | 'assistant';
+  content: string;
+  kind?: 'compare_summary' | 'council_synthesis' | 'roundtable_synthesis';
+};
