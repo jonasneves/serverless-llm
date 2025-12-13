@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
-import { MODEL_META, BG_STYLES, MODE_COLORS, GENERATION_DEFAULTS, LAYOUT } from './constants';
+import { BG_STYLES, MODE_COLORS, GENERATION_DEFAULTS, LAYOUT } from './constants';
 import Typewriter from './components/Typewriter';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
@@ -11,16 +11,8 @@ import SettingsModal from './components/SettingsModal';
 import { fetchChatStream, fetchCouncilStream, fetchDiscussionStream, streamSseEvents } from './utils/streaming';
 import StatusIndicator from './components/StatusIndicator';
 import TopicsDrawer from './components/TopicsDrawer';
-
-interface ModelsApiModel {
-  id: string;
-  name?: string;
-  type?: string;
-}
-
-interface ModelsApiResponse {
-  models: ModelsApiModel[];
-}
+import { useModelsManager } from './hooks/useModelsManager';
+import { usePersistedSetting } from './hooks/usePersistedSetting';
 
 type ChatHistoryEntry = {
   role: 'user' | 'assistant';
@@ -29,10 +21,19 @@ type ChatHistoryEntry = {
 };
 
 export default function Playground() {
-  const [modelsData, setModelsData] = useState<Model[]>([]);
+  const {
+    modelsData,
+    setModelsData,
+    selected,
+    setSelected,
+    moderator,
+    setModerator,
+    availableModels,
+    totalModelsByType,
+    allSelectedByType,
+    modelIdToName,
+  } = useModelsManager();
   const [mode, setMode] = useState<Mode>('compare');
-  const [selected, setSelected] = useState<string[]>([]);
-  const [moderator, setModerator] = useState<string>('');
 
   // Dock Drag & Drop State (HTML5 DnD for Dock -> Arena)
   const [draggedDockModelId, setDraggedDockModelId] = useState<string | null>(null);
@@ -46,35 +47,28 @@ export default function Playground() {
   const wheelRafRef = useRef<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showTopics, setShowTopics] = useState(false);
-  const [githubToken, setGithubToken] = useState<string>(() => {
-    try {
-      return localStorage.getItem('github_models_token') || '';
-    } catch { return ''; }
+  const [githubToken, setGithubToken] = usePersistedSetting<string>('github_models_token', '', {
+    serialize: value => value ? value : null,
+    deserialize: (stored, fallback) => stored ?? fallback,
   });
 
-  const [inspectorPosition, setInspectorPosition] = useState<'left' | 'right'>(() => {
-    return (localStorage.getItem('inspector_position') as 'left' | 'right') || 'right';
-  });
+  const [inspectorPosition, setInspectorPosition] = usePersistedSetting<'left' | 'right'>(
+    'inspector_position',
+    'right',
+    {
+      serialize: value => value,
+      deserialize: (stored, fallback) => (stored === 'left' || stored === 'right') ? (stored as 'left' | 'right') : fallback,
+    },
+  );
 
-  const [showCouncilReviewerNames, setShowCouncilReviewerNames] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('show_council_reviewer_names') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('inspector_position', inspectorPosition);
-  }, [inspectorPosition]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('show_council_reviewer_names', String(showCouncilReviewerNames));
-    } catch {
-      // ignore
-    }
-  }, [showCouncilReviewerNames]);
+  const [showCouncilReviewerNames, setShowCouncilReviewerNames] = usePersistedSetting<boolean>(
+    'show_council_reviewer_names',
+    false,
+    {
+      serialize: value => String(value),
+      deserialize: stored => stored === 'true',
+    },
+  );
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
@@ -109,8 +103,6 @@ export default function Playground() {
 
     return lastSynthesis ? [...users, lastSynthesis] : users;
   };
-
-  const modelIdToName = (id: string) => modelsData.find(m => m.id === id)?.name || id;
 
   const summarizeSessionResponses = (responses: Record<string, string>, order: string[]) => {
     const seen = new Set<string>();
@@ -158,67 +150,7 @@ export default function Playground() {
     };
   }, []);
 
-  // Fetch models from API
-  useEffect(() => {
-    fetch('/api/models')
-      .then(res => res.json())
-      .then((data: ModelsApiResponse) => {
-        const apiModels = data.models.map((m) => {
-          const modelType: 'local' | 'api' = m.type === 'api' ? 'api' : 'local';
-          const meta = MODEL_META[modelType];
-          return {
-            id: m.id,
-            name: meta.name || m.name || m.id, // Use meta name or API name
-            color: meta.color,
-            type: modelType,
-            response: "Ready to generate..."
-          };
-        });
-        setModelsData(apiModels);
-
-        // Select only local models by default
-        const defaultSelectedIds = apiModels.filter((m: Model) => m.type === 'local').map((m: Model) => m.id);
-        setSelected(defaultSelectedIds);
-
-        // Set default moderator to an API model if available, otherwise the first model
-        const apiModeratorCandidate = apiModels.find((m: Model) => m.type === 'api');
-        if (apiModeratorCandidate) {
-          setModerator(apiModeratorCandidate.id);
-        } else if (apiModels.length > 0) {
-          setModerator(apiModels[0].id);
-        }
-      })
-      .catch(err => console.error("Failed to fetch models:", err));
-  }, []);
-
-  // Persist optional GitHub token in browser (same key as chat mode)
-  useEffect(() => {
-    try {
-      if (githubToken) {
-        localStorage.setItem('github_models_token', githubToken);
-      } else {
-        localStorage.removeItem('github_models_token');
-      }
-    } catch {
-      // Ignore storage errors (e.g., private mode)
-    }
-  }, [githubToken]);
-
-  // Available models are those in CONFIG but NOT in selected
-  const availableModels = modelsData.filter(m => !selected.includes(m.id));
-
-  const totalModelsByType = {
-    local: modelsData.filter(m => m.type === 'local').length,
-    api: modelsData.filter(m => m.type === 'api').length,
-  };
-  const selectedModelsByType = {
-    local: modelsData.filter(m => m.type === 'local' && selected.includes(m.id)).length,
-    api: modelsData.filter(m => m.type === 'api' && selected.includes(m.id)).length,
-  };
-  const allSelectedByType = {
-    local: totalModelsByType.local > 0 && selectedModelsByType.local === totalModelsByType.local,
-    api: totalModelsByType.api > 0 && selectedModelsByType.api === totalModelsByType.api,
-  };
+  // Local state for GitHub Models token is persisted via usePersistedSetting
 
   // Map selected IDs to models to preserve user-defined order (important for drag-and-drop)
   const selectedModels = selected
@@ -1394,18 +1326,17 @@ export default function Playground() {
     };
   }, []);
 
-  // Load background style from localStorage or use default
-  const [bgStyle, setBgStyle] = useState<BackgroundStyle>(() => {
-    const saved = localStorage.getItem('playground-bg-style');
-    return (saved && BG_STYLES.includes(saved as BackgroundStyle))
-      ? (saved as BackgroundStyle)
-      : 'dots-mesh';
-  });
-
-  // Save background style to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('playground-bg-style', bgStyle);
-  }, [bgStyle]);
+  const [bgStyle, setBgStyle] = usePersistedSetting<BackgroundStyle>(
+    'playground-bg-style',
+    'dots-mesh',
+    {
+      serialize: value => value,
+      deserialize: (stored, fallback) =>
+        stored && BG_STYLES.includes(stored as BackgroundStyle)
+          ? (stored as BackgroundStyle)
+          : fallback,
+    },
+  );
 
   const cycleBgStyle = (direction: 'prev' | 'next') => {
     const currentIndex = BG_STYLES.indexOf(bgStyle);
