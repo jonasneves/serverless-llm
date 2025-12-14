@@ -272,6 +272,7 @@ export default function Playground() {
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const lastSelectedCardRef = useRef<string | null>(null);
   const suppressClickRef = useRef({ card: false, background: false });
   const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
@@ -894,6 +895,7 @@ export default function Playground() {
                 isGenerating={isGenerating}
                 phaseLabel={phaseLabel}
                 linesTransitioning={linesTransitioning}
+                lastSelectedCardRef={lastSelectedCardRef}
               />
             </div>
           </div>
@@ -1020,8 +1022,8 @@ export default function Playground() {
                 Open
               </button>
 
-              {/* Set as Orchestrator - only in Council/Roundtable modes */}
-              {mode !== 'compare' && (
+              {/* Set as Orchestrator - only in Council/Roundtable modes and not already the orchestrator */}
+              {mode !== 'compare' && contextMenu.modelId !== moderator && (
                 <button
                   className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
                   onClick={() => {
@@ -1040,7 +1042,21 @@ export default function Playground() {
               <button
                 className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors flex items-center gap-2"
                 onClick={() => {
+                  const removingModerator = contextMenu.modelId === moderator;
+
+                  // Remove the model from selected
                   handleModelToggle(contextMenu.modelId!);
+
+                  // If removing the orchestrator, auto-select a new one from remaining models
+                  if (removingModerator && mode !== 'compare') {
+                    const remaining = selected.filter(id => id !== contextMenu.modelId);
+                    if (remaining.length > 0) {
+                      setModerator(remaining[0]);
+                    } else {
+                      // If no models remain, clear moderator
+                      setModerator('');
+                    }
+                  }
                   setContextMenu(null);
                 }}
               >

@@ -44,6 +44,7 @@ interface ArenaCanvasProps {
   isGenerating: boolean;
   phaseLabel: string | null;
   linesTransitioning: boolean;
+  lastSelectedCardRef: MutableRefObject<string | null>;
 }
 
 const GRID_CARD_WIDTH = 256;
@@ -82,6 +83,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     isGenerating,
     phaseLabel,
     linesTransitioning,
+    lastSelectedCardRef,
   } = props;
 
   const isCircleMode = mode !== 'compare';
@@ -245,6 +247,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 modelId: model.id,
                 suppressClickRef,
                 setSelectedCardIds,
+                selectedModels,
+                lastSelectedCardRef,
               })}
               onDoubleClick={(e) => handleCardDoubleClick({
                 e,
@@ -387,6 +391,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             e.stopPropagation();
             if (moderatorId) {
               setSelectedCardIds(new Set([moderatorId]));
+              lastSelectedCardRef.current = moderatorId;
             }
           }}
           onDoubleClick={(e) => {
@@ -394,6 +399,15 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             if (moderatorId) {
               setActiveInspectorId(moderatorId);
             }
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenu({
+              x: e.clientX,
+              y: e.clientY,
+              modelId: moderatorId
+            });
           }}
           onMouseEnter={() => setHoveredCard('moderator')}
           onMouseLeave={() => setHoveredCard(null)}
@@ -559,19 +573,43 @@ function handleCardClick({
   modelId,
   suppressClickRef,
   setSelectedCardIds,
+  selectedModels,
+  lastSelectedCardRef,
 }: {
   e: ReactMouseEvent;
   modelId: string;
   suppressClickRef: MutableRefObject<{ card: boolean; background: boolean }>;
   setSelectedCardIds: Dispatch<SetStateAction<Set<string>>>;
+  selectedModels: Model[];
+  lastSelectedCardRef: MutableRefObject<string | null>;
 }) {
   e.stopPropagation();
   if (suppressClickRef.current.card) {
     suppressClickRef.current.card = false;
     return;
   }
+
+  const isShift = e.shiftKey;
   const isMulti = e.metaKey || e.ctrlKey;
-  if (isMulti) {
+
+  if (isShift && lastSelectedCardRef.current) {
+    // Shift+click: select range from last selected to current
+    const lastIndex = selectedModels.findIndex(m => m.id === lastSelectedCardRef.current);
+    const currentIndex = selectedModels.findIndex(m => m.id === modelId);
+
+    if (lastIndex !== -1 && currentIndex !== -1) {
+      const start = Math.min(lastIndex, currentIndex);
+      const end = Math.max(lastIndex, currentIndex);
+      const rangeIds = selectedModels.slice(start, end + 1).map(m => m.id);
+
+      setSelectedCardIds(prev => {
+        const next = new Set(prev);
+        rangeIds.forEach(id => next.add(id));
+        return next;
+      });
+    }
+  } else if (isMulti) {
+    // Cmd/Ctrl+click: toggle individual item
     setSelectedCardIds(prev => {
       const next = new Set(prev);
       if (next.has(modelId)) {
@@ -581,8 +619,11 @@ function handleCardClick({
       }
       return next;
     });
+    lastSelectedCardRef.current = modelId;
   } else {
+    // Regular click: select only this item
     setSelectedCardIds(new Set([modelId]));
+    lastSelectedCardRef.current = modelId;
   }
 }
 

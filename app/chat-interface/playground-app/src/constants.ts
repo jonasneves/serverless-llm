@@ -1,8 +1,8 @@
 import { BackgroundStyle, Mode, TopicPack, TopicPrompt, TrendingTopic } from './types';
 
 export const MODEL_META: Record<string, { color: string; name?: string }> = {
-  local: { color: '#22c55e' }, // Green for local models
-  api: { color: '#f97316' },   // Orange for API models
+  local: { color: '#10b981' }, // Green for local models
+  api: { color: '#3b82f6' },   // Blue for API models
 };
 
 // Curated static topics grounded in current-ish industry/news contexts
