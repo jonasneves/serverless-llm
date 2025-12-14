@@ -624,6 +624,20 @@ document.addEventListener('DOMContentLoaded', () => {
   localModelSelector.loadModels();
   apiModelSelector.loadModels();
 
+  // Make logo clickable to open model selector (matching playground behavior)
+  const logoWithModelSelector = document.getElementById('logoWithModelSelector');
+  if (logoWithModelSelector && localModelSelector) {
+    logoWithModelSelector.style.cursor = 'pointer';
+    logoWithModelSelector.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Open local models dropdown (or toggle if already open)
+      if (typeof localModelSelector.toggleDropdown === 'function') {
+        localModelSelector.toggleDropdown();
+      }
+    });
+  }
+
   // Auto-focus logic: Removed aggressive initial focus.
   // Instead, typing anywhere focuses the input.
 
