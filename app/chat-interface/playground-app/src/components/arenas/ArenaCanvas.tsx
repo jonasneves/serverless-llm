@@ -21,7 +21,6 @@ interface ArenaCanvasProps {
   selectedCardIds: Set<string>;
   setSelectedCardIds: Dispatch<SetStateAction<Set<string>>>;
   setActiveInspectorId: (id: string | null) => void;
-  pinnedModels: Set<string>;
   executionTimes: Record<string, ExecutionTimeData>;
   failedModels: Set<string>;
   cardRefs: MutableRefObject<Map<string, HTMLDivElement>>;
@@ -59,7 +58,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     selectedCardIds,
     setSelectedCardIds,
     setActiveInspectorId,
-    pinnedModels,
     executionTimes,
     failedModels,
     cardRefs,
@@ -232,7 +230,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 modelId: model.id,
                 suppressClickRef,
                 setSelectedCardIds,
-                pinnedModels,
                 setActiveInspectorId,
               })}
               onMouseEnter={() => isCircleMode && setHoveredCard(model.id)}
@@ -528,14 +525,12 @@ function handleCardClick({
   modelId,
   suppressClickRef,
   setSelectedCardIds,
-  pinnedModels,
   setActiveInspectorId,
 }: {
   e: ReactMouseEvent;
   modelId: string;
   suppressClickRef: MutableRefObject<boolean>;
   setSelectedCardIds: Dispatch<SetStateAction<Set<string>>>;
-  pinnedModels: Set<string>;
   setActiveInspectorId: (id: string | null) => void;
 }) {
   e.stopPropagation();
@@ -556,11 +551,7 @@ function handleCardClick({
     });
     setActiveInspectorId(modelId);
   } else {
-    setSelectedCardIds(prev => {
-      const next = new Set([...prev].filter(id => pinnedModels.has(id)));
-      next.add(modelId);
-      return next;
-    });
+    setSelectedCardIds(new Set([modelId]));
     setActiveInspectorId(modelId);
   }
 }

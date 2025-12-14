@@ -262,10 +262,7 @@ export default function Playground() {
     setSelectedCardIds,
     activeInspectorId,
     setActiveInspectorId,
-    pinnedModels,
-    setPinnedModels,
     clearInspectorSelection,
-    retainPinnedSelection,
   } = useInspectorSelection();
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
@@ -284,7 +281,6 @@ export default function Playground() {
     selectionRect,
     isSelecting,
     dragSelectionActiveRef,
-    clearSelection: clearDragSelection,
   } = useSelectionBox({
     rootContainerRef,
     visualizationAreaRef,
@@ -296,7 +292,6 @@ export default function Playground() {
     selectedCardIds,
     setSelectedCardIds,
     setActiveInspectorId,
-    retainPinnedSelection,
     suppressClickRef,
   });
 
@@ -443,7 +438,27 @@ export default function Playground() {
         if (activeEl && activeEl !== document.body) {
           activeEl.blur();
         }
-        if (showDock) setShowDock(false);
+        if (showSettings) {
+          setShowSettings(false);
+          return;
+        }
+        if (showTopics) {
+          setShowTopics(false);
+          return;
+        }
+        if (contextMenu) {
+          setContextMenu(null);
+          return;
+        }
+        if (activeInspectorId || selectedCardIds.size > 0) {
+          clearInspectorSelection();
+          setHoveredCard(null);
+          return;
+        }
+        if (showDock) {
+          setShowDock(false);
+          return;
+        }
         setHoveredCard(null);
         return;
       }
@@ -474,9 +489,8 @@ export default function Playground() {
       // Delete or Backspace removes selected cards from arena
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCardIds.size > 0) {
         event.preventDefault();
-        // Remove all selected cards from the arena
         setSelected(prev => prev.filter(id => !selectedCardIds.has(id)));
-        setSelectedCardIds(new Set());
+        clearInspectorSelection();
         return;
       }
 
@@ -493,7 +507,17 @@ export default function Playground() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showDock, selectedCardIds, mode, handleModeChange]);
+  }, [
+    showDock,
+    showSettings,
+    showTopics,
+    contextMenu,
+    activeInspectorId,
+    selectedCardIds,
+    mode,
+    handleModeChange,
+    clearInspectorSelection,
+  ]);
 
   // Handle wheel scroll to move arena up/down
   useEffect(() => {
@@ -711,7 +735,7 @@ export default function Playground() {
         mode={mode}
         setMode={handleModeChange}
         setHoveredCard={setHoveredCard}
-        clearSelection={clearDragSelection}
+        clearSelection={clearInspectorSelection}
         cycleBgStyle={cycleBgStyle}
         showDock={showDock}
         setShowDock={setShowDock}
@@ -788,7 +812,7 @@ export default function Playground() {
             if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
               setHoveredCard(null);
               if (!suppressClickRef.current) {
-                retainPinnedSelection();
+                clearInspectorSelection();
               }
               suppressClickRef.current = false;
             }
@@ -809,7 +833,6 @@ export default function Playground() {
             selectedCardIds={selectedCardIds}
             setSelectedCardIds={setSelectedCardIds}
             setActiveInspectorId={setActiveInspectorId}
-            pinnedModels={pinnedModels}
             executionTimes={executionTimes}
             failedModels={failedModels}
             cardRefs={cardRefs}
@@ -864,19 +887,6 @@ export default function Playground() {
           councilAnonymousReviews={councilAnonymousReviews}
           showCouncilReviewerNames={showCouncilReviewerNames}
           discussionTurnsByModel={discussionTurnsByModel}
-          pinned={pinnedModels.has(activeInspectorId)}
-          onTogglePin={() => {
-            if (!activeInspectorId) return;
-            setPinnedModels(prev => {
-              const next = new Set(prev);
-              if (next.has(activeInspectorId)) {
-                next.delete(activeInspectorId);
-              } else {
-                next.add(activeInspectorId);
-              }
-              return next;
-            });
-          }}
           position={inspectorPosition}
           onTogglePosition={() => setInspectorPosition(prev => prev === 'left' ? 'right' : 'left')}
         />

@@ -27,7 +27,6 @@ interface UseSelectionBoxParams {
   selectedCardIds: Set<string>;
   setSelectedCardIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   setActiveInspectorId: React.Dispatch<React.SetStateAction<string | null>>;
-  retainPinnedSelection: () => void;
   suppressClickRef: React.MutableRefObject<boolean>;
 }
 
@@ -57,7 +56,6 @@ export function useSelectionBox({
   selectedCardIds,
   setSelectedCardIds,
   setActiveInspectorId,
-  retainPinnedSelection,
   suppressClickRef,
 }: UseSelectionBoxParams) {
   const [dragSelection, setDragSelection] = useState<SelectionState | null>(null);
@@ -186,8 +184,6 @@ export function useSelectionBox({
             setActiveInspectorId(null);
           }
           suppressClickRef.current = willTriggerCardClick;
-        } else if (!state.active) {
-          retainPinnedSelection();
         }
 
         return null;
@@ -211,7 +207,6 @@ export function useSelectionBox({
     selectedCardIds,
     setSelectedCardIds,
     setActiveInspectorId,
-    retainPinnedSelection,
     suppressClickRef,
   ]);
 

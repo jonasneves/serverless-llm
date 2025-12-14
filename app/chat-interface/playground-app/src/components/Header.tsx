@@ -28,7 +28,7 @@ export default function Header({
         <button
           id="dockToggleBtn"
           onClick={() => setShowDock(!showDock)}
-          className="min-w-[44px] min-h-[44px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95"
+          className="min-w-[44px] min-h-[44px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
           title={showDock ? "Close Dock" : "Open Dock"}
         >
           <svg className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,8 +77,9 @@ export default function Header({
             {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
               <button
                 key={m}
+                tabIndex={-1}
                 onClick={() => { setMode(m.toLowerCase() as Mode); setHoveredCard(null); clearSelection(); }}
-                className={`relative z-10 py-2 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 ${mode === m.toLowerCase()
+                className={`relative z-10 py-2 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none ${mode === m.toLowerCase()
                   ? 'text-white'
                   : 'text-slate-400 hover:text-slate-200'
                   }`}
@@ -103,7 +104,7 @@ export default function Header({
         <div className="hidden sm:flex items-center rounded-lg bg-slate-800/30 border border-slate-700/50">
           <button
             onClick={() => cycleBgStyle('prev')}
-            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95"
+            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
             title="Previous background"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +113,7 @@ export default function Header({
           </button>
           <button
             onClick={() => cycleBgStyle('next')}
-            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95"
+            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
             title="Next background"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +125,7 @@ export default function Header({
         {/* Settings */}
         <button
           onClick={onOpenSettings}
-          className="min-w-[44px] min-h-[44px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95"
+          className="min-w-[44px] min-h-[44px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
           title="Settings"
         >
           <svg className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

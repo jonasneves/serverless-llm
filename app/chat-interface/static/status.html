@@ -8,7 +8,7 @@
     /* Status-specific styles */
     .status-dashboard {
         margin: 0 auto;
-        max-width: 900px;
+        max-width: 1400px;
         width: 100%;
         padding: 0 var(--space-4);
         display: flex;
@@ -17,9 +17,38 @@
         padding-bottom: 48px;
     }
 
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    @media (min-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr 1fr;
+            align-items: start;
+        }
+    }
+
+    /* Subtle background pattern */
+    .status-dashboard::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background:
+            radial-gradient(circle at 20% 30%, rgba(30, 58, 95, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(5, 150, 105, 0.02) 0%, transparent 50%);
+        background-size: 100% 100%, 100% 100%;
+        pointer-events: none;
+        z-index: -1;
+    }
+
     .overall-status {
         background: var(--bg-primary);
-        border-radius: 12px;
+        border-radius: var(--radius-card);
         padding: 24px;
         border: 1px solid var(--border-color);
         box-shadow: var(--shadow-sm);
@@ -41,18 +70,22 @@
 
     .overall-status.healthy::before {
         background: #10b981;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
     }
 
     .overall-status.degraded::before {
         background: #f59e0b;
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
     }
 
     .overall-status.unhealthy::before {
         background: #ef4444;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
     }
 
     .overall-status.loading::before {
         background: #6366f1;
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
     }
 
     .status-icon {
@@ -64,17 +97,17 @@
 
     .status-icon.healthy {
         background: #10b981;
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), 0 0 12px rgba(16, 185, 129, 0.4);
     }
 
     .status-icon.degraded {
         background: #f59e0b;
-        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15);
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15), 0 0 12px rgba(245, 158, 11, 0.4);
     }
 
     .status-icon.unhealthy {
         background: #ef4444;
-        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15), 0 0 12px rgba(239, 68, 68, 0.4);
     }
 
     .status-icon.loading {
@@ -94,23 +127,23 @@
         color: var(--text-secondary);
     }
 
-    .services-section {
+    .services-section, .capacity-section {
         background: var(--bg-primary);
-        border-radius: 12px;
+        border-radius: var(--radius-card);
         border: 1px solid var(--border-color);
         box-shadow: var(--shadow-sm);
         display: flex;
         flex-direction: column;
     }
 
-    .services-header {
+    .services-header, .capacity-header {
         padding: 20px 24px;
         border-bottom: 1px solid var(--border-color);
         background: var(--bg-secondary);
-        border-radius: 12px 12px 0 0;
+        border-radius: var(--radius-card) var(--radius-card) 0 0;
     }
 
-    .services-header h3 {
+    .services-header h3, .capacity-header h3 {
         font-size: 16px;
         font-weight: 600;
         color: var(--text-primary);
@@ -119,23 +152,41 @@
         gap: 8px;
     }
 
+    .capacity-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .capacity-summary {
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+    }
+
     .service-item {
         padding: 20px 24px;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 16px;
-        min-height: 72px;
-        transition: background-color 0.15s ease;
+        min-height: 88px;
+        transition: all var(--transition-base);
     }
 
     .service-item:last-child {
         border-bottom: none;
-        border-radius: 0 0 12px 12px;
+        border-radius: 0 0 var(--radius-card) var(--radius-card);
     }
 
     .service-item:hover {
-        background: var(--bg-tertiary);
+        background: var(--bg-secondary);
+    }
+
+    @media (min-width: 1024px) {
+        .service-item {
+            min-height: 100px;
+        }
     }
 
     .service-indicator {
@@ -147,14 +198,17 @@
 
     .service-indicator.online {
         background: #10b981;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
     }
 
     .service-indicator.degraded {
         background: #f59e0b;
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
     }
 
     .service-indicator.offline {
         background: #ef4444;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
     }
 
     .service-indicator.loading {
@@ -213,19 +267,29 @@
 
     .metric-value.success,
     .metric-value.failure {
-        font-size: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
         line-height: 1;
     }
 
-    .metric-value.success {
-        color: #10b981;
+    .status-check-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
     }
 
-    .metric-value.failure {
-        color: #ef4444;
+    .status-check-icon.success-icon {
+        background: #10b98114;
+        border: 1px solid #10b98199;
+    }
+
+    .status-check-icon.failure-icon {
+        background: #ef444414;
+        border: 1px solid #ef444499;
     }
 
     .status-label {
@@ -243,21 +307,25 @@
     .status-label.online {
         background: rgba(16, 185, 129, 0.1);
         color: #059669;
+        border: 1px solid rgba(16, 185, 129, 0.2);
     }
 
     .status-label.degraded {
         background: rgba(245, 158, 11, 0.1);
         color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.2);
     }
 
     .status-label.offline {
         background: rgba(239, 68, 68, 0.1);
         color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
     }
 
     .status-label.loading {
         background: rgba(99, 102, 241, 0.1);
         color: #4f46e5;
+        border: 1px solid rgba(99, 102, 241, 0.2);
     }
 
     .error-details {
@@ -268,6 +336,147 @@
         font-size: 12px;
         color: #b45309;
         font-family: var(--font-mono);
+    }
+
+    /* Load Balancer Capacity Styles */
+    .capacity-item {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-color);
+        transition: all var(--transition-base);
+        min-height: 88px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .capacity-item:last-child {
+        border-bottom: none;
+    }
+
+    .capacity-item:hover {
+        background: var(--bg-secondary);
+    }
+
+    @media (min-width: 1024px) {
+        .capacity-item {
+            min-height: 100px;
+        }
+    }
+
+    .capacity-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .capacity-model-name {
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .capacity-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 13px;
+        font-family: var(--font-mono);
+        color: var(--text-secondary);
+    }
+
+    .capacity-stat {
+        display: flex;
+        gap: 4px;
+    }
+
+    .capacity-stat-value {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .capacity-stat-value.active {
+        color: #f59e0b;
+    }
+
+    .capacity-stat-value.available {
+        color: #10b981;
+    }
+
+    .utilization-bar {
+        height: 8px;
+        background: var(--bg-tertiary);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+        position: relative;
+        border: 1px solid var(--border-color-light);
+    }
+
+    .utilization-fill {
+        height: 100%;
+        transition: width 0.5s ease, background-color var(--transition-base);
+        border-radius: 3px;
+        position: relative;
+    }
+
+    .utilization-fill.low {
+        background: linear-gradient(90deg, var(--success-color), #059669);
+    }
+
+    .utilization-fill.medium {
+        background: linear-gradient(90deg, var(--warning-color), #d97706);
+    }
+
+    .utilization-fill.high {
+        background: linear-gradient(90deg, var(--danger-color), #dc2626);
+    }
+
+    .utilization-label {
+        font-size: 12px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+    }
+
+    .instances-breakdown {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    .instance-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 0;
+    }
+
+    .instance-label {
+        font-size: 12px;
+        color: var(--text-tertiary);
+        min-width: 80px;
+        font-family: var(--font-mono);
+    }
+
+    .instance-bar {
+        flex: 1;
+        height: 6px;
+        background: var(--bg-tertiary);
+        border-radius: 3px;
+        overflow: hidden;
+        border: 1px solid var(--border-color-light);
+    }
+
+    .instance-fill {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+
+    .instance-stats {
+        font-size: 11px;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        min-width: 80px;
+        text-align: right;
     }
 
     .footer {
@@ -281,13 +490,30 @@
         color: var(--text-tertiary);
     }
 
-    @keyframes pulse {
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
 
+    ::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--border-color-dark);
+    }
+
+    @keyframes pulse {
         0%,
         100% {
             opacity: 1;
         }
-
         50% {
             opacity: 0.5;
         }
@@ -310,6 +536,22 @@
         .status-label {
             margin-left: auto;
         }
+
+        .capacity-stats {
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-end;
+        }
+
+        .instance-label {
+            min-width: 60px;
+            font-size: 11px;
+        }
+
+        .instance-stats {
+            min-width: 60px;
+            font-size: 10px;
+        }
     }
 </style>
 {% endblock %}
@@ -324,12 +566,24 @@
         </div>
     </div>
 
-    <div class="services-section">
-        <div class="services-header">
-            <h3>Local Model Services</h3>
+    <div class="dashboard-grid">
+        <div class="services-section">
+            <div class="services-header">
+                <h3>Local Model Services</h3>
+            </div>
+            <div id="services-list">
+                <!-- Service items will be inserted here -->
+            </div>
         </div>
-        <div id="services-list">
-            <!-- Service items will be inserted here -->
+
+        <div class="capacity-section">
+            <div class="capacity-header">
+                <h3>Load Balancer Capacity</h3>
+                <div class="capacity-summary" id="capacity-summary">Loading...</div>
+            </div>
+            <div id="capacity-list">
+                <!-- Capacity items will be inserted here -->
+            </div>
         </div>
     </div>
 
@@ -340,6 +594,36 @@
 
 <script>
     let isRefreshing = false;
+    let isRefreshingCapacity = false;
+    let instanceDetailsCache = {};
+
+    // Equalize row heights between service and capacity lists on desktop
+    function equalizeRowHeights() {
+        if (window.innerWidth < 1024) return; // Only on desktop
+
+        const serviceItems = document.querySelectorAll('.service-item');
+        const capacityItems = document.querySelectorAll('.capacity-item');
+
+        // Reset heights first
+        serviceItems.forEach(item => item.style.height = '');
+        capacityItems.forEach(item => item.style.height = '');
+
+        // Match heights for each row
+        const maxLength = Math.max(serviceItems.length, capacityItems.length);
+        for (let i = 0; i < maxLength; i++) {
+            const serviceItem = serviceItems[i];
+            const capacityItem = capacityItems[i];
+
+            if (serviceItem && capacityItem) {
+                const serviceHeight = serviceItem.offsetHeight;
+                const capacityHeight = capacityItem.offsetHeight;
+                const maxHeight = Math.max(serviceHeight, capacityHeight);
+
+                serviceItem.style.height = `${maxHeight}px`;
+                capacityItem.style.height = `${maxHeight}px`;
+            }
+        }
+    }
 
     async function loadHealthStatus() {
         if (isRefreshing) return;
@@ -353,13 +637,15 @@
             const response = await fetch('/api/models');
             const data = await response.json();
 
-            // Filter to only local models (exclude API models)
-            const localModels = data.models.filter(m => !m.id.includes('gpt') &&
-                !m.id.includes('deepseek-v3') &&
-                !m.id.includes('cohere') &&
-                !m.id.includes('llama-3.3') &&
-                !m.id.includes('llama-4') &&
-                !m.id.includes('llama-3.1'));
+            // Filter to only local models (exclude API models) and sort by ID for consistency
+            const localModels = data.models
+                .filter(m => !m.id.includes('gpt') &&
+                    !m.id.includes('deepseek-v3') &&
+                    !m.id.includes('cohere') &&
+                    !m.id.includes('llama-3.3') &&
+                    !m.id.includes('llama-4') &&
+                    !m.id.includes('llama-3.1'))
+                .sort((a, b) => a.id.localeCompare(b.id));
 
             overallStatus.className = 'overall-status loading';
             overallStatus.innerHTML = `
@@ -411,6 +697,9 @@
             const results = await Promise.all(statusPromises);
             updateOverallStatusDisplay(results);
 
+            // Equalize row heights after content loads
+            setTimeout(equalizeRowHeights, 100);
+
         } catch (error) {
             console.error('Failed to load models:', error);
             overallStatus.className = 'overall-status unhealthy';
@@ -426,6 +715,66 @@
             const now = new Date();
             document.getElementById('last-updated').textContent =
                 `Last checked at ${now.toLocaleTimeString()}`;
+        }
+    }
+
+    async function loadCapacityStatus() {
+        if (isRefreshingCapacity) return;
+
+        const capacityList = document.getElementById('capacity-list');
+        const capacitySummary = document.getElementById('capacity-summary');
+
+        isRefreshingCapacity = true;
+
+        try {
+            const response = await fetch('/api/system/loadbalancer');
+            const data = await response.json();
+
+            // Don't clear the list - update items in place to avoid glitching
+            // Only clear if this is the first load (empty list)
+            const isFirstLoad = capacityList.children.length === 0;
+
+            // Sort model IDs to match the order in services section
+            const sortedModelEntries = Object.entries(data.models).sort((a, b) => a[0].localeCompare(b[0]));
+
+            if (isFirstLoad) {
+                // First load: create all items
+                for (const [modelId, modelData] of sortedModelEntries) {
+                    const item = createCapacityItem(modelId, modelData, instanceDetailsCache[modelId]);
+                    item.id = `capacity-${modelId}`;
+                    capacityList.appendChild(item);
+                }
+            } else {
+                // Subsequent updates: update items in place
+                for (const [modelId, modelData] of sortedModelEntries) {
+                    const newItem = createCapacityItem(modelId, modelData, instanceDetailsCache[modelId]);
+                    newItem.id = `capacity-${modelId}`;
+
+                    const currentItem = document.getElementById(`capacity-${modelId}`);
+                    if (currentItem) {
+                        currentItem.replaceWith(newItem);
+                    } else {
+                        capacityList.appendChild(newItem);
+                    }
+                }
+            }
+
+            // Update summary
+            capacitySummary.textContent = `${data.total_active}/${data.total_capacity} slots active`;
+
+            // Equalize row heights after capacity updates
+            setTimeout(equalizeRowHeights, 100);
+
+        } catch (error) {
+            console.error('Failed to load capacity status:', error);
+            capacityList.innerHTML = `
+                <div style="padding: 20px 24px; text-align: center; color: var(--text-secondary);">
+                    Unable to load capacity metrics
+                </div>
+            `;
+            capacitySummary.textContent = 'N/A';
+        } finally {
+            isRefreshingCapacity = false;
         }
     }
 
@@ -500,7 +849,18 @@
                     <div class="metric">
                         <div class="metric-label">Inference</div>
                         <div class="metric-value ${data.inference_test === 'passed' ? 'success' : 'failure'}">
-                            ${data.inference_test === 'passed' ? '✓' : '✗'}
+                            ${data.inference_test === 'passed' ?
+                                `<div class="status-check-icon success-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                        <polyline points="5 13 10 18 19 7" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>` :
+                                `<div class="status-check-icon failure-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                        <path d="M6 6L18 18M6 18L18 6" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>`
+                            }
                         </div>
                     </div>
                 ` : ''}
@@ -523,7 +883,84 @@
         return item;
     }
 
+    function createCapacityItem(modelId, data, instances) {
+        const item = document.createElement('div');
+        item.className = 'capacity-item';
+
+        const modelName = modelId.split('-').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+
+        const utilizationPercent = data.utilization_percent || 0;
+        let utilizationClass = 'low';
+        if (utilizationPercent >= 90) utilizationClass = 'high';
+        else if (utilizationPercent >= 70) utilizationClass = 'medium';
+
+        let html = `
+        <div class="capacity-header-row">
+            <div class="capacity-model-name">${modelName}</div>
+            <div class="capacity-stats">
+                <div class="capacity-stat">
+                    <span>Total:</span>
+                    <span class="capacity-stat-value">${data.configured_capacity}</span>
+                </div>
+                <div class="capacity-stat">
+                    <span>Active:</span>
+                    <span class="capacity-stat-value active">${data.active_requests}</span>
+                </div>
+                <div class="capacity-stat">
+                    <span>Free:</span>
+                    <span class="capacity-stat-value available">${data.available_slots}</span>
+                </div>
+            </div>
+        </div>
+        <div class="utilization-bar">
+            <div class="utilization-fill ${utilizationClass}" style="width: ${utilizationPercent}%"></div>
+        </div>
+        <div class="utilization-label">${utilizationPercent.toFixed(1)}% utilized</div>
+    `;
+
+        // Add instance breakdown if we have multiple instances
+        if (instances && instances.length > 1) {
+            html += '<div class="instances-breakdown">';
+            instances.forEach((instance, idx) => {
+                const instanceUtil = instance.max_concurrent > 0
+                    ? (instance.active_requests / instance.max_concurrent * 100)
+                    : 0;
+                let instClass = 'low';
+                if (instanceUtil >= 90) instClass = 'high';
+                else if (instanceUtil >= 70) instClass = 'medium';
+
+                html += `
+                <div class="instance-row">
+                    <div class="instance-label">Instance #${instance.instance_id}</div>
+                    <div class="instance-bar">
+                        <div class="instance-fill utilization-fill ${instClass}" style="width: ${instanceUtil}%"></div>
+                    </div>
+                    <div class="instance-stats">${instance.active_requests}/${instance.max_concurrent}</div>
+                </div>
+            `;
+            });
+            html += '</div>';
+        }
+
+        item.innerHTML = html;
+        return item;
+    }
+
+    // Initial load
     loadHealthStatus();
-    setInterval(loadHealthStatus, 30000);
+    loadCapacityStatus();
+
+    // Different refresh intervals
+    setInterval(loadHealthStatus, 30000);  // Health checks every 30 seconds
+    setInterval(loadCapacityStatus, 5000);  // Capacity updates every 5 seconds
+
+    // Equalize heights on window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(equalizeRowHeights, 150);
+    });
 </script>
 {% endblock %}

@@ -29,8 +29,6 @@ interface ResponseInspectorProps {
     response: string;
     evaluation?: any;
   }>>;
-  pinned?: boolean;
-  onTogglePin?: () => void;
   position?: 'left' | 'right';
   onTogglePosition?: () => void;
 }
@@ -47,8 +45,6 @@ export default function ResponseInspector({
   councilAnonymousReviews,
   showCouncilReviewerNames,
   discussionTurnsByModel,
-  pinned = false,
-  onTogglePin,
   position = 'right',
   onTogglePosition,
 }: ResponseInspectorProps) {
@@ -141,21 +137,6 @@ export default function ResponseInspector({
           ))}
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`min-w-[44px] min-h-[44px] w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-colors active:scale-95 ${pinned
-                ? 'text-amber-400 bg-amber-400/10'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              aria-label={pinned ? 'Unpin panel' : 'Pin panel'}
-              title={pinned ? 'Unpin panel' : 'Pin panel'}
-            >
-              <svg className="w-5 h-5 sm:w-4 sm:h-4" fill={pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-            </button>
-          )}
           <button
             onClick={onClose}
             className="min-w-[44px] min-h-[44px] w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors active:scale-95"

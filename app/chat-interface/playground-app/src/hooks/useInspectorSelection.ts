@@ -2,20 +2,16 @@ import { useCallback, useReducer, SetStateAction } from 'react';
 
 type SelectionState = {
   selectedCardIds: Set<string>;
-  pinnedModels: Set<string>;
   activeInspectorId: string | null;
 };
 
 type SelectionAction =
   | { type: 'setSelected'; update: SetStateAction<Set<string>> }
   | { type: 'setActive'; update: SetStateAction<string | null> }
-  | { type: 'setPinned'; update: SetStateAction<Set<string>> }
-  | { type: 'clearSelection' }
-  | { type: 'retainPinned' };
+  | { type: 'clearSelection' };
 
 const initialState: SelectionState = {
   selectedCardIds: new Set(),
-  pinnedModels: new Set(),
   activeInspectorId: null,
 };
 
@@ -30,27 +26,16 @@ export function useInspectorSelection() {
     dispatch({ type: 'setActive', update });
   }, []);
 
-  const setPinnedModels = useCallback((update: SetStateAction<Set<string>>) => {
-    dispatch({ type: 'setPinned', update });
-  }, []);
-
   const clearInspectorSelection = useCallback(() => {
     dispatch({ type: 'clearSelection' });
-  }, []);
-
-  const retainPinnedSelection = useCallback(() => {
-    dispatch({ type: 'retainPinned' });
   }, []);
 
   return {
     selectedCardIds: state.selectedCardIds,
     setSelectedCardIds,
-    pinnedModels: state.pinnedModels,
-    setPinnedModels,
     activeInspectorId: state.activeInspectorId,
     setActiveInspectorId,
     clearInspectorSelection,
-    retainPinnedSelection,
   };
 }
 
@@ -79,47 +64,11 @@ function selectionReducer(state: SelectionState, action: SelectionAction): Selec
       }
       return { ...state, activeInspectorId: nextActive };
     }
-    case 'setPinned': {
-      const nextPinned = resolveSetUpdate(state.pinnedModels, action.update);
-      if (setsEqual(state.pinnedModels, nextPinned)) {
-        return state;
-      }
-      return { ...state, pinnedModels: nextPinned };
-    }
     case 'clearSelection': {
       if (state.selectedCardIds.size === 0 && state.activeInspectorId == null) {
         return state;
       }
       return { ...state, selectedCardIds: new Set(), activeInspectorId: null };
-    }
-    case 'retainPinned': {
-      if (state.pinnedModels.size === 0) {
-        if (state.selectedCardIds.size === 0 && state.activeInspectorId == null) {
-          return state;
-        }
-        return { ...state, selectedCardIds: new Set(), activeInspectorId: null };
-      }
-      const pinnedSelected = new Set(
-        [...state.selectedCardIds].filter(id => state.pinnedModels.has(id))
-      );
-      if (pinnedSelected.size === 0) {
-        if (state.selectedCardIds.size === 0 && state.activeInspectorId == null) {
-          return state;
-        }
-        return { ...state, selectedCardIds: new Set(), activeInspectorId: null };
-      }
-      const nextActive = reconcileActive(state.activeInspectorId, pinnedSelected);
-      if (
-        setsEqual(state.selectedCardIds, pinnedSelected) &&
-        nextActive === state.activeInspectorId
-      ) {
-        return state;
-      }
-      return {
-        ...state,
-        selectedCardIds: pinnedSelected,
-        activeInspectorId: nextActive,
-      };
     }
     default:
       return state;

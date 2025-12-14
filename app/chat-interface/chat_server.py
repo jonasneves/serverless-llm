@@ -178,6 +178,7 @@ async def startup_event():
     for model_id, endpoint in MODEL_ENDPOINTS.items():
         capacity = await fetch_model_capacity(model_id, endpoint)
         MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(capacity)
+        MODEL_CAPACITIES[model_id] = capacity
 
         # Also fetch context length
         try:
@@ -367,6 +368,9 @@ DEFAULT_MODEL_ID = next(
 # Models expose their max_concurrent via /health/details endpoint
 MODEL_SEMAPHORES: Dict[str, asyncio.Semaphore] = {}
 
+# Cache for configured capacities (max_concurrent) for each model
+MODEL_CAPACITIES: Dict[str, int] = {}
+
 # Cache for live context lengths fetched from inference servers
 # Keys are model IDs, values are the actual n_ctx the server is running with
 LIVE_CONTEXT_LENGTHS: Dict[str, int] = {}
@@ -524,10 +528,15 @@ async def playground_interface():
 @app.get("/status")
 async def status_page(request: Request):
     """Serve health status dashboard with automatic cache busting"""
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "status.html",
         {"request": request, **get_static_versions()}
     )
+    # Prevent HTML caching to ensure inline CSS/JS updates are always fetched
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.get("/health")
 async def health():
@@ -662,14 +671,18 @@ async def loadbalancer_status():
     status = {}
     for model_id, semaphore in MODEL_SEMAPHORES.items():
         endpoint = MODEL_ENDPOINTS.get(model_id, "unknown")
+        configured_capacity = MODEL_CAPACITIES.get(model_id, 1)
+        available_slots = semaphore._value
+        active_requests = configured_capacity - available_slots
+
         status[model_id] = {
             "endpoint": endpoint,
-            "configured_capacity": semaphore._bound_value,
-            "active_requests": semaphore._bound_value - semaphore._value,
-            "available_slots": semaphore._value,
+            "configured_capacity": configured_capacity,
+            "active_requests": active_requests,
+            "available_slots": available_slots,
             "utilization_percent": round(
-                ((semaphore._bound_value - semaphore._value) / semaphore._bound_value * 100)
-                if semaphore._bound_value > 0 else 0,
+                (active_requests / configured_capacity * 100)
+                if configured_capacity > 0 else 0,
                 1
             )
         }
