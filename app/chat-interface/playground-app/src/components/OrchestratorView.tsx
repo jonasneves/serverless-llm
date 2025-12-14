@@ -154,13 +154,13 @@ export default function OrchestratorView({
     return (
         <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
-            <div className="h-14 px-4 border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md z-10 rounded-t-2xl">
-                <div className="max-w-3xl mx-auto h-full flex items-center justify-between">
+            <div className="z-10 w-full flex justify-center">
+                <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'}`} />
                             <span className="text-sm font-semibold text-slate-200 tracking-tight">
-                                {selectedModel ? selectedModel.name : 'Select a conductor from the dock'}
+                                {selectedModel ? selectedModel.name : ''}
                             </span>
                         </div>
                         {selectedModel?.type === 'api' && (
@@ -222,7 +222,7 @@ export default function OrchestratorView({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleStart}
                 onOpenTopics={onOpenTopics}
-                placeholder={selectedModel ? `Instruct ${selectedModel.name} to solve a complex task...` : "Select a conductor model..."}
+                placeholder={selectedModel ? `Instruct ${selectedModel.name} to solve a complex task...` : "Select a conductor from the dock..."}
             />
         </div>
     );

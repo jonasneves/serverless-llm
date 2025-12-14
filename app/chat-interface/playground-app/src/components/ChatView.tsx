@@ -137,13 +137,13 @@ export default function ChatView({
     return (
         <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
-            <div className="h-14 px-4 border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md z-10 rounded-t-2xl">
-                <div className="max-w-3xl mx-auto h-full flex items-center justify-between">
+            <div className="z-10 w-full flex justify-center">
+                <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'}`} />
                             <span className="text-sm font-semibold text-slate-200 tracking-tight">
-                                {selectedModel ? selectedModel.name : 'Select a model from the dock'}
+                                {selectedModel ? selectedModel.name : ''}
                             </span>
                         </div>
                         {selectedModel?.type === 'api' && (
@@ -221,7 +221,7 @@ export default function ChatView({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleSend}
                 onOpenTopics={onOpenTopics}
-                placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start chatting..."}
+                placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting..."}
             />
         </div>
     );
