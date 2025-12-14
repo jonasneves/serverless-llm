@@ -1,5 +1,19 @@
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize model selectors (multi-select mode)
+  // Use hidden containers since we won't render dropdowns
+  const hiddenContainer = document.createElement('div');
+  hiddenContainer.id = 'hiddenModelSelectors';
+  hiddenContainer.style.display = 'none';
+  document.body.appendChild(hiddenContainer);
+  
+  const localModelSelectorContainer = document.createElement('div');
+  localModelSelectorContainer.id = 'localModelSelector';
+  hiddenContainer.appendChild(localModelSelectorContainer);
+  
+  const apiModelSelectorContainer = document.createElement('div');
+  apiModelSelectorContainer.id = 'apiModelSelector';
+  hiddenContainer.appendChild(apiModelSelectorContainer);
+
   const localModelSelector = new ModelSelector('#localModelSelector', {
     multiSelect: true,
     autoSelectOnline: true,
@@ -14,6 +28,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     filterTypes: ['api']
   });
 
+  // Prevent dropdown rendering
+  localModelSelector.render = function() {};
+  apiModelSelector.render = function() {};
+
   function updateButtonState() {
     const generateBtn = document.getElementById('sendBtn');
     const queryInput = document.getElementById('userInput');
@@ -23,15 +41,210 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   
   function getAllSelectedModels() {
-    return [...localModelSelector.getSelected(), ...apiModelSelector.getSelected()];
+    const selected = [];
+    if (localModelSelector.selectedModels) {
+      localModelSelector.selectedModels.forEach(id => selected.push(id));
+    }
+    if (apiModelSelector.selectedModels) {
+      apiModelSelector.selectedModels.forEach(id => selected.push(id));
+    }
+    return selected;
   }
 
   function getModelInfo(modelId) {
     return localModelSelector.models[modelId] || apiModelSelector.models[modelId];
   }
 
-  await localModelSelector.loadModels();
-  await apiModelSelector.loadModels();
+  // Update selected models display and dock
+  function updateSelectedModelsDisplay() {
+    const container = document.getElementById('selectedModelsDisplay');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const allSelected = new Map();
+    
+    if (localModelSelector && localModelSelector.selectedModels) {
+      localModelSelector.selectedModels.forEach(id => {
+        const model = localModelSelector.models[id];
+        if (model) allSelected.set(id, model);
+      });
+    }
+    
+    if (apiModelSelector && apiModelSelector.selectedModels) {
+      apiModelSelector.selectedModels.forEach(id => {
+        const model = apiModelSelector.models[id];
+        if (model) allSelected.set(id, model);
+      });
+    }
+
+    allSelected.forEach((model, id) => {
+      const chip = document.createElement('div');
+      chip.className = `model-chip selected model-type-${model.type}`;
+      
+      let statusClass = 'offline';
+      if (model.type === 'api') statusClass = 'api';
+      else if (model.status === 'online') statusClass = 'online';
+      else if (model.status === 'checking') statusClass = 'checking';
+
+      chip.innerHTML = `
+        <span class="status-dot status-${statusClass}"></span>
+        <span class="model-name-text">${model.name}</span>
+      `;
+
+      chip.onclick = (e) => {
+        e.stopPropagation();
+        toggleDock();
+      };
+
+      container.appendChild(chip);
+    });
+
+    updateDock();
+  }
+
+  // Populate dock with models
+  function updateDock() {
+    const localDockList = document.getElementById('localDockList');
+    const apiDockList = document.getElementById('apiDockList');
+    const localDockCount = document.getElementById('localDockCount');
+    const apiDockCount = document.getElementById('apiDockCount');
+
+    const renderModelItem = (selector, id, model) => {
+      const isSelected = selector.selectedModels.has(id);
+      const el = document.createElement('div');
+
+      let statusClass = 'offline';
+      if (model.type === 'api') statusClass = 'api';
+      else if (model.status === 'online') statusClass = 'online';
+      else if (model.status === 'checking') statusClass = 'checking';
+
+      el.className = `model-option ${isSelected ? 'selected' : ''}`;
+      const statusDot = `<span class="status-dot status-${statusClass}"></span>`;
+      const checkIcon = `<span class="model-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+      el.innerHTML = `
+        ${statusDot}
+        <span class="model-name-text">${model.name}</span>
+        ${checkIcon}
+      `;
+
+      el.onclick = (e) => {
+        e.stopPropagation();
+        selector.toggleModel(id);
+      };
+      return el;
+    };
+
+    if (localDockList && localModelSelector) {
+      localDockList.innerHTML = '';
+      const localModels = Object.entries(localModelSelector.models || {}).filter(([id, m]) => m.type === 'local');
+      if (localDockCount) {
+        localDockCount.textContent = `(${localModels.length})`;
+      }
+      localModels.forEach(([id, model]) => {
+        localDockList.appendChild(renderModelItem(localModelSelector, id, model));
+      });
+    }
+
+    if (apiDockList && apiModelSelector) {
+      apiDockList.innerHTML = '';
+      const apiModels = Object.entries(apiModelSelector.models || {}).filter(([id, m]) => m.type === 'api');
+      if (apiDockCount) {
+        apiDockCount.textContent = `(${apiModels.length})`;
+      }
+      apiModels.forEach(([id, model]) => {
+        apiDockList.appendChild(renderModelItem(apiModelSelector, id, model));
+      });
+    }
+  }
+
+  // Model Dock Panel
+  const modelDock = document.getElementById('modelDock');
+  const dockOverlay = document.getElementById('dockOverlay');
+  let showDock = false;
+
+  function toggleDock() {
+    showDock = !showDock;
+    if (modelDock) {
+      modelDock.classList.toggle('show', showDock);
+    }
+    if (dockOverlay) {
+      dockOverlay.classList.toggle('show', showDock);
+    }
+  }
+
+  function closeDock() {
+    showDock = false;
+    if (modelDock) {
+      modelDock.classList.remove('show');
+    }
+    if (dockOverlay) {
+      dockOverlay.classList.remove('show');
+    }
+  }
+
+  const logoWithModelSelector = document.getElementById('logoWithModelSelector');
+  if (logoWithModelSelector) {
+    logoWithModelSelector.style.cursor = 'pointer';
+    logoWithModelSelector.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleDock();
+    });
+  }
+
+  if (dockOverlay) {
+    dockOverlay.addEventListener('click', closeDock);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'm' || e.key === 'M') {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        return;
+      }
+      toggleDock();
+    }
+    if (e.key === 'Escape') {
+      closeDock();
+    }
+  });
+
+  document.querySelectorAll('.model-dock-toggle-all').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type;
+      const selector = type === 'local' ? localModelSelector : apiModelSelector;
+      const allModels = Object.keys(selector.models || {});
+      const allSelected = allModels.length > 0 && allModels.every(id => selector.selectedModels.has(id));
+      
+      if (allSelected) {
+        allModels.forEach(id => selector.deselectModel(id));
+      } else {
+        allModels.forEach(id => selector.selectModel(id));
+      }
+    });
+  });
+
+  const originalLocalChange = localModelSelector.options.onSelectionChange;
+  localModelSelector.options.onSelectionChange = (...args) => {
+    if (originalLocalChange) originalLocalChange(...args);
+    updateDock();
+    updateSelectedModelsDisplay();
+  };
+
+  const originalApiChange = apiModelSelector.options.onSelectionChange;
+  apiModelSelector.options.onSelectionChange = (...args) => {
+    if (originalApiChange) originalApiChange(...args);
+    updateDock();
+    updateSelectedModelsDisplay();
+  };
+
+  await Promise.all([
+    localModelSelector.loadModels(),
+    apiModelSelector.loadModels()
+  ]);
+  
+  updateSelectedModelsDisplay();
 
   const generateBtn = document.getElementById('sendBtn');
   const queryInput = document.getElementById('userInput');

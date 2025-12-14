@@ -4,6 +4,7 @@
 {% block subtitle %}Explore Diverse Outputs{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="/static/chat.css?v={{ chat_css }}">
 <style>
   /* Page-specific styles for Variations mode */
 
@@ -392,47 +393,57 @@
   </div>
 </div>
 
+<!-- Model Dock Panel (slides in from left) -->
+<div id="modelDock" class="model-dock">
+  <div class="model-dock-header">
+    <h2>Available Models</h2>
+    <p>Click to select models</p>
+  </div>
+  <div class="model-dock-content">
+    <div class="model-dock-section">
+      <div class="model-dock-section-header">
+        <div class="model-dock-section-title">
+          <span>Local Models</span>
+          <span class="model-dock-count" id="localDockCount">(0)</span>
+        </div>
+        <button class="model-dock-toggle-all" data-type="local">+ Add All</button>
+      </div>
+      <div class="model-dock-list" id="localDockList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    <div class="model-dock-section">
+      <div class="model-dock-section-header">
+        <div class="model-dock-section-title">
+          <span>API Models</span>
+          <span class="model-dock-count" id="apiDockCount">(0)</span>
+        </div>
+        <button class="model-dock-toggle-all" data-type="api">+ Add All</button>
+      </div>
+      <div class="model-dock-list" id="apiDockList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+  <div class="model-dock-footer">
+    <p>Press <kbd>M</kbd> to toggle this panel</p>
+  </div>
+</div>
+
+<!-- Dock overlay (closes dock when clicked) -->
+<div id="dockOverlay" class="dock-overlay"></div>
+
 <div class="typing-indicator" id="typingIndicator">
   <span class="model-badge streaming-badge">Generating...</span>
 </div>
 
 <div class="input-container">
   <div class="controls-row">
-    <div class="model-selector-compact">
-      <button class="model-selector-trigger" id="localModelsTrigger" type="button">
-        <div class="trigger-content">
-          <span class="trigger-text">Local Models</span>
-          <span class="trigger-badge" id="localModelCount">0</span>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
-      <div class="model-selector-dropdown" id="localModelsDropdown">
-        <div class="model-selector" id="localModelSelector">
-          <!-- Local model chips populated by JS -->
-        </div>
+    <div class="selected-models-container">
+      <div class="model-selector" id="selectedModelsDisplay">
+        <!-- Selected model chips populated by JS -->
       </div>
     </div>
-
-    <div class="model-selector-compact">
-      <button class="model-selector-trigger" id="apiModelsTrigger" type="button">
-        <div class="trigger-content">
-          <span class="trigger-text">API Models</span>
-          <span class="trigger-badge" id="apiModelCount">0</span>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
-      <div class="model-selector-dropdown" id="apiModelsDropdown">
-        <div class="model-selector" id="apiModelSelector">
-          <!-- API model chips populated by JS -->
-        </div>
-      </div>
-    </div>
-
-    <div class="flex-spacer"></div>
     <div class="controls-secondary">
       <div class="control-group">
         <label>Num Responses:</label>

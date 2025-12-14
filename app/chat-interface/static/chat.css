@@ -523,6 +523,56 @@
   }
 }
 
+/* Selected models display container */
+.selected-models-container {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  position: relative;
+  margin-right: var(--space-2);
+}
+
+/* Ensure trash can button stays fixed on the right */
+#clearBtn {
+  flex-shrink: 0;
+}
+
+
+.selected-models-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.selected-models-container::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+}
+
+.selected-models-container::-webkit-scrollbar-thumb {
+  background: var(--border-color-dark);
+  border-radius: var(--radius-full);
+}
+
+.selected-models-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+.selected-models-container .model-selector {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: min-content;
+  width: max-content;
+}
+
+.selected-models-container .model-selector .model-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 @media (max-width: 480px) {
   .chat-history {
     padding: var(--space-2);

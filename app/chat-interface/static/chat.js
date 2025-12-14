@@ -18,6 +18,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // State - Separate selectors for local and API models
+  // Use hidden containers since we won't render dropdowns
+  const hiddenContainer = document.createElement('div');
+  hiddenContainer.id = 'hiddenModelSelectors';
+  hiddenContainer.style.display = 'none';
+  document.body.appendChild(hiddenContainer);
+  
+  const localModelSelectorContainer = document.createElement('div');
+  localModelSelectorContainer.id = 'localModelSelector';
+  hiddenContainer.appendChild(localModelSelectorContainer);
+  
+  const apiModelSelectorContainer = document.createElement('div');
+  apiModelSelectorContainer.id = 'apiModelSelector';
+  hiddenContainer.appendChild(apiModelSelectorContainer);
+
   const localModelSelector = new ModelSelector('#localModelSelector', {
     showStatus: true,
     autoSelectOnline: true,
@@ -31,6 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
     onSelectionChange: updateSendButtonState,
     filterTypes: ['api']
   });
+
+  // Prevent dropdown rendering - override render method
+  localModelSelector.render = function() {};
+  apiModelSelector.render = function() {};
 
   // Helper to get all selected models from both selectors
   function getAllSelectedModels() {
@@ -620,36 +638,100 @@ document.addEventListener('DOMContentLoaded', () => {
     resetTokenUsage();
   }
 
+  // Update selected models display and dock
+  function updateSelectedModelsDisplay() {
+    const container = document.getElementById('selectedModelsDisplay');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Get all selected models from both selectors
+    const allSelected = new Map();
+    
+    if (localModelSelector && localModelSelector.selectedModels) {
+      localModelSelector.selectedModels.forEach(id => {
+        const model = localModelSelector.models[id];
+        if (model) allSelected.set(id, model);
+      });
+    }
+    
+    if (apiModelSelector && apiModelSelector.selectedModels) {
+      apiModelSelector.selectedModels.forEach(id => {
+        const model = apiModelSelector.models[id];
+        if (model) allSelected.set(id, model);
+      });
+    }
+
+    // Render selected models as chips
+    allSelected.forEach((model, id) => {
+      const chip = document.createElement('div');
+      chip.className = `model-chip selected model-type-${model.type}`;
+      
+      let statusClass = 'offline';
+      if (model.type === 'api') statusClass = 'api';
+      else if (model.status === 'online') statusClass = 'online';
+      else if (model.status === 'checking') statusClass = 'checking';
+
+      chip.innerHTML = `
+        <span class="status-dot status-${statusClass}"></span>
+        <span class="model-name-text">${model.name}</span>
+      `;
+
+      // Click to deselect (opens dock)
+      chip.onclick = (e) => {
+        e.stopPropagation();
+        toggleDock();
+      };
+
+      container.appendChild(chip);
+    });
+
+    // Update dock as well
+    updateDock();
+  }
+
   // Hook into ModelSelector's renderDropdownContent to update dock
   // Store original renderDropdownContent
-  const originalLocalRender = localModelSelector.renderDropdownContent.bind(localModelSelector);
-  localModelSelector.renderDropdownContent = function() {
-    originalLocalRender();
-    updateDock();
-  };
+  const originalLocalRender = localModelSelector.renderDropdownContent?.bind(localModelSelector);
+  if (originalLocalRender) {
+    localModelSelector.renderDropdownContent = function() {
+      originalLocalRender();
+      updateDock();
+      updateSelectedModelsDisplay();
+    };
+  }
 
-  const originalApiRender = apiModelSelector.renderDropdownContent.bind(apiModelSelector);
-  apiModelSelector.renderDropdownContent = function() {
-    originalApiRender();
-    updateDock();
-  };
+  const originalApiRender = apiModelSelector.renderDropdownContent?.bind(apiModelSelector);
+  if (originalApiRender) {
+    apiModelSelector.renderDropdownContent = function() {
+      originalApiRender();
+      updateDock();
+      updateSelectedModelsDisplay();
+    };
+  }
 
-  // Also set up selection change callbacks
+  // Set up selection change callbacks
   const originalLocalChange = localModelSelector.options.onSelectionChange;
   localModelSelector.options.onSelectionChange = (...args) => {
     if (originalLocalChange) originalLocalChange(...args);
     updateDock();
+    updateSelectedModelsDisplay();
   };
 
   const originalApiChange = apiModelSelector.options.onSelectionChange;
   apiModelSelector.options.onSelectionChange = (...args) => {
     if (originalApiChange) originalApiChange(...args);
     updateDock();
+    updateSelectedModelsDisplay();
   };
 
   // Initialize both model selectors
-  localModelSelector.loadModels();
-  apiModelSelector.loadModels();
+  Promise.all([
+    localModelSelector.loadModels(),
+    apiModelSelector.loadModels()
+  ]).then(() => {
+    updateSelectedModelsDisplay();
+  });
 
   // Model Dock Panel (matching playground behavior)
   const modelDock = document.getElementById('modelDock');
