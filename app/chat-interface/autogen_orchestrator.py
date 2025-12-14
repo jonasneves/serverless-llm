@@ -17,62 +17,6 @@ from constants import DEFAULT_REMOTE_ENDPOINTS
 
 logger = logging.getLogger(__name__)
 
-# Custom Mock Client for Demo Mode
-class MockModelClient:
-    def __init__(self, config, **kwargs):
-        self.model_name = config.get("model", "unknown")
-        print(f"Initialized Mock Client for {self.model_name}")
-
-    def create(self, params):
-        # Generate a dummy response based on the last message
-        messages = params.get("messages", [])
-        last_msg = messages[-1]["content"] if messages else ""
-        
-        response_content = f"[MOCK {self.model_name}] Processing: {last_msg[:50]}..."
-        
-        if "reasoning" in self.model_name or "qwen" in self.model_name:
-            response_content = f"**Step 1:** Analyzing '{last_msg}'\n**Step 2:** Calculating logic...\n**Conclusion:** Valid logic path found."
-        elif "knowledge" in self.model_name or "phi" in self.model_name:
-            response_content = f"Here is some information about '{last_msg}': It is a fascinating topic with many facets."
-        elif "quick" in self.model_name or "llama" in self.model_name:
-            response_content = f"Short answer: Yes, regarding {last_msg}."
-        elif "orchestrator" in self.model_name:
-            # Orchestrator needs to call tools often
-            if "search" in last_msg.lower():
-                # Simulate tool call format for AutoGen
-                # This is tricky without real LLM, so we'll just return text that looks like a plan
-                response_content = "I should search for this information. Call function: search_web"
-            else:
-                response_content = f"I will answer your question about: {last_msg}"
-
-        from types import SimpleNamespace
-        choice = SimpleNamespace()
-        choice.message = SimpleNamespace()
-        choice.message.content = response_content
-        choice.message.function_call = None
-        
-        # Simulate function call if needed (very basic)
-        if "orchestrator" in self.model_name and "search" in last_msg.lower():
-             # In 0.2, function calling is complex to mock in this simple wrapper without proper structure
-             # We will stick to text response for mock to avoid breaking parser
-             pass
-
-        response = SimpleNamespace()
-        response.choices = [choice]
-        response.model = self.model_name
-        response.usage = SimpleNamespace(prompt_tokens=10, completion_tokens=10, total_tokens=20)
-        return response
-
-    def message_retrieval(self, response):
-        return [response.choices[0].message.content]
-
-    def cost(self, response):
-        return 0
-
-    @staticmethod
-    def get_usage(response):
-        return {}
-
 
 class AutoGenOrchestrator:
     """
@@ -110,11 +54,6 @@ class AutoGenOrchestrator:
 
     def _create_llm_config(self, base_url: str, model_name: str, api_key: str = "local", api_type: str = "open_ai") -> dict:
         """Create an AutoGen llm_config"""
-        # Simple availability check (only for local endpoints)
-        if api_key == "local" and not self._check_endpoint(base_url):
-            logger.warning(f"Endpoint {base_url} unreachable. Using MockModelClient.")
-            pass
-
         return {
             "config_list": [
                 {
@@ -125,7 +64,7 @@ class AutoGenOrchestrator:
                 }
             ],
             "cache_seed": None,  # Disable caching
-            "timeout": 60,       # Longer timeout for orchestration
+            "timeout": 120,      # Adequate timeout for orchestration
         }
 
     async def _search_web_wrapper(self, query: str) -> str:
@@ -136,8 +75,11 @@ class AutoGenOrchestrator:
             "arguments": {"query": query}
         })
         
-        result = await self.web_search_tool.search(query, num_results=3)
-        formatted = self.web_search_tool.format_results_for_context(result)
+        try:
+            result = await self.web_search_tool.search(query, num_results=3)
+            formatted = self.web_search_tool.format_results_for_context(result)
+        except Exception as e:
+            formatted = f"Error searching web: {str(e)}"
         
         await self.event_queue.put({
             "event": "tool_result",
@@ -154,8 +96,11 @@ class AutoGenOrchestrator:
             "arguments": {"code": code}
         })
 
-        result = await self.code_executor_tool.execute(code, timeout=10)
-        formatted = self.code_executor_tool.format_result_for_context(result)
+        try:
+            result = await self.code_executor_tool.execute(code, timeout=10)
+            formatted = self.code_executor_tool.format_result_for_context(result)
+        except Exception as e:
+            formatted = f"Error executing code: {str(e)}"
         
         await self.event_queue.put({
             "event": "tool_result",
@@ -212,10 +157,9 @@ class AutoGenOrchestrator:
             last_msg = user.last_message(expert)["content"]
         except Exception as e:
             logger.error(f"Error in expert {agent_name}: {e}")
-            last_msg = f"Error: {str(e)}"
-            # If network error, we return a fallback
+            last_msg = f"Error invoking expert: {str(e)}"
             if "connect" in str(e).lower():
-                last_msg = "[System: Model unreachable. Skipping expert.]"
+                last_msg = "[System: Expert Model unreachable. Please check model status.]"
 
         await self.event_queue.put({
             "event": "tool_result",
@@ -231,7 +175,7 @@ class AutoGenOrchestrator:
         return await self._ask_expert(
             "reasoning_expert", 
             config, 
-            "You are a math and reasoning expert. Solve problems step-by-step with clear logic.", 
+            "You are a math and reasoning expert. Solve problems step-by-step with clear logic. Provide the final answer clearly.", 
             question
         )
 
@@ -283,18 +227,21 @@ class AutoGenOrchestrator:
 
             orchestrator = autogen.AssistantAgent(
                 name="orchestrator",
-                system_message="""
-You are an intelligent orchestrator. Your job is to answer the user's query by calling the appropriate functions/tools.
+                system_message="""You are an intelligent Orchestrator. 
+Your goal is to answer the user's request efficiently using the available tools.
 
-ROUTING RULES:
-1. "latest", "news", "today" -> call search_web
-2. Math, logic -> call ask_reasoning_expert
-3. Code -> call execute_python
-4. General knowledge -> call ask_knowledge_expert
-5. Simple questions -> call ask_quick_expert
+AVAILABLE TOOLS:
+- search_web(query): Search the internet for latest news, facts, or current events.
+- execute_python(code): Execute Python code for calculations, data processing, or algorithms.
+- ask_reasoning_expert(question): Delegate complex logic or math problems to a reasoning expert.
+- ask_knowledge_expert(question): Delegate general knowledge questions.
+- ask_quick_expert(question): Delegate simple questions for a quick specific answer.
 
-When you have the answer from the tools, summarize it and reply to the user.
-If you know the answer directly (e.g. greeting), just reply.
+GUIDELINES:
+1. If the user asks for latest news or current information (e.g. "latest news on AI"), you MUST use 'search_web'.
+2. After receiving tool results, analyze them and provide a FINAL ANSWER to the user.
+3. Do not just say you will do something; USE the tool function.
+4. If you have enough information, answer directly and terminate.
 """,
                 llm_config=llm_config,
             )
@@ -304,7 +251,7 @@ If you know the answer directly (e.g. greeting), just reply.
                 name="user_proxy",
                 human_input_mode="NEVER",
                 max_consecutive_auto_reply=max_turns,
-                is_termination_msg=lambda x: "TERMINATE" in x.get("content", ""),
+                is_termination_msg=lambda x: "TERMINATE" in x.get("content", "") or (x.get("content", "").strip().endswith("TERMINATE")),
                 code_execution_config=False,  # We use our own tool for code
             )
 
@@ -349,11 +296,10 @@ If you know the answer directly (e.g. greeting), just reply.
                     )
                 except Exception as e:
                     logger.error(f"Chat execution error: {e}")
-                    # If we have a network error at the top level, let user know
                     if "connect" in str(e).lower():
                         await self.event_queue.put({
                             "event": "error", 
-                            "error": "Could not connect to Orchestrator model (Qwen). Please ensure models are running."
+                            "error": "Could not connect to Orchestrator model. Please ensure the model server is running."
                         })
                     else:
                         await self.event_queue.put({"event": "error", "error": str(e)})
@@ -363,17 +309,30 @@ If you know the answer directly (e.g. greeting), just reply.
             asyncio.create_task(run_chat())
 
             # 6. Yield Events from Queue
+            final_answer_acc = []
+            
             while True:
                 event = await self.event_queue.get()
                 if event is None:
                     break
+                
+                # Capture possible final answer from the last agent message
+                if event.get("event") == "agent_message" and event.get("agent") == "orchestrator":
+                     final_answer_acc.append(event.get("content", ""))
+
                 yield event
+
+            # Determine final answer from history
+            final_text = ""
+            if final_answer_acc:
+                final_text = final_answer_acc[-1] # The last message is usually the answer
 
             yield {
                 "event": "complete",
                 "summary": {
                     "framework": "Microsoft AutoGen (0.2.x)",
-                    "status": "success"
+                    "status": "success",
+                    "final_answer": final_text
                 }
             }
 
