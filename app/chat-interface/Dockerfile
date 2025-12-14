@@ -50,6 +50,10 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy all Python files and JSON config
 COPY --chown=appuser:appuser *.py .
 COPY --chown=appuser:appuser *.json .
+# Copy directories
+COPY --chown=appuser:appuser utils ./utils
+COPY --chown=appuser:appuser api ./api
+COPY --chown=appuser:appuser services ./services
 # Copy static files (excluding playground, which will be copied from builder)
 COPY --chown=appuser:appuser static ./static
 # Copy pre-built playground from playground-builder stage (overwrites any existing playground)
