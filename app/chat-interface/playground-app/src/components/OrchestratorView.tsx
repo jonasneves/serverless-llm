@@ -154,22 +154,24 @@ export default function OrchestratorView({
     return (
         <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
-            <div className="h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md z-10 rounded-t-2xl">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'}`} />
-                        <span className="text-sm font-semibold text-slate-200 tracking-tight">
-                            {selectedModel ? selectedModel.name : 'Select a conductor from the dock'}
-                        </span>
+            <div className="h-14 px-4 border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md z-10 rounded-t-2xl">
+                <div className="max-w-3xl mx-auto h-full flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'}`} />
+                            <span className="text-sm font-semibold text-slate-200 tracking-tight">
+                                {selectedModel ? selectedModel.name : 'Select a conductor from the dock'}
+                            </span>
+                        </div>
+                        {selectedModel?.type === 'api' && (
+                            <span className="text-[10px] uppercase tracking-wider bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20 font-medium">
+                                API
+                            </span>
+                        )}
                     </div>
-                    {selectedModel?.type === 'api' && (
-                        <span className="text-[10px] uppercase tracking-wider bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20 font-medium">
-                            API
-                        </span>
-                    )}
-                </div>
-                <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
-                    AUTOGEN • MULTI-AGENT
+                    <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
+                        AUTOGEN • MULTI-AGENT
+                    </div>
                 </div>
             </div>
 
