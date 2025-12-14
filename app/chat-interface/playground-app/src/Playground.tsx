@@ -812,19 +812,17 @@ export default function Playground() {
           />
         )}
 
-        {/* Model Dock (Left) - Hidden in Orchestrator/Chat Mode */}
-        {mode !== 'orchestrator' && mode !== 'chat' && (
-          <ModelDock
-            showDock={showDock}
-            availableModels={availableModels}
-            allSelectedByType={allSelectedByType}
-            totalModelsByType={totalModelsByType}
-            handleDragStart={handleDockDragStart}
-            handleModelToggle={handleModelToggle}
-            handleAddGroup={handleAddGroup}
-            dockRef={dockRef}
-          />
-        )}
+        {/* Model Dock (Left) - Available in all modes */}
+        <ModelDock
+          showDock={showDock}
+          availableModels={availableModels}
+          allSelectedByType={allSelectedByType}
+          totalModelsByType={totalModelsByType}
+          handleDragStart={handleDockDragStart}
+          handleModelToggle={handleModelToggle}
+          handleAddGroup={handleAddGroup}
+          dockRef={dockRef}
+        />
 
         {/* Orchestrator View */}
         {mode === 'orchestrator' && (
@@ -834,6 +832,7 @@ export default function Playground() {
               selectedModelId={selected[0] || null}
               onSelectModel={(id) => setSelected([id])}
               githubToken={githubToken}
+              onOpenTopics={() => setShowTopics(true)}
             />
           </div>
         )}
@@ -846,6 +845,7 @@ export default function Playground() {
               selectedModelId={selected[0] || null}
               onSelectModel={(id) => setSelected([id])}
               githubToken={githubToken}
+              onOpenTopics={() => setShowTopics(true)}
             />
           </div>
         )}

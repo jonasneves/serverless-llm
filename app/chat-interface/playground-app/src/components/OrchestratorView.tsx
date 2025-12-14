@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
-import { Play, Square, Terminal, Cpu, Bot, CheckCircle, AlertTriangle } from 'lucide-react';
+import PromptInput from './PromptInput';
+import { Terminal, Cpu, Bot, CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface OrchestratorViewProps {
     id?: string;
@@ -9,6 +10,7 @@ interface OrchestratorViewProps {
     selectedModelId: string | null;
     onSelectModel: (id: string) => void;
     githubToken?: string;
+    onOpenTopics: () => void;
 }
 
 interface OrchestrationEvent {
@@ -39,15 +41,17 @@ interface OrchestrationEvent {
 export default function OrchestratorView({
     models,
     selectedModelId,
-    onSelectModel,
-    githubToken
+    // onSelectModel,
+    githubToken,
+    onOpenTopics
 }: OrchestratorViewProps) {
-    const [query, setQuery] = useState('');
-    const [isRunning, setIsRunning] = useState(false);
     const [events, setEvents] = useState<OrchestrationEvent[]>([]);
     const [rounds, setRounds] = useState<OrchestrationEvent[][]>([]);
+    const [isRunning, setIsRunning] = useState(false);
+    const [inputFocused, setInputFocused] = useState(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     // Group events into rounds for display
     useEffect(() => {
@@ -81,8 +85,8 @@ export default function OrchestratorView({
         }
     }, [events, rounds]);
 
-    const handleStart = async () => {
-        if (!query.trim() || !selectedModelId || isRunning) return;
+    const handleStart = async (text: string) => {
+        if (!text.trim() || !selectedModelId || isRunning) return;
 
         setIsRunning(true);
         setEvents([]); // Clear previous run
@@ -95,7 +99,7 @@ export default function OrchestratorView({
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query: query,
+                    query: text,
                     model: selectedModelId,
                     max_rounds: 10, // Default
                     temperature: 0.7, // Default
@@ -145,41 +149,34 @@ export default function OrchestratorView({
         }
     };
 
-    const handleStop = () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            setIsRunning(false);
-        }
-    };
+    const selectedModel = models.find(m => m.id === selectedModelId);
 
     return (
-        <div className="flex flex-col h-full bg-slate-900 text-white overflow-hidden relative">
+        <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
-            <div className="flex items-center p-4 border-b border-white/10 gap-4 bg-slate-900/50 backdrop-blur top-0 z-10">
-                <div className="flex-1 max-w-xs">
-                    <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Model</label>
-                    <select
-                        value={selectedModelId || ''}
-                        onChange={(e) => onSelectModel(e.target.value)}
-                        className="w-full bg-slate-800 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
-                    >
-                        <option value="" disabled>Select a model...</option>
-                        {models.map(m => (
-                            <option key={m.id} value={m.id}>
-                                {m.name} {m.type === 'api' ? '(API)' : ''}
-                            </option>
-                        ))}
-                    </select>
+            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-slate-900/50 backdrop-blur z-10 rounded-t-xl">
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                        <span className="text-sm font-medium text-slate-200">
+                            {selectedModel ? selectedModel.name : 'Select a conductor from the dock'}
+                        </span>
+                    </div>
+                    {selectedModel?.type === 'api' && (
+                        <span className="text-[10px] uppercase tracking-wider bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20">
+                            API
+                        </span>
+                    )}
                 </div>
-                <div className="flex-1">
-                    {/* Additional controls (max rounds, etc.) can go here */}
+                <div className="text-xs text-slate-500 font-mono">
+                    AUTOGEN • MULTI-AGENT
                 </div>
             </div>
 
             {/* Main Content Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth"
+                className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth pb-32"
             >
                 {events.length === 0 && !isRunning && (
                     <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 select-none">
@@ -215,36 +212,16 @@ export default function OrchestratorView({
             </div>
 
             {/* Input Area */}
-            <div className="p-4 border-t border-white/10 bg-slate-900 z-20">
-                <div className="relative max-w-4xl mx-auto">
-                    <textarea
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Describe a complex task for the agent team..."
-                        className="w-full bg-slate-800 text-white rounded-xl pl-4 pr-14 py-4 min-h-[60px] max-h-[200px] border border-white/10 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none shadow-lg"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleStart();
-                            }
-                        }}
-                        disabled={isRunning}
-                    />
-                    <button
-                        onClick={isRunning ? handleStop : handleStart}
-                        disabled={!selectedModelId && !isRunning}
-                        className={`absolute right-3 bottom-3 p-2 rounded-lg transition-all ${isRunning
-                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed'
-                            }`}
-                    >
-                        {isRunning ? <Square size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-                    </button>
-                </div>
-                <p className="text-center text-slate-500 text-xs mt-2">
-                    AutoGen Orchestrator • Powered by {selectedModelId || '...'}
-                </p>
-            </div>
+            <PromptInput
+                inputRef={inputRef}
+                inputFocused={inputFocused}
+                setInputFocused={setInputFocused}
+                onSendMessage={handleStart}
+                onOpenTopics={onOpenTopics}
+                className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-6 pt-10 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent"
+                style={{}}
+                placeholder={selectedModelId ? `Instruct ${selectedModel?.name} to solve a complex task...` : "Select a conductor model..."}
+            />
         </div>
     );
 }
