@@ -6,7 +6,10 @@ Paper: "Verbalized Sampling: How to Mitigate Mode Collapse and Unlock LLM Divers
 
 import logging
 from typing import AsyncGenerator, Dict, Any, List
-import httpx
+
+from model_client import ModelClient
+from utils.github_token import get_default_github_token
+from error_utils import create_error_event
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +26,17 @@ class VerbalizedSamplingEngine:
     the narrow post-aligned mode-collapsed outputs.
     """
     
-    def __init__(self, model_endpoint: str, model_name: str):
-        self.model_endpoint = model_endpoint
-        self.model_name = model_name
+    def __init__(self, model_id: str, github_token: str = None):
+        """
+        Initialize verbalized sampling engine.
+        
+        Args:
+            model_id: Model identifier to use
+            github_token: Optional GitHub token for API models
+        """
+        self.model_id = model_id
+        self.github_token = github_token or get_default_github_token()
+        self.client = ModelClient(self.github_token)
         
     async def generate_diverse_responses(
         self,
@@ -51,7 +62,7 @@ class VerbalizedSamplingEngine:
         yield {
             "event": "start",
             "query": query,
-            "model": self.model_name,
+            "model": self.model_id,
             "technique": "Verbalized Sampling",
             "num_responses": num_responses
         }
@@ -68,84 +79,56 @@ Response 1 (probability: X%): [your response]
 Response 2 (probability: Y%): [your response]
 ...and so on."""
         
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a creative AI assistant that can generate diverse, high-quality responses. When asked for multiple responses, you provide genuinely different perspectives rather than minor variations."
+            },
+            {
+                "role": "user",
+                "content": vs_prompt
+            }
+        ]
+        
+        logger.info(f"Verbalized Sampling using {self.model_id}")
+        
         try:
-            # Call the model with verbalized sampling prompt
-            full_url = f"{self.model_endpoint}/v1/chat/completions"
-            logger.info(f"Verbalized Sampling calling {self.model_name} at {full_url}")
+            # Stream the response using ModelClient
+            full_response = ""
             
-            from http_client import HTTPClient
-            client = HTTPClient.get_client()
-            
-            async with client.stream(
-                "POST",
-                full_url,
-                json={
-                    "model": "model",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "You are a creative AI assistant that can generate diverse, high-quality responses. When asked for multiple responses, you provide genuinely different perspectives rather than minor variations."
-                        },
-                        {
-                            "role": "user",
-                            "content": vs_prompt
-                        }
-                    ],
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                    "stream": True
-                },
-                timeout=60.0
-            ) as response:
-                
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    error_msg = f"Model API error from {full_url}: Status {response.status_code}, {error_text.decode('utf-8')[:200]}"
-                    logger.error(error_msg)
+            async for event in self.client.stream_model(
+                model_id=self.model_id,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature
+            ):
+                if event["type"] == "chunk":
+                    content = event["content"]
+                    full_response += content
                     yield {
-                        "event": "error",
-                        "error": error_msg
+                        "event": "chunk",
+                        "content": content
                     }
+                elif event["type"] == "error":
+                    yield {"event": "error", "error": event["error"]}
                     return
-                
-                # Stream the response
-                full_response = ""
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        if line.strip() == "data: [DONE]":
-                            break
-                        
-                        try:
-                            import json
-                            data = json.loads(line[6:])
-                            if "choices" in data and len(data["choices"]) > 0:
-                                delta = data["choices"][0].get("delta", {})
-                                content = delta.get("content", "")
-                                if content:
-                                    full_response += content
-                                    yield {
-                                        "event": "chunk",
-                                        "content": content
-                                    }
-                        except json.JSONDecodeError:
-                            continue
-                
-                # Parse the responses
-                parsed_responses = self._parse_verbalized_responses(full_response, num_responses)
-                
-                yield {
-                    "event": "complete",
-                    "full_response": full_response,
-                    "parsed_responses": parsed_responses,
-                    "diversity_score": self._calculate_diversity_score(parsed_responses)
-                }
+                elif event["type"] == "done":
+                    # Ensure we have full content
+                    full_response = event.get("full_content", full_response)
+            
+            # Parse the responses
+            parsed_responses = self._parse_verbalized_responses(full_response, num_responses)
+            
+            yield {
+                "event": "complete",
+                "full_response": full_response,
+                "parsed_responses": parsed_responses,
+                "diversity_score": self._calculate_diversity_score(parsed_responses)
+            }
                 
         except Exception as e:
             logger.error(f"Verbalized Sampling error: {e}", exc_info=True)
-            yield {
-                "event": "error",
-                "error": str(e)
-            }
+            yield create_error_event(e, context="verbalized_sampling", model_id=self.model_id)
     
     def _parse_verbalized_responses(self, response_text: str, expected_count: int) -> List[Dict[str, Any]]:
         """
@@ -246,4 +229,3 @@ Response 2 (probability: Y%): [your response]
         diversity_score = min(1.0, (avg_distance * 0.7 + min(1.0, length_variance / 1000) * 0.3))
         
         return round(diversity_score, 3)
-

@@ -13,9 +13,10 @@ import json
 import re
 import random
 from collections import defaultdict
-from model_profiles import MODEL_PROFILES
+from model_profiles import MODEL_PROFILES, get_display_name
 from error_utils import sanitize_error_message
 from rate_limiter import get_rate_limiter
+from services.streaming import merge_async_generators
 
 # Pre-defined quip templates for faster response (used as fallback)
 CHAIRMAN_QUIP_TEMPLATES = {
@@ -247,7 +248,7 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         for model_id in participants:
             if model_id in completed_responses:
                 response = completed_responses[model_id]
-                model_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+                model_name = get_display_name(model_id)
                 model_responses[model_id] = response
                 
                 # Emit events as if it just finished
@@ -273,7 +274,7 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         # Create streaming tasks for ACTIVE models only
         async def stream_model(model_id: str):
             """Stream a single model and yield events"""
-            model_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+            model_name = get_display_name(model_id)
 
             # Notify that this model is starting
             yield {
@@ -318,41 +319,11 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         # Stream all active models concurrently
         tasks = [stream_model(model_id) for model_id in active_participants]
 
-        # Merge all streams
-        async for event in self._merge_streams(tasks):
+        # Merge all streams using shared utility
+        async for event in merge_async_generators(tasks):
             yield event
 
         yield {"type": "stage1_complete", "results": stage1_results}
-
-    async def _merge_streams(self, generators: List[AsyncGenerator]) -> AsyncGenerator[Dict[str, Any], None]:
-        """Merge multiple async generators into one stream"""
-        queues = [asyncio.Queue() for _ in generators]
-
-        async def consume(gen, queue):
-            try:
-                async for item in gen:
-                    await queue.put(item)
-            finally:
-                await queue.put(None)  # Signal completion
-
-        # Start all consumers
-        consumers = [asyncio.create_task(consume(gen, queue)) for gen, queue in zip(generators, queues)]
-
-        # Yield items as they arrive from any queue
-        active = len(queues)
-        while active > 0:
-            for queue in queues:
-                try:
-                    item = await asyncio.wait_for(queue.get(), timeout=0.01)
-                    if item is None:
-                        active -= 1
-                    else:
-                        yield item
-                except asyncio.TimeoutError:
-                    continue
-
-        # Wait for all consumers to finish
-        await asyncio.gather(*consumers)
 
     def _parse_ranking(self, ranking_text: str) -> List[str]:
         """
@@ -480,7 +451,7 @@ Now provide your evaluation and ranking:"""
 
             stage2_results.append({
                 "model_id": model_id,
-                "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                "model_name": get_display_name(model_id),
                 "ranking": ranking_text,
                 "parsed_ranking": parsed
             })
@@ -488,7 +459,7 @@ Now provide your evaluation and ranking:"""
             yield {
                 "type": "ranking_response",
                 "model_id": model_id,
-                "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                "model_name": get_display_name(model_id),
                 "ranking": ranking_text,
                 "parsed_ranking": parsed
             }
@@ -526,7 +497,7 @@ Now provide your evaluation and ranking:"""
                 avg_rank = sum(positions) / len(positions)
                 aggregate.append({
                     "model_id": model_id,
-                    "model_name": MODEL_PROFILES.get(model_id, {}).get("display_name", model_id),
+                    "model_name": get_display_name(model_id),
                     "average_rank": round(avg_rank, 2),
                     "votes_count": len(positions)
                 })

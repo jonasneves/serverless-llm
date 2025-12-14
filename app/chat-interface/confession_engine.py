@@ -10,7 +10,9 @@ import json
 import logging
 from typing import Any, AsyncGenerator, Dict, Optional
 
-from http_client import HTTPClient
+from model_client import ModelClient
+from utils.github_token import get_default_github_token
+from error_utils import create_error_event
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +53,17 @@ class ConfessionEngine:
         "Output EXACT JSON only."
     )
 
-    def __init__(self, model_endpoint: str, model_name: str) -> None:
-        self.model_endpoint = model_endpoint
-        self.model_name = model_name
+    def __init__(self, model_id: str, github_token: str = None) -> None:
+        """
+        Initialize confession engine.
+        
+        Args:
+            model_id: Model identifier to use
+            github_token: Optional GitHub token for API models
+        """
+        self.model_id = model_id
+        self.github_token = github_token or get_default_github_token()
+        self.client = ModelClient(self.github_token)
 
     async def generate_with_confession(
         self,
@@ -64,68 +74,42 @@ class ConfessionEngine:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Yield SSE-style events for answer generation and confession analysis."""
 
-        yield {"event": "start", "model": self.model_name, "query": query}
-
-        client = HTTPClient.get_client()
-        url = f"{self.model_endpoint}/v1/chat/completions"
+        yield {"event": "start", "model": self.model_id, "query": query}
 
         answer_messages = [
             {"role": "system", "content": self.DEFAULT_ASSISTANT_PROMPT},
             {"role": "user", "content": query},
         ]
 
-        answer_payload = {
-            "messages": answer_messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True,
-        }
-
         answer_text = ""
 
         try:
-            async with client.stream("POST", url, json=answer_payload, timeout=90.0) as response:
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    yield {
-                        "event": "error",
-                        "error": f"Model error ({response.status_code}) while generating answer: {error_text.decode('utf-8', 'ignore')[:200]}"
-                    }
-                    logger.error(
-                        "Answer stream error %s: %s",
-                        response.status_code,
-                        error_text[:200],
-                    )
+            # Stream answer generation using ModelClient
+            async for event in self.client.stream_model(
+                model_id=self.model_id,
+                messages=answer_messages,
+                max_tokens=max_tokens,
+                temperature=temperature
+            ):
+                if event["type"] == "chunk":
+                    content = event["content"]
+                    answer_text += content
+                    yield {"event": "answer_chunk", "content": content}
+                elif event["type"] == "error":
+                    yield {"event": "error", "error": event["error"]}
                     return
+                elif event["type"] == "done":
+                    # Ensure we have the full content
+                    answer_text = event.get("full_content", answer_text)
 
-                async for raw_line in response.aiter_lines():
-                    if not raw_line or not raw_line.startswith("data: "):
-                        continue
-
-                    line = raw_line.strip()
-                    if line == "data: [DONE]":
-                        break
-
-                    try:
-                        payload = json.loads(line[6:])
-                    except json.JSONDecodeError:
-                        continue
-
-                    if not payload.get("choices"):
-                        continue
-
-                    delta = payload["choices"][0].get("delta", {})
-                    content = delta.get("content")
-                    if content:
-                        answer_text += content
-                        yield {"event": "answer_chunk", "content": content}
         except Exception as exc:
             logger.error("Streaming failure: %s", exc, exc_info=True)
-            yield {"event": "error", "error": f"Failed to stream answer: {exc}"}
+            yield create_error_event(exc, context="answer_generation", model_id=self.model_id)
             return
 
         yield {"event": "answer_complete", "answer": answer_text.strip()}
 
+        # Build confession request
         confession_messages = answer_messages + [
             {"role": "assistant", "content": answer_text},
             {"role": "system", "content": self.CONFESSION_PROMPT},
@@ -135,41 +119,21 @@ class ConfessionEngine:
 
         confession_token_limit = max(512, min(max_tokens * 2, 4096))
 
-        confession_payload = {
-            "messages": confession_messages,
-            "temperature": 0.2,
-            "max_tokens": confession_token_limit,
-        }
-
         try:
-            confession_response = await client.post(
-                url,
-                json=confession_payload,
-                timeout=90.0
+            # Call model for confession (non-streaming)
+            confession_result = await self.client.call_model(
+                model_id=self.model_id,
+                messages=confession_messages,
+                max_tokens=confession_token_limit,
+                temperature=0.2
             )
+            
+            confession_text = confession_result.get("content", "")
+
         except Exception as exc:
             logger.error("Confession failure: %s", exc, exc_info=True)
-            yield {"event": "error", "error": f"Failed to request confession: {exc}"}
+            yield create_error_event(exc, context="confession_generation", model_id=self.model_id)
             return
-
-        if confession_response.status_code != 200:
-            logger.error(
-                "Confession error %s: %s",
-                confession_response.status_code,
-                confession_response.text[:200],
-            )
-            yield {
-                "event": "error",
-                "error": f"Model error ({confession_response.status_code}) while generating confession: {confession_response.text[:200]}"
-            }
-            return
-
-        confession_data = confession_response.json()
-        if "choices" not in confession_data or not confession_data["choices"]:
-            raise ValueError("Model response missing choices for confession request")
-        choices = confession_data["choices"]
-
-        confession_text = choices[0]["message"].get("content", "")
 
         parsed_report = self._parse_confession(confession_text)
         if parsed_report is None:
