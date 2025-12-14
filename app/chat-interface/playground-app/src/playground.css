@@ -57,6 +57,38 @@
   transform: scale(1.05) !important;
 }
 
+.model-dock-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.glow-dot-emerald {
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.glow-dot-blue {
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+}
+
+.prompt-panel {
+  background: rgba(30, 41, 59, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.prompt-panel-focused {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.ticker-mask {
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
 .header-shell {
   background: rgba(30, 41, 59, 0.8);
   backdrop-filter: blur(12px);

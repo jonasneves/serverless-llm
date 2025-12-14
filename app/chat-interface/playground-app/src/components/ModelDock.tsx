@@ -26,13 +26,11 @@ export default function ModelDock({
       type: 'local' as const,
       title: 'Local Models',
       accentColor: 'emerald',
-      dotGlow: 'rgba(34,197,94,0.6)',
     },
     {
       type: 'api' as const,
       title: 'API Models',
       accentColor: 'blue',
-      dotGlow: 'rgba(59,130,246,0.6)',
     },
   ];
 
@@ -40,12 +38,8 @@ export default function ModelDock({
     <div
       ref={dockRef}
       data-no-arena-scroll
-      className="dock-scroll fixed left-3 top-20 bottom-20 w-[min(75vw,320px)] sm:left-6 sm:top-24 sm:bottom-24 sm:w-72 rounded-2xl flex flex-col z-[60] transition-all duration-300 overflow-hidden"
+      className="dock-scroll model-dock-panel fixed left-3 top-20 bottom-20 w-[min(75vw,320px)] sm:left-6 sm:top-24 sm:bottom-24 sm:w-72 rounded-2xl flex flex-col z-[60] transition-all duration-300 overflow-hidden"
       style={{
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
         transform: showDock ? 'translateX(0)' : 'translateX(-150%)',
         opacity: showDock ? 1 : 0,
         pointerEvents: showDock ? 'auto' : 'none',
@@ -82,8 +76,7 @@ export default function ModelDock({
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`w-2 h-2 rounded-full ${accentClasses.dot}`}
-                    style={{ boxShadow: `0 0 8px ${section.dotGlow}` }}
+                    className={`w-2 h-2 rounded-full ${accentClasses.dot} ${section.type === 'local' ? 'glow-dot-emerald' : 'glow-dot-blue'}`}
                   />
                   <h3 className="text-[11px] font-semibold text-slate-300 uppercase tracking-wide">
                     {section.title}

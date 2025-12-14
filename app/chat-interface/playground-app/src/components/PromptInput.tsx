@@ -18,9 +18,8 @@ export default function PromptInput({
 
   return (
     <div
-      className="fixed bottom-0 right-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
+      className="fixed bottom-0 right-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
       style={{
-        left: '0', // Static left, independent of dock
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
       }}
     >
@@ -37,11 +36,7 @@ export default function PromptInput({
             Explore topics
           </button>
           <div
-            className="relative overflow-hidden h-6 w-full backdrop-blur-md bg-slate-900/40 rounded-lg border border-white/5"
-            style={{
-              maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)'
-            }}
+            className="relative overflow-hidden h-6 w-full backdrop-blur-md bg-slate-900/40 rounded-lg border border-white/5 ticker-mask"
           >
             <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-300 font-medium h-full px-4">
               {[...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS].map((s, i) => ( // Repeat for infinite scroll effect
@@ -65,16 +60,7 @@ export default function PromptInput({
         </div>
 
         <div
-          className="rounded-xl p-4 transition-all duration-300 flex items-center gap-2"
-          style={{
-            background: 'rgba(30, 41, 59, 0.95)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: inputFocused ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(71, 85, 105, 0.4)',
-            boxShadow: inputFocused
-              ? '0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(59, 130, 246, 0.15)'
-              : '0 4px 20px rgba(0,0,0,0.3)'
-          }}
+          className={`prompt-panel rounded-xl p-4 transition-all duration-300 flex items-center gap-2 ${inputFocused ? 'prompt-panel-focused' : ''}`}
         >
           <input
             ref={inputRef}

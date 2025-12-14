@@ -148,7 +148,7 @@ export default function ResponseInspector({
       </div>
 
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800/60">
-        <div className="w-2.5 h-2.5 rounded-full" style={{ background: activeModel.type === 'local' ? '#10b981' : '#3b82f6' }} />
+        <div className={`w-2.5 h-2.5 rounded-full ${activeModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
         <div className="text-sm font-semibold text-slate-100">{activeModel.name}</div>
         {isStreaming && (
           <div className="text-xs text-slate-500 ml-auto">Streaming…</div>
