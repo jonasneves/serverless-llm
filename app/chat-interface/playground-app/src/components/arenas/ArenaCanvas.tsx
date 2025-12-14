@@ -48,6 +48,7 @@ interface ArenaCanvasProps {
 
 const GRID_CARD_WIDTH = 256;
 const GRID_CARD_HEIGHT = 200;
+const CIRCLE_CARD_SIZE = 104;
 
 export function ArenaCanvas(props: ArenaCanvasProps) {
   const {
@@ -85,6 +86,14 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
 
   const isCircleMode = mode !== 'compare';
   const orchestratorYOffset = mode === 'council' ? layoutRadius - 64 : 0;
+  const orchestratorStatusLabel =
+    orchestratorStatus === 'responding'
+      ? 'Responding'
+      : orchestratorStatus === 'waiting'
+        ? 'Waiting'
+        : orchestratorStatus === 'done'
+          ? 'Done'
+          : 'Ready';
 
   return (
     <>
@@ -147,13 +156,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         });
 
         const isHovered = hoveredCard === model.id;
-        const circleSize = 112;
-        const width = isCircleMode ? circleSize : GRID_CARD_WIDTH;
-        const height = isCircleMode ? circleSize : GRID_CARD_HEIGHT;
-        const typeBadgeClasses = model.type === 'local'
-          ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-400/40'
-          : 'bg-blue-500/10 text-blue-200 border border-blue-400/40';
-        const showInlinePreview = isCircleMode && hoveredCard !== model.id;
+        const width = isCircleMode ? CIRCLE_CARD_SIZE : GRID_CARD_WIDTH;
+        const height = isCircleMode ? CIRCLE_CARD_SIZE : GRID_CARD_HEIGHT;
 
         const lineSize = Math.max(800, layoutRadius * 2 + 600);
         const lineCenter = lineSize / 2;
@@ -258,7 +262,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   e.stopPropagation();
                   handleModelToggle(model.id);
                 }}
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all opacity-0 z-50"
+                className={`absolute w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all opacity-0 z-50 ${isCircleMode ? '-top-3 -right-3' : '-top-2 -right-2'}`}
                 style={{ opacity: isSelected || isHovered ? 1 : undefined }}
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,27 +319,14 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                       filter: 'blur(10px)'
                     }}
                   />
-                  <div className="relative z-10 flex flex-col items-center justify-center gap-2 px-3">
-                    <div className="text-[9px] tracking-[0.25em] text-slate-400 uppercase">{statusLabel}</div>
-                    <div className="text-[11px] font-semibold text-slate-100 leading-tight">{model.name}</div>
-                    <StatusIndicator state={statusState} color={effectiveColor} size={14} />
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider ${typeBadgeClasses}`}>
-                      {model.type === 'local' ? 'Local' : 'API'}
-                    </span>
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-1.5 px-3">
+                    <div className="text-[7px] tracking-[0.32em] text-slate-400 uppercase">{statusLabel}</div>
+                    <div className="text-[10px] font-semibold text-slate-100 leading-tight">{model.name}</div>
+                    <StatusIndicator state={statusState} color={effectiveColor} size={12} />
                   </div>
                 </div>
               )}
 
-              {showInlinePreview && (
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none"
-                  style={{ top: 'calc(100% + 8px)', width: '180px' }}
-                >
-                  <div className="px-3 py-2 rounded-2xl border border-white/5 bg-slate-900/80 text-[11px] text-slate-300 leading-snug shadow-lg shadow-black/40">
-                    {renderPreviewContent({ model, isSpeaking, getTailSnippet, maxChars: 120 })}
-                  </div>
-                </div>
-              )}
             </div>
 
             {isCircleMode && hoveredCard === model.id && (
@@ -393,23 +384,25 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
           onMouseEnter={() => setHoveredCard('moderator')}
           onMouseLeave={() => setHoveredCard(null)}
         >
-          <div className="relative w-24 h-24 flex items-center justify-center">
+          <div className="relative flex items-center justify-center" style={{ width: `${CIRCLE_CARD_SIZE}px`, height: `${CIRCLE_CARD_SIZE}px` }}>
             <div
               className="absolute inset-0 rounded-full animate-pulse"
               style={{
                 background: `radial-gradient(circle, ${moderatorModel.color}20 0%, transparent 70%)`,
-                transform: 'scale(2)',
-                filter: 'blur(20px)'
+                transform: 'scale(2.2)',
+                filter: 'blur(18px)'
               }}
             />
 
             <div
-              className="relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300"
+              className="relative rounded-full flex items-center justify-center transition-all duration-300"
               style={{
+                width: `${CIRCLE_CARD_SIZE}px`,
+                height: `${CIRCLE_CARD_SIZE}px`,
                 background: 'rgba(15, 23, 42, 0.9)',
                 backdropFilter: 'blur(16px)',
                 border: `2px solid ${moderatorModel.color}60`,
-                boxShadow: `0 0 40px ${moderatorModel.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
+                boxShadow: `0 0 36px ${moderatorModel.color}28, inset 0 1px 1px rgba(255,255,255,0.1)`
               }}
             >
               <div
@@ -419,16 +412,17 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   animation: 'spin 4s linear infinite'
                 }}
               />
-              <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
+              <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.96)' }} />
 
-              <div className="relative text-center z-10 flex flex-col items-center gap-1">
-                <div className="text-[10px] font-semibold text-slate-200 leading-tight">
+              <div className="relative text-center z-10 flex flex-col items-center gap-1.5 px-3">
+                <div className="text-[7px] tracking-[0.32em] text-slate-400 uppercase">{orchestratorStatusLabel}</div>
+                <div className="text-[10px] font-semibold text-slate-100 leading-tight">
                   {moderatorModel.name}
                 </div>
                 <StatusIndicator
                   state={orchestratorStatus}
                   color={moderatorModel.color}
-                  size={14}
+                  size={12}
                 />
               </div>
             </div>
