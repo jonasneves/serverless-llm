@@ -400,8 +400,9 @@ class ModelSelector {
     const isCompactMode = this.container?.closest('.model-selector-compact') !== null;
 
     if (isCompactMode) {
-      // Update the badge count separately
-      const badge = document.getElementById('modelCount');
+      // Update the badge count separately - find it within the same compact container
+      const compactContainer = this.container.closest('.model-selector-compact');
+      const badge = compactContainer?.querySelector('.trigger-badge');
       if (badge) {
         badge.textContent = count.toString();
       }
@@ -450,8 +451,8 @@ class ModelSelector {
 
     const targetContainer = isCompactMode ? this.container : this.dropdown;
 
-    // Add Select All / Deselect All toggle in multi-select mode (only in dropdown mode)
-    if (!isCompactMode && this.options.multiSelect && Object.keys(this.models).length > 0) {
+    // Add Select All / Deselect All toggle in multi-select mode
+    if (this.options.multiSelect && Object.keys(this.models).length > 0) {
       const allSelected = this.selectedModels.size === Object.keys(this.models).length;
       const toggleBtn = document.createElement('button');
       toggleBtn.className = 'model-select-all-btn';
@@ -509,19 +510,24 @@ class ModelSelector {
       return el;
     };
 
+    // Only show group headers if both types are present
+    const showGroupHeaders = localModels.length > 0 && apiModels.length > 0;
+
     if (localModels.length > 0) {
-      const allLocalSelected = localModels.every(([id]) => this.selectedModels.has(id));
-      // Always show group header with toggle button
-      this.createGroupHeader('Local Models', 'local', allLocalSelected, targetContainer);
+      if (showGroupHeaders) {
+        const allLocalSelected = localModels.every(([id]) => this.selectedModels.has(id));
+        this.createGroupHeader('Local Models', 'local', allLocalSelected, targetContainer);
+      }
       localModels.forEach(([id, model]) => {
         targetContainer.appendChild(renderModel(id, model));
       });
     }
 
     if (apiModels.length > 0) {
-      const allApiSelected = apiModels.every(([id]) => this.selectedModels.has(id));
-      // Always show group header with toggle button
-      this.createGroupHeader('API Models', 'api', allApiSelected, targetContainer);
+      if (showGroupHeaders) {
+        const allApiSelected = apiModels.every(([id]) => this.selectedModels.has(id));
+        this.createGroupHeader('API Models', 'api', allApiSelected, targetContainer);
+      }
       apiModels.forEach(([id, model]) => {
         targetContainer.appendChild(renderModel(id, model));
       });

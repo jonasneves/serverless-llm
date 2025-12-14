@@ -15,9 +15,9 @@
 {% block content %}
 <div id="chatHistory" class="chat-history">
   <div class="welcome-card">
-    <div class="welcome-title">Compare AI Model Responses</div>
+    <div class="welcome-title">Chat with Multiple Models</div>
     <div class="welcome-subtitle">
-      Select one or multiple models to compare their responses side-by-side.
+      Select one or more models and see their responses side-by-side.
       Each response includes metrics like tokens and response time.
     </div>
     <div class="tools-demo-section">
@@ -78,18 +78,35 @@
 <div class="input-container">
   <div class="controls-row">
     <div class="model-selector-compact">
-      <button class="model-selector-trigger" id="modelSelectorTrigger" type="button">
+      <button class="model-selector-trigger" id="localModelsTrigger" type="button">
         <div class="trigger-content">
-          <span class="trigger-text">Select Models</span>
-          <span class="trigger-badge" id="modelCount">0</span>
+          <span class="trigger-text">Local Models</span>
+          <span class="trigger-badge" id="localModelCount">0</span>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
       </button>
-      <div class="model-selector-dropdown" id="modelSelectorDropdown">
-        <div class="model-selector" id="modelSelector">
-          <!-- Model chips populated by JS -->
+      <div class="model-selector-dropdown" id="localModelsDropdown">
+        <div class="model-selector" id="localModelSelector">
+          <!-- Local model chips populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <div class="model-selector-compact">
+      <button class="model-selector-trigger" id="apiModelsTrigger" type="button">
+        <div class="trigger-content">
+          <span class="trigger-text">API Models</span>
+          <span class="trigger-badge" id="apiModelCount">0</span>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+      <div class="model-selector-dropdown" id="apiModelsDropdown">
+        <div class="model-selector" id="apiModelSelector">
+          <!-- API model chips populated by JS -->
         </div>
       </div>
     </div>

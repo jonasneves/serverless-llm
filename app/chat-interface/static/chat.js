@@ -17,13 +17,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // State
-  const modelSelector = new ModelSelector('#modelSelector', {
+  // State - Separate selectors for local and API models
+  const localModelSelector = new ModelSelector('#localModelSelector', {
     showStatus: true,
     autoSelectOnline: true,
-    onSelectionChange: updateSendButtonState
-    // Both local and API models are now supported
+    onSelectionChange: updateSendButtonState,
+    filterTypes: ['local']
   });
+
+  const apiModelSelector = new ModelSelector('#apiModelSelector', {
+    showStatus: true,
+    autoSelectOnline: false, // Don't auto-select API models
+    onSelectionChange: updateSendButtonState,
+    filterTypes: ['api']
+  });
+
+  // Helper to get all selected models from both selectors
+  function getAllSelectedModels() {
+    return [...localModelSelector.getSelected(), ...apiModelSelector.getSelected()];
+  }
+
+  // Helper to get model info from either selector
+  function getModelInfo(modelIdOrName) {
+    return localModelSelector.models[modelIdOrName] ||
+           apiModelSelector.models[modelIdOrName] ||
+           Object.values(localModelSelector.models).find(m => m.name === modelIdOrName) ||
+           Object.values(apiModelSelector.models).find(m => m.name === modelIdOrName);
+  }
 
   let conversationHistory = [];
   let totalTokensUsed = 0;
@@ -50,14 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getContextInfo(modelIdOrName) {
-    // Try direct ID access first
-    let model = modelSelector.models[modelIdOrName];
-
-    // If not found, try to find by name
-    if (!model) {
-      model = Object.values(modelSelector.models).find(m => m.name === modelIdOrName);
-    }
-
+    const model = getModelInfo(modelIdOrName);
     if (model && model.context_length > 0) {
       return `<span class="context-info">${formatContextLength(model.context_length)} ctx</span>`;
     }
@@ -65,19 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getModelContextLength(modelIdOrName) {
-    // Try direct ID access first
-    let model = modelSelector.models[modelIdOrName];
-
-    // If not found, try to find by name
-    if (!model) {
-      model = Object.values(modelSelector.models).find(m => m.name === modelIdOrName);
-    }
-
+    const model = getModelInfo(modelIdOrName);
     return model?.context_length || 0;
   }
 
   function updateTokenUsage() {
-    const selected = modelSelector.getSelected();
+    const selected = getAllSelectedModels();
     // Only show token usage if exactly one model is selected
     if (selected.length !== 1) {
       tokenUsageContainer.style.display = 'none';
@@ -85,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const modelId = selected[0];
-    const model = modelSelector.models[modelId];
+    const model = getModelInfo(modelId);
 
     if (!model || !model.context_length) {
       tokenUsageContainer.style.display = 'none';
@@ -120,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Update send button state and token usage based on selection
   function updateSendButtonState() {
-    const selectedModels = modelSelector.getSelected();
+    const selectedModels = getAllSelectedModels();
     const hasContent = userInput.value.trim().length > 0;
     const count = selectedModels.length;
     sendBtn.disabled = count === 0 || !hasContent;
@@ -144,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
   userInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (userInput.value.trim() && modelSelector.getSelected().length > 0) {
+      if (userInput.value.trim() && getAllSelectedModels().length > 0) {
         sendMessage();
       }
     }
@@ -315,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (models.length === 1) {
       const modelId = models[0];
-      const modelName = modelSelector.models[modelId]?.name || modelId;
+      const modelName = getModelInfo(modelId)?.name || modelId;
       const contextLength = getModelContextLength(modelId);
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message assistant';
@@ -353,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
       container.className = 'model-responses';
 
       for (const modelId of models) {
-        const modelName = modelSelector.models[modelId]?.name || modelId;
+        const modelName = getModelInfo(modelId)?.name || modelId;
         const contextLength = getModelContextLength(modelId);
         const responseDiv = document.createElement('div');
         responseDiv.className = 'model-response';
@@ -451,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Add total tokens to usage tracker (only if one model is selected)
-      const currentSelection = modelSelector.getSelected();
+      const currentSelection = getAllSelectedModels();
       const totalTokens = usage?.total_tokens ?? tokenEstimate;
       if (currentSelection.length === 1 && totalTokens) {
         addTokens(parseInt(totalTokens) || 0);
@@ -461,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function sendMessage() {
     const message = userInput.value.trim();
-    if (!message || modelSelector.getSelected().length === 0) return;
+    if (!message || getAllSelectedModels().length === 0) return;
 
     addUserMessage(message);
     conversationHistory.push({ role: 'user', content: message });
@@ -472,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     userInput.disabled = true;
     typingIndicator.classList.add('active');
 
-    const models = modelSelector.getSelected();
+    const models = getAllSelectedModels();
     const modelData = createStreamingContainer(models);
     let firstContent = '';
 
@@ -565,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finalizeStreaming(modelData, entry.id, null, null, true);
       }
     } finally {
-      sendBtn.disabled = modelSelector.getSelected().length === 0;
+      sendBtn.disabled = getAllSelectedModels().length === 0;
       userInput.disabled = false;
       typingIndicator.classList.remove('active');
       userInput.focus();
@@ -646,8 +652,9 @@ document.addEventListener('DOMContentLoaded', () => {
     resetTokenUsage();
   }
 
-  // Initialize
-  modelSelector.loadModels();
+  // Initialize both model selectors
+  localModelSelector.loadModels();
+  apiModelSelector.loadModels();
 
   // Auto-focus the input field on page load
   // Use a small delay to ensure the page is fully rendered
