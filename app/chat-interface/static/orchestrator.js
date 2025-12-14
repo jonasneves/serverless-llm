@@ -252,6 +252,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   updateSelectedModelsDisplay();
 
+  // Enable horizontal scrolling with mouse wheel
+  const selectedModelsContainer = document.querySelector('.selected-models-container');
+  if (selectedModelsContainer) {
+    selectedModelsContainer.addEventListener('wheel', (e) => {
+      if (selectedModelsContainer.scrollWidth > selectedModelsContainer.clientWidth) {
+        e.preventDefault();
+        selectedModelsContainer.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
   const queryInput = document.getElementById('userInput');
   const maxRoundsInput = document.getElementById('maxRounds');
   const engineSelect = document.getElementById('engineSelect');

@@ -733,6 +733,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSelectedModelsDisplay();
   });
 
+  // Enable horizontal scrolling with mouse wheel
+  const selectedModelsContainer = document.querySelector('.selected-models-container');
+  if (selectedModelsContainer) {
+    selectedModelsContainer.addEventListener('wheel', (e) => {
+      // Only handle if there's horizontal overflow
+      if (selectedModelsContainer.scrollWidth > selectedModelsContainer.clientWidth) {
+        e.preventDefault();
+        selectedModelsContainer.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
   // Model Dock Panel (matching playground behavior)
   const modelDock = document.getElementById('modelDock');
   const dockOverlay = document.getElementById('dockOverlay');

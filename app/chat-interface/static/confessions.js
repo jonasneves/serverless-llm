@@ -259,6 +259,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   updateSelectedModelsDisplay();
 
+  // Enable horizontal scrolling with mouse wheel
+  const selectedModelsContainer = document.querySelector('.selected-models-container');
+  if (selectedModelsContainer) {
+    selectedModelsContainer.addEventListener('wheel', (e) => {
+      if (selectedModelsContainer.scrollWidth > selectedModelsContainer.clientWidth) {
+        e.preventDefault();
+        selectedModelsContainer.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
   const runBtn = document.getElementById('sendBtn');
   const promptInput = document.getElementById('userInput');
   // Temp/Tokens controls removed - using SettingsPanel
