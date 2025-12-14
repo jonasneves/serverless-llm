@@ -217,7 +217,7 @@ export default function ChatView({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleSend}
                 onOpenTopics={onOpenTopics}
-                className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-6 pt-10 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent"
+                className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-6 pt-10 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent flex justify-center items-end"
                 style={{}} // Override fixed positioning from default
                 placeholder={selectedModelId ? `Message ${selectedModel?.name}...` : "Select a model to start chatting..."}
             />
