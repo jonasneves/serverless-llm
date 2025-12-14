@@ -41,6 +41,7 @@ async def stream_discussion_events(
     try:
         from discussion_engine import DiscussionEngine
         from utils.github_token import get_default_github_token
+        from core.config import MODEL_ENDPOINTS
 
         # Determine orchestrator model type
         api_models = [
@@ -49,8 +50,6 @@ async def stream_discussion_events(
             'deepseek/deepseek-v3-0324', 'cohere/command-r-plus-08-2024',
             'meta/llama-3.3-70b-instruct', 'meta/llama-4-scout-17b-16e-instruct', 'meta/llama-3.1-405b-instruct'
         ]
-
-        from chat_server import MODEL_ENDPOINTS
 
         selected_orchestrator = orchestrator_model or 'openai/gpt-4o'
         is_api_model = selected_orchestrator in api_models

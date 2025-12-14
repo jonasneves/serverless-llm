@@ -89,9 +89,8 @@ async def council_stream(request: CouncilRequest):
     - council_complete: Full council process finished
     - error: Error details
     """
-    # Import MODEL_ENDPOINTS from main module
-    # This is a pragmatic approach - in future can move to config module
-    from chat_server import MODEL_ENDPOINTS
+    # Import MODEL_ENDPOINTS from core.config
+    from core.config import MODEL_ENDPOINTS
 
     return create_sse_response(
         stream_council_events(

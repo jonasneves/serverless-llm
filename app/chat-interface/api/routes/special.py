@@ -29,17 +29,15 @@ async def stream_verbalized_sampling_events(
     a distribution of responses rather than a single response.
     """
     try:
-        from chat_server import MODEL_ENDPOINTS, MODEL_DISPLAY_NAMES
+        from core.config import MODEL_ENDPOINTS, MODEL_DISPLAY_NAMES
         from verbalized_sampling_engine import VerbalizedSamplingEngine
 
         if model not in MODEL_ENDPOINTS:
             yield f"data: {json.dumps({'event': 'error', 'error': f'Model {model} not found'}, ensure_ascii=False)}\n\n"
             return
 
-        model_endpoint = MODEL_ENDPOINTS[model]
-        model_name = MODEL_DISPLAY_NAMES.get(model, model)
-
-        engine = VerbalizedSamplingEngine(model_endpoint, model_name)
+        # Initialize engine with model_id (it will handle endpoint internally via ModelClient)
+        engine = VerbalizedSamplingEngine(model_id=model)
 
         async for event in engine.generate_diverse_responses(
             query=query,
@@ -101,16 +99,15 @@ async def stream_confession_events(
     max_tokens: int
 ) -> AsyncGenerator[str, None]:
     try:
-        from chat_server import MODEL_ENDPOINTS, MODEL_DISPLAY_NAMES
+        from core.config import MODEL_ENDPOINTS, MODEL_DISPLAY_NAMES
         from confession_engine import ConfessionEngine
 
         if model not in MODEL_ENDPOINTS:
             yield f"data: {json.dumps({'event': 'error', 'error': f'Model {model} not found'}, ensure_ascii=False)}\n\n"
             return
 
-        endpoint = MODEL_ENDPOINTS[model]
-        model_name = MODEL_DISPLAY_NAMES.get(model, model)
-        engine = ConfessionEngine(endpoint, model_name)
+        # Initialize engine with model_id (it will handle endpoint internally via ModelClient)
+        engine = ConfessionEngine(model_id=model)
 
         async for event in engine.generate_with_confession(
             query=query,

@@ -13,14 +13,13 @@ import httpx
 
 from http_client import HTTPClient
 from core.config import MODEL_ENDPOINTS
-from model_profiles import MODEL_PROFILES
+from model_profiles import MODEL_PROFILES, get_display_name
+from constants import GITHUB_MODELS_API_URL
 from error_utils import sanitize_error_message
 from rate_limiter import get_rate_limiter
 from core.state import UNSUPPORTED_GITHUB_MODELS
 
 logger = logging.getLogger(__name__)
-
-GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
 
 class ModelClient:
     def __init__(self, github_token: Optional[str] = None):
@@ -179,7 +178,8 @@ class ModelClient:
     async def _stream_local_model(self, model_id, messages, max_tokens, temperature):
         endpoint = self.get_model_endpoint(model_id)
         url = f"{endpoint}/v1/chat/completions"
-        display_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+        display_name = get_display_name(model_id)
+        logger.info(f"Streaming from local model: {display_name} at {url}")
         
         yield {"type": "start", "model_id": model_id, "model_name": display_name}
         
@@ -243,7 +243,8 @@ class ModelClient:
              return
 
         url = GITHUB_MODELS_API_URL
-        display_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+        display_name = get_display_name(model_id)
+        logger.info(f"Streaming from API model: {display_name}")
         yield {"type": "start", "model_id": model_id, "model_name": display_name}
         
         headers = {

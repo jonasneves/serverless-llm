@@ -3,7 +3,7 @@ Discussion Orchestrator using GPT-5-nano via GitHub Models API
 
 This module provides intelligent orchestration for multi-model discussions,
 using GPT-5-nano to analyze queries, evaluate contributions, and synthesize
-final responses with structured outputs.
+final responses based on model expertise profiles.
 """
 
 import os
@@ -14,6 +14,7 @@ from typing import List, Dict, Any, Optional, Type
 from pydantic import BaseModel, Field
 from enum import Enum
 from rate_limiter import get_rate_limiter
+from constants import GITHUB_MODELS_API_URL
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ class GitHubModelsOrchestrator:
         self,
         github_token: Optional[str] = None,
         model_id: Optional[str] = None,
-        api_url: str = "https://models.github.ai/inference/chat/completions",
+        api_url: str = None,
         max_tokens: int = 16384
     ):
         """
@@ -113,7 +114,7 @@ class GitHubModelsOrchestrator:
         Args:
             github_token: GitHub Personal Access Token (user_models:read permission)
             model_id: Model to use (env: ORCHESTRATOR_MODEL, default: gpt-4o)
-            api_url: GitHub Models API endpoint
+            api_url: GitHub Models API endpoint (defaults to constant)
             max_tokens: Maximum tokens per response (includes reasoning tokens for GPT-5 models)
         """
         default_env_token = (
@@ -124,7 +125,7 @@ class GitHubModelsOrchestrator:
         self.github_token = github_token or default_env_token
         self._default_env_token = default_env_token
         self.model_id = model_id or os.getenv("ORCHESTRATOR_MODEL", "gpt-4o")
-        self.api_url = api_url
+        self.api_url = api_url or GITHUB_MODELS_API_URL
         self.max_tokens = max_tokens
         
         # Initialize unified model client
