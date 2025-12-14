@@ -636,6 +636,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Global key listener for "type anywhere"
   document.addEventListener('keydown', (e) => {
+    // Handle Escape key
+    if (e.key === 'Escape') {
+      localModelSelector.closeDropdown();
+      apiModelSelector.closeDropdown();
+      
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        document.activeElement.blur();
+      }
+      return;
+    }
+
     const active = document.activeElement;
     if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable) {
       return;
