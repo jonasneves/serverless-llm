@@ -1,18 +1,18 @@
 document.addEventListener('DOMContentLoaded', async () => {
   // Configure marked.js via shared module
   configureMarked();
-  
+
   // State - Separate selectors for local and API models
   // Use hidden containers since we won't render dropdowns
   const hiddenContainer = document.createElement('div');
   hiddenContainer.id = 'hiddenModelSelectors';
   hiddenContainer.style.display = 'none';
   document.body.appendChild(hiddenContainer);
-  
+
   const localModelSelectorContainer = document.createElement('div');
   localModelSelectorContainer.id = 'localModelSelector';
   hiddenContainer.appendChild(localModelSelectorContainer);
-  
+
   const apiModelSelectorContainer = document.createElement('div');
   apiModelSelectorContainer.id = 'apiModelSelector';
   hiddenContainer.appendChild(apiModelSelectorContainer);
@@ -32,14 +32,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Prevent dropdown rendering
-  localModelSelector.render = function() {};
-  apiModelSelector.render = function() {};
+  localModelSelector.render = function () { };
+  apiModelSelector.render = function () { };
 
   function updateButtonState() {
     const startBtn = document.getElementById('sendBtn');
     const queryInput = document.getElementById('userInput');
     if (!startBtn || !queryInput) return;
-    
+
     const hasModel = getAllSelectedModels().length > 0;
     const hasQuery = queryInput.value.trim().length > 0;
     startBtn.disabled = !hasModel || !hasQuery;
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     return selected;
   }
-  
+
   // Add listeners to enforce mutual exclusivity manually
   // We need to access the internal trigger or wrap the callback logic carefully
   // For now, we'll allow both to have a selection but only use the first one found.
@@ -68,14 +68,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     container.innerHTML = '';
 
     const allSelected = new Map();
-    
+
     if (localModelSelector && localModelSelector.selectedModels) {
       localModelSelector.selectedModels.forEach(id => {
         const model = localModelSelector.models[id];
         if (model) allSelected.set(id, model);
       });
     }
-    
+
     if (apiModelSelector && apiModelSelector.selectedModels) {
       apiModelSelector.selectedModels.forEach(id => {
         const model = apiModelSelector.models[id];
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     allSelected.forEach((model, id) => {
       const chip = document.createElement('div');
       chip.className = `model-chip model-type-${model.type}`;
-      
+
       let statusClass = 'offline';
       if (model.type === 'api') statusClass = 'api';
       else if (model.status === 'online') statusClass = 'online';
@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const selector = type === 'local' ? localModelSelector : apiModelSelector;
       const allModels = Object.keys(selector.models || {});
       const allSelected = allModels.length > 0 && allModels.every(id => selector.selectedModels.has(id));
-      
+
       if (allSelected) {
         allModels.forEach(id => selector.deselectModel(id));
       } else {
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     localModelSelector.loadModels(),
     apiModelSelector.loadModels()
   ]);
-  
+
   updateSelectedModelsDisplay();
 
   // Enable horizontal scrolling with mouse wheel
@@ -267,13 +267,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const maxRoundsInput = document.getElementById('maxRounds');
   const engineSelect = document.getElementById('engineSelect');
   // Temp/Tokens controls removed - using SettingsPanel
-  
+
   const startBtn = document.getElementById('sendBtn');
   let originalBtnHTML = null;
   const orchestrationResults = document.getElementById('orchestrationResults');
 
   let isRunning = false;
-  
+
   // Initial button state check
   updateButtonState();
 
@@ -289,11 +289,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('Please select a model');
       return;
     }
-    
+
     // Use the most recently selected or just the first one
     // Since we didn't implement strict mutual exclusion in UI, we pick the first one.
     // If user selected one in Local and one in API, we'll use Local.
-    const modelId = selectedModels[0]; 
+    const modelId = selectedModels[0];
 
     if (isRunning) return;
     isRunning = true;
@@ -318,8 +318,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       // Get GitHub token for API models (from settings panel)
       const githubToken = window.SettingsPanel?.getToken?.() || '';
-      
-      const engine = engineSelect ? engineSelect.value : 'auto';
+
+      const engine = engineSelect ? engineSelect.value : 'autogen';
       const response = await fetch(`/api/chat/orchestrator/stream?engine=${encodeURIComponent(engine)}`, {
         method: 'POST',
         headers: {
@@ -593,7 +593,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape') {
       localModelSelector.closeDropdown();
       apiModelSelector.closeDropdown();
-      
+
       if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
         document.activeElement.blur();
       }

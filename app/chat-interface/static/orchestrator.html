@@ -464,12 +464,14 @@
     </p>
 
     <div class="api-notice">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"></circle>
         <line x1="12" y1="16" x2="12" y2="12"></line>
         <line x1="12" y1="8" x2="12.01" y2="8"></line>
       </svg>
-      <span>API models use GitHub Models with free quota and may experience rate limiting. Configure your own token in Settings for dedicated quota.</span>
+      <span>API models use GitHub Models with free quota and may experience rate limiting. Configure your own token in
+        Settings for dedicated quota.</span>
     </div>
 
     <div class="tools-info-card">
@@ -555,9 +557,8 @@
       <div class="control-group">
         <label>Engine:</label>
         <select id="engineSelect">
-          <option value="auto" selected>Auto</option>
-          <option value="autogen">AutoGen</option>
-          <option value="tools">ToolOrchestrator</option>
+          <option value="autogen" selected>AutoGen</option>
+          <option value="toolorchestrator">ToolOrchestrator</option>
         </select>
       </div>
       <div class="control-group">
@@ -565,7 +566,8 @@
         <input type="number" id="maxRounds" value="5" min="1" max="10" class="input-narrow">
       </div>
       <button id="clearBtn" class="input-icon-btn" type="button" title="Clear">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
         </svg>

@@ -38,11 +38,9 @@ async def stream_orchestrator_events(
             get_default_github_token
         )
 
-        choice = (engine or "auto").lower()
+        choice = (engine or "autogen").lower()
         if choice == "autogen" and AutoGenOrchestrator is None:
             choice = "tools"
-        if choice == "auto":
-            choice = "autogen" if AutoGenOrchestrator is not None else "tools"
 
         if choice == "autogen":
             orch = AutoGenOrchestrator()
@@ -100,8 +98,8 @@ async def orchestrator_stream(payload: OrchestratorRequest, req: Request):
     The orchestrator intelligently routes to specialized models and tools
     across multiple rounds to efficiently solve complex tasks.
     """
-    # Choose engine via query param (?engine=autogen|tools|auto), default auto
-    engine = req.query_params.get("engine", "auto")
+    # Choose engine via query param (?engine=autogen|tools), default autogen
+    engine = req.query_params.get("engine", "autogen")
 
     return create_sse_response(
         stream_orchestrator_events(
