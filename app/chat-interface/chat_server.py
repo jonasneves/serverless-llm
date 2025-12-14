@@ -749,10 +749,6 @@ async def model_badge(model_id: str):
             "color": "red"
         }
 
-# /api/models endpoints moved to api/routes/models.py
-
-# /api/chat endpoint moved to api/routes/chat.py
-
 async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, max_tokens: int, temperature: float):
     """Query a single model and return results with timing (with request queueing)"""
     endpoint = MODEL_ENDPOINTS[model_id]
@@ -821,9 +817,6 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
             "error": True,
             "time": time.time() - start_time
         }
-
-# /api/chat/multi endpoint moved to api/routes/chat.py
-
 
 # GitHub Models API Configuration
 GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
@@ -1179,9 +1172,6 @@ async def stream_multiple_models(
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
 
 
-# /api/chat/stream endpoint moved to api/routes/chat.py
-
-
 async def stream_discussion_events(
     query: str,
     max_tokens: int,
@@ -1315,12 +1305,6 @@ async def stream_council_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
 
 
-# /api/chat/council/stream endpoint moved to api/routes/council.py
-
-
-# /api/chat/discussion/stream endpoint moved to api/routes/discussion.py
-
-
 # Orchestrator Mode Endpoint
 async def stream_orchestrator_events(
     query: str,
@@ -1391,9 +1375,6 @@ async def stream_orchestrator_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
-# /api/chat/orchestrator/stream endpoint moved to api/routes/orchestrator.py
-
-
 # ToolOrchestrator Endpoint
 async def stream_tool_orchestrator_events(
     query: str,
@@ -1417,9 +1398,6 @@ async def stream_tool_orchestrator_events(
     except Exception as e:
         logger.error(f"ToolOrchestrator error: {e}", exc_info=True)
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
-
-
-# /api/chat/tool-orchestrator/stream endpoint moved to api/routes/orchestrator.py
 
 
 # ===== VERBALIZED SAMPLING MODE =====
@@ -1462,9 +1440,6 @@ async def stream_verbalized_sampling_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
-# /api/verbalized-sampling/stream endpoint moved to api/routes/special.py
-
-
 # ===== CONFESSIONS MODE =====
 async def stream_confession_events(
     query: str,
@@ -1491,9 +1466,6 @@ async def stream_confession_events(
     except Exception as e:
         logger.error(f"Confessions mode error: {e}", exc_info=True)
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
-
-
-# /api/confessions/stream endpoint moved to api/routes/special.py
 
 
 if __name__ == "__main__":
