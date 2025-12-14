@@ -162,10 +162,12 @@ export const TRENDING_FALLBACK: TrendingTopic[] = [
 
 export const BG_STYLES: BackgroundStyle[] = ['dots-mesh', 'dots', 'dots-fade', 'grid', 'mesh', 'animated-mesh', 'none'];
 
+const BASE_BACKGROUND = '#0f172a'; // Unified playground background tone
+
 export const MODE_COLORS: Record<Mode, string> = {
-  compare: '#0f172a',    // Slate 900
-  council: '#1e1b4b',    // Indigo 950
-  roundtable: '#022c22', // Emerald 950
+  compare: BASE_BACKGROUND,
+  council: BASE_BACKGROUND,
+  roundtable: BASE_BACKGROUND,
 };
 
 // Generation defaults - centralized for easy maintenance
