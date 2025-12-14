@@ -57,6 +57,27 @@
   transform: scale(1.05) !important;
 }
 
+.header-shell {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.mode-track {
+  width: min(280px, 70vw);
+}
+
+.mode-slider {
+  width: calc((100% - 8px) / 3);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.4));
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.topics-scroll {
+  max-height: 60vh;
+}
+
 body.arena-selecting {
   user-select: none !important;
   -webkit-user-select: none !important;

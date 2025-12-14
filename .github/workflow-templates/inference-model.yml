@@ -5,20 +5,11 @@
 # Copy this template and replace the placeholders to onboard a new model.
 # 
 # Steps to add a new model:
-# 1. Copy this file to ../.github/workflows/[model]-inference.yml
-# 2. Replace all [[PLACEHOLDERS]] with your model's values:
-#    - [[MODEL_DISPLAY_NAME]]: Human-readable name (e.g., "Llama 3.2-3B")
-#    - [[MODEL_NAME]]: Short identifier (e.g., "llama")
-#    - [[MODEL_DIR]]: Directory name in app/ (e.g., "llama-inference")
-#    - [[MODEL_REPO]]: HuggingFace repo (e.g., "bartowski/Llama-3.2-3B-Instruct-GGUF")
-#    - [[MODEL_FILE]]: GGUF filename (e.g., "Llama-3.2-3B-Instruct-Q4_K_M.gguf")
-#    - [[CACHE_KEY_PREFIX]]: Cache identifier (e.g., "gguf-llama-3.2-3b-q4")
-#    - [[TUNNEL_SECRET_NAME]]: Cloudflare tunnel secret (e.g., "CLOUDFLARE_TUNNEL_TOKEN_LLAMA")
-#    - [[RESTART_EVENT]]: Dispatch event type (e.g., "restart-llama-inference")
-#    - [[WORKFLOW_FILE]]: This file's name (e.g., "llama-inference.yml")
+# 1. Copy this file to ../workflows/[model]-inference.yml
+# 2. Replace all values marked with #REPLACE# comments
 # 3. Set default values for n_ctx, n_batch, max_concurrent based on model size
 # 4. Create the Cloudflare tunnel secret in GitHub repository settings
-# 5. Optionally create a custom Dockerfile in app/[[MODEL_DIR]]/
+# 5. Optionally create a custom Dockerfile in app/[MODEL_DIR]/
 #
 # Model-specific tuning guidelines:
 # - Small models (1-3B): n_ctx=4096, n_batch=512, max_concurrent=4
@@ -26,9 +17,9 @@
 # - Large models (13B+): n_ctx=8192, n_batch=128, max_concurrent=2
 # ==============================================================================
 
-name: [[MODEL_DISPLAY_NAME]]
+name: Model Name  # REPLACE: Human-readable name (e.g., "Llama 3.2-3B")
 
-run-name: [[MODEL_DISPLAY_NAME]] Inference Server
+run-name: Model Name Inference Server  # REPLACE: Match the name above
 
 on:
   workflow_dispatch:
@@ -55,7 +46,7 @@ on:
       n_ctx:
         description: 'Context window size'
         required: false
-        default: '4096'  # Adjust based on model size
+        default: '4096'  # REPLACE: Adjust based on model size
         type: string
       n_threads:
         description: 'CPU threads'
@@ -65,24 +56,34 @@ on:
       n_batch:
         description: 'Batch size'
         required: false
-        default: '512'  # Adjust based on model size
+        default: '512'  # REPLACE: Adjust based on model size
         type: string
       max_concurrent:
         description: 'Max concurrent requests per instance'
         required: false
-        default: '4'  # Adjust based on model size
+        default: '4'  # REPLACE: Adjust based on model size
         type: string
 
   repository_dispatch:
-    types: [[[RESTART_EVENT]]]
+    types: [restart-model-inference]  # REPLACE: e.g., restart-llama-inference
 
 # ============================================================
 # Shared configuration using YAML anchors
+# GitHub Actions supports YAML anchors in the jobs section
 # ============================================================
 x-common-permissions: &common-permissions
   actions: write
   contents: read
   packages: read
+
+x-inference-with-defaults: &inference-with-defaults
+  duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
+  auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
+  instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
+  n_ctx: ${{ github.event.client_payload.n_ctx || inputs.n_ctx || '8192' }}
+  n_threads: ${{ github.event.client_payload.n_threads || inputs.n_threads || '2' }}
+  n_batch: ${{ github.event.client_payload.n_batch || inputs.n_batch || '256' }}
+  max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
 
 x-common-secrets: &common-secrets
   hf_token: ${{ secrets.HF_TOKEN }}
@@ -96,21 +97,17 @@ jobs:
   inference:
     uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "[[MODEL_NAME]]"
-      model_dir: "[[MODEL_DIR]]"
-      model_repo: "[[MODEL_REPO]]"
-      model_file: "[[MODEL_FILE]]"
-      cache_key_prefix: "[[CACHE_KEY_PREFIX]]"
-      tunnel_secret_name: "[[TUNNEL_SECRET_NAME]]"
-      restart_event_type: "[[RESTART_EVENT]]"
-      workflow_file: "[[WORKFLOW_FILE]]"
-      duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
-      auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
-      instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
-      n_ctx: ${{ github.event.client_payload.n_ctx || inputs.n_ctx || '8192' }}
-      n_threads: ${{ github.event.client_payload.n_threads || inputs.n_threads || '2' }}
-      n_batch: ${{ github.event.client_payload.n_batch || inputs.n_batch || '256' }}
-      max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
+      # Model-specific configuration - REPLACE ALL THESE VALUES
+      model_name: "model"             # REPLACE: Short identifier (e.g., "llama")
+      model_dir: "model-inference"    # REPLACE: Directory name (e.g., "llama-inference")
+      model_repo: "owner/repo"        # REPLACE: HuggingFace repo (e.g., "bartowski/Llama-3.2-3B-Instruct-GGUF")
+      model_file: "model.gguf"        # REPLACE: GGUF filename (e.g., "Llama-3.2-3B-Instruct-Q4_K_M.gguf")
+      cache_key_prefix: "gguf-model"  # REPLACE: Cache identifier (e.g., "gguf-llama-3.2-3b-q4")
+      tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_MODEL"  # REPLACE: e.g., "CLOUDFLARE_TUNNEL_TOKEN_LLAMA"
+      restart_event_type: "restart-model-inference"        # REPLACE: e.g., "restart-llama-inference"
+      workflow_file: "model-inference.yml"                 # REPLACE: This file's name
+      # Common configuration with defaults (uses YAML anchor)
+      <<: *inference-with-defaults
     secrets:
       <<: *common-secrets
-      tunnel_token: ${{ secrets.[[TUNNEL_SECRET_NAME]] }}
+      tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_MODEL }}  # REPLACE: Match tunnel_secret_name

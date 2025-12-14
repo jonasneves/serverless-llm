@@ -186,7 +186,7 @@ export default function TopicsDrawer({ open, onClose, onSelectPrompt }: TopicsDr
         </div>
 
         {tab === 'today' && (
-          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-y-auto topics-scroll" style={{ maxHeight: '60vh' }}>
+          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-y-auto topics-scroll">
             {todayTopics.map(topic => (
               <TopicCard key={topic.id} topic={topic} onSelectPrompt={onSelectPrompt} />
             ))}
@@ -194,7 +194,7 @@ export default function TopicsDrawer({ open, onClose, onSelectPrompt }: TopicsDr
         )}
 
         {tab === 'packs' && (
-          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto topics-scroll" style={{ maxHeight: '60vh' }}>
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto topics-scroll">
             {TOPIC_PACKS.map(pack => (
               <div key={pack.id} className="rounded-xl border border-slate-800/60 bg-slate-900/70 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
@@ -217,7 +217,7 @@ export default function TopicsDrawer({ open, onClose, onSelectPrompt }: TopicsDr
         )}
 
         {tab === 'trending' && (
-          <div className="p-4 sm:p-6 space-y-3 overflow-y-auto topics-scroll" style={{ maxHeight: '60vh' }}>
+          <div className="p-4 sm:p-6 space-y-3 overflow-y-auto topics-scroll">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="text-xs text-slate-400">Feed:</div>
               <span className="text-xs text-slate-200 bg-slate-800/70 px-2 py-1 rounded border border-slate-700/60">
