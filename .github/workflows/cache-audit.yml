@@ -119,10 +119,16 @@ jobs:
           CACHES=$(gh api repos/${{ github.repository }}/actions/caches --paginate 2>/dev/null || echo '{"actions_caches":[]}')
           
           OLD_CACHES=$(echo "$CACHES" | jq -r --arg date "$(date -d '30 days ago' +%Y-%m-%d 2>/dev/null || date -v-30d +%Y-%m-%d)" '.actions_caches[] | select(.last_accessed_at < $date) | .key' 2>/dev/null || echo "")
-          OLD_COUNT=$(echo "$OLD_CACHES" | grep -c . 2>/dev/null || echo "0")
+          OLD_COUNT=0
+          if [ -n "$OLD_CACHES" ]; then
+            OLD_COUNT=$(echo "$OLD_CACHES" | wc -l | tr -d ' ')
+          fi
           
           LARGE_CACHES=$(echo "$CACHES" | jq -r '.actions_caches[] | select(.size_in_bytes > 1073741824) | "\(.key): \(.size_in_bytes / 1073741824 | . * 100 | floor / 100) GB"')
-          LARGE_COUNT=$(echo "$LARGE_CACHES" | grep -c . 2>/dev/null || echo "0")
+          LARGE_COUNT=0
+          if [ -n "$LARGE_CACHES" ]; then
+            LARGE_COUNT=$(echo "$LARGE_CACHES" | wc -l | tr -d ' ')
+          fi
           
           if [ "$OLD_COUNT" -gt 0 ]; then
             echo "### Old Caches (Not accessed in 30+ days)" >> $GITHUB_STEP_SUMMARY
