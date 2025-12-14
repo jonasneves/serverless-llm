@@ -13,6 +13,46 @@
 {% endblock %}
 
 {% block content %}
+<!-- Model Dock Panel (slides in from left) -->
+<div id="modelDock" class="model-dock">
+  <div class="model-dock-header">
+    <h2>Available Models</h2>
+    <p>Click to select models</p>
+  </div>
+  <div class="model-dock-content">
+    <div class="model-dock-section">
+      <div class="model-dock-section-header">
+        <div class="model-dock-section-title">
+          <span>Local Models</span>
+          <span class="model-dock-count" id="localDockCount">(0)</span>
+        </div>
+        <button class="model-dock-toggle-all" data-type="local">+ Add All</button>
+      </div>
+      <div class="model-dock-list" id="localDockList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    <div class="model-dock-section">
+      <div class="model-dock-section-header">
+        <div class="model-dock-section-title">
+          <span>API Models</span>
+          <span class="model-dock-count" id="apiDockCount">(0)</span>
+        </div>
+        <button class="model-dock-toggle-all" data-type="api">+ Add All</button>
+      </div>
+      <div class="model-dock-list" id="apiDockList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+  <div class="model-dock-footer">
+    <p>Press <kbd>M</kbd> to toggle this panel</p>
+  </div>
+</div>
+
+<!-- Dock overlay (closes dock when clicked) -->
+<div id="dockOverlay" class="dock-overlay"></div>
+
 <div id="chatHistory" class="chat-history">
   <div class="welcome-card">
     <div class="welcome-title">Chat with Multiple Models</div>

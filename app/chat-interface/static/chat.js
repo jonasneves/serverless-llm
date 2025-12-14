@@ -620,23 +620,194 @@ document.addEventListener('DOMContentLoaded', () => {
     resetTokenUsage();
   }
 
+  // Hook into ModelSelector's renderDropdownContent to update dock
+  // Store original renderDropdownContent
+  const originalLocalRender = localModelSelector.renderDropdownContent.bind(localModelSelector);
+  localModelSelector.renderDropdownContent = function() {
+    originalLocalRender();
+    updateDock();
+  };
+
+  const originalApiRender = apiModelSelector.renderDropdownContent.bind(apiModelSelector);
+  apiModelSelector.renderDropdownContent = function() {
+    originalApiRender();
+    updateDock();
+  };
+
+  // Also set up selection change callbacks
+  const originalLocalChange = localModelSelector.options.onSelectionChange;
+  localModelSelector.options.onSelectionChange = (...args) => {
+    if (originalLocalChange) originalLocalChange(...args);
+    updateDock();
+  };
+
+  const originalApiChange = apiModelSelector.options.onSelectionChange;
+  apiModelSelector.options.onSelectionChange = (...args) => {
+    if (originalApiChange) originalApiChange(...args);
+    updateDock();
+  };
+
   // Initialize both model selectors
   localModelSelector.loadModels();
   apiModelSelector.loadModels();
 
-  // Make logo clickable to open model selector (matching playground behavior)
+  // Model Dock Panel (matching playground behavior)
+  const modelDock = document.getElementById('modelDock');
+  const dockOverlay = document.getElementById('dockOverlay');
+  let showDock = false;
+
+  function toggleDock() {
+    showDock = !showDock;
+    if (modelDock) {
+      modelDock.classList.toggle('show', showDock);
+    }
+    if (dockOverlay) {
+      dockOverlay.classList.toggle('show', showDock);
+    }
+  }
+
+  function closeDock() {
+    showDock = false;
+    if (modelDock) {
+      modelDock.classList.remove('show');
+    }
+    if (dockOverlay) {
+      dockOverlay.classList.remove('show');
+    }
+  }
+
+  // Make logo clickable to toggle dock
   const logoWithModelSelector = document.getElementById('logoWithModelSelector');
-  if (logoWithModelSelector && localModelSelector) {
+  if (logoWithModelSelector) {
     logoWithModelSelector.style.cursor = 'pointer';
     logoWithModelSelector.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Open local models dropdown (or toggle if already open)
-      if (typeof localModelSelector.toggleDropdown === 'function') {
-        localModelSelector.toggleDropdown();
-      }
+      toggleDock();
     });
   }
+
+  // Close dock when overlay is clicked
+  if (dockOverlay) {
+    dockOverlay.addEventListener('click', closeDock);
+  }
+
+  // Keyboard shortcut: M to toggle dock
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'm' || e.key === 'M') {
+      // Don't trigger if typing in input
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        return;
+      }
+      toggleDock();
+    }
+    // Escape closes dock
+    if (e.key === 'Escape' && showDock) {
+      closeDock();
+    }
+  });
+
+  // Populate dock with models - using EXACT same pattern as dropdown
+  function updateDock() {
+    const localDockList = document.getElementById('localDockList');
+    const apiDockList = document.getElementById('apiDockList');
+    const localDockCount = document.getElementById('localDockCount');
+    const apiDockCount = document.getElementById('apiDockCount');
+
+    // Render function - EXACT copy from model-selector.js renderDropdownContent
+    const renderModelItem = (selector, id, model) => {
+      const isSelected = selector.selectedModels.has(id);
+      const el = document.createElement('div');
+
+      let statusClass = 'offline';
+      if (model.type === 'api') statusClass = 'api';
+      else if (model.status === 'online') statusClass = 'online';
+      else if (model.status === 'checking') statusClass = 'checking';
+
+      // Use model-option class (same as dropdown)
+      el.className = `model-option ${isSelected ? 'selected' : ''}`;
+      const statusDot = `<span class="status-dot status-${statusClass}"></span>`;
+      const checkIcon = `<span class="model-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+      el.innerHTML = `
+        ${statusDot}
+        <span class="model-name-text">${model.name}</span>
+        ${checkIcon}
+      `;
+
+      el.onclick = (e) => {
+        e.stopPropagation();
+        selector.toggleModel(id);
+      };
+      return el;
+    };
+
+    if (localDockList && localModelSelector) {
+      localDockList.innerHTML = '';
+      const localModels = Object.entries(localModelSelector.models || {}).filter(([id, m]) => m.type === 'local');
+      if (localDockCount) {
+        localDockCount.textContent = `(${localModels.length})`;
+      }
+      localModels.forEach(([id, model]) => {
+        localDockList.appendChild(renderModelItem(localModelSelector, id, model));
+      });
+    }
+
+    if (apiDockList && apiModelSelector) {
+      apiDockList.innerHTML = '';
+      const apiModels = Object.entries(apiModelSelector.models || {}).filter(([id, m]) => m.type === 'api');
+      if (apiDockCount) {
+        apiDockCount.textContent = `(${apiModels.length})`;
+      }
+      apiModels.forEach(([id, model]) => {
+        apiDockList.appendChild(renderModelItem(apiModelSelector, id, model));
+      });
+    }
+
+    // Update toggle all buttons
+    document.querySelectorAll('.model-dock-toggle-all').forEach(btn => {
+      const type = btn.dataset.type;
+      const selector = type === 'local' ? localModelSelector : apiModelSelector;
+      const allModels = Object.keys(selector.models || {});
+      const allSelected = allModels.length > 0 && allModels.every(id => selector.selectedModels.has(id));
+      btn.textContent = allSelected ? '− Remove All' : '+ Add All';
+    });
+  }
+
+
+  // Initial dock update after models load
+  // Wait for models to load, then update
+  let updateAttempts = 0;
+  const tryUpdateDock = () => {
+    updateAttempts++;
+    if ((localModelSelector.models && Object.keys(localModelSelector.models).length > 0) ||
+        (apiModelSelector.models && Object.keys(apiModelSelector.models).length > 0) ||
+        updateAttempts > 20) {
+      updateDock();
+    } else {
+      setTimeout(tryUpdateDock, 100);
+    }
+  };
+  setTimeout(tryUpdateDock, 500);
+
+  // Toggle all buttons
+  document.querySelectorAll('.model-dock-toggle-all').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type;
+      const selector = type === 'local' ? localModelSelector : apiModelSelector;
+      const allModels = Object.keys(selector.models);
+      const allSelected = allModels.every(id => selector.selectedModels.has(id));
+      
+      if (allSelected) {
+        allModels.forEach(id => selector.selectedModels.delete(id));
+      } else {
+        allModels.forEach(id => selector.selectedModels.add(id));
+      }
+      selector.updateTrigger();
+      selector.renderDropdownContent();
+      selector.notifySelectionChange();
+    });
+  });
 
   // Auto-focus logic: Removed aggressive initial focus.
   // Instead, typing anywhere focuses the input.

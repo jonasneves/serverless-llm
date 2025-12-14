@@ -15,11 +15,30 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    min-width: 44px;
+    min-height: 44px;
+    width: 40px;
+    height: 40px;
     background: rgba(255, 255, 255, 0.15);
-    padding: 6px;
+    padding: 0;
     border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-all);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo-icon:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.logo-icon:active {
+    transform: scale(0.95);
+}
+
+.logo-icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 .logo-text {
@@ -245,6 +264,13 @@
     .logo-icon {
         width: 32px;
         height: 32px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .logo-icon svg {
+        width: 16px;
+        height: 16px;
     }
 
     .logo-title {
@@ -258,14 +284,15 @@
 
 @media (max-width: 480px) {
     .logo-icon {
-        width: 28px;
-        height: 28px;
-        padding: var(--space-1);
+        width: 32px;
+        height: 32px;
+        min-width: 44px;
+        min-height: 44px;
     }
 
     .logo-icon svg {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
     }
 
     .logo {
