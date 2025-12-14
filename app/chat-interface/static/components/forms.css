@@ -43,10 +43,71 @@
 /* Controls row and groups */
 .controls-row {
     display: flex;
-    gap: var(--space-3);
-    margin-bottom: 6px;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
     flex-wrap: wrap;
     align-items: center;
+}
+
+.controls-row .icon-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-all);
+    flex-shrink: 0;
+}
+
+.controls-row .icon-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+}
+
+.controls-row .icon-btn svg {
+    stroke: currentColor;
+}
+
+.advanced-controls {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: rgba(248, 250, 252, 0.8);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    flex-wrap: wrap;
+    align-items: center;
+    animation: slideDown 0.2s ease-out;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+[data-theme="dark"] .advanced-controls {
+    background: rgba(30, 41, 59, 0.6);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 100px;
+        padding-top: var(--space-3);
+        padding-bottom: var(--space-3);
+    }
 }
 
 .control-group {

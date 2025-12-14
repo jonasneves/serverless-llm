@@ -17,6 +17,7 @@ import { useCardReorder } from './hooks/useCardReorder';
 import { useInspectorSelection } from './hooks/useInspectorSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
+import DiscussionTranscript from './components/DiscussionTranscript';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import './playground.css';
 
@@ -80,6 +81,7 @@ export default function Playground() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastQuery, setLastQuery] = useState('');
   const {
+    history,
     historyRef: conversationHistoryRef,
     pushHistoryEntries,
     historyToText,
@@ -763,7 +765,7 @@ export default function Playground() {
   return (
     <div
       ref={rootContainerRef}
-      className={`min-h-screen text-white relative overflow-hidden ${bgClass}`}
+      className={`fixed inset-0 overflow-hidden text-white ${bgClass}`}
       style={{
         backgroundColor: MODE_COLORS[mode],
         transition: 'background-color 1s ease',
@@ -790,7 +792,6 @@ export default function Playground() {
         style={{
           paddingLeft: activeInspectorId && mode === 'compare' && inspectorPosition === 'left' ? '28rem' : '1.5rem',
           paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : '1.5rem',
-          paddingTop: '4rem',
         }}
       >
         {/* Dock Backdrop */}
@@ -813,73 +814,105 @@ export default function Playground() {
           dockRef={dockRef}
         />
 
-        {/* Main visualization area */}
-        <div
-          ref={visualizationAreaRef}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`relative w-full z-[40] transition-all duration-300 ${mode === 'compare' ? '' : ''}`}
-          style={{
-            // Base styles for all modes
-            position: 'relative',
-            display: 'flex',
-            alignItems: mode === 'compare' ? 'flex-start' : 'center', // Top-align for grid to prevent upward growth
-            justifyContent: 'center',
-            ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
-            transform: `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
-            willChange: 'transform',
-            border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
-            borderRadius: isDraggingOver ? '24px' : '0px',
-            transition: 'transform 0s linear',
+        {/* Main Content Area */}
+        <div className="flex h-screen w-full relative">
+          {/* Left/Main Visualization Area */}
+          <div
+            className={`relative flex-1 transition-all duration-300 flex flex-col pt-24`}
+          >
+            <div
+              ref={visualizationAreaRef}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative w-full h-full z-0 transition-all duration-300`}
+              style={{
+                // Base styles for all modes
+                position: 'relative',
+                display: 'flex',
+                // Compare mode aligns top for scrolling, others center
+                alignItems: mode === 'compare' ? 'flex-start' : 'center',
+                justifyContent: 'center',
+                ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
+                transform: `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
+                willChange: 'transform',
+                border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
+                borderRadius: isDraggingOver ? '24px' : '0px',
+                transition: 'transform 0s linear',
 
-            // Mode-specific styles override base
-            ...(mode === 'compare' ? {
-              minHeight: '300px', // Minimum height to ensure clickable background
-              paddingBottom: '120px', // Extra space at bottom for right-click menu access
-            } : {
-              height: `${LAYOUT.arenaHeight}px`,
-              minHeight: `${LAYOUT.arenaHeight}px`,
-              maxHeight: '100vh',
-            }),
+                // Mode-specific styles override base
+                ...(mode === 'compare' ? {
+                  minHeight: '300px', // Minimum height to ensure clickable background
+                  paddingBottom: '120px', // Extra space at bottom for right-click menu access
+                } : {
+                  height: '100%',
+                  minHeight: '100%',
+                  overflow: 'hidden' // Prevent scroll in arena for council
+                }),
 
-            ...(isDraggingOver ? {
-              background: 'rgba(59, 130, 246, 0.05)',
-            } : {})
-          }}
-        >
-          <ArenaCanvas
-            mode={mode}
-            selectedModels={selectedModels}
-            gridCols={gridCols}
-            speaking={speaking}
-            selectedCardIds={selectedCardIds}
-            setSelectedCardIds={setSelectedCardIds}
-            setActiveInspectorId={setActiveInspectorId}
-            executionTimes={executionTimes}
-            failedModels={failedModels}
-            cardRefs={cardRefs}
-            handlePointerDown={handlePointerDown}
-            dragState={dragState}
-            handleModelToggle={handleModelToggle}
-            setContextMenu={setContextMenu}
-            suppressClickRef={suppressClickRef}
-            getTailSnippet={getTailSnippet}
-            hoveredCard={hoveredCard}
-            setHoveredCard={setHoveredCard}
-            layoutRadius={layoutRadius}
-            getCirclePosition={getCirclePosition}
-            moderatorModel={moderatorModel}
-            moderatorId={moderator}
-            orchestratorTransform={orchestratorTransformWithScale}
-            orchestratorStatus={orchestratorStatus}
-            orchestratorPhaseLabel={orchestratorPhaseLabel}
-            moderatorSynthesis={moderatorSynthesis}
-            isSynthesizing={isSynthesizing}
-            isGenerating={isGenerating}
-            phaseLabel={phaseLabel}
-            linesTransitioning={linesTransitioning}
-          />
+                ...(isDraggingOver ? {
+                  background: 'rgba(59, 130, 246, 0.05)',
+                } : {})
+              }}
+            >
+              <ArenaCanvas
+                mode={mode}
+                selectedModels={selectedModels}
+                gridCols={gridCols}
+                speaking={speaking}
+                selectedCardIds={selectedCardIds}
+                setSelectedCardIds={setSelectedCardIds}
+                setActiveInspectorId={setActiveInspectorId}
+                executionTimes={executionTimes}
+                failedModels={failedModels}
+                cardRefs={cardRefs}
+                handlePointerDown={handlePointerDown}
+                dragState={dragState}
+                handleModelToggle={handleModelToggle}
+                setContextMenu={setContextMenu}
+                suppressClickRef={suppressClickRef}
+                getTailSnippet={getTailSnippet}
+                hoveredCard={hoveredCard}
+                setHoveredCard={setHoveredCard}
+                layoutRadius={layoutRadius}
+                getCirclePosition={getCirclePosition}
+                moderatorModel={moderatorModel}
+                moderatorId={moderator}
+                orchestratorTransform={orchestratorTransformWithScale}
+                orchestratorStatus={orchestratorStatus}
+                orchestratorPhaseLabel={orchestratorPhaseLabel}
+                moderatorSynthesis={moderatorSynthesis}
+                isSynthesizing={isSynthesizing}
+                isGenerating={isGenerating}
+                phaseLabel={phaseLabel}
+                linesTransitioning={linesTransitioning}
+              />
+            </div>
+          </div>
+
+          {/* Right Panel: Transcript (Only for Council/Roundtable) */}
+          {mode !== 'compare' && (
+            <div className="w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
+              <DiscussionTranscript
+                history={history}
+                models={modelsData}
+                className="pt-24 mask-fade-top"
+              />
+
+              <div className="p-4 border-t border-white/5 relative z-[50]">
+                <PromptInput
+                  inputRef={inputRef}
+                  inputFocused={inputFocused}
+                  setInputFocused={setInputFocused}
+                  onSendMessage={sendMessage}
+                  onOpenTopics={() => setShowTopics(true)}
+                  className="relative w-full"
+                  style={{ paddingBottom: '0' }}
+                  placeholder="Steer the discussion..."
+                />
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
@@ -930,13 +963,16 @@ export default function Playground() {
         onSelectPrompt={handleSelectPrompt}
       />
 
-      <PromptInput
-        inputRef={inputRef}
-        inputFocused={inputFocused}
-        setInputFocused={setInputFocused}
-        onSendMessage={sendMessage}
-        onOpenTopics={() => setShowTopics(true)}
-      />
+      {/* Fixed Prompt Input for Compare Mode ONLY */}
+      {mode === 'compare' && (
+        <PromptInput
+          inputRef={inputRef}
+          inputFocused={inputFocused}
+          setInputFocused={setInputFocused}
+          onSendMessage={sendMessage}
+          onOpenTopics={() => setShowTopics(true)}
+        />
+      )}
 
       {/* Custom Context Menu */}
       {contextMenu && (

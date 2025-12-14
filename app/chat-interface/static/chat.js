@@ -181,6 +181,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Advanced controls toggle
+  const advancedToggle = document.getElementById('advancedToggle');
+  const advancedControls = document.getElementById('advancedControls');
+  if (advancedToggle && advancedControls) {
+    advancedToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isShown = advancedControls.style.display !== 'none';
+      advancedControls.style.display = isShown ? 'none' : 'flex';
+      advancedToggle.classList.toggle('active', !isShown);
+    });
+  }
+
   function isNearBottom() {
     const distanceFromBottom = chatHistory.scrollHeight - chatHistory.clientHeight - chatHistory.scrollTop;
     return distanceFromBottom <= AUTO_SCROLL_THRESHOLD;

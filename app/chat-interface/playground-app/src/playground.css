@@ -124,3 +124,8 @@ body.arena-selecting textarea {
   -webkit-user-select: text !important;
   cursor: text !important;
 }
+
+.mask-fade-top {
+  mask-image: linear-gradient(to bottom, transparent 0px, black 6rem);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 6rem);
+}

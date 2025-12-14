@@ -49,8 +49,11 @@ export type ChatHistoryEntry = {
   role: 'user' | 'assistant';
   content: string;
   kind?: 'compare_summary'
-    | 'council_synthesis'
-    | 'roundtable_synthesis'
-    | 'roundtable_analysis'
-    | 'roundtable_turn';
+  | 'council_synthesis'
+  | 'council_turn'
+  | 'council_chairman'
+  | 'council_ranking'
+  | 'roundtable_synthesis'
+  | 'roundtable_analysis'
+  | 'roundtable_turn';
 };

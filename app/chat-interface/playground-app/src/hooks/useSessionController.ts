@@ -200,8 +200,8 @@ export function useSessionController(params: SessionControllerParams) {
     const formatDomainLabel = (value: string) =>
       value
         ? value
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, char => char.toUpperCase())
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, char => char.toUpperCase())
         : '';
 
     const formatPercentage = (value?: number) =>
@@ -247,7 +247,7 @@ export function useSessionController(params: SessionControllerParams) {
       return lines.join('\n').trim();
     };
 
-    const appendRoundtableHistory = (content: string, kind: ChatHistoryEntry['kind']) => {
+    const appendEventHistory = (content: string, kind: ChatHistoryEntry['kind']) => {
       const trimmed = content?.trim();
       if (!trimmed || skipHistory) return;
       pushHistoryEntries([{ role: 'assistant', content: trimmed, kind }]);
@@ -462,6 +462,7 @@ export function useSessionController(params: SessionControllerParams) {
             recordResponse(modelId, responseText, { replace: true });
             if (!(previousResponses && previousResponses[modelId])) {
               setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: responseText } : model));
+              appendEventHistory(`${modelIdToName(modelId)}:\n${responseText}`, 'council_turn');
             }
           }
 
@@ -536,12 +537,21 @@ export function useSessionController(params: SessionControllerParams) {
 
           if (eventType === 'stage2_complete') {
             const aggregate = (data as any).aggregate_rankings as CouncilRanking[] | undefined;
-            if (aggregate) setCouncilAggregateRankings(aggregate);
+            if (aggregate) {
+              setCouncilAggregateRankings(aggregate);
+              const rankingText = aggregate
+                .map((r, i) => `${i + 1}. ${r.model_name} (avg: ${r.average_rank}, votes: ${r.votes_count})`)
+                .join('\n');
+              appendEventHistory(`Anonymous Rankings:\n${rankingText}`, 'council_ranking');
+            }
           }
 
           if (eventType === 'chairman_quip') {
             const quip = String((data as any).quip ?? '');
             setModeratorSynthesis(quip);
+            if (effectiveChairman) {
+              appendEventHistory(`${modelIdToName(effectiveChairman)}: ${quip}`, 'council_chairman');
+            }
           }
 
           if (eventType === 'stage3_start') {
@@ -641,7 +651,7 @@ export function useSessionController(params: SessionControllerParams) {
               model.id === moderator ? { ...model, response: analysisText } : model,
             ));
           }
-          appendRoundtableHistory(analysisText, 'roundtable_analysis');
+          appendEventHistory(analysisText, 'roundtable_analysis');
         }
 
         if (eventType === 'turn_start') {
@@ -688,8 +698,9 @@ export function useSessionController(params: SessionControllerParams) {
           setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: turnResponse } : model));
           setSpeaking(new Set());
           recordResponse(modelId, turnResponse, { label: `Round ${currentTurn + 1}` });
+          recordResponse(modelId, turnResponse, { label: `Round ${currentTurn + 1}` });
           const speakerName = modelIdToName(modelId);
-          appendRoundtableHistory(
+          appendEventHistory(
             `${speakerName} · Round ${currentTurn + 1}\n${turnResponse}`,
             'roundtable_turn',
           );
@@ -708,7 +719,7 @@ export function useSessionController(params: SessionControllerParams) {
           setSpeaking(new Set());
           markModelFailed(modelId);
           recordResponse(modelId, errorText, { replace: true });
-          appendRoundtableHistory(
+          appendEventHistory(
             `${modelIdToName(modelId)} · Round ${currentTurn + 1}\n${errorText}`,
             'roundtable_turn',
           );

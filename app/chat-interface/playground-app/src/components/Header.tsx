@@ -22,9 +22,12 @@ export default function Header({
   onOpenSettings
 }: HeaderProps) {
   return (
-    <div className="relative flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50">
+    <div className="fixed top-0 left-0 right-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none">
+      {/* Background layer for hit testing if needed, or just let events pass through empty space */}
+      <div className="absolute inset-0 pointer-events-auto" style={{ height: '100%', zIndex: -1 }} />
+
       {/* Left: Dock Toggle Only */}
-      <div className="flex items-center gap-3 flex-1">
+      <div className="flex items-center gap-3 flex-1 pointer-events-auto">
         <button
           id="dockToggleBtn"
           onClick={() => setShowDock(!showDock)}
@@ -38,7 +41,7 @@ export default function Header({
       </div>
 
       {/* Center: Unified Title & Mode Toggle */}
-      <div className="absolute left-1/2 -translate-x-1/2 max-w-[calc(100vw-10rem)] sm:max-w-none">
+      <div className="absolute left-1/2 -translate-x-1/2 max-w-[calc(100vw-10rem)] sm:max-w-none pointer-events-auto">
         <div className="flex items-center p-1.5 rounded-xl border border-slate-700/40 header-shell">
           {/* Title */}
           <div className="px-2 sm:px-4 flex items-center gap-2">
@@ -79,7 +82,7 @@ export default function Header({
       </div>
 
       {/* Right: Settings */}
-      <div className="flex items-center gap-2 flex-1 justify-end">
+      <div className="flex items-center gap-2 flex-1 justify-end pointer-events-auto">
         {/* Background Style Cycler */}
         <div className="hidden sm:flex items-center rounded-lg bg-slate-800/30 border border-slate-700/50">
           <button

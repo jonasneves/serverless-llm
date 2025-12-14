@@ -15,10 +15,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     background: rgba(255, 255, 255, 0.15);
-    padding: var(--space-1);
+    padding: 5px;
     border-radius: var(--radius-sm);
 }
 
@@ -28,7 +28,7 @@
 }
 
 .logo-title {
-    font-size: var(--text-lg);
+    font-size: var(--text-base);
     font-weight: var(--font-semibold);
     line-height: var(--leading-tight);
     letter-spacing: var(--tracking-tight);
@@ -38,8 +38,8 @@
 }
 
 .logo-subtitle {
-    font-size: var(--text-xs);
-    opacity: 0.75;
+    font-size: 10px;
+    opacity: 0.7;
     line-height: var(--leading-tight);
 }
 
@@ -59,9 +59,9 @@
 }
 
 .mode-link {
-    padding: var(--space-2) var(--space-4);
+    padding: 6px var(--space-3);
     border-radius: var(--radius-sm);
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--font-medium);
     color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
@@ -69,7 +69,7 @@
     cursor: pointer;
     border: none;
     background: transparent;
-    min-height: var(--button-height-sm);
+    min-height: 32px;
     display: flex;
     align-items: center;
 }

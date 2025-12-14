@@ -239,13 +239,49 @@ class ModelSelector {
   render() {
     if (!this.container) return;
 
-    this.container.innerHTML = '';
+    // Check if we're using compact mode (trigger/dropdown already exist in DOM)
+    const parentContainer = this.container.parentElement;
+    const isCompactMode = parentContainer?.classList.contains('model-selector-compact');
+
+    if (isCompactMode) {
+      // Use existing trigger and dropdown from HTML
+      this.trigger = parentContainer.querySelector('.model-selector-trigger');
+      this.dropdown = parentContainer.querySelector('.model-selector-dropdown');
+
+      if (this.trigger) {
+        this.trigger.onclick = (e) => {
+          e.stopPropagation();
+          this.toggleDropdown();
+        };
+      }
+
+      // Don't clear the container in compact mode
+      // The model chips will be populated inside it
+    } else {
+      // Legacy mode: create elements dynamically
+      this.container.innerHTML = '';
+
+      // 1. Trigger
+      this.trigger = document.createElement('div');
+      this.trigger.className = 'model-selector-trigger';
+      this.trigger.onclick = (e) => {
+        e.stopPropagation();
+        this.toggleDropdown();
+      };
+      this.container.appendChild(this.trigger);
+
+      // 2. Dropdown
+      this.dropdown = document.createElement('div');
+      this.dropdown.className = 'model-selector-dropdown';
+      this.container.appendChild(this.dropdown);
+    }
 
     // Click outside listener
     if (!this.boundClickOutside) {
       this.boundClickOutside = (e) => {
         if (this.dropdown && this.dropdown.classList.contains('show')) {
-          if (!this.container.contains(e.target)) {
+          const targetContainer = isCompactMode ? parentContainer : this.container;
+          if (!targetContainer.contains(e.target)) {
             this.closeDropdown();
           }
         }
@@ -263,20 +299,6 @@ class ModelSelector {
       window.addEventListener('scroll', this.boundRepositionOnScroll, { passive: true });
       window.addEventListener('resize', this.boundRepositionOnScroll);
     }
-
-    // 1. Trigger
-    this.trigger = document.createElement('div');
-    this.trigger.className = 'model-selector-trigger';
-    this.trigger.onclick = (e) => {
-      e.stopPropagation();
-      this.toggleDropdown();
-    };
-    this.container.appendChild(this.trigger);
-
-    // 2. Dropdown
-    this.dropdown = document.createElement('div');
-    this.dropdown.className = 'model-selector-dropdown';
-    this.container.appendChild(this.dropdown);
 
     // Initial fill
     this.updateTrigger();
@@ -332,6 +354,22 @@ class ModelSelector {
     if (!this.trigger) return;
 
     const count = this.selectedModels.size;
+
+    // Check if we're in compact mode (badge is separate element)
+    const parentContainer = this.container?.parentElement;
+    const isCompactMode = parentContainer?.classList.contains('model-selector-compact');
+
+    if (isCompactMode) {
+      // Update the badge count separately
+      const badge = document.getElementById('modelCount');
+      if (badge) {
+        badge.textContent = count.toString();
+      }
+      // Trigger already has the right structure from HTML
+      return;
+    }
+
+    // Legacy mode: update trigger HTML
     let text = 'Select Model';
     let badge = '';
 
@@ -358,10 +396,23 @@ class ModelSelector {
 
   renderDropdownContent() {
     if (!this.dropdown) return;
-    this.dropdown.innerHTML = '';
 
-    // Add Select All / Deselect All toggle in multi-select mode
-    if (this.options.multiSelect && Object.keys(this.models).length > 0) {
+    // Check if we're in compact mode
+    const parentContainer = this.container?.parentElement;
+    const isCompactMode = parentContainer?.classList.contains('model-selector-compact');
+
+    // Clear the appropriate container
+    if (isCompactMode) {
+      // In compact mode, render chips inside the #modelSelector container
+      this.container.innerHTML = '';
+    } else {
+      this.dropdown.innerHTML = '';
+    }
+
+    const targetContainer = isCompactMode ? this.container : this.dropdown;
+
+    // Add Select All / Deselect All toggle in multi-select mode (only in dropdown mode)
+    if (!isCompactMode && this.options.multiSelect && Object.keys(this.models).length > 0) {
       const allSelected = this.selectedModels.size === Object.keys(this.models).length;
       const toggleBtn = document.createElement('button');
       toggleBtn.className = 'model-select-all-btn';
@@ -376,32 +427,41 @@ class ModelSelector {
           this.selectAll();
         }
       };
-      this.dropdown.appendChild(toggleBtn);
+      targetContainer.appendChild(toggleBtn);
     }
 
     // Group models by type
     const localModels = Object.entries(this.models).filter(([id, m]) => m.type === 'local');
     const apiModels = Object.entries(this.models).filter(([id, m]) => m.type === 'api');
 
-    // Helper
-    const renderOption = (id, model) => {
+    // Helper - render as chip or option based on mode
+    const renderModel = (id, model) => {
       const isSelected = this.selectedModels.has(id);
       const el = document.createElement('div');
-      el.className = `model-option ${isSelected ? 'selected' : ''}`;
 
       let statusClass = 'offline';
-      if (model.type === 'api') statusClass = 'api';  // API models get their own distinct color
+      if (model.type === 'api') statusClass = 'api';
       else if (model.status === 'online') statusClass = 'online';
       else if (model.status === 'checking') statusClass = 'checking';
 
-      const statusDot = `<span class="status-dot status-${statusClass}"></span>`;
-      const checkIcon = `<span class="model-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
-
-      el.innerHTML = `
-            ${statusDot}
-            <span class="model-name-text">${model.name}</span>
-            ${checkIcon}
+      if (isCompactMode) {
+        // Render as chip
+        el.className = `model-chip ${isSelected ? 'selected' : ''} model-type-${model.type}`;
+        el.innerHTML = `
+          <span class="status-dot status-${statusClass}"></span>
+          <span class="model-name-text">${model.name}</span>
         `;
+      } else {
+        // Render as dropdown option
+        el.className = `model-option ${isSelected ? 'selected' : ''}`;
+        const statusDot = `<span class="status-dot status-${statusClass}"></span>`;
+        const checkIcon = `<span class="model-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+        el.innerHTML = `
+          ${statusDot}
+          <span class="model-name-text">${model.name}</span>
+          ${checkIcon}
+        `;
+      }
 
       el.onclick = (e) => {
         e.stopPropagation();
@@ -411,16 +471,18 @@ class ModelSelector {
     };
 
     if (localModels.length > 0) {
-      this.createGroupLabel('Local Models');
+      if (!isCompactMode) this.createGroupLabel('Local Models', targetContainer);
+      else if (apiModels.length > 0) this.createSeparator('Local Models', targetContainer);
       localModels.forEach(([id, model]) => {
-        this.dropdown.appendChild(renderOption(id, model));
+        targetContainer.appendChild(renderModel(id, model));
       });
     }
 
     if (apiModels.length > 0) {
-      this.createGroupLabel('API Models');
+      if (!isCompactMode) this.createGroupLabel('API Models', targetContainer);
+      else this.createSeparator('API Models', targetContainer);
       apiModels.forEach(([id, model]) => {
-        this.dropdown.appendChild(renderOption(id, model));
+        targetContainer.appendChild(renderModel(id, model));
       });
     }
 
@@ -431,16 +493,26 @@ class ModelSelector {
       empty.style.fontSize = '12px';
       empty.style.textAlign = 'center';
       empty.textContent = 'No models found';
-      this.dropdown.appendChild(empty);
+      targetContainer.appendChild(empty);
     }
   }
 
-  createGroupLabel(text) {
-    if (!this.dropdown) return;
+  createGroupLabel(text, container = null) {
+    const target = container || this.dropdown;
+    if (!target) return;
     const el = document.createElement('div');
     el.className = 'model-group-label';
     el.textContent = text;
-    this.dropdown.appendChild(el);
+    target.appendChild(el);
+  }
+
+  createSeparator(text, container = null) {
+    const target = container || this.container;
+    if (!target) return;
+    const el = document.createElement('div');
+    el.className = 'model-selector-separator';
+    el.innerHTML = `<span class="separator-label">${text}</span>`;
+    target.appendChild(el);
   }
 
   updateStatus() {

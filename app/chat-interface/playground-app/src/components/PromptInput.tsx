@@ -6,6 +6,9 @@ interface PromptInputProps {
   setInputFocused: (focused: boolean) => void;
   onSendMessage: (text: string) => void;
   onOpenTopics: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+  placeholder?: string;
 }
 
 export default function PromptInput({
@@ -14,12 +17,15 @@ export default function PromptInput({
   setInputFocused,
   onSendMessage,
   onOpenTopics,
+  className,
+  style,
+  placeholder,
 }: PromptInputProps) {
 
   return (
     <div
-      className="fixed bottom-0 right-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
-      style={{
+      className={className ?? "fixed bottom-0 right-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"}
+      style={style ?? {
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
       }}
     >
@@ -65,7 +71,7 @@ export default function PromptInput({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Ask a question to compare model responses..."
+            placeholder={placeholder || "Ask a question to compare model responses..."}
             className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}

@@ -5,16 +5,18 @@
 
 /* Main layout structure */
 header {
-    padding: var(--header-padding-y) var(--header-padding-x);
+    padding: var(--space-3) var(--space-4);
     background: var(--accent-color);
     color: white;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
     z-index: var(--z-fixed);
     position: relative;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 main,
@@ -82,9 +84,17 @@ main> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing
 }
 
 .input-container {
-    padding: 14px var(--space-4);
-    background-color: var(--bg-primary);
+    padding: var(--space-3) var(--space-4);
+    background: rgba(255, 255, 255, 0.95);
     border-top: 1px solid var(--border-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .input-container {
+    background: rgba(15, 23, 42, 0.95);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Safe area inset for devices with notches */
@@ -228,7 +238,7 @@ main> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing
 /* Responsive breakpoints */
 @media (max-width: 768px) {
     header {
-        padding: var(--space-3) var(--space-4);
+        padding: var(--space-2) var(--space-3);
     }
 
     .mode-input-container {
@@ -257,7 +267,7 @@ main> :not(.mode-input-container):not(.input-container):last-of-type:not(.typing
 
 @media (max-width: 480px) {
     header {
-        padding: var(--space-3) var(--space-4);
+        padding: var(--space-2) var(--space-3);
     }
 
     main> :not(.mode-input-container):not(.input-container):not(.mode-overview-card),
