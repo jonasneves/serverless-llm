@@ -30,13 +30,11 @@ async def stream_orchestrator_events(
     Uses Microsoft AutoGen framework with specialist agents
     """
     try:
-        from chat_server import (
-            AutoGenOrchestrator,
-            ToolOrchestrator,
-            MODEL_ENDPOINTS,
-            MODEL_PROFILES,
-            get_default_github_token
-        )
+        from autogen_orchestrator import AutoGenOrchestrator
+        from tool_orchestrator import ToolOrchestrator
+        from core.config import MODEL_ENDPOINTS
+        from model_profiles import MODEL_PROFILES
+        from utils.github_token import get_default_github_token
 
         choice = (engine or "autogen").lower()
         if choice == "autogen" and AutoGenOrchestrator is None:

@@ -22,9 +22,9 @@ async def chat(request: ChatRequest):
     from chat_server import (
         get_model_endpoint_or_error,
         serialize_messages,
-        build_completion_payload,
-        HTTPClient
+        build_completion_payload
     )
+    from http_client import HTTPClient
 
     endpoint = get_model_endpoint_or_error(request.model)
     full_url = f"{endpoint}/v1/chat/completions"
@@ -70,9 +70,9 @@ async def chat_stream(request: MultiChatRequest):
     """
     from chat_server import (
         serialize_messages,
-        stream_multiple_models,
-        get_default_github_token
+        stream_multiple_models
     )
+    from utils.github_token import get_default_github_token
 
     messages = serialize_messages(request.messages)
 
@@ -97,10 +97,10 @@ async def chat_multi(request: MultiChatRequest):
     """
     from chat_server import (
         serialize_messages,
-        query_model,
-        HTTPClient,
-        MODEL_SEMAPHORES
+        query_model
     )
+    from http_client import HTTPClient
+    from core.state import MODEL_SEMAPHORES
 
     messages = serialize_messages(request.messages)
 

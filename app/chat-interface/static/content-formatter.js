@@ -82,7 +82,9 @@ function formatContent(content) {
   if (!content) return '';
   try {
     const withLatex = renderLatex(content);
-    return marked.parse(withLatex);
+    const rawHtml = marked.parse(withLatex);
+    // Sanitize HTML to prevent XSS
+    return typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
   } catch (e) {
     return content;
   }
@@ -166,7 +168,9 @@ function formatContentWithThinking(content) {
     }
 
     const withLatex = renderLatex(answer);
-    html += marked.parse(withLatex);
+    const rawHtml = marked.parse(withLatex);
+    // Sanitize HTML
+    html += typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
 
     return html;
   } catch (e) {

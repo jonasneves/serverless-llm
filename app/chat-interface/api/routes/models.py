@@ -14,13 +14,9 @@ async def list_models():
     """
     List all available models (local and API)
     """
-    from chat_server import (
-        MODEL_CONFIG,
-        MODEL_ENDPOINTS,
-        MODEL_PROFILES,
-        LIVE_CONTEXT_LENGTHS,
-        DEFAULT_MODEL_ID
-    )
+    from core.config import MODEL_CONFIG, MODEL_ENDPOINTS, DEFAULT_MODEL_ID
+    from core.state import LIVE_CONTEXT_LENGTHS
+    from model_profiles import MODEL_PROFILES
 
     def get_context_length(model_id: str) -> int:
         """Get context length: prefer live value from server, fall back to profile."""
@@ -67,11 +63,9 @@ async def model_status(model_id: str, detailed: bool = False):
     """
     Get health status for a specific model
     """
-    from chat_server import (
-        get_model_endpoint_or_error,
-        check_model_health,
-        HTTPClient
-    )
+    from chat_server import get_model_endpoint_or_error
+    from services.health_service import check_model_health
+    from http_client import HTTPClient
 
     endpoint = get_model_endpoint_or_error(model_id, status_code=404)
 

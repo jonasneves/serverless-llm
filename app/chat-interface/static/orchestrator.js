@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   localModelSelector.render = function () { };
   apiModelSelector.render = function () { };
 
+  /**
+   * Updates the state of the send button based on input validity.
+   * Disables button if no model is selected or query is empty.
+   */
   function updateButtonState() {
     const startBtn = document.getElementById('sendBtn');
     const queryInput = document.getElementById('userInput');
@@ -45,6 +49,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     startBtn.disabled = !hasModel || !hasQuery;
   }
 
+  /**
+   * Retrieves all selected model IDs from both local and API selectors.
+   * @returns {string[]} Array of selected model IDs
+   */
   function getAllSelectedModels() {
     const selected = [];
     if (localModelSelector.selectedModels && localModelSelector.selectedModels.size > 0) {
@@ -61,6 +69,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // For now, we'll allow both to have a selection but only use the first one found.
 
   // Update selected models display and dock
+  /**
+   * Refreshes the display of selected model chips in the UI.
+   * Updates the visual list of models chosen by the user.
+   */
   function updateSelectedModelsDisplay() {
     const container = document.getElementById('selectedModelsDisplay');
     if (!container) return;
@@ -109,6 +121,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Populate dock with models
+  /**
+   * Re-renders the model dock list based on current selection state.
+   * Updates the side panel with available local and API models.
+   */
   function updateDock() {
     const localDockList = document.getElementById('localDockList');
     const apiDockList = document.getElementById('apiDockList');
@@ -168,6 +184,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dockOverlay = document.getElementById('dockOverlay');
   let showDock = false;
 
+  /**
+   * Toggles the visibility of the model selection dock sidebar.
+   */
   function toggleDock() {
     showDock = !showDock;
     if (modelDock) {
@@ -277,6 +296,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initial button state check
   updateButtonState();
 
+  /**
+   * Initiates the orchestration process.
+   * Validates input, sends request to backend, and handles streaming response.
+   */
   async function startOrchestration() {
     const query = queryInput.value.trim();
     if (!query) {
@@ -552,13 +575,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateButtonState();
   });
 
-  // Allow Enter to submit (with Shift+Enter for newlines)
-  queryInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      startOrchestration();
-    }
-  });
+
 
   startBtn.addEventListener('click', (event) => {
     event.preventDefault();

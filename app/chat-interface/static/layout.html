@@ -36,6 +36,7 @@
     integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8"
     crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <script defer src="/static/content-formatter.js?v={{ content_formatter_js }}"></script>
   <script>
     // Smart dropdown positioning utility
@@ -94,7 +95,8 @@
   <header>
     <div class="logo" id="logoWithModelSelector">
       <div class="logo-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </div>
@@ -142,8 +144,9 @@
           </div>
         </div>
 
-        <a href="/playground" class="mode-link {% if request.url.path == '/playground' %}active{% endif %}">
-          Arena <span style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;">New</span>
+        <a href="/playground" target="_blank" rel="noopener noreferrer" class="mode-link {% if request.url.path == '/playground' %}active{% endif %}">
+          Arena <span
+            style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;">New</span>
         </a>
       </nav>
 

@@ -22,6 +22,15 @@ from urllib.parse import urlparse
 
 from http_client import HTTPClient
 from constants import DEFAULT_LOCAL_ENDPOINTS
+from services.health_service import fetch_model_capacity
+from core.config import (
+    MODEL_CONFIG,
+
+    MODEL_ENDPOINTS,
+    MODEL_DISPLAY_NAMES,
+    DEFAULT_MODEL_ID,
+    get_endpoint
+)
 
 # Discussion mode imports
 from orchestrator import GitHubModelsOrchestrator
@@ -50,7 +59,12 @@ logger = logging.getLogger(__name__)
 
 # Cache of GitHub Models that returned "unknown_model".
 # Prevents repeated network calls/log spam for invalid IDs.
-UNSUPPORTED_GITHUB_MODELS: set[str] = set()
+from core.state import (
+    MODEL_SEMAPHORES,
+    MODEL_CAPACITIES,
+    LIVE_CONTEXT_LENGTHS,
+    UNSUPPORTED_GITHUB_MODELS
+)
 
 # Import GitHub token utility
 from utils.github_token import get_default_github_token
@@ -113,25 +127,7 @@ def validate_environment():
     logger.info("✓ Environment validation passed")
 
 
-async def fetch_model_capacity(model_id: str, endpoint: str) -> int:
-    """
-    Query a model's /health/details endpoint to get its max_concurrent capacity.
-    Returns the model's reported capacity, or a default of 1 if unavailable.
-    """
-    try:
-        client = HTTPClient.get_client()
-        response = await client.get(f"{endpoint}/health/details", timeout=5.0)
-        if response.status_code == 200:
-            data = response.json()
-            capacity = data.get("max_concurrent", 1)
-            logger.info(f"✓ {model_id}: max_concurrent={capacity}")
-            return capacity
-        else:
-            logger.warning(f"⚠️  {model_id}: health check returned {response.status_code}, using default capacity=1")
-            return 1
-    except Exception as e:
-        logger.warning(f"⚠️  {model_id}: failed to fetch capacity ({e}), using default capacity=1")
-        return 1
+
 
 
 @app.on_event("startup")
@@ -200,7 +196,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(static_dir))
 
 # Include API routers
-from api.routes import chat, models, orchestrator, discussion, council, special
+from api.routes import chat, models, orchestrator, discussion, council, special, health
 
 app.include_router(chat.router)
 app.include_router(models.router)
@@ -208,6 +204,7 @@ app.include_router(orchestrator.router)
 app.include_router(discussion.router)
 app.include_router(council.router)
 app.include_router(special.router)
+app.include_router(health.router)
 
 # Cache file versions based on content hash for automatic cache busting
 FILE_VERSIONS = {}
@@ -265,115 +262,7 @@ def get_static_versions() -> dict:
     }
 
 # Models ordered by capability (Dec 2025 benchmarks)
-MODEL_CONFIG = (
-    {  # Rank 1: Multilingual (119 langs), 1M context, reasoning, coding
-        "id": "qwen3-4b",
-        "name": "Qwen3 4B",
-        "env": "QWEN_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["QWEN_API_URL"],
-        "default": True,
-        "service": "qwen",
-    },
-    {  # Rank 2: o1-preview level reasoning, 96.3% Codeforces
-        "id": "deepseek-r1-distill-qwen-1.5b",
-        "name": "DeepSeek R1 1.5B",
-        "env": "R1QWEN_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["R1QWEN_API_URL"],
-        "service": "r1qwen",
-    },
-    {  # Rank 3: On-device efficiency, reasoning, safety-aligned
-        "id": "gemma-2-9b-instruct",
-        "name": "Gemma 2 9B",
-        "env": "GEMMA_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["GEMMA_API_URL"],
-    },
-    {  # Rank 4: Instruction-following, structured output, function calling
-        "id": "mistral-7b-instruct-v0.3",
-        "name": "Mistral 7B v0.3",
-        "env": "MISTRAL_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["MISTRAL_API_URL"],
-    },
-    {  # Rank 5: Compact reasoning, synthetic data efficiency
-        "id": "phi-3-mini",
-        "name": "Phi-3 Mini",
-        "env": "PHI_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["PHI_API_URL"],
-    },
-    {  # Rank 6: Tool-calling, agentic (70% SWE-Bench)
-        "id": "rnj-1-instruct",
-        "name": "RNJ-1 Instruct",
-        "env": "RNJ_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["RNJ_API_URL"],
-        "service": "rnj",
-    },
-    {  # Rank 7: Lightweight chat, creative writing, long context
-        "id": "llama-3.2-3b",
-        "name": "Llama 3.2-3B",
-        "env": "LLAMA_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["LLAMA_API_URL"],
-    },
-)
 
-# Base domain configuration for production (Cloudflare tunnels)
-# Accepts raw hostnames ("neevs.io") or full URLs ("https://neevs.io")
-RAW_BASE_DOMAIN = os.getenv("BASE_DOMAIN", "").strip()
-BASE_DOMAIN = ""
-BASE_SCHEME = "https"
-
-if RAW_BASE_DOMAIN:
-    candidate = RAW_BASE_DOMAIN.strip()
-    if candidate.startswith("http://") or candidate.startswith("https://"):
-        parsed = urlparse(candidate)
-        BASE_SCHEME = parsed.scheme or "https"
-        candidate = (parsed.netloc or parsed.path).strip()
-    BASE_DOMAIN = candidate.rstrip("/")
-
-def build_service_url(service: str) -> str:
-    """Construct a service URL using the normalized base domain."""
-    return f"{BASE_SCHEME}://{service}.{BASE_DOMAIN}"
-
-def get_endpoint(config):
-    """Get endpoint URL for a service, prioritization: Env Var > Base Domain > Default."""
-    # 1. Specific Env Var (e.g. QWEN_API_URL)
-    if os.getenv(config["env"]):
-        return os.getenv(config["env"])
-
-    # 2. Base Domain (if configured)
-    if BASE_DOMAIN:
-        # Allow explicit service override, otherwise derive from model ID
-        # Qwen IDs include version numbers (e.g., qwen2.5), so we need to map them to "qwen"
-        service = config.get("service") or config["id"].split("-")[0].split(".")[0]
-        return build_service_url(service)
-    
-    # 3. Default Local URL
-    return config["default_url"]
-
-MODEL_ENDPOINTS = {
-    config["id"]: get_endpoint(config)
-    for config in MODEL_CONFIG
-}
-
-MODEL_DISPLAY_NAMES = {
-    config["id"]: config["name"]
-    for config in MODEL_CONFIG
-}
-
-DEFAULT_MODEL_ID = next(
-    (config["id"] for config in MODEL_CONFIG if config.get("default")),
-    MODEL_CONFIG[0]["id"] if MODEL_CONFIG else None,
-)
-
-# Request queueing: limit concurrent requests per model to prevent overload
-# Semaphores are populated at startup based on each model's reported capacity
-# Models expose their max_concurrent via /health/details endpoint
-MODEL_SEMAPHORES: Dict[str, asyncio.Semaphore] = {}
-
-# Cache for configured capacities (max_concurrent) for each model
-MODEL_CAPACITIES: Dict[str, int] = {}
-
-# Cache for live context lengths fetched from inference servers
-# Keys are model IDs, values are the actual n_ctx the server is running with
-LIVE_CONTEXT_LENGTHS: Dict[str, int] = {}
 
 # Log configured endpoints at startup
 logger.info("=" * 60)
@@ -486,265 +375,9 @@ async def status_page(request: Request):
     response.headers["Expires"] = "0"
     return response
 
-@app.get("/health")
-async def health():
-    """Basic health check for the chat interface"""
-    return {"status": "healthy", "service": "chat-interface"}
-
-async def check_model_health(model_id: str, endpoint: str) -> dict:
-    """
-    Perform a detailed health check on a single model, including inference test.
-    Also fetches and caches the live context length from /health/details.
-    """
-    client = HTTPClient.get_client()
-    start_time = time.time()
-    
-    try:
-        # Test health endpoint
-        health_response = await client.get(f"{endpoint}/health")
-
-        if health_response.status_code == 200:
-            health_data = health_response.json()
-            
-            # Try to fetch detailed health info including actual n_ctx
-            try:
-                details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
-                if details_response.status_code == 200:
-                    details_data = details_response.json()
-                    if "n_ctx" in details_data:
-                        LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
-                        logger.debug(f"Cached live context length for {model_id}: {details_data['n_ctx']}")
-            except Exception:
-                pass  # Details endpoint is optional, don't fail the health check
-
-            # Additionally test a simple completion to verify model works
-            try:
-                test_response = await client.post(
-                    f"{endpoint}/v1/chat/completions",
-                    json={
-                        "messages": [{"role": "user", "content": "Hi"}],
-                        "max_tokens": 5,
-                        "temperature": 0.1
-                    },
-                    timeout=30.0
-                )
-
-                return {
-                    "status": "online",
-                    "endpoint": endpoint,
-                    "health": health_data,
-                    "inference_test": "passed" if test_response.status_code == 200 else "failed",
-                    "response_time_ms": int((time.time() - start_time) * 1000),
-                    "context_length": LIVE_CONTEXT_LENGTHS.get(model_id)
-                }
-            except Exception as e:
-                # Health passed but inference failed
-                return {
-                    "status": "degraded",
-                    "endpoint": endpoint,
-                    "health": health_data,
-                    "inference_test": "failed",
-                    "error": str(e),
-                    "response_time_ms": int((time.time() - start_time) * 1000),
-                    "context_length": LIVE_CONTEXT_LENGTHS.get(model_id)
-                }
-        else:
-            return {
-                "status": "unhealthy",
-                "endpoint": endpoint,
-                "error": f"Health check returned {health_response.status_code}",
-                "response_time_ms": int((time.time() - start_time) * 1000)
-            }
-
-    except httpx.TimeoutException:
-        return {
-            "status": "offline",
-            "endpoint": endpoint,
-            "error": "Connection timeout",
-            "response_time_ms": int((time.time() - start_time) * 1000)
-        }
-    except Exception as e:
-        return {
-            "status": "offline",
-            "endpoint": endpoint,
-            "error": str(e),
-            "response_time_ms": int((time.time() - start_time) * 1000)
-        }
-
-@app.get("/api/health/detailed")
-async def detailed_health():
-    """
-    Comprehensive health check for all services
-    Tests actual endpoints to verify they're working
-    """
-    results = {
-        "chat_interface": {
-            "status": "healthy",
-            "timestamp": time.time()
-        },
-        "models": {}
-    }
-
-    # Check each model endpoint
-    # We can run these in parallel for faster results
-    tasks = [
-        check_model_health(model_id, endpoint)
-        for model_id, endpoint in MODEL_ENDPOINTS.items()
-    ]
-    
-    model_results = await asyncio.gather(*tasks)
-    
-    for model_id, result in zip(MODEL_ENDPOINTS.keys(), model_results):
-        results["models"][model_id] = result
-
-    # Calculate overall status
-    model_statuses = [m["status"] for m in results["models"].values()]
-    if not model_statuses:
-        results["overall_status"] = "healthy" # No models configured
-    elif all(s == "online" for s in model_statuses):
-        results["overall_status"] = "healthy"
-    elif any(s == "online" for s in model_statuses):
-        results["overall_status"] = "degraded"
-    else:
-        results["overall_status"] = "unhealthy"
-
-    return results
 
 
-@app.get("/api/system/loadbalancer")
-async def loadbalancer_status():
-    """
-    Load balancer status showing current capacity and active requests per model
-    """
-    status = {}
-    for model_id, semaphore in MODEL_SEMAPHORES.items():
-        endpoint = MODEL_ENDPOINTS.get(model_id, "unknown")
-        configured_capacity = MODEL_CAPACITIES.get(model_id, 1)
-        available_slots = semaphore._value
-        active_requests = configured_capacity - available_slots
 
-        status[model_id] = {
-            "endpoint": endpoint,
-            "configured_capacity": configured_capacity,
-            "active_requests": active_requests,
-            "available_slots": available_slots,
-            "utilization_percent": round(
-                (active_requests / configured_capacity * 100)
-                if configured_capacity > 0 else 0,
-                1
-            )
-        }
-
-    return {
-        "timestamp": time.time(),
-        "models": status,
-        "total_capacity": sum(s["configured_capacity"] for s in status.values()),
-        "total_active": sum(s["active_requests"] for s in status.values()),
-        "total_available": sum(s["available_slots"] for s in status.values()),
-    }
-
-
-async def _quick_model_health(timeout: float = 3.0):
-    """Lightweight /health checks for badge endpoints."""
-    client = HTTPClient.get_client()
-
-    async def check_model(model_id: str, endpoint: str):
-        try:
-            response = await client.get(f"{endpoint}/health", timeout=timeout)
-            if response.status_code == 200:
-                return model_id, "online"
-            return model_id, "unhealthy"
-        except httpx.TimeoutException:
-            return model_id, "timeout"
-        except Exception:
-            return model_id, "offline"
-
-    tasks = [check_model(model_id, endpoint) for model_id, endpoint in MODEL_ENDPOINTS.items()]
-    results = await asyncio.gather(*tasks)
-    return dict(results)
-
-
-@app.get("/api/badge/system")
-async def system_badge():
-    """
-    Shields.io-compatible badge endpoint for overall system health
-    Returns: https://img.shields.io/endpoint?url=<this-endpoint>
-    """
-    try:
-        model_statuses = await _quick_model_health()
-        total_count = len(model_statuses)
-        online_count = sum(1 for status in model_statuses.values() if status == "online")
-
-        if total_count == 0:
-            color = "lightgrey"
-            message = "no models"
-        elif online_count == total_count:
-            color = "brightgreen"
-            message = f"{online_count}/{total_count} online"
-        elif online_count > 0:
-            color = "yellow"
-            message = f"{online_count}/{total_count} online"
-        else:
-            color = "red"
-            message = "offline"
-
-        return {
-            "schemaVersion": 1,
-            "label": "API Status",
-            "message": message,
-            "color": color
-        }
-    except Exception:
-        return {
-            "schemaVersion": 1,
-            "label": "API Status",
-            "message": "error",
-            "color": "red"
-        }
-
-@app.get("/api/badge/model/{model_id}")
-async def model_badge(model_id: str):
-    """
-    Shields.io-compatible badge endpoint for individual model health
-    Usage: https://img.shields.io/endpoint?url=<this-endpoint>&label=Qwen
-    """
-    if model_id not in MODEL_ENDPOINTS:
-        return {
-            "schemaVersion": 1,
-            "label": model_id,
-            "message": "unknown",
-            "color": "lightgrey"
-        }
-
-    endpoint = MODEL_ENDPOINTS[model_id]
-    display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
-
-    try:
-        client = HTTPClient.get_client()
-        # Quick health check
-        response = await client.get(f"{endpoint}/health", timeout=5.0)
-
-        if response.status_code == 200:
-            return {
-                "schemaVersion": 1,
-                "label": display_name,
-                "message": "online",
-                "color": "brightgreen"
-            }
-        else:
-            return {
-                "schemaVersion": 1,
-                "label": display_name,
-                "message": "unhealthy",
-                "color": "orange"
-            }
-    except Exception:
-        return {
-            "schemaVersion": 1,
-            "label": display_name,
-            "message": "offline",
-            "color": "red"
-        }
 
 async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, max_tokens: int, temperature: float):
     """Query a single model and return results with timing (with request queueing)"""
