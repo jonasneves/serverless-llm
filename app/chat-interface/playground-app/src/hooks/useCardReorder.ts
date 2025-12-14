@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { LAYOUT } from '../constants';
 import { Mode } from '../types';
 
-interface DragState {
+export interface DragState {
   activeId: string;
   currX: number;
   currY: number;

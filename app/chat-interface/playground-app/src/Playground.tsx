@@ -1,14 +1,11 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
 import { BG_STYLES, MODE_COLORS, LAYOUT } from './constants';
-import Typewriter from './components/Typewriter';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
 import Header from './components/Header';
-import ExecutionTimeDisplay, { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import ResponseInspector from './components/ResponseInspector';
 import SettingsModal from './components/SettingsModal';
-import StatusIndicator from './components/StatusIndicator';
 import TopicsDrawer from './components/TopicsDrawer';
 import { useModelsManager } from './hooks/useModelsManager';
 import { usePersistedSetting } from './hooks/usePersistedSetting';
@@ -17,6 +14,10 @@ import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
 import { useSelectionBox } from './hooks/useSelectionBox';
 import { useCardReorder } from './hooks/useCardReorder';
+import { CompareArena } from './components/arenas/CompareArena';
+import { CouncilArena, RoundtableArena } from './components/arenas/CircleArena';
+import { ArenaContextMenu } from './components/arenas/types';
+import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 
 export default function Playground() {
   const {
@@ -311,7 +312,7 @@ export default function Playground() {
 
   useEffect(() => () => resetPendingStream(), [resetPendingStream]);
 
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; modelId?: string; type?: 'background' } | null>(null);
+  const [contextMenu, setContextMenu] = useState<ArenaContextMenu>(null);
 
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
@@ -780,558 +781,87 @@ export default function Playground() {
             setContextMenu({ x: e.clientX, y: e.clientY, type: 'background' });
           }}
         >
-          {/* Model cards - rendered for all modes with transitions */}
-          {selectedModels.map((model, index) => {
-            const circlePos = getCirclePosition(index, selectedModels.length, mode, layoutRadius);
-            const isCircle = mode !== 'compare';
-            const isSpeaking = speaking.has(model.id); // Check set membership
-            const isHovered = hoveredCard === model.id;
-            const isSelected = selectedCardIds.has(model.id);
-            const hasError = failedModels.has(model.id);
-            const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
-            const statusState: 'idle' | 'responding' | 'done' | 'waiting' = hasError
-              ? 'waiting'
-              : isSpeaking
-                ? 'responding'
-                : isDone
-                  ? 'done'
-                  : 'idle';
-            const statusLabel = hasError
-              ? 'Error'
-              : isSpeaking
-                ? 'Responding'
-                : isDone
-                  ? 'Done'
-                  : 'Ready';
-            const processingColor = '#fbbf24';
-            const errorColor = '#ef4444'; // Red for errors
-            const typeColor = model.type === 'local' ? '#10b981' : '#3b82f6'; // Green for local, blue for API
-            const effectiveColor = hasError ? errorColor : typeColor; // Use type-based color
-            const isProcessing = isSpeaking && !hasError;
-            const baseBackground = 'rgba(30, 41, 59, 0.85)';
-            const cardBackground = hasError
-              ? `linear-gradient(135deg, ${errorColor}14, ${baseBackground})`
-              : isProcessing
-                ? `linear-gradient(135deg, ${processingColor}14, ${baseBackground})`
-                : baseBackground;
-            const cardBorder = hasError
-              ? `1px solid ${errorColor}99`
-              : isProcessing
-                ? `1px solid ${processingColor}99`
-                : isSelected
-                  ? `1px solid ${typeColor}d0`
-                  : '1px solid rgba(71, 85, 105, 0.5)';
-            const cardShadow = hasError
-              ? `0 0 24px ${errorColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
-              : isProcessing
-                ? `0 0 24px ${processingColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
-                : isSelected
-                  ? `0 0 20px ${typeColor}30, inset 0 1px 1px rgba(255,255,255,0.1)`
-                  : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)';
-
-            // Calculate grid position for compare mode
-            const cols = gridCols; // Use dynamic gridCols state
-            const row = Math.floor(index / cols);
-            const col = index % cols;
-            const totalWidth = (LAYOUT.cardWidth + LAYOUT.gapX) * cols - LAYOUT.gapX;
-            // GridY: Start from top (0) + row offset. Do NOT center vertically to avoid overlapping header.
-            const gridY = mode === 'compare' ? row * (LAYOUT.cardHeight + LAYOUT.gapY) : 0;
-            const gridX = mode === 'compare' ? col * (LAYOUT.cardWidth + LAYOUT.gapX) - totalWidth / 2 + LAYOUT.cardWidth / 2 : 0;
-
-            const pos = isCircle ? circlePos : { x: gridX, y: gridY, angle: 0 };
-            // In council mode, orchestrator sits at (0, layoutRadius - 64) relative to arena center
-            const orchestratorYOffset = mode === 'council' ? layoutRadius - 64 : 0;
-            const lineSize = Math.max(800, layoutRadius * 2 + 600);
-            const lineCenter = lineSize / 2;
-            // SVG is centered on the card. Line goes FROM card center TO orchestrator.
-            // Card is at (circlePos.x, circlePos.y) in arena coords.
-            // Orchestrator is at (0, orchestratorYOffset) in arena coords.
-            // In SVG coords (centered on card): card = (lineCenter, lineCenter)
-            // Orchestrator = lineCenter + (orchestratorX - cardX), lineCenter + (orchestratorY - cardY)
-            const lineX1 = lineCenter; // card center
-            const lineY1 = lineCenter;
-            const lineX2 = lineCenter + (0 - circlePos.x); // orchestrator x relative to card
-            const lineY2 = lineCenter + (orchestratorYOffset - circlePos.y); // orchestrator y relative to card
-
-            // Determine if this card is being dragged
-            const isDragging = dragState?.activeId === model.id;
-
-            // Calculate Position
-            let styleTransform = '';
-
-            if (isDragging && dragState) {
-              // Determine absolute position based on mouse - avoid transitions for instant follow
-              const centerX_Screen = dragState.currX + dragState.offsetX;
-              const centerY_Screen = dragState.currY + dragState.offsetY;
-
-              if (mode === 'compare') {
-                // Grid Mode: transform X is center-relative, Y is top-relative.
-                // We want to place the Top-Left edge of the card.
-                // But wait, our transform is `translate(calc(-50% + X), Y)`.
-                // X is offset from center. Y is offset from top.
-                // (-50%) on X shifts the center of the card to the anchor point.
-                // So if X = 'distance from container center to card center', the card is centered there horizontally.
-                // Y = 'distance from container top to card TOP'.
-
-                const xRelative = centerX_Screen - (dragState.containerLeft + dragState.containerWidth / 2);
-
-                // We have CenterY. We need TopY.
-                // Use the captured cardHeight ensuring accurate offset even if card is taller than standard
-                const topY_Relative = (centerY_Screen - dragState.containerTop) - (dragState.cardHeight / 2);
-
-                styleTransform = `translate(calc(-50% + ${xRelative}px), ${topY_Relative}px)`;
-              } else {
-                // Circle Mode: transform is `translate(calc(-50% + X), calc(-50% + Y))`
-                // Both X and Y are offsets from container center to card center.
-                const xRelative = centerX_Screen - (dragState.containerLeft + dragState.containerWidth / 2);
-                const yRelative = centerY_Screen - (dragState.containerTop + dragState.containerHeight / 2);
-
-                styleTransform = `translate(calc(-50% + ${xRelative}px), calc(-50% + ${yRelative}px))`;
-              }
-            } else {
-              // Not dragging - use slot position
-              if (mode === 'compare') {
-                styleTransform = `translate(calc(-50% + ${pos.x}px), ${pos.y}px)`;
-              } else {
-                styleTransform = `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`;
-              }
-            }
-
-            return (
-              <div
-                key={model.id}
-                ref={(el) => {
-                  if (el) cardRefs.current.set(model.id, el);
-                  else cardRefs.current.delete(model.id);
-                }}
-                onPointerDown={(e) => handlePointerDown(e, model.id)}
-                className="absolute"
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setContextMenu({
-                    x: e.clientX,
-                    y: e.clientY,
-                    modelId: model.id
-                  });
-                }}
-                style={{
-                  transform: styleTransform,
-                  zIndex: isDragging || isHovered ? 100 : isSelected ? 20 : isSpeaking ? 10 : 1,
-                  left: '50%',
-                  top: mode === 'compare' ? '0' : '50%',
-                  transition: isDragging ? 'none' : 'transform 300ms cubic-bezier(0.2, 0, 0.2, 1)',
-                }}
-              >
-                {/* Speaking glow effect */}
-                {isSpeaking && isCircle && (
-                  <div
-                    className="absolute inset-0 rounded-full animate-pulse"
-                    style={{
-                      background: `radial-gradient(circle, ${processingColor}2b 0%, transparent 70%)`,
-                      transform: 'scale(2)',
-                      filter: 'blur(15px)'
-                    }}
-                  />
-                )}
-
-                {/* Card */}
-                <div
-                  data-card
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (suppressClickRef.current) {
-                      suppressClickRef.current = false;
-                      return;
-                    }
-                    const isMulti = e.metaKey || e.ctrlKey;
-                    if (isMulti) {
-                      const newSelection = new Set(selectedCardIds);
-                      if (newSelection.has(model.id)) {
-                        newSelection.delete(model.id);
-                      } else {
-                        newSelection.add(model.id);
-                      }
-                      setSelectedCardIds(newSelection);
-                      setActiveInspectorId(model.id);
-                    } else {
-                      // Click opens full inspector
-                      // Add this model to selection (alongside any pinned models)
-                      const newSelection = new Set([...selectedCardIds].filter(id => pinnedModels.has(id)));
-                      newSelection.add(model.id);
-                      setSelectedCardIds(newSelection);
-                      setActiveInspectorId(model.id);
-                    }
-                  }}
-                  onMouseEnter={() => isCircle && setHoveredCard(model.id)}
-                  onMouseLeave={() => isCircle && setHoveredCard(null)}
-                  className={`relative cursor-grab active:cursor-grabbing card-hover ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
-                  style={{
-                    background: cardBackground,
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    border: cardBorder,
-                    boxShadow: cardShadow,
-                    transform: isSelected || isProcessing ? 'scale(1.05)' : 'scale(1)',
-                    width: isCircle ? '96px' : '256px',
-                    height: isCircle ? '96px' : '200px',
-                    borderRadius: isCircle ? '50%' : '12px',
-                    transition: 'transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out, width 0.7s cubic-bezier(0.4, 0, 0.2, 1), height 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
-                  }}
-                >
-                  {/* Remove Button (Top Right) */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleModelToggle(model.id);
-                    }}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all opacity-0 group-hover:opacity-100 z-50"
-                    style={{ opacity: isSelected || isHovered ? 1 : undefined }}
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-
-                  {/* Grid mode content */}
-                  {!isCircle && (
-                    <div style={{
-                      padding: '16px',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      isolation: 'isolate',
-                      WebkitFontSmoothing: 'antialiased',
-                      MozOsxFontSmoothing: 'grayscale',
-                      textRendering: 'optimizeLegibility',
-                      opacity: isCircle ? 0 : 1,
-                      transition: 'opacity 0.3s ease-out'
-                    }}>
-                      <div className="flex items-center justify-between mb-3 gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <StatusIndicator
-                            state={statusState}
-                            color={effectiveColor}
-                            size={16}
-                            label={statusLabel}
-                          />
-                          <span className="text-xs font-semibold text-slate-200 truncate">{model.name}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {mode === 'compare' && moderator === model.id && (
-                            <span
-                              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300 border border-orange-500/30"
-                              title="Orchestrator used for Council/Roundtable"
-                            >
-                              Orchestrator
-                            </span>
-                          )}
-                          <span
-                            className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${model.type === 'local'
-                              ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
-                              : 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
-                              }`}
-                          >
-                            {model.type === 'local' ? 'Local' : 'API'}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 flex-1">
-                        {model.statusMessage ? (
-                          // Show temporary status message (rate limiting, etc.)
-                          model.statusMessage.startsWith('<svg') ? (
-                            <span dangerouslySetInnerHTML={{ __html: model.statusMessage }} />
-                          ) : (
-                            model.statusMessage
-                          )
-                        ) : isSpeaking ? (
-                          model.response.trim().length > 0 ? (
-                            model.response.startsWith('<svg') ? (
-                              <span dangerouslySetInnerHTML={{ __html: model.response }} />
-                            ) : (
-                              <Typewriter text={model.response} speed={20} />
-                            )
-                          ) : model.thinking && model.thinking.trim().length > 0 ? (
-                            <span>
-                              <span className="text-slate-500 italic">Thinking… </span>
-                              {getTailSnippet(model.thinking.trim(), 220)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 italic">Thinking…</span>
-                          )
-                        ) : (
-                          model.response.startsWith('<svg') ? (
-                            <span dangerouslySetInnerHTML={{ __html: model.response }} />
-                          ) : (
-                            model.response
-                          )
-                        )}
-                      </p>
-                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                        <ExecutionTimeDisplay times={executionTimes[model.id]} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Circle mode content */}
-                  {isCircle && (
-                    <div className="absolute inset-0 flex items-center justify-center" style={{
-                      opacity: isCircle ? 1 : 0,
-                      transition: 'opacity 0.3s ease-out'
-                    }}>
-                      <div className="text-center px-2">
-                        <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-                        <div className="flex items-center justify-center mt-3">
-                          <StatusIndicator state={statusState} color={effectiveColor} size={14} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Hover preview panel */}
-                {isHovered && isCircle && (
-                  <div
-                    data-card
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl transition-all duration-300"
-                    style={{
-                      top: circlePos.y > 0 ? 'auto' : '100%',
-                      bottom: circlePos.y > 0 ? '100%' : 'auto',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      marginTop: circlePos.y > 0 ? 0 : '12px',
-                      marginBottom: circlePos.y > 0 ? '12px' : 0,
-                      background: 'rgba(15, 23, 42, 0.95)',
-                      backdropFilter: 'blur(16px)',
-                      border: `1px solid ${effectiveColor}40`,
-                      boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${effectiveColor}15`,
-                      zIndex: 200,
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
-                      <span className="text-xs font-semibold text-slate-300">{model.name}</span>
-                    </div>
-                    <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-                      {model.statusMessage ? (
-                        // Show temporary status message (rate limiting, etc.)
-                        model.statusMessage.startsWith('<svg') ? (
-                          <span dangerouslySetInnerHTML={{ __html: model.statusMessage }} />
-                        ) : (
-                          model.statusMessage
-                        )
-                      ) : isSpeaking ? (
-                        model.response.trim().length > 0 ? (
-                          model.response.startsWith('<svg') ? (
-                            <span dangerouslySetInnerHTML={{ __html: model.response }} />
-                          ) : (
-                            <Typewriter text={model.response} speed={20} />
-                          )
-                        ) : model.thinking && model.thinking.trim().length > 0 ? (
-                          <span>
-                            <span className="text-slate-500 italic">Thinking… </span>
-                            {getTailSnippet(model.thinking.trim(), 280)}
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 italic">Thinking…</span>
-                        )
-                      ) : model.response ? (
-                        model.response.startsWith('<svg') ? (
-                          <span dangerouslySetInnerHTML={{ __html: model.response }} />
-                        ) : (
-                          getTailSnippet(model.response)
-                        )
-                      ) : (
-                        <span className="text-slate-500 italic">No response yet.</span>
-                      )}
-                    </p>
-                    <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
-                      <ExecutionTimeDisplay times={executionTimes[model.id]} />
-                    </div>
-                  </div>
-                )}
-
-                {isSpeaking && mode !== 'compare' && !hasError && (
-                  <svg
-                    className="absolute pointer-events-none"
-                    style={{
-                      width: `${lineSize}px`,
-                      height: `${lineSize}px`,
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      zIndex: -1
-                    }}
-                    viewBox={`0 0 ${lineSize} ${lineSize}`}
-                  >
-                    <defs>
-                      <linearGradient
-                        id={`grad-${model.id}`}
-                        gradientUnits="userSpaceOnUse"
-                        x1={lineX1}
-                        y1={lineY1}
-                        x2={lineX2}
-                        y2={lineY2}
-                      >
-                        <stop offset="0%" stopColor={processingColor} stopOpacity="0.45" />
-                        <stop offset="100%" stopColor={processingColor} stopOpacity="0.12" />
-                      </linearGradient>
-                    </defs>
-                    <line
-                      x1={lineX1}
-                      y1={lineY1}
-                      x2={lineX2}
-                      y2={lineY2}
-                      stroke={`url(#grad-${model.id})`}
-                      strokeWidth="2"
-                      strokeDasharray="6,4"
-                      strokeLinecap="round"
-                      className="animate-flow"
-                    />
-                  </svg>
-                )}
-
-              </div>
-            );
-          })}
-
-          {/* Orchestrator in center */}
-          {mode !== 'compare' && moderatorModel && (
-            <div
-              data-card
-              className="absolute z-20 transition-all duration-700 ease-out cursor-pointer"
-              style={{
-                opacity: 1,
-                transform: orchestratorTransformWithScale,
-                left: '50%',
-                top: mode === 'council' ? `calc(50% + ${layoutRadius}px - 64px)` : '50%', // Align top edge with circle bottom
-              }}
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent background click handler from firing
-                if (moderator) {
-                  setSelectedCardIds(new Set([moderator]));
-                  setActiveInspectorId(moderator);
-                }
-              }}
-              onMouseEnter={() => setHoveredCard('moderator')}
-              onMouseLeave={() => setHoveredCard(null)}
-            >
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                {/* Outer glow rings */}
-                <div
-                  className="absolute inset-0 rounded-full animate-pulse"
-                  style={{
-                    background: `radial-gradient(circle, ${moderatorModel.color}20 0%, transparent 70%)`,
-                    transform: 'scale(2)',
-                    filter: 'blur(20px)'
-                  }}
-                />
-
-                {/* Main moderator card */}
-                <div
-                  className="relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300"
-                  style={{
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    backdropFilter: 'blur(16px)',
-                    border: `2px solid ${moderatorModel.color}60`,
-                    boxShadow: `0 0 40px ${moderatorModel.color}30, inset 0 1px 1px rgba(255,255,255,0.1)`
-                  }}
-                >
-                  {/* Rotating ring */}
-                  <div
-                    className="absolute inset-[-4px] rounded-full"
-                    style={{
-                      background: `conic-gradient(from 0deg, transparent, ${moderatorModel.color}60, transparent)`,
-                      animation: 'spin 4s linear infinite'
-                    }}
-                  />
-                  <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.95)' }} />
-
-                  <div className="relative text-center z-10 flex flex-col items-center gap-1">
-                    <div className="text-[10px] font-semibold text-slate-200 leading-tight">
-                      {moderatorModel.name}
-                    </div>
-                    <StatusIndicator
-                      state={orchestratorStatus}
-                      color={moderatorModel.color}
-                      size={14}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 w-max max-w-[200px]" style={{ top: 'calc(100% + 12px)' }}>
-                <span className="text-[10px] text-slate-500">{orchestratorPhaseLabel}</span>
-              </div>
-
-              {/* Hover preview synthesis */}
-              {hoveredCard === 'moderator' && (
-                <div
-                  data-card
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-[200] transition-all duration-300"
-                  style={{
-                    background: 'rgba(15, 23, 42, 0.95)',
-                    backdropFilter: 'blur(16px)',
-                    border: `1px solid ${moderatorModel.color}40`,
-                    boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${moderatorModel.color}20`
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="text-xs text-slate-400 uppercase tracking-wider">Orchestrator</div>
-                    <span className="text-xs text-slate-500">·</span>
-                    <span className="text-xs font-medium text-slate-300">{moderatorModel.name}</span>
-                  </div>
-                  <p className="text-sm text-slate-300 leading-relaxed">
-                    {moderatorSynthesis ? (
-                      (isSynthesizing && moderator && speaking.has(moderator))
-                        ? <Typewriter text={moderatorSynthesis} speed={20} />
-                        : getTailSnippet(moderatorSynthesis)
-                    ) : isSynthesizing ? (
-                      <span className="text-slate-500 italic">Synthesizing responses...</span>
-                    ) : isGenerating ? (
-                      phaseLabel && phaseLabel.startsWith('<svg') ? (
-                        <span className="text-slate-500 italic" dangerouslySetInnerHTML={{ __html: phaseLabel }} />
-                      ) : (
-                        <span className="text-slate-500 italic">
-                          {phaseLabel === 'Stage 1 · Responses' ? 'Waiting for model responses...' : (phaseLabel || 'Orchestrating...')}
-                        </span>
-                      )
-                    ) : (
-                      <span className="text-slate-500 italic">Send a prompt to see the synthesis.</span>
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          {/* Connecting circle */}
-          {mode !== 'compare' && (
-            <svg
-              className="absolute pointer-events-none transition-opacity duration-700"
-              style={{
-                width: '1000px',
-                height: '1000px',
-                opacity: 0.2
-              }}
-            >
-              <circle
-                cx="500"
-                cy="500"
-                r={layoutRadius}
-                fill="none"
-                stroke="url(#circleGrad)"
-                strokeWidth="1"
-                strokeDasharray="8,4"
-              />
-              <defs>
-                <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="50%" stopColor="#8b5cf6" />
-                  <stop offset="100%" stopColor="#3b82f6" />
-                </linearGradient>
-              </defs>
-            </svg>
+          {mode === 'compare' ? (
+            <CompareArena
+              selectedModels={selectedModels}
+              gridCols={gridCols}
+              speaking={speaking}
+              selectedCardIds={selectedCardIds}
+              setSelectedCardIds={setSelectedCardIds}
+              setActiveInspectorId={setActiveInspectorId}
+              pinnedModels={pinnedModels}
+              executionTimes={executionTimes}
+              failedModels={failedModels}
+              cardRefs={cardRefs}
+              handlePointerDown={handlePointerDown}
+              dragState={dragState}
+              handleModelToggle={handleModelToggle}
+              setContextMenu={setContextMenu}
+              suppressClickRef={suppressClickRef}
+              getTailSnippet={getTailSnippet}
+            />
+          ) : mode === 'council' ? (
+            <CouncilArena
+              selectedModels={selectedModels}
+              layoutRadius={layoutRadius}
+              getCirclePosition={getCirclePosition}
+              dragState={dragState}
+              handlePointerDown={handlePointerDown}
+              speaking={speaking}
+              hoveredCard={hoveredCard}
+              setHoveredCard={setHoveredCard}
+              selectedCardIds={selectedCardIds}
+              setSelectedCardIds={setSelectedCardIds}
+              setActiveInspectorId={setActiveInspectorId}
+              pinnedModels={pinnedModels}
+              handleModelToggle={handleModelToggle}
+              executionTimes={executionTimes}
+              failedModels={failedModels}
+              cardRefs={cardRefs}
+              setContextMenu={setContextMenu}
+              suppressClickRef={suppressClickRef}
+              moderatorModel={moderatorModel}
+              moderatorId={moderator}
+              orchestratorTransform={orchestratorTransformWithScale}
+              orchestratorStatus={orchestratorStatus}
+              orchestratorPhaseLabel={orchestratorPhaseLabel}
+              moderatorSynthesis={moderatorSynthesis}
+              isSynthesizing={isSynthesizing}
+              isGenerating={isGenerating}
+              phaseLabel={phaseLabel}
+              getTailSnippet={getTailSnippet}
+            />
+          ) : (
+            <RoundtableArena
+              selectedModels={selectedModels}
+              layoutRadius={layoutRadius}
+              getCirclePosition={getCirclePosition}
+              dragState={dragState}
+              handlePointerDown={handlePointerDown}
+              speaking={speaking}
+              hoveredCard={hoveredCard}
+              setHoveredCard={setHoveredCard}
+              selectedCardIds={selectedCardIds}
+              setSelectedCardIds={setSelectedCardIds}
+              setActiveInspectorId={setActiveInspectorId}
+              pinnedModels={pinnedModels}
+              handleModelToggle={handleModelToggle}
+              executionTimes={executionTimes}
+              failedModels={failedModels}
+              cardRefs={cardRefs}
+              setContextMenu={setContextMenu}
+              suppressClickRef={suppressClickRef}
+              moderatorModel={moderatorModel}
+              moderatorId={moderator}
+              orchestratorTransform={orchestratorTransformWithScale}
+              orchestratorStatus={orchestratorStatus}
+              orchestratorPhaseLabel={orchestratorPhaseLabel}
+              moderatorSynthesis={moderatorSynthesis}
+              isSynthesizing={isSynthesizing}
+              isGenerating={isGenerating}
+              phaseLabel={phaseLabel}
+              getTailSnippet={getTailSnippet}
+            />
           )}
         </div>
 
