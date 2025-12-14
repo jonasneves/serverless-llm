@@ -51,6 +51,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --chown=appuser:appuser *.py .
 COPY --chown=appuser:appuser *.json .
 # Copy directories
+COPY --chown=appuser:appuser core ./core
 COPY --chown=appuser:appuser utils ./utils
 COPY --chown=appuser:appuser api ./api
 COPY --chown=appuser:appuser services ./services
