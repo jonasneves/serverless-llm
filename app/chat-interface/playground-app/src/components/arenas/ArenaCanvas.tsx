@@ -48,7 +48,7 @@ interface ArenaCanvasProps {
 
 const GRID_CARD_WIDTH = 256;
 const GRID_CARD_HEIGHT = 200;
-const CIRCLE_CARD_SIZE = 104;
+const CIRCLE_CARD_SIZE = 96;
 
 export function ArenaCanvas(props: ArenaCanvasProps) {
   const {
@@ -246,8 +246,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
               style={{
                 background: cardBackground,
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
+                backdropFilter: isCircleMode ? undefined : 'blur(8px)',
+                WebkitBackdropFilter: isCircleMode ? undefined : 'blur(8px)',
                 border: cardBorder,
                 boxShadow: cardShadow,
                 transform: isSelected || isProcessing ? 'scale(1.05)' : 'scale(1)',
