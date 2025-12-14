@@ -38,6 +38,7 @@ export default function ModelDock({
     <div
       ref={dockRef}
       data-no-arena-scroll
+      data-no-background
       className="dock-scroll model-dock-panel fixed left-3 top-20 bottom-20 w-[min(75vw,320px)] sm:left-6 sm:top-24 sm:bottom-24 sm:w-72 rounded-2xl flex flex-col z-[60] transition-all duration-300 overflow-hidden"
       style={{
         transform: showDock ? 'translateX(0)' : 'translateX(-150%)',

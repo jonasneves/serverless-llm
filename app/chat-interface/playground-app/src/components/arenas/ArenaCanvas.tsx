@@ -28,7 +28,7 @@ interface ArenaCanvasProps {
   dragState: DragState | null;
   handleModelToggle: (modelId: string) => void;
   setContextMenu: Dispatch<SetStateAction<ArenaContextMenu>>;
-  suppressClickRef: MutableRefObject<boolean>;
+  suppressClickRef: MutableRefObject<{ card: boolean; background: boolean }>;
   getTailSnippet: (text: string, maxChars?: number) => string;
   hoveredCard: string | null;
   setHoveredCard: (value: string | null) => void;
@@ -529,13 +529,13 @@ function handleCardClick({
 }: {
   e: ReactMouseEvent;
   modelId: string;
-  suppressClickRef: MutableRefObject<boolean>;
+  suppressClickRef: MutableRefObject<{ card: boolean; background: boolean }>;
   setSelectedCardIds: Dispatch<SetStateAction<Set<string>>>;
   setActiveInspectorId: (id: string | null) => void;
 }) {
   e.stopPropagation();
-  if (suppressClickRef.current) {
-    suppressClickRef.current = false;
+  if (suppressClickRef.current.card) {
+    suppressClickRef.current.card = false;
     return;
   }
   const isMulti = e.metaKey || e.ctrlKey;

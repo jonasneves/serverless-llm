@@ -107,6 +107,7 @@ export default function ResponseInspector({
   return (
     <aside
       data-no-arena-scroll
+      data-no-background
       className={`fixed top-20 bottom-20 w-[min(85vw,380px)] sm:top-24 sm:bottom-24 sm:w-[420px] rounded-2xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-xl shadow-2xl z-[80] flex flex-col ${position === 'left' ? 'left-3 sm:left-6 right-auto' : 'right-3 sm:right-6 left-auto'
         }`}
       onClick={(e) => e.stopPropagation()}

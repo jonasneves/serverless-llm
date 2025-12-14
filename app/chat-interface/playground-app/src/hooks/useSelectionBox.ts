@@ -16,6 +16,8 @@ interface SelectionRect {
   height: number;
 }
 
+type ClickSuppressRef = React.MutableRefObject<{ card: boolean; background: boolean }>;
+
 interface UseSelectionBoxParams {
   rootContainerRef: React.RefObject<HTMLDivElement>;
   visualizationAreaRef: React.RefObject<HTMLDivElement>;
@@ -27,7 +29,7 @@ interface UseSelectionBoxParams {
   selectedCardIds: Set<string>;
   setSelectedCardIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   setActiveInspectorId: React.Dispatch<React.SetStateAction<string | null>>;
-  suppressClickRef: React.MutableRefObject<boolean>;
+  suppressClickRef: ClickSuppressRef;
 }
 
 function normalizeRect(a: SelectionPoint, b: SelectionPoint) {
@@ -96,7 +98,8 @@ export function useSelectionBox({
       event.preventDefault();
 
       dragSelectionActiveRef.current = true;
-      suppressClickRef.current = false;
+      suppressClickRef.current.card = false;
+      suppressClickRef.current.background = false;
       setDragSelection({
         origin: point,
         current: point,
@@ -183,7 +186,11 @@ export function useSelectionBox({
           } else {
             setActiveInspectorId(null);
           }
-          suppressClickRef.current = willTriggerCardClick;
+          if (willTriggerCardClick) {
+            suppressClickRef.current.card = true;
+          } else if (matched.length > 0) {
+            suppressClickRef.current.background = true;
+          }
         }
 
         return null;

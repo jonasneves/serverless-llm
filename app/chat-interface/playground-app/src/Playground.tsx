@@ -20,6 +20,7 @@ import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import './playground.css';
 
+const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
 export default function Playground() {
   const {
     modelsData,
@@ -269,7 +270,7 @@ export default function Playground() {
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const suppressClickRef = useRef(false);
+  const suppressClickRef = useRef({ card: false, background: false });
   const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
   const {
@@ -317,6 +318,8 @@ export default function Playground() {
 
   useEffect(() => () => resetPendingStream(), [resetPendingStream]);
 
+  const [contextMenu, setContextMenu] = useState<ArenaContextMenu>(null);
+
   useEffect(() => {
     const className = 'arena-selecting';
     const body = document.body;
@@ -329,6 +332,37 @@ export default function Playground() {
       body.classList.remove(className);
     };
   }, [isSelecting]);
+
+  const isBackgroundTarget = useCallback(
+    (target: HTMLElement | null) => {
+      if (!target) return false;
+      return !target.closest(BACKGROUND_IGNORE_SELECTOR);
+    },
+    [],
+  );
+
+  const handleBackgroundClick = useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      if (!isBackgroundTarget(event.target as HTMLElement | null)) return;
+      if (suppressClickRef.current.background) {
+        suppressClickRef.current.background = false;
+        return;
+      }
+      setHoveredCard(null);
+      clearInspectorSelection();
+      suppressClickRef.current.background = false;
+    },
+    [isBackgroundTarget, clearInspectorSelection],
+  );
+
+  const handleBackgroundContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      if (!isBackgroundTarget(event.target as HTMLElement | null)) return;
+      event.preventDefault();
+      setContextMenu({ x: event.clientX, y: event.clientY, type: 'background' });
+    },
+    [isBackgroundTarget],
+  );
 
   const triggerLineTransition = useCallback(() => {
     setLinesTransitioning(true);
@@ -352,8 +386,6 @@ export default function Playground() {
       clearTimeout(lineTransitionTimeoutRef.current);
     }
   }, []);
-
-  const [contextMenu, setContextMenu] = useState<ArenaContextMenu>(null);
 
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
@@ -737,12 +769,8 @@ export default function Playground() {
         ...(bgStyle === 'none' ? { background: MODE_COLORS[mode] } : {}),
         ...(isSelecting ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}),
       }}
-      onClick={(e) => {
-        // Only deselect if clicking directly on the background
-        if (e.target === e.currentTarget) {
-          setHoveredCard(null);
-        }
-      }}
+      onClick={handleBackgroundClick}
+      onContextMenu={handleBackgroundContextMenu}
     >
       {/* Header */}
       <Header
@@ -817,26 +845,6 @@ export default function Playground() {
             ...(isDraggingOver ? {
               background: 'rgba(59, 130, 246, 0.05)',
             } : {})
-          }}
-          onClick={(e) => {
-            // Deselect if clicking on the background (cards use stopPropagation to prevent this)
-            const target = e.target as HTMLElement;
-            // Check if click is on background container or SVG elements (connection lines)
-            const isSVG = target.tagName === 'svg' || target.closest('svg');
-            if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
-              setHoveredCard(null);
-              if (!suppressClickRef.current) {
-                clearInspectorSelection();
-              }
-              suppressClickRef.current = false;
-            }
-          }}
-          onContextMenu={(e) => {
-            // Show background context menu only if clicking on actual background
-            const target = e.target as HTMLElement;
-            if (target.closest('[data-card]')) return; // Don't show if right-clicking on a card
-            e.preventDefault();
-            setContextMenu({ x: e.clientX, y: e.clientY, type: 'background' });
           }}
         >
           <ArenaCanvas
