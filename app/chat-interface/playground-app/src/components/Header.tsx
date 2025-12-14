@@ -5,7 +5,6 @@ interface HeaderProps {
   setMode: (mode: Mode) => void;
   setHoveredCard: (hovered: string | null) => void;
   clearSelection: () => void;
-  cycleBgStyle: (direction: 'prev' | 'next') => void;
   showDock: boolean;
   setShowDock: (show: boolean) => void;
   onOpenSettings: () => void;
@@ -16,7 +15,6 @@ export default function Header({
   setMode,
   setHoveredCard,
   clearSelection,
-  cycleBgStyle,
   showDock,
   setShowDock,
   onOpenSettings
