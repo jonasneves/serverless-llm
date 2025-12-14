@@ -158,9 +158,17 @@ export default function OrchestratorView({
                 <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'}`} />
-                            <span className="text-sm font-semibold text-slate-200 tracking-tight">
+                            <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'} ${isRunning ? 'animate-pulse' : ''}`} />
+                            <span className="text-sm font-semibold text-slate-200 tracking-tight flex items-center gap-2">
                                 {selectedModel ? selectedModel.name : ''}
+                                {isRunning && (() => {
+                                    const last = events[events.length - 1];
+                                    let status = 'working...';
+                                    if (last?.event === 'agent_message') status = `${last.agent} is speaking...`;
+                                    else if (last?.event === 'tool_call') status = `using ${last.tool}...`;
+                                    else if (last?.event === 'orchestrator_thinking') status = 'thinking...';
+                                    return <span className="font-normal text-slate-400 text-xs">{status}</span>;
+                                })()}
                             </span>
                         </div>
                         {selectedModel?.type === 'api' && (

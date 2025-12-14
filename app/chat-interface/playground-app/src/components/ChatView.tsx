@@ -141,9 +141,10 @@ export default function ChatView({
                 <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'}`} />
-                            <span className="text-sm font-semibold text-slate-200 tracking-tight">
+                            <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'} ${isGenerating ? 'animate-pulse' : ''}`} />
+                            <span className="text-sm font-semibold text-slate-200 tracking-tight flex items-center gap-2">
                                 {selectedModel ? selectedModel.name : ''}
+                                {isGenerating && <span className="font-normal text-slate-400 text-xs">is typing...</span>}
                             </span>
                         </div>
                         {selectedModel?.type === 'api' && (
