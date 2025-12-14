@@ -7,16 +7,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   const localModelSelector = new ModelSelector('#localModelSelector', {
     multiSelect: false,
     autoSelectOnline: true,
-    onSelectionChange: handleSelectionChange,
+    onSelectionChange: updateButtonState,
     filterTypes: ['local']
   });
 
   const apiModelSelector = new ModelSelector('#apiModelSelector', {
     multiSelect: false,
     autoSelectOnline: false,
-    onSelectionChange: handleSelectionChange,
+    onSelectionChange: updateButtonState,
     filterTypes: ['api']
   });
+
+  function updateButtonState() {
+    const startBtn = document.getElementById('sendBtn');
+    const queryInput = document.getElementById('userInput');
+    if (!startBtn || !queryInput) return;
+    
+    const hasModel = getAllSelectedModels().length > 0;
+    const hasQuery = queryInput.value.trim().length > 0;
+    startBtn.disabled = !hasModel || !hasQuery;
+  }
 
   function getAllSelectedModels() {
     // Since we want single select effectively, we just grab whichever has a selection
@@ -31,16 +41,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (api) selected.push(api);
     
     return selected;
-  }
-
-  function handleSelectionChange() {
-    // Ensure mutually exclusive selection between the two dropdowns for Orchestrator
-    // If this event was triggered by local selector picking something, clear API selector
-    // Note: This is a bit tricky without knowing which one triggered it.
-    // Simplified: We'll just check at startOrchestration time and warn if multiple.
-    // Or better: clear the *other* selector when one changes.
-    // However, ModelSelector doesn't pass 'source' in callback easily.
-    // We'll rely on the user to pick one.
   }
   
   // Add listeners to enforce mutual exclusivity manually
@@ -60,6 +60,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const orchestrationResults = document.getElementById('orchestrationResults');
 
   let isRunning = false;
+  
+  // Initial button state check
+  updateButtonState();
 
   async function startOrchestration() {
     const query = queryInput.value.trim();
@@ -323,6 +326,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (originalBtnHTML !== null) {
         startBtn.innerHTML = originalBtnHTML;
       }
+      // Re-evaluate button state
+      updateButtonState();
     }
   }
 
@@ -331,6 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   queryInput.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    updateButtonState();
   });
 
   // Allow Enter to submit (with Shift+Enter for newlines)
