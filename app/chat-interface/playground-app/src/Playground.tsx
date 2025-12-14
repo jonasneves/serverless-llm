@@ -18,6 +18,7 @@ import { useInspectorSelection } from './hooks/useInspectorSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
+import './playground.css';
 
 export default function Playground() {
   const {
@@ -315,6 +316,19 @@ export default function Playground() {
   });
 
   useEffect(() => () => resetPendingStream(), [resetPendingStream]);
+
+  useEffect(() => {
+    const className = 'arena-selecting';
+    const body = document.body;
+    if (isSelecting) {
+      body.classList.add(className);
+    } else {
+      body.classList.remove(className);
+    }
+    return () => {
+      body.classList.remove(className);
+    };
+  }, [isSelecting]);
 
   const triggerLineTransition = useCallback(() => {
     setLinesTransitioning(true);
@@ -973,63 +987,6 @@ export default function Playground() {
         </div>
       )}
 
-      <style>{`
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-33.33%); } /* Move by 1/3 since we tripled the content */
-        }
-        .animate-ticker {
-          animation: ticker 40s linear infinite;
-        }
-        .animate-ticker:hover {
-          animation-play-state: paused;
-        }
-        @keyframes flow {
-          from { stroke-dashoffset: 10; }
-          to { stroke-dashoffset: 0; }
-        }
-        .animate-flow {
-          animation: flow 1s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .line-clamp-3 {
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        .card-hover {
-          will-change: transform;
-        }
-        .card-hover:hover:not(.card-selected):not(.card-speaking) {
-          transform: scale(1.02) !important;
-        }
-        .card-hover.rounded-full:hover:not(.card-selected):not(.card-speaking) {
-          transform: scale(1.05) !important;
-        }
-        .arena-link {
-          animation: flow 1s linear infinite;
-        }
-      `}</style>
-      {isSelecting && (
-        <style>{`
-          body {
-            user-select: none !important;
-            -webkit-user-select: none !important;
-            -moz-user-select: none !important;
-            -ms-user-select: none !important;
-            cursor: crosshair !important;
-          }
-          input, textarea {
-            user-select: text !important;
-            -webkit-user-select: text !important;
-            cursor: text !important;
-          }
-        `}</style>
-      )}
     </div>
   );
 }

@@ -48,15 +48,35 @@ on:
   repository_dispatch:
     types: [restart-r1qwen-inference]
 
-permissions:
+# ============================================================
+# YAML Anchors for shared configuration
+# ============================================================
+x-inference-permissions: &inference-permissions
   actions: write
   contents: read
   packages: read
+
+x-inference-with-defaults: &inference-with-defaults
+  duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
+  auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
+  instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
+  n_ctx: ${{ github.event.client_payload.n_ctx || inputs.n_ctx || '8192' }}
+  n_threads: ${{ github.event.client_payload.n_threads || inputs.n_threads || '2' }}
+  n_batch: ${{ github.event.client_payload.n_batch || inputs.n_batch || '256' }}
+  max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
+
+x-common-secrets: &common-secrets
+  hf_token: ${{ secrets.HF_TOKEN }}
+  workflow_pat: ${{ secrets.WORKFLOW_PAT }}
+# ============================================================
+
+permissions: *inference-permissions
 
 jobs:
   inference:
     uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
+      # Model-specific configuration
       model_name: "r1qwen"
       model_dir: "deepseek-r1qwen-inference"
       model_repo: "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF"
@@ -65,14 +85,8 @@ jobs:
       tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_R1QWEN"
       restart_event_type: "restart-r1qwen-inference"
       workflow_file: "r1qwen-inference.yml"
-      duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
-      auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
-      instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
-      n_ctx: ${{ github.event.client_payload.n_ctx || inputs.n_ctx || '8192' }}
-      n_threads: ${{ github.event.client_payload.n_threads || inputs.n_threads || '2' }}
-      n_batch: ${{ github.event.client_payload.n_batch || inputs.n_batch || '256' }}
-      max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
+      # Common configuration with defaults
+      <<: *inference-with-defaults
     secrets:
-      hf_token: ${{ secrets.HF_TOKEN }}
+      <<: *common-secrets
       tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_R1QWEN }}
-      workflow_pat: ${{ secrets.WORKFLOW_PAT }}

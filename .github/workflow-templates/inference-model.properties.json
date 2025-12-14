@@ -1,0 +1,12 @@
+{
+    "name": "LLM Inference Server",
+    "description": "Template for creating a new LLM inference server workflow with Cloudflare tunnel and auto-restart capabilities.",
+    "iconName": "rocket",
+    "categories": [
+        "Machine Learning",
+        "Deployment"
+    ],
+    "filePatterns": [
+        "app/*-inference/**"
+    ]
+}
