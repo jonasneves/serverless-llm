@@ -12,10 +12,9 @@ import httpx
 import hashlib
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
 from typing import Dict, List, Optional, AsyncGenerator
 import uvicorn
 import pathlib
@@ -358,8 +357,6 @@ MODEL_DISPLAY_NAMES = {
     config["id"]: config["name"]
     for config in MODEL_CONFIG
 }
-
- 
 
 DEFAULT_MODEL_ID = next(
     (config["id"] for config in MODEL_CONFIG if config.get("default")),
