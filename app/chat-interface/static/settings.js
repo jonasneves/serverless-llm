@@ -89,6 +89,24 @@
               <span>Token is saved in your browser only and injected per request. We never store it on our servers.</span>
             </div>
           </div>
+
+          <div class="settings-card">
+            <h3>Model Parameters</h3>
+            <p class="settings-description">Configure default generation parameters for all models.</p>
+
+            <div class="param-row">
+              <span class="param-label">Temperature</span>
+              <div class="param-control-wrapper">
+                <input type="range" id="settingsTemp" min="0" max="1" step="0.1" value="0.7">
+                <span class="param-value" id="settingsTempValue">0.7</span>
+              </div>
+            </div>
+
+            <div class="param-row">
+              <span class="param-label">Max Tokens</span>
+              <input type="number" id="settingsMaxTokens" value="2048" min="1" max="4096" step="128">
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -241,6 +259,45 @@
     }
   }
 
+  function initModelParams() {
+    const tempSlider = modal?.querySelector('#settingsTemp');
+    const tempValue = modal?.querySelector('#settingsTempValue');
+    const maxTokensInput = modal?.querySelector('#settingsMaxTokens');
+    const maxTokensValue = modal?.querySelector('#settingsMaxTokensValue');
+
+    if (!tempSlider || !maxTokensInput) return;
+
+    // Load saved values or use defaults
+    const savedTemp = localStorage.getItem('model_temperature') || '0.7';
+    const savedMaxTokens = localStorage.getItem('model_max_tokens') || '2048';
+
+    tempSlider.value = savedTemp;
+    if (tempValue) tempValue.textContent = savedTemp;
+
+    maxTokensInput.value = savedMaxTokens;
+    if (maxTokensValue) maxTokensValue.textContent = savedMaxTokens;
+
+    // Temperature slider
+    tempSlider.addEventListener('input', () => {
+      const value = tempSlider.value;
+      if (tempValue) tempValue.textContent = value;
+      localStorage.setItem('model_temperature', value);
+      window.dispatchEvent(new CustomEvent('model-params-change', {
+        detail: { temperature: parseFloat(value), maxTokens: parseInt(maxTokensInput.value) }
+      }));
+    });
+
+    // Max tokens input
+    maxTokensInput.addEventListener('input', () => {
+      const value = maxTokensInput.value;
+      if (maxTokensValue) maxTokensValue.textContent = value;
+      localStorage.setItem('model_max_tokens', value);
+      window.dispatchEvent(new CustomEvent('model-params-change', {
+        detail: { temperature: parseFloat(tempSlider.value), maxTokens: parseInt(value) }
+      }));
+    });
+  }
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -249,6 +306,7 @@
     attachSettingsTriggers();
     initTokenInput();
     initApiModelsToggle();
+    initModelParams();
     initModalBehavior();
     dispatchTokenChange(tokenInput?.value.trim() || '');
   }
@@ -272,6 +330,8 @@
         localStorage.removeItem(TOKEN_STORAGE_KEY);
       }
     },
+    getTemperature: () => parseFloat(localStorage.getItem('model_temperature') || '0.7'),
+    getMaxTokens: () => parseInt(localStorage.getItem('model_max_tokens') || '2048'),
     isApiModelsEnabled: () => {
       const saved = localStorage.getItem(API_MODELS_STORAGE_KEY);
       return saved === null ? true : saved === 'true';

@@ -35,9 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const userInput = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
   const clearBtn = document.getElementById('clearBtn');
-  const tempSlider = document.getElementById('tempSlider');
-  const tempValue = document.getElementById('tempValue');
-  const maxTokens = document.getElementById('maxTokens');
   const typingIndicator = document.getElementById('typingIndicator');
   const tokenUsageContainer = document.getElementById('tokenUsageContainer');
   const tokenUsageFill = document.getElementById('tokenUsageFill');
@@ -131,11 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTokenUsage();
   }
 
-  // Temperature slider
-  tempSlider.addEventListener('input', () => {
-    tempValue.textContent = tempSlider.value;
-  });
-
   // Auto-resize textarea and enable/disable send button
   userInput.addEventListener('input', function () {
     this.style.height = 'auto';
@@ -178,18 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
     clearBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       clearChat();
-    });
-  }
-
-  // Advanced controls toggle
-  const advancedToggle = document.getElementById('advancedToggle');
-  const advancedControls = document.getElementById('advancedControls');
-  if (advancedToggle && advancedControls) {
-    advancedToggle.addEventListener('click', (e) => {
-      e.preventDefault();
-      const isShown = advancedControls.style.display !== 'none';
-      advancedControls.style.display = isShown ? 'none' : 'flex';
-      advancedToggle.classList.toggle('active', !isShown);
     });
   }
 
@@ -506,8 +486,8 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({
           models: models,
           messages: conversationHistory,
-          max_tokens: parseInt(maxTokens.value),
-          temperature: parseFloat(tempSlider.value),
+          max_tokens: window.SettingsPanel?.getMaxTokens?.() || 2048,
+          temperature: window.SettingsPanel?.getTemperature?.() || 0.7,
           github_token: githubToken || null  // Pass token for API models
         })
       });

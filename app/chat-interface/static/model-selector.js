@@ -234,19 +234,58 @@ class ModelSelector {
   }
 
   /**
+   * Select all models of a specific type
+   */
+  selectGroup(type) {
+    Object.entries(this.models)
+      .filter(([id, model]) => model.type === type)
+      .forEach(([id]) => this.selectedModels.add(id));
+    this.updateTrigger();
+    this.renderDropdownContent();
+    this.notifySelectionChange();
+  }
+
+  /**
+   * Deselect all models of a specific type
+   */
+  deselectGroup(type) {
+    Object.entries(this.models)
+      .filter(([id, model]) => model.type === type)
+      .forEach(([id]) => this.selectedModels.delete(id));
+    this.updateTrigger();
+    this.renderDropdownContent();
+    this.notifySelectionChange();
+  }
+
+  /**
+   * Toggle selection for all models of a specific type
+   */
+  toggleGroup(type) {
+    const modelsOfType = Object.entries(this.models).filter(([id, m]) => m.type === type);
+    const allSelected = modelsOfType.every(([id]) => this.selectedModels.has(id));
+
+    if (allSelected) {
+      this.deselectGroup(type);
+    } else {
+      this.selectGroup(type);
+    }
+  }
+
+  /**
    * Render the model selector
    */
   render() {
     if (!this.container) return;
 
     // Check if we're using compact mode (trigger/dropdown already exist in DOM)
-    const parentContainer = this.container.parentElement;
-    const isCompactMode = parentContainer?.classList.contains('model-selector-compact');
+    // In compact mode, #modelSelector is inside .model-selector-dropdown inside .model-selector-compact
+    const isCompactMode = this.container.closest('.model-selector-compact') !== null;
+    const compactContainer = this.container.closest('.model-selector-compact');
 
     if (isCompactMode) {
       // Use existing trigger and dropdown from HTML
-      this.trigger = parentContainer.querySelector('.model-selector-trigger');
-      this.dropdown = parentContainer.querySelector('.model-selector-dropdown');
+      this.trigger = compactContainer.querySelector('.model-selector-trigger');
+      this.dropdown = compactContainer.querySelector('.model-selector-dropdown');
 
       if (this.trigger) {
         this.trigger.onclick = (e) => {
@@ -280,7 +319,9 @@ class ModelSelector {
     if (!this.boundClickOutside) {
       this.boundClickOutside = (e) => {
         if (this.dropdown && this.dropdown.classList.contains('show')) {
-          const targetContainer = isCompactMode ? parentContainer : this.container;
+          // Re-check compact mode dynamically
+          const compact = this.container?.closest('.model-selector-compact');
+          const targetContainer = compact || this.container;
           if (!targetContainer.contains(e.target)) {
             this.closeDropdown();
           }
@@ -356,8 +397,7 @@ class ModelSelector {
     const count = this.selectedModels.size;
 
     // Check if we're in compact mode (badge is separate element)
-    const parentContainer = this.container?.parentElement;
-    const isCompactMode = parentContainer?.classList.contains('model-selector-compact');
+    const isCompactMode = this.container?.closest('.model-selector-compact') !== null;
 
     if (isCompactMode) {
       // Update the badge count separately
@@ -398,8 +438,7 @@ class ModelSelector {
     if (!this.dropdown) return;
 
     // Check if we're in compact mode
-    const parentContainer = this.container?.parentElement;
-    const isCompactMode = parentContainer?.classList.contains('model-selector-compact');
+    const isCompactMode = this.container?.closest('.model-selector-compact') !== null;
 
     // Clear the appropriate container
     if (isCompactMode) {
@@ -471,16 +510,18 @@ class ModelSelector {
     };
 
     if (localModels.length > 0) {
-      if (!isCompactMode) this.createGroupLabel('Local Models', targetContainer);
-      else if (apiModels.length > 0) this.createSeparator('Local Models', targetContainer);
+      const allLocalSelected = localModels.every(([id]) => this.selectedModels.has(id));
+      // Always show group header with toggle button
+      this.createGroupHeader('Local Models', 'local', allLocalSelected, targetContainer);
       localModels.forEach(([id, model]) => {
         targetContainer.appendChild(renderModel(id, model));
       });
     }
 
     if (apiModels.length > 0) {
-      if (!isCompactMode) this.createGroupLabel('API Models', targetContainer);
-      else this.createSeparator('API Models', targetContainer);
+      const allApiSelected = apiModels.every(([id]) => this.selectedModels.has(id));
+      // Always show group header with toggle button
+      this.createGroupHeader('API Models', 'api', allApiSelected, targetContainer);
       apiModels.forEach(([id, model]) => {
         targetContainer.appendChild(renderModel(id, model));
       });
@@ -497,13 +538,30 @@ class ModelSelector {
     }
   }
 
-  createGroupLabel(text, container = null) {
+  createGroupHeader(text, type, allSelected, container = null) {
     const target = container || this.dropdown;
     if (!target) return;
-    const el = document.createElement('div');
-    el.className = 'model-group-label';
-    el.textContent = text;
-    target.appendChild(el);
+
+    const header = document.createElement('div');
+    header.className = 'model-group-header';
+
+    const label = document.createElement('div');
+    label.className = 'model-group-label';
+    label.textContent = text;
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'model-group-toggle-btn';
+    toggleBtn.innerHTML = allSelected
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg> Remove All`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Add All`;
+    toggleBtn.onclick = (e) => {
+      e.stopPropagation();
+      this.toggleGroup(type);
+    };
+
+    header.appendChild(label);
+    header.appendChild(toggleBtn);
+    target.appendChild(header);
   }
 
   createSeparator(text, container = null) {

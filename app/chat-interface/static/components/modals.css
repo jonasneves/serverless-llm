@@ -388,3 +388,85 @@ body.modal-open {
 [data-theme="dark"] .settings-card.highlight {
     box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.3);
 }
+
+/* Model Parameters */
+.param-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.param-label {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.param-control-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    max-width: 240px;
+}
+
+.param-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-color);
+    min-width: 32px;
+    text-align: right;
+}
+
+.param-row input[type="range"] {
+    flex: 1;
+    height: 4px;
+    background: #d1d1d6;
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+[data-theme="dark"] .param-row input[type="range"] {
+    background: #48484a;
+}
+
+.param-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.param-row input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.param-row input[type="number"] {
+    width: 100px;
+    padding: 8px 12px;
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    text-align: center;
+}
+
+[data-theme="dark"] .param-row input[type="number"] {
+    border-color: #48484a;
+    background: #1c1c1e;
+}
+
+.param-row input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}

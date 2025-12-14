@@ -96,38 +96,12 @@
 
     <div class="flex-spacer"></div>
 
-    <button class="icon-btn" id="advancedToggle" type="button" title="Advanced settings">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="3"></circle>
-        <path d="M12 1v6m0 6v6M1 12h6m6 0h6"></path>
-      </svg>
-    </button>
-
-    <button id="clearBtn" class="icon-btn" type="button" title="Clear chat">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <button id="clearBtn" class="input-icon-btn" type="button" title="Clear chat">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="3 6 5 6 21 6"></polyline>
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
       </svg>
     </button>
-  </div>
-
-  <div class="advanced-controls" id="advancedControls" style="display: none;">
-    <div class="control-group">
-      <label>Temperature:</label>
-      <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
-      <span id="tempValue">0.7</span>
-    </div>
-    <div class="control-group">
-      <label>Max Tokens:</label>
-      <input type="number" id="maxTokens" value="2048" min="1" max="4096">
-    </div>
-    <div class="token-usage-container" id="tokenUsageContainer" style="display: none;">
-      <div class="token-usage-label">Context:</div>
-      <div class="token-usage-bar">
-        <div class="token-usage-fill" id="tokenUsageFill"></div>
-      </div>
-      <div class="token-usage-text" id="tokenUsageText">0 / 0</div>
-    </div>
   </div>
 
   <div class="input-wrapper">

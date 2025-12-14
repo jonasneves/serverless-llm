@@ -49,31 +49,53 @@
     align-items: center;
 }
 
-.controls-row .icon-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    border-radius: var(--radius-md);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition-all);
-    flex-shrink: 0;
+.input-container .controls-row .input-icon-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    border-radius: var(--radius-md) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: #6b7280 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.15s ease !important;
+    flex-shrink: 0 !important;
 }
 
-.controls-row .icon-btn:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--accent-color);
-    color: var(--text-primary);
+.input-container .controls-row .input-icon-btn:hover {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--accent-color) !important;
 }
 
-.controls-row .icon-btn svg {
-    stroke: currentColor;
+.input-container .controls-row .input-icon-btn.active {
+    background: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+    color: white !important;
+}
+
+.input-container .controls-row .input-icon-btn svg {
+    stroke: currentColor !important;
+    fill: none !important;
+    flex-shrink: 0 !important;
+}
+
+.input-container .controls-row .input-icon-btn svg * {
+    stroke: inherit !important;
+}
+
+[data-theme="dark"] .input-container .controls-row .input-icon-btn {
+    color: #9ca3af !important;
+}
+
+[data-theme="dark"] .input-container .controls-row .input-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: var(--accent-hover) !important;
 }
 
 .advanced-controls {
