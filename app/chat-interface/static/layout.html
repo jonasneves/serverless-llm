@@ -94,7 +94,7 @@
   <header>
     <div class="logo" id="logoWithModelSelector">
       <div class="logo-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </div>
@@ -108,10 +108,6 @@
       <nav class="modes">
         <a href="/" class="mode-link {% if request.url.path == '/' %}active{% endif %}">
           Chat
-        </a>
-
-        <a href="/playground" class="mode-link {% if request.url.path == '/playground' %}active{% endif %}">
-          Arena <span style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;">New</span>
         </a>
 
         <!-- Lab (Experimental Modes) Dropdown -->
@@ -145,6 +141,10 @@
             </a>
           </div>
         </div>
+
+        <a href="/playground" class="mode-link {% if request.url.path == '/playground' %}active{% endif %}">
+          Arena <span style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;">New</span>
+        </a>
       </nav>
 
       <div class="header-controls">

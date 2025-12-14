@@ -15,10 +15,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    width: 40px;
-    height: 40px;
+    min-width: 32px;
+    min-height: 32px;
+    width: 32px;
+    height: 32px;
     background: rgba(255, 255, 255, 0.15);
     padding: 0;
     border-radius: var(--radius-sm);
@@ -37,8 +37,8 @@
 }
 
 .logo-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
 }
 
 .logo-text {

@@ -15,6 +15,11 @@
   gap: var(--section-gap);
 }
 
+.chat-history:has(.welcome-card:not(.has-content .welcome-card)) {
+  justify-content: center;
+  align-items: center;
+}
+
 /* Messages */
 .message {
   max-width: 90%;

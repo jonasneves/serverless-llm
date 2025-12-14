@@ -56,9 +56,14 @@
   }
 
   .comparison-container {
-    display: grid;
+    display: none;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 20px;
+  }
+
+  .has-content .comparison-container {
+    display: grid;
+  }
     margin-bottom: 24px;
   }
 
