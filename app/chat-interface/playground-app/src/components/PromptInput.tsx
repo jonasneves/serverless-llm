@@ -112,9 +112,9 @@ export default function PromptInput({
             aria-label={isGenerating ? "Stop generation" : "Send message"}
           >
             {isGenerating ? (
-              <Square className="w-5 h-5 fill-current" />
+              <Square className="w-6 h-6 sm:w-5 sm:h-5 fill-current" />
             ) : (
-              <ArrowUp className="w-5 h-5" />
+              <ArrowUp className="w-6 h-6 sm:w-5 sm:h-5" />
             )}
           </button>
         </div>
