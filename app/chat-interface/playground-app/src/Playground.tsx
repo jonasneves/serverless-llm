@@ -58,7 +58,7 @@ export default function Playground() {
     deserialize: (stored, fallback) => stored ?? fallback,
   });
 
-  const [inspectorPosition, setInspectorPosition] = usePersistedSetting<'left' | 'right'>(
+  const [inspectorPosition, setInspectorPosition] = usePersistedSetting<'left' | 'right' >(
     'inspector_position',
     'right',
     {
@@ -185,7 +185,9 @@ export default function Playground() {
     e.preventDefault();
     setIsDraggingOver(false);
     if (draggedDockModelId) {
-      if (!selected.includes(draggedDockModelId)) {
+      if (mode === 'chat' || mode === 'orchestrator') {
+        setSelected([draggedDockModelId]);
+      } else if (!selected.includes(draggedDockModelId)) {
         setSelected(prev => [...prev, draggedDockModelId]);
       }
       setDraggedDockModelId(null);
@@ -193,6 +195,11 @@ export default function Playground() {
   };
 
   const handleModelToggle = (modelId: string) => {
+    if (mode === 'chat' || mode === 'orchestrator') {
+      setSelected(prev => prev.includes(modelId) ? [] : [modelId]);
+      return;
+    }
+
     if (selected.includes(modelId)) {
       // Removing a model
       const isRemovingActive = isGenerating && sessionModelIdsRef.current.includes(modelId);
@@ -689,7 +696,7 @@ export default function Playground() {
 
   const [bgStyle, setBgStyle] = usePersistedSetting<BackgroundStyle>(
     'playground-bg-style',
-    'dots-mesh',
+    'dots',
     {
       serialize: value => value,
       deserialize: (stored, fallback) =>
