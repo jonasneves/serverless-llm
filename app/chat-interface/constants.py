@@ -22,8 +22,23 @@ DEFAULT_REMOTE_ENDPOINTS = {
     "RNJ_API_URL": "https://rnj.neevs.io",
 }
 
+# GitHub Models API endpoint
+GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
+
 # Generation defaults - keep in sync with playground-app/src/constants.ts
 GENERATION_DEFAULTS = {
     "max_tokens": 1024,     # Reasonable default for comparison
     "temperature": 0.7,     # Balanced creativity/coherence
+}
+
+# Standard event types for streaming
+EVENT_TYPES = {
+    "START": "start",
+    "CHUNK": "chunk",
+    "TOKEN": "token",
+    "DONE": "done",
+    "COMPLETE": "complete",
+    "ERROR": "error",
+    "INFO": "info",
+    "USAGE": "usage",
 }

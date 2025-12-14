@@ -690,6 +690,20 @@ def get_model_display_name(model_id: str) -> str:
     return profile["display_name"]
 
 
+def get_display_name(model_id: str) -> str:
+    """
+    Get human-readable display name for a model ID.
+    Convenience wrapper with fallback to model_id if not found.
+    
+    Args:
+        model_id: Model identifier
+        
+    Returns:
+        Human-readable display name, or model_id if profile not found
+    """
+    return MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
+
+
 def should_model_participate(
     model_id: str,
     domain_weights: Dict[str, float],
