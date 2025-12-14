@@ -126,19 +126,15 @@ class GitHubModelsOrchestrator:
         self.model_id = model_id or os.getenv("ORCHESTRATOR_MODEL", "gpt-4o")
         self.api_url = api_url
         self.max_tokens = max_tokens
+        
+        # Initialize unified model client
+        from model_client import ModelClient
+        self.client = ModelClient(self.github_token)
 
         if not self.github_token:
             raise ValueError(
                 "GitHub token required. Set GH_MODELS_TOKEN (or GITHUB_TOKEN/GH_TOKEN) env var or pass github_token parameter."
             )
-
-    def _get_headers(self) -> Dict[str, str]:
-        """Get authentication headers for GitHub Models API"""
-        return {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.github_token}",
-            "X-GitHub-Api-Version": "2022-11-28"
-        }
 
     async def _call_structured(
         self,
@@ -155,9 +151,6 @@ class GitHubModelsOrchestrator:
         Returns:
             Tuple of (Validated Pydantic model instance, TokenUsage)
         """
-        from http_client import HTTPClient
-        import httpx
-        
         # Add JSON schema instruction to prompt
         schema = response_format.schema()
 
@@ -180,164 +173,49 @@ Example format (fill in actual values based on your analysis):
 
 Respond with ONLY the JSON object. Do not include the schema definition, explanations, or any text outside the JSON."""
 
-        client = HTTPClient.get_client()
-        
-        # Detect if using local model (not GitHub Models API)
-        is_local_model = "github.ai" not in self.api_url
-        
-        # Build payload matching the Chat page's working format
-        # Combine system instruction into user message for better local model compatibility
         combined_prompt = f"IMPORTANT: Respond with valid JSON only, no other text.\n\n{structured_prompt}"
-
-        payload = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": combined_prompt
-                }
-            ],
-            "stream": True,
-            "stream_options": {"include_usage": True}  # Request usage in final chunk
-        }
+        messages = [{"role": "user", "content": combined_prompt}]
         
-        # Local models use max_tokens, API models use max_completion_tokens
-        if is_local_model:
-            payload["max_tokens"] = min(self.max_tokens, 512)  # Cap for local orchestrator responses
-        else:
-            payload["model"] = self.model_id  # Only needed for API models
-            payload["max_completion_tokens"] = self.max_tokens
-
+        # Use ModelClient to make the call
+        # We try to use response_format={"type": "json_object"} if supported, but we also rely on prompt
         try:
-            # Use streaming for all models - collect the response
-            collected_content = ""
-            usage_data = None
-
-            # Only send auth headers to API models, local models don't need them
-            headers = self._get_headers() if not is_local_model else None
-
-            # Apply rate limiting for GitHub Models API
-            if not is_local_model:
-                rate_limiter = await get_rate_limiter(self.api_url, self.github_token or "default")
-                semaphore = await rate_limiter.acquire()
-            else:
-                # For local models, create a dummy context manager
-                from contextlib import nullcontext
-                semaphore = nullcontext()
-
-            async with semaphore:
-                async with client.stream(
-                    "POST",
-                    self.api_url,
-                    headers=headers,
-                    json=payload,
-                    timeout=120.0
-                ) as response:
-                    if response.status_code == 429:
-                        if not is_local_model:
-                            rate_limiter.record_429()
-                        error_text = await response.aread()
-                        rate_limit_reset = response.headers.get("x-ratelimit-reset")
-
-                        # Provide helpful message about default token
-                        quota_msg = ""
-                        if self._default_env_token and self.github_token == self._default_env_token:
-                            quota_msg = " Configure your own token for dedicated quota."
-
-                        raise Exception(f"GitHub Models rate limit exceeded. Reset at: {rate_limit_reset}.{quota_msg}")
-
-                    if response.status_code != 200:
-                        error_text = await response.aread()
-                        error_text = error_text.decode()
-                        if "context window" in error_text.lower() or "exceed" in error_text.lower():
-                            raise Exception(f"Orchestrator model context limit exceeded. Try using an API orchestrator (like GPT-4o) or increase the local model's N_CTX. Details: {error_text}")
-                        raise Exception(f"Orchestrator API error {response.status_code}: {error_text}")
-
-                    # Record success
-                    if not is_local_model:
-                        rate_limiter.record_success()
-
-                    async for line in response.aiter_lines():
-                        if not line or not line.startswith("data: "):
-                            continue
-
-                        data_str = line[6:]  # Remove "data: " prefix
-                        if data_str == "[DONE]":
-                            break
-
-                        try:
-                            chunk = json.loads(data_str)
-
-                            # Collect content from delta
-                            if "choices" in chunk and len(chunk["choices"]) > 0:
-                                delta = chunk["choices"][0].get("delta", {})
-                                if "content" in delta:
-                                    collected_content += delta["content"]
-
-                            # Capture usage data (usually in the last chunk)
-                            if "usage" in chunk:
-                                usage_data = chunk["usage"]
-                        except json.JSONDecodeError:
-                            continue
-            
-            # Build response data in standard format
-            data = {
-                "choices": [{"message": {"content": collected_content}}],
-                "usage": usage_data or {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-            }
-            
-            logger.info(f"Orchestrator streaming response collected: {len(collected_content)} chars")
-
-            # Extract token usage
-            if "usage" not in data:
-                raise Exception("No usage data in API response")
-
-            usage_data = data["usage"]
-            required_fields = ["prompt_tokens", "completion_tokens", "total_tokens"]
-            missing_fields = [f for f in required_fields if f not in usage_data]
-            if missing_fields:
-                raise Exception(f"Missing usage fields in API response: {missing_fields}")
-
-            token_usage = TokenUsage(
-                prompt_tokens=usage_data["prompt_tokens"],
-                completion_tokens=usage_data["completion_tokens"],
-                total_tokens=usage_data["total_tokens"]
+            result = await self.client.call_model(
+                self.model_id,
+                messages,
+                max_tokens=self.max_tokens,
+                response_format={"type": "json_object"}
             )
-
-            # Extract content from response
-            if "choices" not in data or not data["choices"]:
-                raise Exception(f"No choices in API response. Full response: {json.dumps(data)}")
-
-            if "message" not in data["choices"][0]:
-                raise Exception(f"No message in choice. Full response: {json.dumps(data)}")
-
-            if "content" not in data["choices"][0]["message"]:
-                raise Exception(f"No content in message. Full response: {json.dumps(data)}")
-
-            content = data["choices"][0]["message"]["content"]
-
-            if not content or content.strip() == "":
-                raise Exception(f"Empty content from API. Full response: {json.dumps(data)}")
-
-            # Parse JSON response
+            
+            content = result["content"]
+            usage = result.get("usage", {})
+            
+            # Parse JSON
             try:
-                # Handle potential markdown code blocks
+                data = json.loads(content)
+            except json.JSONDecodeError:
+                # Try simple cleanup if markdown blocks are present
                 if "```json" in content:
                     content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0].strip()
+                    data = json.loads(content)
+                else:
+                    raise
 
-                json_data = json.loads(content)
-                return response_format.parse_obj(json_data), token_usage
-            except (json.JSONDecodeError, ValueError) as e:
-                logger.error(f"Failed to parse JSON. Content: {content[:500]}")
-                raise Exception(f"Failed to parse structured output: {e}\nContent preview: {content[:500]}")
-                
-        except httpx.TimeoutException:
-            raise Exception(f"Orchestrator request timed out after 60s. The model server ({self.api_url}) may be down or overloaded.")
-        except httpx.ConnectError as e:
-            raise Exception(f"Cannot connect to orchestrator model at {self.api_url}. Is the server running? Error: {str(e)}")
-        except httpx.HTTPError as e:
-            raise Exception(f"Connection error to orchestrator: {str(e)}")
+            # Validate against Pydantic model
+            validated_obj = response_format(**data)
+            
+            # Create TokenUsage
+            token_usage = TokenUsage(
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+                total_tokens=usage.get("total_tokens", 0)
+            )
+            
+            return validated_obj, token_usage
+
+        except Exception as e:
+            logger.error(f"Orchestrator error: {e}")
+            raise
+
 
     async def analyze_query(self, query: str, model_profiles: Dict[str, Dict]) -> tuple[QueryAnalysis, TokenUsage]:
         """

@@ -57,6 +57,9 @@ from rate_limiter import get_rate_limiter
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from model_client import ModelClient
+model_client = ModelClient()
+
 # Cache of GitHub Models that returned "unknown_model".
 # Prevents repeated network calls/log spam for invalid IDs.
 from core.state import (
@@ -375,339 +378,46 @@ async def status_page(request: Request):
 
 async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, max_tokens: int, temperature: float):
     """Query a single model and return results with timing (with request queueing)"""
-    endpoint = MODEL_ENDPOINTS[model_id]
     display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
 
     # Use semaphore to limit concurrent requests per model
     semaphore = MODEL_SEMAPHORES.get(model_id)
+    # If no semaphore (e.g. API model or not initialized), use a dummy one
+    if not semaphore:
+        from contextlib import nullcontext
+        semaphore = nullcontext()
 
     start_time = time.time()
     try:
         async with semaphore:
-            response = await client.post(
-                f"{endpoint}/v1/chat/completions",
-                json=build_completion_payload(messages, max_tokens, temperature)
+            # ModelClient handles the actual call (local or API)
+            result = await model_client.call_model(
+                model_id=model_id,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature
             )
+            
             elapsed = time.time() - start_time
-
-            if response.status_code != 200:
-                error_msg = sanitize_error_message(response.text, endpoint)
-                return {
-                    "model": display_name,
-                    "content": error_msg,
-                    "error": True,
-                    "time": elapsed
-                }
-
-            data = response.json()
-
-            # Ensure usage data is present
-            if "usage" not in data:
-                raise ValueError(f"Usage data not received from model {model_id}")
-
-            # Ensure choices are present
-            if "choices" not in data or not data["choices"]:
-                raise ValueError(f"No choices returned from model {model_id}")
-
+            
             return {
                 "model": display_name,
-                "content": data["choices"][0]["message"]["content"],
-                "usage": data["usage"],
+                "content": result["content"],
+                "usage": result["usage"],
                 "time": elapsed,
                 "error": False
             }
 
-    except httpx.TimeoutException:
-        logger.error(f"Timeout querying {endpoint}")
-        return {
-            "model": display_name,
-            "content": "Request timed out. Please try again.",
-            "error": True,
-            "time": time.time() - start_time
-        }
-    except httpx.ConnectError as e:
-        logger.error(f"Connection error to {endpoint}: {e}")
-        return {
-            "model": display_name,
-            "content": "Cannot connect to model server. Please try again later.",
-            "error": True,
-            "time": time.time() - start_time
-        }
     except Exception as e:
-        logger.exception(f"Unexpected error querying {endpoint}")
+        logger.exception(f"Error querying {model_id}")
         return {
             "model": display_name,
-            "content": "An unexpected error occurred. Please try again.",
+            "content": str(e),
             "error": True,
             "time": time.time() - start_time
         }
 
-# GitHub Models API Configuration
-GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
 
-async def stream_github_model_response(
-    model_id: str, 
-    messages: list, 
-    max_tokens: int, 
-    temperature: float,
-    github_token: str
-) -> AsyncGenerator[str, None]:
-    """Stream response from GitHub Models API for API models (GPT-4, DeepSeek, etc.)"""
-    display_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
-    start_time = time.time()
-    total_content = ""
-    usage_data = None
-
-    # Short-circuit models known to be invalid on GitHub Models.
-    if model_id in UNSUPPORTED_GITHUB_MODELS:
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'This model is not available on GitHub Models (unknown model id). Remove it or update the id.'})}\n\n"
-        return
-    
-    # Send initial event
-    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
-    
-    try:
-        client = HTTPClient.get_client()
-
-        # Newer OpenAI models (o1, o3, o4, gpt-5) use max_completion_tokens instead of max_tokens
-        # They also don't support custom temperature (only default=1)
-        is_restricted_model = any(
-            pattern in model_id.lower()
-            for pattern in ['o1', 'o3', 'o4', 'gpt-5']
-        )
-
-        payload = {
-            "model": model_id,
-            "messages": messages,
-            "stream": True,
-            "stream_options": {"include_usage": True}
-        }
-
-        # These models don't support custom temperature
-        if not is_restricted_model:
-            payload["temperature"] = temperature
-
-        # Use correct token parameter based on model
-        if is_restricted_model:
-            payload["max_completion_tokens"] = max_tokens
-        else:
-            payload["max_tokens"] = max_tokens
-
-        # Apply rate limiting for GitHub Models API
-        rate_limiter = await get_rate_limiter(GITHUB_MODELS_API_URL, github_token)
-
-        # Check if we'll need to wait and inform the user BEFORE waiting
-        wait_msg = await rate_limiter.check_will_wait()
-        if wait_msg:
-            yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'info', 'content': wait_msg})}\n\n"
-
-        async with await rate_limiter.acquire():
-            async with client.stream(
-                "POST",
-                GITHUB_MODELS_API_URL,
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {github_token}",
-                    "X-GitHub-Api-Version": "2022-11-28"
-                },
-                json=payload,
-                timeout=120.0
-            ) as response:
-                if response.status_code == 429:
-                    rate_limiter.record_429()
-
-                if response.status_code != 200:
-                    error_bytes = await response.aread()
-                    error_raw = error_bytes.decode(errors="ignore")
-
-                    # Detect "unknown_model" and cache to avoid repeated calls.
-                    try:
-                        error_json = json.loads(error_raw)
-                        err_obj = error_json.get("error") or {}
-                        code = str(err_obj.get("code", "")).lower()
-                        msg = str(err_obj.get("message", "")).lower()
-                    except Exception:
-                        code = ""
-                        msg = error_raw.lower()
-
-                    if code == "unknown_model" or "unknown model" in msg:
-                        UNSUPPORTED_GITHUB_MODELS.add(model_id)
-                        friendly = "This model id isn't recognized by GitHub Models. It may be unavailable for your token or renamed."
-                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': friendly})}\n\n"
-                        return
-
-                    error_msg = sanitize_error_message(error_raw, GITHUB_MODELS_API_URL)
-                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
-                    return
-
-                # Record success
-                rate_limiter.record_success()
-
-                async for line in response.aiter_lines():
-                    if not line.startswith("data: "):
-                        continue
-
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        break
-
-                    try:
-                        data = json.loads(data_str)
-
-                        # Capture usage data if present
-                        if "usage" in data:
-                            usage_data = data["usage"]
-
-                        if "choices" in data and len(data["choices"]) > 0:
-                            delta = data["choices"][0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                total_content += content
-                                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
-                    except json.JSONDecodeError:
-                        pass
-        
-        # Send completion event
-        elapsed = time.time() - start_time
-        token_count = usage_data.get("total_tokens", len(total_content.split()) * 1.3) if usage_data else len(total_content.split()) * 1.3
-        
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage_data})}\n\n"
-        
-    except httpx.TimeoutException:
-        logger.error(f"Timeout connecting to GitHub Models API for {model_id}")
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Request timed out. Please try again.'})}\n\n"
-    except httpx.ConnectError as e:
-        logger.error(f"Connection error to GitHub Models API: {e}")
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Cannot connect to GitHub Models API. Check your token.'})}\n\n"
-    except Exception as e:
-        logger.exception(f"Unexpected error streaming from GitHub Models API for {model_id}")
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'An unexpected error occurred.'})}\n\n"
-
-
-async def stream_model_response(model_id: str, messages: list, max_tokens: int, temperature: float) -> AsyncGenerator[str, None]:
-    """Stream response from a single model using SSE format (with request queueing and keep-alives)"""
-    endpoint = MODEL_ENDPOINTS[model_id]
-    display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
-    start_time = time.time()
-    total_content = ""
-
-    # Use semaphore to limit concurrent requests per model
-    semaphore = MODEL_SEMAPHORES.get(model_id)
-    if semaphore is None:
-        # Create a default semaphore if startup event hasn't run yet
-        semaphore = asyncio.Semaphore(1)
-        MODEL_SEMAPHORES[model_id] = semaphore
-
-    client = HTTPClient.get_client()
-
-    # Send initial event immediately
-    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
-
-    try:
-        async with semaphore:
-            # Build the request
-            request = client.build_request(
-                "POST",
-                f"{endpoint}/v1/chat/completions",
-                json=build_completion_payload(
-                    messages,
-                    max_tokens,
-                    temperature,
-                    stream=True,
-                )
-            )
-
-            # Start the request in a way we can monitor progress
-            # We use client.send(..., stream=True) which returns a Response object we must manually close
-            
-            # 1. Wait for Headers (TTFB)
-            response = None
-            try:
-                # We loop until we get the response headers or error
-                while True:
-                    try:
-                        # Wait up to 15 seconds for the connection/headers
-                        response = await asyncio.wait_for(
-                            client.send(request, stream=True),
-                            timeout=15.0
-                        )
-                        break # Got headers!
-                    except asyncio.TimeoutError:
-                        # No headers yet, send keep-alive to browser
-                        yield ": keep-alive\n\n"
-            except Exception as e:
-                # If the actual connection failed or timed out (client-side limit), handle it
-                raise e
-
-            try:
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    error_msg = sanitize_error_message(error_text.decode(), endpoint)
-                    yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': error_msg})}\n\n"
-                    return
-
-                usage_data = None
-                
-                # 2. Wait for Body Chunks (Streaming)
-                # We need to iterate manually to inject keep-alives during gaps
-                iterator = response.aiter_lines()
-                
-                while True:
-                    try:
-                        # Wait for next line
-                        line = await asyncio.wait_for(anext(iterator), timeout=15.0)
-                        
-                        if line.startswith("data: "):
-                            data_str = line[6:]
-                            if data_str.strip() == "[DONE]":
-                                break
-                            try:
-                                data = json.loads(data_str)
-                                # Capture usage data if present
-                                if "usage" in data:
-                                    usage_data = data["usage"]
-
-                                if "choices" in data and len(data["choices"]) > 0:
-                                    delta = data["choices"][0].get("delta", {})
-                                    content = delta.get("content", "")
-                                    if content:
-                                        total_content += content
-                                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': content, 'event': 'token'})}\n\n"
-                            except json.JSONDecodeError:
-                                pass
-                                
-                    except asyncio.TimeoutError:
-                        # Stream stalled, send keep-alive
-                        yield ": keep-alive\n\n"
-                    except StopAsyncIteration:
-                        # Stream finished
-                        break
-
-                # Send completion event with stats
-                elapsed = time.time() - start_time
-
-                # Use real token count from usage data if available
-                if usage_data and "total_tokens" in usage_data:
-                    token_count = usage_data["total_tokens"]
-                else:
-                    # Fallback estimate if no usage data
-                    token_count = len(total_content.split()) * 1.3
-
-                yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': elapsed, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage_data})}\n\n"
-
-            finally:
-                # CRITICAL: Always close the streaming response
-                await response.aclose()
-
-    except httpx.TimeoutException:
-        logger.error(f"Timeout connecting to {endpoint}")
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Request timed out. Please try again.'})}\n\n"
-    except httpx.ConnectError as e:
-        logger.error(f"Connection error to {endpoint}: {e}")
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'Cannot connect to model server. Please try again later.'})}\n\n"
-    except Exception as e:
-        logger.exception(f"Unexpected error streaming from {endpoint}")
-        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'An unexpected error occurred. Please try again.'})}\n\n"
 
 
 async def stream_multiple_models(
@@ -720,60 +430,69 @@ async def stream_multiple_models(
     """Stream responses from multiple models, yielding chunks in real-time as they arrive.
     Supports both local models and API models (via GitHub Models API).
     """
-    # Categorize models
-    local_models = [m for m in models if m in MODEL_ENDPOINTS]
-    api_models = [m for m in models if m in MODEL_PROFILES and MODEL_PROFILES[m].get("model_type") == "api"]
-    
     # Use a queue to collect chunks from all models in real-time
     queue: asyncio.Queue = asyncio.Queue()
-    active_streams = len(local_models) + len(api_models)
+    active_streams = len(models)
     completed_streams = 0
     
     if active_streams == 0:
         yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
         return
 
-    async def stream_local_to_queue(model_id: str):
-        """Stream from a local model and put chunks into the shared queue"""
+    # Client to use (ModelClient instances are lightweight)
+    request_client = ModelClient(github_token) # Passed token handles API auth
+
+    async def stream_to_queue(model_id: str):
+        """Stream from a model and put chunks into the shared queue"""
         nonlocal completed_streams
+        display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
+        
+        # Semaphore for local concurrency
+        semaphore = MODEL_SEMAPHORES.get(model_id)
+        if not semaphore:
+            from contextlib import nullcontext
+            semaphore = nullcontext()
+
         try:
-            async for chunk in stream_model_response(model_id, messages, max_tokens, temperature):
-                await queue.put(chunk)
+            async with semaphore:
+                async for event in request_client.stream_model(model_id, messages, max_tokens, temperature):
+                    if event["type"] == "start":
+                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
+                    
+                    elif event["type"] == "chunk":
+                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': event['content'], 'event': 'token'})}\n\n"
+                    
+                    elif event["type"] == "done":
+                        # Estimate usage if not provided
+                        usage = event.get("usage")
+                        total_content = event.get("full_content", "")
+                        token_count = usage.get("total_tokens") if usage else len(total_content.split()) * 1.3
+                        
+                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': 0, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage})}\n\n"
+                    
+                    elif event["type"] == "error":
+                         # Only yield errors as data events so frontend can display them
+                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': event['error']})}\n\n"
+                        
+        except Exception as e:
+             yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': str(e)})}\n\n"
         finally:
-            completed_streams += 1
-            if completed_streams >= active_streams:
+            # We need to signal completion to the main loop
+            # But since we are yielding to a bridge, we can't easily put to queue here if we use generator
+            pass
+
+    async def bridge_stream_to_queue(model_id: str):
+         nonlocal completed_streams
+         try:
+             async for item in stream_to_queue(model_id):
+                 await queue.put(item)
+         finally:
+             completed_streams += 1
+             if completed_streams >= active_streams:
                 await queue.put(None)
 
-    async def stream_api_to_queue(model_id: str, token: str):
-        """Stream from an API model and put chunks into the shared queue"""
-        nonlocal completed_streams
-        try:
-            async for chunk in stream_github_model_response(model_id, messages, max_tokens, temperature, token):
-                await queue.put(chunk)
-        finally:
-            completed_streams += 1
-            if completed_streams >= active_streams:
-                await queue.put(None)
-
-    # Start all streams concurrently
-    tasks = []
-    
-    # Local model tasks
-    for model_id in local_models:
-        tasks.append(asyncio.create_task(stream_local_to_queue(model_id)))
-    
-    # API model tasks (only if token provided)
-    if github_token:
-        for model_id in api_models:
-            tasks.append(asyncio.create_task(stream_api_to_queue(model_id, github_token)))
-    else:
-        # No token - send error for API models
-        for model_id in api_models:
-            display_name = MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
-            yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': 'GitHub token required for API models. Add it in Settings.'})}\n\n"
-            completed_streams += 1
-            if completed_streams >= active_streams:
-                await queue.put(None)
+    # Re-create tasks with bridge
+    tasks = [asyncio.create_task(bridge_stream_to_queue(m)) for m in models]
 
     if not tasks:
         yield f"data: {json.dumps({'event': 'all_done'})}\n\n"

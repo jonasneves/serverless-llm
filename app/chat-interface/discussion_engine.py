@@ -54,6 +54,8 @@ class DiscussionState:
             self.started_at = datetime.utcnow().isoformat()
 
 
+from model_client import ModelClient
+
 class DiscussionEngine:
     """
     Manages multi-model discussions with orchestrator guidance
@@ -83,11 +85,9 @@ class DiscussionEngine:
         self.orchestrator = orchestrator
         self.model_endpoints = model_endpoints
         self.timeout_per_turn = timeout_per_turn
-
-    def is_api_model(self, model_id: str) -> bool:
-        """Check if a model is an API model (uses GitHub Models API)"""
-        profile = MODEL_PROFILES.get(model_id)
-        return profile is not None and profile.get("model_type") == "api"
+        
+        # Initialize unified model client
+        self.client = ModelClient(orchestrator.github_token)
 
     def _build_turn_prompt(
         self,
@@ -247,172 +247,7 @@ Discussion so far:
 
 {contribution_guide}"""
 
-    async def _call_model_api(
-        self,
-        model_id: str,
-        messages: List[Dict[str, str]],
-        max_tokens: int = 512,
-        temperature: float = 0.7
-    ) -> AsyncGenerator[Dict[str, Any], None]:
-        """
-        Stream response from a model's API
 
-        Args:
-            model_id: Model identifier
-            messages: OpenAI-format messages
-            max_tokens: Max tokens to generate
-            temperature: Sampling temperature
-
-        Yields:
-            Dicts with type "chunk" (content) or "usage" (token counts)
-        """
-        from http_client import HTTPClient
-        import httpx
-
-        endpoint = self.model_endpoints.get(model_id)
-        if not endpoint:
-            raise ValueError(f"No endpoint configured for model: {model_id}")
-
-        url = f"{endpoint}/v1/chat/completions"
-        payload = {
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "stream": True
-        }
-
-        client = HTTPClient.get_client()
-        
-        try:
-            async with client.stream("POST", url, json=payload, timeout=self.timeout_per_turn) as response:
-                if response.status_code != 200:
-                    error_raw = (await response.aread()).decode("utf-8", "ignore")
-                    error_msg = sanitize_error_message(error_raw, url)
-                    raise Exception(error_msg)
-
-                async for line in response.aiter_lines():
-                    if not line or not line.startswith('data: '):
-                        continue
-
-                    data = line[6:]  # Remove 'data: ' prefix
-                    if data == '[DONE]':
-                        break
-
-                    try:
-                        chunk = json.loads(data)
-
-                        # Check for usage data (usually in final chunk)
-                        if 'usage' in chunk:
-                            usage = chunk['usage']
-                            if 'prompt_tokens' not in usage or 'completion_tokens' not in usage or 'total_tokens' not in usage:
-                                raise ValueError("Incomplete usage data received from model")
-                            yield {
-                                "type": "usage",
-                                "prompt_tokens": usage['prompt_tokens'],
-                                "completion_tokens": usage['completion_tokens'],
-                                "total_tokens": usage['total_tokens']
-                            }
-
-                        # Check for content chunk
-                        choices = chunk.get('choices', [])
-                        if choices:
-                            content = choices[0].get('delta', {}).get('content')
-                            if content:
-                                yield {"type": "chunk", "content": content}
-                    except json.JSONDecodeError:
-                        continue
-        except httpx.HTTPError as e:
-             raise Exception(f"Connection error to {model_id}: {str(e)}")
-
-    async def _call_github_models_api(
-        self,
-        model_id: str,
-        messages: List[Dict[str, str]],
-        max_tokens: int = 512,
-        temperature: float = 0.7
-    ) -> AsyncGenerator[Dict[str, Any], None]:
-        """
-        Stream response from GitHub Models API for API model participants
-
-        Args:
-            model_id: Model identifier (e.g., 'gpt-4o', 'llama-3.3-70b-instruct')
-            messages: OpenAI-format messages
-            max_tokens: Max tokens to generate
-            temperature: Sampling temperature
-
-        Yields:
-            Dicts with type "chunk" (content) or "usage" (token counts)
-        """
-        from http_client import HTTPClient
-        import httpx
-
-        url = "https://models.github.ai/inference/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.orchestrator.github_token}",
-            "X-GitHub-Api-Version": "2022-11-28"
-        }
-        payload = {
-            "model": model_id,
-            "messages": messages,
-            "max_completion_tokens": max_tokens,
-            "temperature": temperature,
-            "stream": True
-        }
-
-        client = HTTPClient.get_client()
-
-        # Apply rate limiting for GitHub Models API
-        rate_limiter = await get_rate_limiter(url, self.orchestrator.github_token or "default")
-
-        try:
-            async with await rate_limiter.acquire():
-                async with client.stream("POST", url, headers=headers, json=payload, timeout=self.timeout_per_turn) as response:
-                    if response.status_code == 429:
-                        rate_limiter.record_429()
-                        rate_limit_reset = response.headers.get("x-ratelimit-reset")
-                        raise Exception(f"Rate limit exceeded for {model_id}. Reset at: {rate_limit_reset}")
-
-                    if response.status_code != 200:
-                        error_raw = (await response.aread()).decode("utf-8", "ignore")
-                        error_msg = sanitize_error_message(error_raw, url)
-                        raise Exception(error_msg)
-
-                    rate_limiter.record_success()
-
-                async for line in response.aiter_lines():
-                    if not line or not line.startswith('data: '):
-                        continue
-
-                    data = line[6:]  # Remove 'data: ' prefix
-                    if data == '[DONE]':
-                        break
-
-                    try:
-                        chunk = json.loads(data)
-
-                        # Check for usage data (usually in final chunk)
-                        if 'usage' in chunk:
-                            usage = chunk['usage']
-                            if 'prompt_tokens' not in usage or 'completion_tokens' not in usage or 'total_tokens' not in usage:
-                                raise ValueError("Incomplete usage data received from model")
-                            yield {
-                                "type": "usage",
-                                "prompt_tokens": usage['prompt_tokens'],
-                                "completion_tokens": usage['completion_tokens'],
-                                "total_tokens": usage['total_tokens']
-                            }
-
-                        # Check for content chunk
-                        choices = chunk.get('choices', [])
-                        if choices:
-                            content = choices[0].get('delta', {}).get('content')
-                            if content:
-                                yield {"type": "chunk", "content": content}
-                    except json.JSONDecodeError:
-                        continue
-        except httpx.HTTPError as e:
-             raise Exception(f"Connection error to {model_id}: {str(e)}")
 
     async def _execute_turn(
         self,
@@ -466,26 +301,19 @@ Discussion so far:
 
         try:
             messages = [{"role": "user", "content": prompt}]
-            # Choose API method based on model type
-            if self.is_api_model(model_id):
-                api_generator = self._call_github_models_api(model_id, messages, max_tokens, temperature)
-            else:
-                api_generator = self._call_model_api(model_id, messages, max_tokens, temperature)
-
-            async for item in api_generator:
-                if item["type"] == "chunk":
-                    full_response += item["content"]
+            
+            async for event in self.client.stream_model(model_id, messages, max_tokens, temperature):
+                if event["type"] == "chunk":
+                    full_response += event["content"]
                     yield {
                         "type": "turn_chunk",
                         "model_id": model_id,
-                        "chunk": item["content"]
+                        "chunk": event["content"]
                     }
-                elif item["type"] == "usage":
-                    local_usage = {
-                        "prompt_tokens": item["prompt_tokens"],
-                        "completion_tokens": item["completion_tokens"],
-                        "total_tokens": item["total_tokens"]
-                    }
+                elif event["type"] == "usage":
+                    local_usage = event["usage"]
+                elif event["type"] == "error":
+                     raise Exception(event["error"])
 
         except asyncio.TimeoutError:
             yield {

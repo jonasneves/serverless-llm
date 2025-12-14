@@ -95,6 +95,10 @@ class CouncilEngine:
         self._quip_cache = {}  # Cache for generated quips
         self._last_quip_time = 0
         self._quip_cooldown = 4.0  # Seconds between quips
+        
+        # Initialize unified model client
+        from model_client import ModelClient
+        self.client = ModelClient(github_token)
 
     def generate_quip(
         self,
@@ -166,11 +170,6 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         # Fallback to template
         return self.generate_quip("waiting", waiting_models=waiting_models)
 
-    def is_api_model(self, model_id: str) -> bool:
-        """Check if a model is an API model (uses GitHub Models API)"""
-        profile = MODEL_PROFILES.get(model_id)
-        return profile is not None and profile.get("model_type") == "api"
-
     async def _call_model(
         self,
         model_id: str,
@@ -179,94 +178,16 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         stream: bool = False
     ) -> Dict[str, Any]:
         """
-        Call a single model and return response (streaming or non-streaming)
-
-        Args:
-            model_id: Model identifier
-            messages: OpenAI-format messages
-            max_tokens: Max tokens to generate
-            stream: Whether to stream the response
-
-        Returns:
-            Dict with 'content' key containing response text (if not streaming)
-            AsyncGenerator yielding chunks (if streaming)
+        Call a single model and return response (non-streaming wrapper)
         """
-        from http_client import HTTPClient
-        import httpx
-
-        if self.is_api_model(model_id):
-            # GitHub Models API
-            url = "https://models.github.ai/inference/chat/completions"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.github_token}",
-                "X-GitHub-Api-Version": "2022-11-28"
-            }
-            payload = {
-                "model": model_id,
-                "messages": messages,
-                "max_completion_tokens": max_tokens,
-                "temperature": 0.7,
-                "stream": stream
-            }
-        else:
-            # Local model
-            endpoint = self.model_endpoints.get(model_id)
-            if not endpoint:
-                raise ValueError(f"No endpoint for model: {model_id}")
-
-            url = f"{endpoint}/v1/chat/completions"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": 0.7,
-                "stream": stream
-            }
-
-        client = HTTPClient.get_client()
-
-        try:
-            # Use rate limiter for GitHub Models API
-            if self.is_api_model(model_id):
-                rate_limiter = await get_rate_limiter(url, self.github_token or "default")
-                async with await rate_limiter.acquire():
-                    response = await client.post(url, headers=headers, json=payload, timeout=self.timeout)
-
-                    if response.status_code == 429:
-                        rate_limiter.record_429()
-                        error_raw = (await response.aread()).decode(errors="ignore")
-                        error_msg = sanitize_error_message(error_raw, url)
-                        raise Exception(error_msg)
-
-                    if response.status_code != 200:
-                        error_raw = (await response.aread()).decode(errors="ignore")
-                        error_msg = sanitize_error_message(error_raw, url)
-                        raise Exception(error_msg)
-
-                    rate_limiter.record_success()
-            else:
-                # Local model - no rate limiting needed
-                response = await client.post(url, headers=headers, json=payload, timeout=self.timeout)
-
-                if response.status_code != 200:
-                    error_raw = (await response.aread()).decode(errors="ignore")
-                    error_msg = sanitize_error_message(error_raw, url)
-                    raise Exception(error_msg)
-
-            # Process response (same for both API and local models)
-            if stream:
-                return {"stream": response, "url": url}
-            else:
-                data = response.json()
-                choices = data.get("choices", [])
-                if not choices:
-                    raise Exception(f"No choices returned from {model_id}")
-                content = choices[0].get("message", {}).get("content", "")
-                return {"content": content}
-
-        except httpx.HTTPError as e:
-            raise Exception(f"Connection error to {model_id}: {str(e)}")
+        if stream:
+             raise ValueError("Stream=True not supported in _call_model wrapper, use _stream_model_response")
+        
+        return await self.client.call_model(
+            model_id=model_id,
+            messages=messages,
+            max_tokens=max_tokens
+        )
 
     async def _stream_model_response(
         self,
@@ -276,40 +197,20 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Stream a single model's response, yielding chunks as they arrive
-
-        Yields:
-            Dict with 'chunk' (token) or 'complete' (full response) or 'error'
         """
         try:
-            result = await self._call_model(model_id, messages, max_tokens, stream=True)
-            response_stream = result["stream"]
-
             full_response = ""
-            async for line in response_stream.aiter_lines():
-                if not line.strip() or not line.startswith("data: "):
-                    continue
-
-                data = line[6:]  # Remove "data: " prefix
-                if data == "[DONE]":
-                    break
-
-                try:
-                    chunk_data = json.loads(data)
-                    choices = chunk_data.get("choices", [])
-                    if not choices:
-                        continue
-                    delta = choices[0].get("delta", {})
-                    content = delta.get("content", "")
-
-                    if content:
-                        full_response += content
-                        yield {"chunk": content, "full_response": full_response}
-
-                except json.JSONDecodeError:
-                    continue
-
-            yield {"complete": True, "full_response": full_response}
-
+            async for event in self.client.stream_model(model_id, messages, max_tokens):
+                if event["type"] == "chunk":
+                    content = event["content"]
+                    full_response += content
+                    yield {"chunk": content, "full_response": full_response}
+                elif event["type"] == "done":
+                    full_response = event.get("full_content", full_response) # sync optional
+                    yield {"complete": True, "full_response": full_response}
+                elif event["type"] == "error":
+                    yield {"error": event["error"]}
+                    
         except Exception as e:
             yield {"error": str(e)}
 
