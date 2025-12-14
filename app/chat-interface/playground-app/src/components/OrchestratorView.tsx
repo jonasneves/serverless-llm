@@ -38,6 +38,26 @@ interface OrchestrationEvent {
     message?: string;
 }
 
+// Helper function to render status text (outside the component)
+const renderOrchestratorStatus = (
+    isRunning: boolean,
+    events: OrchestrationEvent[],
+    selectedModel: Model | undefined,
+    selectedModelId: string | null
+) => {
+    const modelName = selectedModel ? selectedModel.name : (selectedModelId || '');
+    let statusPart = '';
+    if (isRunning) {
+        const last = events[events.length - 1];
+        if (last?.event === 'agent_message') statusPart = ` ${last.agent} is speaking...`;
+        else if (last?.event === 'tool_call') statusPart = ` using ${last.tool}...`;
+        else if (last?.event === 'orchestrator_thinking') statusPart = ' thinking...';
+        else statusPart = ' orchestrating...';
+    }
+    return `${modelName}${statusPart}`;
+};
+
+
 export default function OrchestratorView({
     models,
     selectedModelId,
@@ -185,16 +205,8 @@ export default function OrchestratorView({
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'} ${isRunning ? 'animate-pulse' : ''}`} />
-                            <span className="text-sm font-semibold text-slate-200 tracking-tight flex items-center gap-2">
-                                {selectedModel ? selectedModel.name : (selectedModelId || '')}
-                                {isRunning && (() => {
-                                    const last = events[events.length - 1];
-                                    let status = 'working...';
-                                    if (last?.event === 'agent_message') status = `${last.agent} is speaking...`;
-                                    else if (last?.event === 'tool_call') status = `using ${last.tool}...`;
-                                    else if (last?.event === 'orchestrator_thinking') status = 'thinking...';
-                                    return <span className="font-normal text-slate-400 text-xs">{status}</span>;
-                                })()}
+                            <span className="text-sm font-semibold text-slate-200 tracking-tight">
+                                {renderOrchestratorStatus(isRunning, events, selectedModel, selectedModelId)}
                             </span>
                         </div>
                         {selectedModel?.type === 'api' && (
@@ -204,19 +216,20 @@ export default function OrchestratorView({
                         )}
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex-1 flex justify-center items-center">
                          <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
                             AUTOGEN • MULTI-AGENT
                         </div>
-                        <button
-                            onClick={handleClear}
-                            className="h-8 px-3 flex items-center gap-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
-                            title="Clear History"
-                        >
-                            <Eraser size={14} />
-                            <span>Clear</span>
-                        </button>
                     </div>
+
+                    <button
+                        onClick={handleClear}
+                        className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
+                        title="Clear History"
+                    >
+                        <Eraser size={12} />
+                        <span>Clear</span>
+                    </button>
                 </div>
             </div>
 
