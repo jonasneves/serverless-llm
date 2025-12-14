@@ -186,7 +186,13 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             }}
             style={{
               transform: styleTransform,
-              zIndex: isHovered || isSelected ? 20 : isSpeaking ? 10 : 1,
+              zIndex: isCircleMode
+                ? (isHovered ? 300 : isSelected ? 40 : isSpeaking ? 15 : 5)
+                : isSelected
+                  ? 20
+                  : isSpeaking
+                    ? 10
+                    : 1,
               left: '50%',
               top: isCircleMode ? '50%' : '0',
               transition: dragState?.activeId === model.id ? 'none' : 'transform 300ms cubic-bezier(0.2, 0, 0.2, 1)',
@@ -333,7 +339,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               <div
                 data-card
                 onClick={(e) => e.stopPropagation()}
-                className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl transition-all duration-300"
+                className="absolute w-64 max-w-[calc(100vw-2rem)] p-4 rounded-xl transition-all duration-300 z-[220]"
                 style={{
                   top: circlePos.y > 0 ? 'auto' : '100%',
                   bottom: circlePos.y > 0 ? '100%' : 'auto',
@@ -345,7 +351,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   backdropFilter: 'blur(16px)',
                   border: `1px solid ${effectiveColor}40`,
                   boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${effectiveColor}15`,
-                  zIndex: 200,
                 }}
               >
                 <div className="flex items-center gap-2 mb-2">
