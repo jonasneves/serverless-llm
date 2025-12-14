@@ -1,34 +1,42 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize model selector (multi-select mode)
-  const modelSelector = new ModelSelector('#modelSelector', {
+  // Initialize model selectors (multi-select mode)
+  const localModelSelector = new ModelSelector('#localModelSelector', {
     multiSelect: true,
     autoSelectOnline: true,
-    onSelectionChange: (selected) => {
-      // Update button state if needed
-      const generateBtn = document.getElementById('sendBtn');
-      const queryInput = document.getElementById('userInput');
-      const hasModel = selected && selected.length > 0;
-      const hasQuery = queryInput.value.trim().length > 0;
-      generateBtn.disabled = !hasModel || !hasQuery;
-    }
+    onSelectionChange: updateButtonState,
+    filterTypes: ['local']
   });
 
-  await modelSelector.loadModels();
+  const apiModelSelector = new ModelSelector('#apiModelSelector', {
+    multiSelect: true,
+    autoSelectOnline: false,
+    onSelectionChange: updateButtonState,
+    filterTypes: ['api']
+  });
+
+  function updateButtonState() {
+    const generateBtn = document.getElementById('sendBtn');
+    const queryInput = document.getElementById('userInput');
+    const hasModel = getAllSelectedModels().length > 0;
+    const hasQuery = queryInput.value.trim().length > 0;
+    generateBtn.disabled = !hasModel || !hasQuery;
+  }
+  
+  function getAllSelectedModels() {
+    return [...localModelSelector.getSelected(), ...apiModelSelector.getSelected()];
+  }
+
+  await localModelSelector.loadModels();
+  await apiModelSelector.loadModels();
 
   const generateBtn = document.getElementById('sendBtn');
   const queryInput = document.getElementById('userInput');
   const numResponsesInput = document.getElementById('numResponses');
-  const temperatureInput = document.getElementById('tempSlider');
-  const tempValue = document.getElementById('tempValue');
+  // Temp control removed - using SettingsPanel
   const directResponsesContainer = document.getElementById('directResponses');
   const verbalizedResponsesContainer = document.getElementById('verbalizedResponses');
   const diversityScoreContainer = document.getElementById('diversityScore');
   const typingIndicator = document.getElementById('typingIndicator');
-
-  // Temperature slider
-  temperatureInput.addEventListener('input', () => {
-    tempValue.textContent = temperatureInput.value;
-  });
 
   const handleGenerate = async () => {
     const query = queryInput.value.trim();
@@ -37,13 +45,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const models = modelSelector.getSelected();
+    const models = getAllSelectedModels();
     if (!models || models.length === 0) {
       alert('Please select at least one model');
       return;
     }
     const numResponses = parseInt(numResponsesInput.value);
-    const temperature = parseFloat(temperatureInput.value);
+    const temperature = window.SettingsPanel?.getTemperature?.() || 0.8;
 
     generateBtn.disabled = true;
     typingIndicator.classList.add('active');
@@ -60,11 +68,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     diversityScoreContainer.style.display = 'none';
 
     try {
+      // Get GitHub token for API models (from settings panel)
+      const githubToken = window.SettingsPanel?.getToken?.() || '';
+      
       // Run comparisons for all models in parallel
       const promises = [];
       for (const modelId of models) {
-        promises.push(generateDirect(query, modelId, numResponses, temperature));
-        promises.push(generateVerbalized(query, modelId, numResponses, temperature));
+        promises.push(generateDirect(query, modelId, numResponses, temperature, githubToken));
+        promises.push(generateVerbalized(query, modelId, numResponses, temperature, githubToken));
       }
       await Promise.all(promises);
     } catch (error) {
@@ -84,9 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
 
     // Update button state
-    const hasModel = modelSelector.getSelected() !== null;
-    const hasQuery = this.value.trim().length > 0;
-    generateBtn.disabled = !hasModel || !hasQuery;
+    updateButtonState();
   });
 
   // Handle Enter key
@@ -99,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  async function generateDirect(query, model, numResponses, temperature) {
+  async function generateDirect(query, model, numResponses, temperature, githubToken) {
     // Create a group for this model
     const groupDiv = document.createElement('div');
     groupDiv.className = 'model-group';
@@ -128,7 +137,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             model: model,
             temperature: temperature,
             max_tokens: 1024,  // Match centralized GENERATION_DEFAULTS
-            stream: false
+            stream: false,
+            github_token: githubToken || null
           })
         });
 
@@ -158,7 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function generateVerbalized(query, model, numResponses, temperature) {
+  async function generateVerbalized(query, model, numResponses, temperature, githubToken) {
     // Create a group for this model
     const groupDiv = document.createElement('div');
     groupDiv.className = 'model-group';
@@ -174,7 +184,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const response = await fetch(`/api/verbalized-sampling/stream?model=${model}&num_responses=${numResponses}&temperature=${temperature}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query })
+        body: JSON.stringify({ 
+          query: query,
+          github_token: githubToken || null 
+        })
       });
 
       const reader = response.body.getReader();

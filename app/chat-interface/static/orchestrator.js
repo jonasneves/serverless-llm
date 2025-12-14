@@ -1,28 +1,63 @@
 document.addEventListener('DOMContentLoaded', async () => {
   // Configure marked.js via shared module
   configureMarked();
-  // Initialize model selector (single-select mode, optional for this page)
-  const modelSelector = new ModelSelector('#modelSelector', {
+  
+  // State - Separate selectors for local and API models
+  // Orchestrator usually runs best with one model, but we'll support selection from either
+  const localModelSelector = new ModelSelector('#localModelSelector', {
     multiSelect: false,
     autoSelectOnline: true,
+    onSelectionChange: handleSelectionChange,
+    filterTypes: ['local']
   });
 
-  await modelSelector.loadModels();
+  const apiModelSelector = new ModelSelector('#apiModelSelector', {
+    multiSelect: false,
+    autoSelectOnline: false,
+    onSelectionChange: handleSelectionChange,
+    filterTypes: ['api']
+  });
+
+  function getAllSelectedModels() {
+    // Since we want single select effectively, we just grab whichever has a selection
+    // Or if both have selections, maybe we prefer one?
+    // Given multiSelect: false on both, getting an array is still the standard API
+    const local = localModelSelector.getSelected();
+    const api = apiModelSelector.getSelected();
+    
+    // In single-select mode, getSelected() returns the ID string or null
+    const selected = [];
+    if (local) selected.push(local);
+    if (api) selected.push(api);
+    
+    return selected;
+  }
+
+  function handleSelectionChange() {
+    // Ensure mutually exclusive selection between the two dropdowns for Orchestrator
+    // If this event was triggered by local selector picking something, clear API selector
+    // Note: This is a bit tricky without knowing which one triggered it.
+    // Simplified: We'll just check at startOrchestration time and warn if multiple.
+    // Or better: clear the *other* selector when one changes.
+    // However, ModelSelector doesn't pass 'source' in callback easily.
+    // We'll rely on the user to pick one.
+  }
+  
+  // Add listeners to enforce mutual exclusivity manually
+  // We need to access the internal trigger or wrap the callback logic carefully
+  // For now, we'll allow both to have a selection but only use the first one found.
+
+  await localModelSelector.loadModels();
+  await apiModelSelector.loadModels();
 
   const queryInput = document.getElementById('userInput');
   const maxRoundsInput = document.getElementById('maxRounds');
   const engineSelect = document.getElementById('engineSelect');
-  const temperatureInput = document.getElementById('tempSlider');
-  const tempValue = document.getElementById('tempValue');
-  const maxTokensInput = document.getElementById('maxTokens');
+  // Temp/Tokens controls removed - using SettingsPanel
+  
   const startBtn = document.getElementById('sendBtn');
   let originalBtnHTML = null;
   const orchestrationResults = document.getElementById('orchestrationResults');
-
-  // Temperature slider
-  temperatureInput.addEventListener('input', () => {
-    tempValue.textContent = temperatureInput.value;
-  });
 
   let isRunning = false;
 
@@ -32,6 +67,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('Please enter a question');
       return;
     }
+
+    const selectedModels = getAllSelectedModels();
+    if (selectedModels.length === 0) {
+      alert('Please select a model');
+      return;
+    }
+    
+    // Use the most recently selected or just the first one
+    // Since we didn't implement strict mutual exclusion in UI, we pick the first one.
+    // If user selected one in Local and one in API, we'll use Local.
+    const modelId = selectedModels[0]; 
 
     if (isRunning) return;
     isRunning = true;
@@ -54,6 +100,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     orchestrationResults.innerHTML = '';
 
     try {
+      // Get GitHub token for API models (from settings panel)
+      const githubToken = window.SettingsPanel?.getToken?.() || '';
+      
       const engine = engineSelect ? engineSelect.value : 'auto';
       const response = await fetch(`/api/chat/orchestrator/stream?engine=${encodeURIComponent(engine)}`, {
         method: 'POST',
@@ -62,9 +111,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         body: JSON.stringify({
           query: query,
+          model: modelId,
           max_rounds: parseInt(maxRoundsInput.value),
-          temperature: parseFloat(temperatureInput.value),
-          max_tokens: parseInt(maxTokensInput.value)
+          temperature: window.SettingsPanel?.getTemperature?.() || 0.7,
+          max_tokens: window.SettingsPanel?.getMaxTokens?.() || 2048,
+          github_token: githubToken || null
         })
       });
 

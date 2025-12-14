@@ -11,33 +11,42 @@ const complianceMap = {
 document.addEventListener('DOMContentLoaded', async () => {
   // Configure marked.js via shared module
   configureMarked();
-  // Initialize model selector (multi-select mode)
-  const modelSelector = new ModelSelector('#modelSelector', {
+  
+  // Initialize model selectors (multi-select mode)
+  const localModelSelector = new ModelSelector('#localModelSelector', {
     multiSelect: true,
     autoSelectOnline: true,
-    onSelectionChange: (selected) => {
-      const runBtn = document.getElementById('sendBtn');
-      const promptInput = document.getElementById('userInput');
-      const hasModel = selected && selected.length > 0;
-      const hasQuery = promptInput.value.trim().length > 0;
-      runBtn.disabled = !hasModel || !hasQuery;
-    }
+    onSelectionChange: updateButtonState,
+    filterTypes: ['local']
   });
 
-  await modelSelector.loadModels();
+  const apiModelSelector = new ModelSelector('#apiModelSelector', {
+    multiSelect: true,
+    autoSelectOnline: false,
+    onSelectionChange: updateButtonState,
+    filterTypes: ['api']
+  });
+
+  function updateButtonState() {
+    const runBtn = document.getElementById('sendBtn');
+    const promptInput = document.getElementById('userInput');
+    const hasModel = getAllSelectedModels().length > 0;
+    const hasQuery = promptInput.value.trim().length > 0;
+    runBtn.disabled = !hasModel || !hasQuery;
+  }
+  
+  function getAllSelectedModels() {
+    return [...localModelSelector.getSelected(), ...apiModelSelector.getSelected()];
+  }
+
+  await localModelSelector.loadModels();
+  await apiModelSelector.loadModels();
 
   const runBtn = document.getElementById('sendBtn');
   const promptInput = document.getElementById('userInput');
-  const tempInput = document.getElementById('tempSlider');
-  const tempValue = document.getElementById('tempValue');
-  const maxTokensInput = document.getElementById('maxTokens');
+  // Temp/Tokens controls removed - using SettingsPanel
   const resultsContainer = document.getElementById('resultsContainer');
   const typingIndicator = document.getElementById('typingIndicator');
-
-  // Temperature slider
-  tempInput.addEventListener('input', () => {
-    tempValue.textContent = tempInput.value;
-  });
 
   document.querySelectorAll('.example-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -55,10 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
 
     // Update button state
-    const selected = modelSelector.getSelected();
-    const hasModel = selected && selected.length > 0;
-    const hasQuery = this.value.trim().length > 0;
-    runBtn.disabled = !hasModel || !hasQuery;
+    updateButtonState();
   });
 
   const handleRun = async () => {
@@ -68,13 +74,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const models = modelSelector.getSelected();
+    const models = getAllSelectedModels();
     if (!models || models.length === 0) {
       alert('Please select at least one model');
       return;
     }
-    const temperature = parseFloat(tempInput.value) || 0.7;
-    const maxTokens = parseInt(maxTokensInput.value, 10) || 768;
+    const temperature = window.SettingsPanel?.getTemperature?.() || 0.7;
+    const maxTokens = window.SettingsPanel?.getMaxTokens?.() || 768;
 
     runBtn.disabled = true;
     typingIndicator.classList.add('active');
@@ -90,7 +96,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     promptInput.value = '';
     promptInput.style.height = 'auto';
 
-    const promises = models.map(modelId => runAuditForModel(modelId, query, temperature, maxTokens));
+    // Get GitHub token for API models (from settings panel)
+    const githubToken = window.SettingsPanel?.getToken?.() || '';
+
+    const promises = models.map(modelId => runAuditForModel(modelId, query, temperature, maxTokens, githubToken));
 
     try {
       await Promise.all(promises);
@@ -102,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  async function runAuditForModel(modelId, query, temperature, maxTokens) {
+  async function runAuditForModel(modelId, query, temperature, maxTokens, githubToken) {
     // Create UI elements for this model
     const resultGroupId = `group-${modelId}`;
     const groupDiv = document.createElement('div');
@@ -171,7 +180,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const response = await fetch(`/api/confessions/stream?model=${encodeURIComponent(modelId)}&temperature=${temperature}&max_tokens=${maxTokens}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ 
+          query: query,
+          github_token: githubToken || null 
+        })
       });
 
       if (!response.ok || !response.body) {

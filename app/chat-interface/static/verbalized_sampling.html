@@ -401,19 +401,45 @@
 
 <div class="input-container">
   <div class="controls-row">
-    <div class="model-selector" id="modelSelector">
-      <!-- Model chips populated by model-selector.js -->
+    <div class="model-selector-compact">
+      <button class="model-selector-trigger" id="localModelsTrigger" type="button">
+        <div class="trigger-content">
+          <span class="trigger-text">Local Models</span>
+          <span class="trigger-badge" id="localModelCount">0</span>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+      <div class="model-selector-dropdown" id="localModelsDropdown">
+        <div class="model-selector" id="localModelSelector">
+          <!-- Local model chips populated by JS -->
+        </div>
+      </div>
     </div>
+
+    <div class="model-selector-compact">
+      <button class="model-selector-trigger" id="apiModelsTrigger" type="button">
+        <div class="trigger-content">
+          <span class="trigger-text">API Models</span>
+          <span class="trigger-badge" id="apiModelCount">0</span>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+      <div class="model-selector-dropdown" id="apiModelsDropdown">
+        <div class="model-selector" id="apiModelSelector">
+          <!-- API model chips populated by JS -->
+        </div>
+      </div>
+    </div>
+
     <div class="flex-spacer"></div>
     <div class="controls-secondary">
       <div class="control-group">
         <label>Num Responses:</label>
         <input type="number" id="numResponses" value="5" min="3" max="10" class="input-narrow">
-      </div>
-      <div class="control-group">
-        <label>Temp:</label>
-        <input type="range" id="tempSlider" min="0" max="2" step="0.1" value="0.8">
-        <span id="tempValue">0.8</span>
       </div>
       <button id="clearBtn" class="clear-btn" type="button">Clear</button>
     </div>
