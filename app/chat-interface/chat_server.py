@@ -254,7 +254,7 @@ def get_static_versions() -> dict:
         "settings_js": get_file_version("settings.js"),
         "content_formatter_js": get_file_version("content-formatter.js"),
         "chat_js": get_file_version("chat.js"),
-        "orchestrator_js": get_file_version("orchestrator.js"),
+
         "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
         "confessions_js": get_file_version("confessions.js"),
         "model_loader_js": get_file_version("model-loader.js"),
@@ -331,13 +331,7 @@ async def chat_interface(request: Request):
         {"request": request, **get_static_versions()}
     )
 
-@app.get("/autogen")
-async def autogen_interface(request: Request):
-    """Serve AutoGen mode interface with automatic cache busting"""
-    return templates.TemplateResponse(
-        "orchestrator.html",
-        {"request": request, **get_static_versions()}
-    )
+
 
 @app.get("/variations")
 async def variations_interface(request: Request):

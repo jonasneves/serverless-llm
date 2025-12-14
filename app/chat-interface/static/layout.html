@@ -123,12 +123,7 @@
             </svg>
           </button>
           <div class="dropdown-menu">
-            <a href="/autogen" class="dropdown-item {% if request.url.path == '/autogen' %}active{% endif %}">
-              <div class="dropdown-item-content">
-                <span class="dropdown-item-title">Agents</span>
-                <span class="dropdown-item-desc">Tool-using orchestration</span>
-              </div>
-            </a>
+
             <a href="/variations" class="dropdown-item {% if request.url.path == '/variations' %}active{% endif %}">
               <div class="dropdown-item-content">
                 <span class="dropdown-item-title">Variations</span>
@@ -144,7 +139,8 @@
           </div>
         </div>
 
-        <a href="/playground" target="_blank" rel="noopener noreferrer" class="mode-link {% if request.url.path == '/playground' %}active{% endif %}">
+        <a href="/playground" target="_blank" rel="noopener noreferrer"
+          class="mode-link {% if request.url.path == '/playground' %}active{% endif %}">
           Arena <span
             style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;">New</span>
         </a>
