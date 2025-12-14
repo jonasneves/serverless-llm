@@ -286,4 +286,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   });
+
+  // Global key listener for "type anywhere"
+  document.addEventListener('keydown', (e) => {
+    const active = document.activeElement;
+    if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable) {
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length !== 1) return;
+
+    queryInput.focus();
+  });
 });

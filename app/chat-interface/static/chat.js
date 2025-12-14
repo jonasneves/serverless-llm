@@ -624,17 +624,26 @@ document.addEventListener('DOMContentLoaded', () => {
   localModelSelector.loadModels();
   apiModelSelector.loadModels();
 
-  // Auto-focus the input field on page load
-  // Use a small delay to ensure the page is fully rendered
-  setTimeout(() => {
-    userInput.focus();
-  }, 100);
+  // Auto-focus logic: Removed aggressive initial focus.
+  // Instead, typing anywhere focuses the input.
 
   // Re-focus input when clicking anywhere in the chat area (for convenience)
   chatHistory.addEventListener('click', () => {
     if (!window.getSelection().toString()) {
       userInput.focus();
     }
+  });
+
+  // Global key listener for "type anywhere"
+  document.addEventListener('keydown', (e) => {
+    const active = document.activeElement;
+    if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable) {
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length !== 1) return; // Only trigger on character keys
+
+    userInput.focus();
   });
 
 
