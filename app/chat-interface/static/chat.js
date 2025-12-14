@@ -212,12 +212,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (responses.length === 1) {
       // Single model response
       const resp = responses[0];
+      const modelInfo = getModelInfo(resp.model);
+      const modelType = modelInfo?.type || 'local';
       const contextLength = getModelContextLength(resp.model);
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message assistant';
       messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${resp.model}</span>
+            <span class="model-type-badge ${modelType}">${modelType === 'local' ? 'Local' : 'API'}</span>
             ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
           </div>
           <div class="message-content">${formatContentWithThinking(resp.content)}</div>
@@ -255,12 +258,15 @@ document.addEventListener('DOMContentLoaded', () => {
       container.className = 'model-responses';
 
       for (const resp of responses) {
+        const modelInfo = getModelInfo(resp.model);
+        const modelType = modelInfo?.type || 'local';
         const contextLength = getModelContextLength(resp.model);
         const responseDiv = document.createElement('div');
         responseDiv.className = 'model-response';
         responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${resp.model}</span>
+              <span class="model-type-badge ${modelType}">${modelType === 'local' ? 'Local' : 'API'}</span>
               ${resp.error ? '<span class="model-badge" style="background: #fecaca; color: #dc2626;">Error</span>' : ''}
             </div>
             <div class="message-content">${formatContentWithThinking(resp.content)}</div>
@@ -319,14 +325,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (models.length === 1) {
       const modelId = models[0];
-      const modelName = getModelInfo(modelId)?.name || modelId;
+      const modelInfo = getModelInfo(modelId);
+      const modelName = modelInfo?.name || modelId;
+      const modelType = modelInfo?.type || 'local';
       const contextLength = getModelContextLength(modelId);
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message assistant';
       messageDiv.innerHTML = `
           <div class="model-header">
             <span class="model-name">${modelName}</span>
-            <span class="model-badge streaming-badge">Streaming...</span>
+            <span class="model-type-badge ${modelType}">${modelType === 'local' ? 'Local' : 'API'}</span>
           </div>
           <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>
           <div class="message-footer" style="display: none;" data-footer-id="${modelId}">
@@ -343,14 +351,16 @@ document.addEventListener('DOMContentLoaded', () => {
       container.className = 'model-responses';
 
       for (const modelId of models) {
-        const modelName = getModelInfo(modelId)?.name || modelId;
+        const modelInfo = getModelInfo(modelId);
+        const modelName = modelInfo?.name || modelId;
+        const modelType = modelInfo?.type || 'local';
         const contextLength = getModelContextLength(modelId);
         const responseDiv = document.createElement('div');
         responseDiv.className = 'model-response';
         responseDiv.innerHTML = `
             <div class="model-header">
               <span class="model-name">${modelName}</span>
-              <span class="model-badge streaming-badge">Waiting...</span>
+              <span class="model-type-badge ${modelType}">${modelType === 'local' ? 'Local' : 'API'}</span>
             </div>
             <div class="message-content" data-model-id="${modelId}"><span class="cursor">▋</span></div>
             <div class="message-footer" style="display: none;" data-footer-id="${modelId}">
@@ -390,15 +400,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const el = entry.element;
 
-    // Remove streaming badge
-    const badge = el.querySelector('.streaming-badge');
-    if (badge) {
-      if (error) {
-        badge.textContent = 'Error';
-        badge.style.background = '#fecaca';
-        badge.style.color = '#dc2626';
-      } else {
-        badge.remove();
+    // Show error badge if error
+    if (error) {
+      const header = el.querySelector('.model-header');
+      if (header && !header.querySelector('.model-badge')) {
+         const errorBadge = document.createElement('span');
+         errorBadge.className = 'model-badge';
+         errorBadge.style.cssText = 'background: #fecaca; color: #dc2626; margin-left: 8px;';
+         errorBadge.textContent = 'Error';
+         header.appendChild(errorBadge);
       }
     }
 

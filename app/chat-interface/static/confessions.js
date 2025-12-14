@@ -39,6 +39,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     return [...localModelSelector.getSelected(), ...apiModelSelector.getSelected()];
   }
 
+  function getModelInfo(modelId) {
+    return localModelSelector.models[modelId] || apiModelSelector.models[modelId];
+  }
+
   await localModelSelector.loadModels();
   await apiModelSelector.loadModels();
 
@@ -118,11 +122,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     groupDiv.className = 'model-result-group';
     groupDiv.style.marginBottom = '32px';
 
-    const modelName = modelId; // You might want to lookup friendly name from selector if available
+    const modelInfo = getModelInfo(modelId);
+    const modelName = modelInfo?.name || modelId;
+    const modelType = modelInfo?.type || 'local';
 
     groupDiv.innerHTML = `
       <h3 class="model-group-header">
         <span class="model-badge">${modelName}</span>
+        <span class="model-type-badge ${modelType}" style="margin-left: 8px;">${modelType === 'local' ? 'Local' : 'API'}</span>
       </h3>
       <div class="comparison-container">
         <!-- Main Answer Side -->
@@ -169,6 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>
     `;
+
 
     resultsContainer.appendChild(groupDiv);
 

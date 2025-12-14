@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     return [...localModelSelector.getSelected(), ...apiModelSelector.getSelected()];
   }
 
+  function getModelInfo(modelId) {
+    return localModelSelector.models[modelId] || apiModelSelector.models[modelId];
+  }
+
   await localModelSelector.loadModels();
   await apiModelSelector.loadModels();
 
@@ -110,9 +114,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function generateDirect(query, model, numResponses, temperature, githubToken) {
     // Create a group for this model
+    const modelInfo = getModelInfo(model);
+    const modelType = modelInfo?.type || 'local';
+    
     const groupDiv = document.createElement('div');
     groupDiv.className = 'model-group';
-    groupDiv.innerHTML = `<div class="model-header-small" style="padding: 8px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid var(--border-color); margin-bottom:8px;">${model}</div>`;
+    groupDiv.innerHTML = `
+      <div class="model-header-small" style="padding: 8px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid var(--border-color); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+        <span>${model}</span>
+        <span class="model-type-badge ${modelType}">${modelType === 'local' ? 'Local' : 'API'}</span>
+      </div>`;
     directResponsesContainer.appendChild(groupDiv);
 
     // Make multiple direct calls
@@ -170,9 +181,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function generateVerbalized(query, model, numResponses, temperature, githubToken) {
     // Create a group for this model
+    const modelInfo = getModelInfo(model);
+    const modelType = modelInfo?.type || 'local';
+
     const groupDiv = document.createElement('div');
     groupDiv.className = 'model-group';
-    groupDiv.innerHTML = `<div class="model-header-small" style="padding: 8px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid var(--border-color); margin-bottom:8px;">${model}</div>`;
+    groupDiv.innerHTML = `
+      <div class="model-header-small" style="padding: 8px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid var(--border-color); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+        <span>${model}</span>
+        <span class="model-type-badge ${modelType}">${modelType === 'local' ? 'Local' : 'API'}</span>
+      </div>`;
     verbalizedResponsesContainer.appendChild(groupDiv);
 
     const streamingDiv = document.createElement('div');
