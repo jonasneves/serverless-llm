@@ -10,6 +10,14 @@ interface HeaderProps {
   onOpenSettings: () => void;
 }
 
+const MODES: { value: Mode; label: string }[] = [
+  { value: 'chat', label: 'Chat' },
+  { value: 'compare', label: 'Compare' },
+  { value: 'council', label: 'Council' },
+  { value: 'roundtable', label: 'Roundtable' },
+  { value: 'orchestrator', label: 'Orchestrator' }
+];
+
 export default function Header({
   mode,
   setMode,
@@ -19,6 +27,10 @@ export default function Header({
   setShowDock,
   onOpenSettings
 }: HeaderProps) {
+  const currentModeIndex = MODES.findIndex(m => m.value === mode);
+  // Default to 0 if not found (e.g. 'chat' mode if not in list)
+  const safeIndex = currentModeIndex === -1 ? 0 : currentModeIndex;
+
   return (
     <div className="fixed top-0 left-0 right-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none">
       {/* Background layer for hit testing if needed, or just let events pass through empty space */}
@@ -55,24 +67,21 @@ export default function Header({
             <div
               className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
               style={{
-                left: mode === 'compare'
-                  ? '4px'
-                  : mode === 'council'
-                    ? 'calc((100% + 4px) / 3)'
-                    : 'calc((200% - 4px) / 3)'
+                width: `calc((100% - 8px) / ${MODES.length})`,
+                left: `calc(4px + (100% - 8px) * ${safeIndex} / ${MODES.length})`
               }}
             />
-            {(['Compare', 'Council', 'Roundtable'] as const).map(m => (
+            {MODES.map(m => (
               <button
-                key={m}
+                key={m.value}
                 tabIndex={-1}
-                onClick={() => { setMode(m.toLowerCase() as Mode); setHoveredCard(null); clearSelection(); }}
-                className={`relative z-10 py-2 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.toLowerCase()
+                onClick={() => { setMode(m.value); setHoveredCard(null); clearSelection(); }}
+                className={`relative z-10 py-2 sm:py-1.5 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.value
                   ? 'text-white'
                   : 'text-slate-400 hover:text-slate-200'
                   }`}
               >
-                {m}
+                {m.label}
               </button>
             ))}
           </div>

@@ -18,6 +18,8 @@ import { useInspectorSelection } from './hooks/useInspectorSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import DiscussionTranscript from './components/DiscussionTranscript';
+import OrchestratorView from './components/OrchestratorView';
+import ChatView from './components/ChatView';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import './playground.css';
 
@@ -810,119 +812,147 @@ export default function Playground() {
           />
         )}
 
-        {/* Model Dock (Left) */}
-        <ModelDock
-          showDock={showDock}
-          availableModels={availableModels}
-          allSelectedByType={allSelectedByType}
-          totalModelsByType={totalModelsByType}
-          handleDragStart={handleDockDragStart}
-          handleModelToggle={handleModelToggle}
-          handleAddGroup={handleAddGroup}
-          dockRef={dockRef}
-        />
+        {/* Model Dock (Left) - Hidden in Orchestrator/Chat Mode */}
+        {mode !== 'orchestrator' && mode !== 'chat' && (
+          <ModelDock
+            showDock={showDock}
+            availableModels={availableModels}
+            allSelectedByType={allSelectedByType}
+            totalModelsByType={totalModelsByType}
+            handleDragStart={handleDockDragStart}
+            handleModelToggle={handleModelToggle}
+            handleAddGroup={handleAddGroup}
+            dockRef={dockRef}
+          />
+        )}
 
-        {/* Main Content Area */}
-        <div className="flex h-screen w-full relative">
-          {/* Left/Main Visualization Area */}
-          <div
-            className={`relative flex-1 transition-all duration-300 flex flex-col pt-24`}
-          >
-            <div
-              ref={visualizationAreaRef}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`relative w-full h-full z-0 transition-all duration-300`}
-              style={{
-                // Base styles for all modes
-                position: 'relative',
-                display: 'flex',
-                // Compare mode aligns top for scrolling, others center
-                alignItems: mode === 'compare' ? 'flex-start' : 'center',
-                justifyContent: 'center',
-                ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
-                transform: `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
-                willChange: 'transform',
-                border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
-                borderRadius: isDraggingOver ? '24px' : '0px',
-                transition: 'transform 0s linear',
-
-                // Mode-specific styles override base
-                ...(mode === 'compare' ? {
-                  minHeight: '300px', // Minimum height to ensure clickable background
-                  paddingBottom: '120px', // Extra space at bottom for right-click menu access
-                } : {
-                  height: '100%',
-                  minHeight: '100%',
-                  overflow: 'hidden' // Prevent scroll in arena for council
-                }),
-
-                ...(isDraggingOver ? {
-                  background: 'rgba(59, 130, 246, 0.05)',
-                } : {})
-              }}
-            >
-              <ArenaCanvas
-                mode={mode}
-                selectedModels={selectedModels}
-                gridCols={gridCols}
-                speaking={speaking}
-                selectedCardIds={selectedCardIds}
-                setSelectedCardIds={setSelectedCardIds}
-                setActiveInspectorId={setActiveInspectorId}
-                executionTimes={executionTimes}
-                failedModels={failedModels}
-                cardRefs={cardRefs}
-                handlePointerDown={handlePointerDown}
-                dragState={dragState}
-                handleModelToggle={handleModelToggle}
-                setContextMenu={setContextMenu}
-                suppressClickRef={suppressClickRef}
-                getTailSnippet={getTailSnippet}
-                hoveredCard={hoveredCard}
-                setHoveredCard={setHoveredCard}
-                layoutRadius={layoutRadius}
-                getCirclePosition={getCirclePosition}
-                moderatorModel={moderatorModel}
-                moderatorId={moderator}
-                orchestratorTransform={orchestratorTransformWithScale}
-                orchestratorStatus={orchestratorStatus}
-                orchestratorPhaseLabel={orchestratorPhaseLabel}
-                moderatorSynthesis={moderatorSynthesis}
-                isSynthesizing={isSynthesizing}
-                isGenerating={isGenerating}
-                phaseLabel={phaseLabel}
-                linesTransitioning={linesTransitioning}
-                lastSelectedCardRef={lastSelectedCardRef}
-              />
-            </div>
+        {/* Orchestrator View */}
+        {mode === 'orchestrator' && (
+          <div className="flex-1 h-screen pt-20 pb-6 px-6">
+            <OrchestratorView
+              models={availableModels}
+              selectedModelId={selected[0] || null}
+              onSelectModel={(id) => setSelected([id])}
+              githubToken={githubToken}
+            />
           </div>
+        )}
 
-          {/* Right Panel: Transcript (Only for Council/Roundtable) */}
-          {mode !== 'compare' && (
-            <div className="w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
-              <DiscussionTranscript
-                history={history}
-                models={modelsData}
-                className="pt-24 mask-fade-top"
-              />
+        {/* Chat View */}
+        {mode === 'chat' && (
+          <div className="flex-1 h-screen pt-20 pb-6 px-6">
+            <ChatView
+              models={availableModels}
+              selectedModelId={selected[0] || null}
+              onSelectModel={(id) => setSelected([id])}
+              githubToken={githubToken}
+            />
+          </div>
+        )}
 
-              <div className="p-4 border-t border-white/5 relative z-[50]">
-                <PromptInput
-                  inputRef={inputRef}
-                  inputFocused={inputFocused}
-                  setInputFocused={setInputFocused}
-                  onSendMessage={sendMessage}
-                  onOpenTopics={() => setShowTopics(true)}
-                  className="relative w-full"
-                  style={{ paddingBottom: '0' }}
-                  placeholder="Steer the discussion..."
+        {/* Main Content Area (Arena/Transcript) - Hidden in Orchestrator/Chat Mode */}
+        {mode !== 'orchestrator' && mode !== 'chat' && (
+          <div className="flex h-screen w-full relative">
+            {/* Left/Main Visualization Area */}
+            <div
+              className={`relative flex-1 transition-all duration-300 flex flex-col pt-24`}
+            >
+              <div
+                ref={visualizationAreaRef}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`relative w-full h-full z-0 transition-all duration-300`}
+                style={{
+                  // Base styles for all modes
+                  position: 'relative',
+                  display: 'flex',
+                  // Compare mode aligns top for scrolling, others center
+                  alignItems: mode === 'compare' ? 'flex-start' : 'center',
+                  justifyContent: 'center',
+                  ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
+                  transform: `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
+                  willChange: 'transform',
+                  border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
+                  borderRadius: isDraggingOver ? '24px' : '0px',
+                  transition: 'transform 0s linear',
+
+                  // Mode-specific styles override base
+                  ...(mode === 'compare' ? {
+                    minHeight: '300px', // Minimum height to ensure clickable background
+                    paddingBottom: '120px', // Extra space at bottom for right-click menu access
+                  } : {
+                    height: '100%',
+                    minHeight: '100%',
+                    overflow: 'hidden' // Prevent scroll in arena for council
+                  }),
+
+                  ...(isDraggingOver ? {
+                    background: 'rgba(59, 130, 246, 0.05)',
+                  } : {})
+                }}
+              >
+                <ArenaCanvas
+                  mode={mode}
+                  selectedModels={selectedModels}
+                  gridCols={gridCols}
+                  speaking={speaking}
+                  selectedCardIds={selectedCardIds}
+                  setSelectedCardIds={setSelectedCardIds}
+                  setActiveInspectorId={setActiveInspectorId}
+                  executionTimes={executionTimes}
+                  failedModels={failedModels}
+                  cardRefs={cardRefs}
+                  handlePointerDown={handlePointerDown}
+                  dragState={dragState}
+                  handleModelToggle={handleModelToggle}
+                  setContextMenu={setContextMenu}
+                  suppressClickRef={suppressClickRef}
+                  getTailSnippet={getTailSnippet}
+                  hoveredCard={hoveredCard}
+                  setHoveredCard={setHoveredCard}
+                  layoutRadius={layoutRadius}
+                  getCirclePosition={getCirclePosition}
+                  moderatorModel={moderatorModel}
+                  moderatorId={moderator}
+                  orchestratorTransform={orchestratorTransformWithScale}
+                  orchestratorStatus={orchestratorStatus}
+                  orchestratorPhaseLabel={orchestratorPhaseLabel}
+                  moderatorSynthesis={moderatorSynthesis}
+                  isSynthesizing={isSynthesizing}
+                  isGenerating={isGenerating}
+                  phaseLabel={phaseLabel}
+                  linesTransitioning={linesTransitioning}
+                  lastSelectedCardRef={lastSelectedCardRef}
                 />
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Right Panel: Transcript (Only for Council/Roundtable) */}
+            {mode !== 'compare' && (
+              <div className="w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
+                <DiscussionTranscript
+                  history={history}
+                  models={modelsData}
+                  className="pt-24 mask-fade-top"
+                />
+
+                <div className="p-4 border-t border-white/5 relative z-[50]">
+                  <PromptInput
+                    inputRef={inputRef}
+                    inputFocused={inputFocused}
+                    setInputFocused={setInputFocused}
+                    onSendMessage={sendMessage}
+                    onOpenTopics={() => setShowTopics(true)}
+                    className="relative w-full"
+                    style={{ paddingBottom: '0' }}
+                    placeholder="Steer the discussion..."
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
 
@@ -994,7 +1024,7 @@ export default function Playground() {
         onSelectPrompt={handleSelectPrompt}
       />
 
-      {/* Fixed Prompt Input for Compare Mode ONLY */}
+      {/* Fixed Prompt Input for Compare Mode ONLY (and not Orchestrator) */}
       {mode === 'compare' && (
         <PromptInput
           inputRef={inputRef}

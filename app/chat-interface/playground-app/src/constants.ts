@@ -168,6 +168,8 @@ export const MODE_COLORS: Record<Mode, string> = {
   compare: BASE_BACKGROUND,
   council: BASE_BACKGROUND,
   roundtable: BASE_BACKGROUND,
+  orchestrator: BASE_BACKGROUND,
+  chat: BASE_BACKGROUND,
 };
 
 // Generation defaults - centralized for easy maintenance

@@ -9,7 +9,7 @@ export interface Model {
   statusMessage?: string; // Temporary system messages (rate limiting, etc.) - not part of conversation history
 }
 
-export type Mode = 'compare' | 'council' | 'roundtable';
+export type Mode = 'compare' | 'council' | 'roundtable' | 'orchestrator' | 'chat';
 
 export interface Position {
   x: number;
