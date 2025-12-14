@@ -121,7 +121,7 @@
         <!-- Lab (Experimental Modes) Dropdown -->
         <div class="mode-dropdown">
           <button
-            class="mode-link dropdown-trigger {% if request.url.path in ['/council', '/roundtable', '/autogen', '/variations', '/confessions'] %}active{% endif %}">
+            class="mode-link dropdown-trigger {% if request.url.path in ['/autogen', '/variations', '/confessions'] %}active{% endif %}">
             Lab
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               style="margin-left: 4px;">
@@ -129,18 +129,6 @@
             </svg>
           </button>
           <div class="dropdown-menu">
-            <a href="/council" class="dropdown-item {% if request.url.path == '/council' %}active{% endif %}">
-              <div class="dropdown-item-content">
-                <span class="dropdown-item-title">Council</span>
-                <span class="dropdown-item-desc">Anonymized peer review</span>
-              </div>
-            </a>
-            <a href="/roundtable" class="dropdown-item {% if request.url.path == '/roundtable' %}active{% endif %}">
-              <div class="dropdown-item-content">
-                <span class="dropdown-item-title">Roundtable</span>
-                <span class="dropdown-item-desc">Multi-model discussion</span>
-              </div>
-            </a>
             <a href="/autogen" class="dropdown-item {% if request.url.path == '/autogen' %}active{% endif %}">
               <div class="dropdown-item-content">
                 <span class="dropdown-item-title">Agents</span>

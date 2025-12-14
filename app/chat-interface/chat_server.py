@@ -253,11 +253,9 @@ def get_static_versions() -> dict:
         "settings_js": get_file_version("settings.js"),
         "content_formatter_js": get_file_version("content-formatter.js"),
         "chat_js": get_file_version("chat.js"),
-        "roundtable_js": get_file_version("roundtable.js"),
         "orchestrator_js": get_file_version("orchestrator.js"),
         "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
         "confessions_js": get_file_version("confessions.js"),
-        "council_js": get_file_version("council.js"),
         "model_loader_js": get_file_version("model-loader.js"),
         "model_selector_js": get_file_version("model-selector.js"),
     }
@@ -415,14 +413,6 @@ class DiscussionRequest(GenerationParams):
     turns: int = 2  # Number of discussion rounds (all models participate each round)
     participants: Optional[List[str]] = None  # List of model IDs to participate (default: all local models)
 
-class CouncilRequest(BaseModel):
-    query: str
-    participants: List[str]  # List of model IDs to participate in council
-    chairman_model: Optional[str] = None  # Optional chairman model (defaults to first participant)
-    max_tokens: int = 2048  # Max tokens per response
-    github_token: Optional[str] = None  # User-provided GitHub token for API models
-    completed_responses: Optional[Dict[str, str]] = None  # Already generated responses
-
 class OrchestratorRequest(GenerationParams):
     query: str
     max_rounds: int = 5  # Maximum orchestration rounds
@@ -475,22 +465,6 @@ async def chat_interface(request: Request):
     """Serve chat interface with automatic cache busting"""
     return templates.TemplateResponse(
         "chat.html",
-        {"request": request, **get_static_versions()}
-    )
-
-@app.get("/roundtable")
-async def roundtable_interface(request: Request):
-    """Serve roundtable mode interface with automatic cache busting"""
-    return templates.TemplateResponse(
-        "roundtable.html",
-        {"request": request, **get_static_versions()}
-    )
-
-@app.get("/council")
-async def council_interface(request: Request):
-    """Serve council mode interface with automatic cache busting"""
-    return templates.TemplateResponse(
-        "council.html",
         {"request": request, **get_static_versions()}
     )
 
@@ -1477,98 +1451,6 @@ async def discussion_stream(request: DiscussionRequest):
             request.github_token,
             request.turns,
             request.participants
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
-
-
-# Council Mode Endpoint
-
-async def stream_council_events(
-    query: str,
-    participants: List[str],
-    chairman_model: Optional[str] = None,
-    max_tokens: int = 2048,
-    github_token: Optional[str] = None,
-    completed_responses: Optional[Dict[str, str]] = None
-) -> AsyncGenerator[str, None]:
-    """
-    Stream council events as Server-Sent Events
-
-    3-stage process:
-    - Stage 1: All models respond independently (with streaming)
-    - Stage 2: Models rank responses anonymously
-    - Stage 3: Chairman synthesizes final answer
-    """
-    try:
-        from council_engine import CouncilEngine
-
-        # Get GitHub token
-        token = github_token or get_default_github_token()
-        if not token:
-            yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for Council mode'})}\n\n"
-            return
-
-        # Initialize council engine
-        engine = CouncilEngine(
-            model_endpoints=MODEL_ENDPOINTS,
-            github_token=token,
-            timeout=120
-        )
-
-        # Run council process with streaming
-        async for event in engine.run_council(query, participants, chairman_model, max_tokens, completed_responses=completed_responses):
-            # Normalize event name for clients (council_engine emits "type"; UI expects "event")
-            if "event" not in event and "type" in event:
-                event = {"event": event["type"], **event}
-            yield f"data: {json.dumps(event)}\n\n"
-
-    except Exception as e:
-        logger.error(f"Council Error: {e}")
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
-
-
-@app.post("/api/chat/council/stream")
-async def council_stream(request: CouncilRequest):
-    """
-    Stream LLM Council process using Server-Sent Events
-
-    3-stage process:
-    1. Stage 1: All models respond independently (parallel)
-    2. Stage 2: Models rank responses anonymously
-    3. Stage 3: Chairman synthesizes final answer
-
-    Request body:
-    - query: User's question or request
-    - participants: List of model IDs to participate
-    - chairman_model: Optional chairman model (defaults to first participant)
-    - github_token: Optional user GitHub token
-
-    Stream events:
-    - stage1_start: Beginning of Stage 1
-    - model_response: Individual model response
-    - stage1_complete: Stage 1 finished
-    - stage2_start: Beginning of Stage 2
-    - ranking_response: Model's ranking of responses
-    - stage2_complete: Stage 2 finished with aggregate rankings
-    - stage3_start: Beginning of Stage 3
-    - stage3_complete: Final synthesis ready
-    - council_complete: Full council process finished
-    - error: Error details
-    """
-    return StreamingResponse(
-        stream_council_events(
-            query=request.query,
-            participants=request.participants,
-            chairman_model=request.chairman_model,
-            max_tokens=request.max_tokens,
-            github_token=request.github_token,
-            completed_responses=request.completed_responses,
         ),
         media_type="text/event-stream",
         headers={
