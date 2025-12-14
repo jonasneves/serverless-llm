@@ -218,8 +218,6 @@ export default function OrchestratorView({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleStart}
                 onOpenTopics={onOpenTopics}
-                className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-6 pt-10 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent flex justify-center items-end"
-                style={{}}
                 placeholder={selectedModelId ? `Instruct ${selectedModel?.name} to solve a complex task...` : "Select a conductor model..."}
             />
         </div>
