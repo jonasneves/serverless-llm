@@ -662,10 +662,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Render selected models as chips
+    // Render selected models as chips (no selected styling since it's already in sidepanel)
     allSelected.forEach((model, id) => {
       const chip = document.createElement('div');
-      chip.className = `model-chip selected model-type-${model.type}`;
+      chip.className = `model-chip model-type-${model.type}`;
       
       let statusClass = 'offline';
       if (model.type === 'api') statusClass = 'api';
@@ -677,7 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="model-name-text">${model.name}</span>
       `;
 
-      // Click to deselect (opens dock)
+      // Click to open dock
       chip.onclick = (e) => {
         e.stopPropagation();
         toggleDock();

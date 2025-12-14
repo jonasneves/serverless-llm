@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     allSelected.forEach((model, id) => {
       const chip = document.createElement('div');
-      chip.className = `model-chip selected model-type-${model.type}`;
+      chip.className = `model-chip model-type-${model.type}`;
       
       let statusClass = 'offline';
       if (model.type === 'api') statusClass = 'api';
