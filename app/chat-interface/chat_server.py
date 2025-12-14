@@ -53,13 +53,8 @@ logger = logging.getLogger(__name__)
 # Prevents repeated network calls/log spam for invalid IDs.
 UNSUPPORTED_GITHUB_MODELS: set[str] = set()
 
-def get_default_github_token() -> Optional[str]:
-    """Return default GitHub Models token from environment."""
-    return (
-        os.getenv("GH_MODELS_TOKEN")
-        or os.getenv("GITHUB_TOKEN")
-        or os.getenv("GH_TOKEN")
-    )
+# Import GitHub token utility
+from utils.github_token import get_default_github_token
 
 app = FastAPI(
     title="LLM Chat Interface",
@@ -204,6 +199,16 @@ async def shutdown_event():
 static_dir = pathlib.Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(static_dir))
+
+# Include API routers
+from api.routes import chat, models, orchestrator, discussion, council, special
+
+app.include_router(chat.router)
+app.include_router(models.router)
+app.include_router(orchestrator.router)
+app.include_router(discussion.router)
+app.include_router(council.router)
+app.include_router(special.router)
 
 # Cache file versions based on content hash for automatic cache busting
 FILE_VERSIONS = {}
@@ -382,57 +387,19 @@ for model_id, endpoint in MODEL_ENDPOINTS.items():
 logger.info("Request queueing enabled: 1 concurrent request per model")
 logger.info("=" * 60)
 
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-
-class GenerationParams(BaseModel):
-    max_tokens: int = 2048
-    temperature: float = 0.7
-
-
-class ChatRequest(GenerationParams):
-    model: str
-    messages: List[ChatMessage]
-
-
-class MultiChatRequest(GenerationParams):
-    models: List[str]
-    messages: List[ChatMessage]
-    github_token: Optional[str] = None  # User-provided token for API models
-
-class ModelStatus(BaseModel):
-    model: str
-    status: str
-    endpoint: str
-
-class CouncilRequest(BaseModel):
-    query: str
-    participants: List[str]  # List of model IDs to participate in council
-    chairman_model: Optional[str] = None  # Optional chairman model (defaults to first participant)
-    max_tokens: int = 2048  # Max tokens per response
-    github_token: Optional[str] = None  # User-provided GitHub token for API models
-    completed_responses: Optional[Dict[str, str]] = None  # Already generated responses
-
-class DiscussionRequest(GenerationParams):
-    query: str
-    orchestrator_model: Optional[str] = None  # Model ID for orchestrator (e.g., 'gpt-5-nano', 'qwen3-4b')
-    github_token: Optional[str] = None  # User-provided GitHub token for API models
-    turns: int = 2  # Number of discussion rounds (all models participate each round)
-    participants: Optional[List[str]] = None  # List of model IDs to participate (default: all local models)
-
-class OrchestratorRequest(GenerationParams):
-    query: str
-    model: Optional[str] = None
-    github_token: Optional[str] = None
-    max_rounds: int = 5  # Maximum orchestration rounds
-
-class VerbalizedSamplingRequest(BaseModel):
-    query: str
-
-
-class ConfessionRequest(BaseModel):
-    query: str
+# Import Pydantic models from api.models
+from api.models import (
+    ChatMessage,
+    GenerationParams,
+    ChatRequest,
+    MultiChatRequest,
+    ModelStatus,
+    CouncilRequest,
+    DiscussionRequest,
+    OrchestratorRequest,
+    VerbalizedSamplingRequest,
+    ConfessionRequest
+)
 
 
 
@@ -782,105 +749,9 @@ async def model_badge(model_id: str):
             "color": "red"
         }
 
-@app.get("/api/models")
-async def list_models():
-    def get_context_length(model_id: str) -> int:
-        """Get context length: prefer live value from server, fall back to profile."""
-        if model_id in LIVE_CONTEXT_LENGTHS:
-            return LIVE_CONTEXT_LENGTHS[model_id]
-        return MODEL_PROFILES.get(model_id, {}).get("context_length", 0)
-    
-    # Build list of local models from MODEL_CONFIG
-    local_models = [
-        {
-            "id": config["id"],
-            "name": config["name"],
-            "type": "local",
-            "endpoint": MODEL_ENDPOINTS.get(config["id"]),
-            "default": config.get("default", False),
-            "context_length": get_context_length(config["id"]),
-        }
-        for config in MODEL_CONFIG
-    ]
-    
-    # Build list of API models from MODEL_PROFILES
-    api_models = [
-        {
-            "id": model_id,
-            "name": profile.get("display_name", model_id),
-            "type": "api",
-            "endpoint": None,  # API models use GitHub Models endpoint
-            "default": False,
-            "context_length": profile.get("context_length", 128000),
-        }
-        for model_id, profile in MODEL_PROFILES.items()
-        if profile.get("model_type") == "api"
-    ]
-    
-    return {
-        "models": local_models + api_models,
-        "endpoints": MODEL_ENDPOINTS,
-        "default_model": DEFAULT_MODEL_ID,
-    }
+# /api/models endpoints moved to api/routes/models.py
 
-@app.get("/api/models/{model_id}/status")
-async def model_status(model_id: str, detailed: bool = False):
-    endpoint = get_model_endpoint_or_error(model_id, status_code=404)
-    
-    if detailed:
-        result = await check_model_health(model_id, endpoint)
-        return result
-
-    # Simple check for non-detailed requests
-    try:
-        client = HTTPClient.get_client()
-        response = await client.get(f"{endpoint}/health", timeout=5.0)
-        if response.status_code == 200:
-            return ModelStatus(model=model_id, status="online", endpoint=endpoint)
-    except Exception:
-        pass
-
-    return ModelStatus(model=model_id, status="offline", endpoint=endpoint)
-
-@app.post("/api/chat")
-async def chat(request: ChatRequest):
-    endpoint = get_model_endpoint_or_error(request.model)
-    full_url = f"{endpoint}/v1/chat/completions"
-    messages = serialize_messages(request.messages)
-    payload = build_completion_payload(messages, request.max_tokens, request.temperature)
-
-    logger.info(f"Calling {request.model} at {full_url}")
-
-    client = HTTPClient.get_client()
-
-    try:
-        response = await client.post(
-            full_url,
-            json=payload
-        )
-
-        if response.status_code != 200:
-            error_detail = f"Model {request.model} at {endpoint} returned {response.status_code}: {response.text[:200]}"
-            logger.error(error_detail)
-            raise HTTPException(
-                status_code=response.status_code,
-                detail=error_detail
-            )
-
-        return response.json()
-
-    except httpx.TimeoutException as e:
-        error_msg = f"Timeout calling {request.model} at {endpoint}: {str(e)}"
-        logger.error(error_msg)
-        raise HTTPException(status_code=504, detail=error_msg)
-    except httpx.ConnectError as e:
-        error_msg = f"Cannot connect to {request.model} at {endpoint}: {str(e)}"
-        logger.error(error_msg)
-        raise HTTPException(status_code=503, detail=error_msg)
-    except Exception as e:
-        error_msg = f"Unexpected error calling {request.model} at {endpoint}: {str(e)}"
-        logger.error(error_msg)
-        raise HTTPException(status_code=500, detail=error_msg)
+# /api/chat endpoint moved to api/routes/chat.py
 
 async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, max_tokens: int, temperature: float):
     """Query a single model and return results with timing (with request queueing)"""
@@ -951,21 +822,7 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
             "time": time.time() - start_time
         }
 
-@app.post("/api/chat/multi")
-async def chat_multi(request: MultiChatRequest):
-    """Query multiple models in parallel"""
-    messages = serialize_messages(request.messages)
-    client = HTTPClient.get_client()
-
-    tasks = [
-        query_model(client, model_id, messages, request.max_tokens, request.temperature)
-        for model_id in request.models
-        if model_id in MODEL_ENDPOINTS
-    ]
-
-    responses = await asyncio.gather(*tasks)
-
-    return {"responses": responses}
+# /api/chat/multi endpoint moved to api/routes/chat.py
 
 
 # GitHub Models API Configuration
@@ -1119,6 +976,11 @@ async def stream_model_response(model_id: str, messages: list, max_tokens: int, 
 
     # Use semaphore to limit concurrent requests per model
     semaphore = MODEL_SEMAPHORES.get(model_id)
+    if semaphore is None:
+        # Create a default semaphore if startup event hasn't run yet
+        semaphore = asyncio.Semaphore(1)
+        MODEL_SEMAPHORES[model_id] = semaphore
+
     client = HTTPClient.get_client()
 
     # Send initial event immediately
@@ -1317,31 +1179,7 @@ async def stream_multiple_models(
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
 
 
-@app.post("/api/chat/stream")
-async def chat_stream(request: MultiChatRequest):
-    """Stream chat responses using Server-Sent Events.
-    Supports both local models and API models (GPT-4, DeepSeek, etc.).
-    """
-    messages = serialize_messages(request.messages)
-    
-    # Get GitHub token from request or environment
-    github_token = request.github_token or get_default_github_token()
-
-    return StreamingResponse(
-        stream_multiple_models(
-            request.models, 
-            messages, 
-            request.max_tokens, 
-            request.temperature,
-            github_token
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+# /api/chat/stream endpoint moved to api/routes/chat.py
 
 
 async def stream_discussion_events(
@@ -1477,90 +1315,10 @@ async def stream_council_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
 
 
-@app.post("/api/chat/council/stream")
-async def council_stream(request: CouncilRequest):
-    """
-    Stream LLM Council process using Server-Sent Events
-
-    3-stage process:
-    1. Stage 1: All models respond independently (parallel)
-    2. Stage 2: Models rank responses anonymously
-    3. Stage 3: Chairman synthesizes final answer
-
-    Request body:
-    - query: User's question or request
-    - participants: List of model IDs to participate
-    - chairman_model: Optional chairman model (defaults to first participant)
-    - github_token: Optional user GitHub token
-
-    Stream events:
-    - stage1_start: Beginning of Stage 1
-    - model_response: Individual model response
-    - stage1_complete: Stage 1 finished
-    - stage2_start: Beginning of Stage 2
-    - ranking_response: Model's ranking of responses
-    - stage2_complete: Stage 2 finished with aggregate rankings
-    - stage3_start: Beginning of Stage 3
-    - stage3_complete: Final synthesis ready
-    - council_complete: Full council process finished
-    - error: Error details
-    """
-    return StreamingResponse(
-        stream_council_events(
-            query=request.query,
-            participants=request.participants,
-            chairman_model=request.chairman_model,
-            max_tokens=request.max_tokens,
-            github_token=request.github_token,
-            completed_responses=request.completed_responses,
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+# /api/chat/council/stream endpoint moved to api/routes/council.py
 
 
-@app.post("/api/chat/discussion/stream")
-async def discussion_stream(request: DiscussionRequest):
-    """
-    Stream collaborative multi-model discussion using Server-Sent Events
-
-    Models discuss the query together, guided by an orchestrator (GPT-5-nano)
-    that evaluates contributions based on each model's benchmark-proven strengths.
-
-    Request body:
-    - query: User's question or request
-    - max_tokens: Max tokens per model response (default: 512)
-
-    Stream events (all sent as SSE):
-    - analysis_complete: Orchestrator's query analysis with domain classification
-    - turn_start: Model begins turn with expertise score
-    - turn_chunk: Streaming response content
-    - turn_complete: Turn finished with quality evaluation
-    - synthesis_complete: Final synthesis plan
-    - discussion_complete: Full discussion with final response
-    - error: Error details
-    """
-    return StreamingResponse(
-        stream_discussion_events(
-            request.query,
-            request.max_tokens,
-            request.temperature,
-            request.orchestrator_model,
-            request.github_token,
-            request.turns,
-            request.participants
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+# /api/chat/discussion/stream endpoint moved to api/routes/discussion.py
 
 
 # Orchestrator Mode Endpoint
@@ -1633,56 +1391,7 @@ async def stream_orchestrator_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
-@app.post("/api/chat/orchestrator/stream")
-async def orchestrator_stream(payload: OrchestratorRequest, req: Request):
-    """
-    Stream ToolOrchestra-style intelligent orchestration using Server-Sent Events
-
-    The orchestrator (Qwen 2.5-7B) intelligently routes to specialized models and tools
-    across multiple rounds to efficiently solve complex tasks.
-
-    Request body:
-    - query: User's question or request
-    - max_tokens: Max tokens per model response (default: 512)
-    - temperature: Sampling temperature (default: 0.7)
-    - max_rounds: Maximum orchestration rounds (default: 5)
-
-    Stream events (all sent as SSE):
-    - start: Orchestration begins
-    - round_start: New round begins
-    - tool_call: Orchestrator calls a tool
-    - tool_result: Tool execution result
-    - orchestrator_thinking: Orchestrator reasoning
-    - final_answer: Final synthesized answer
-    - complete: Orchestration finished
-    - error: Error details
-
-    Tools available:
-    - enhance_reasoning: Call specialized reasoning models (Qwen/Phi/Llama)
-    - answer: Generate final answer with best model
-    - search: Web search for missing information
-    - code_interpreter: Execute Python code
-    """
-    # Choose engine via query param (?engine=autogen|tools|auto), default auto
-    engine = req.query_params.get("engine", "auto")
-
-    return StreamingResponse(
-        stream_orchestrator_events(
-            payload.query,
-            payload.max_tokens,
-            payload.temperature,
-            payload.max_rounds,
-            engine,
-            orchestrator_model_id=payload.model,
-            github_token=payload.github_token
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+# /api/chat/orchestrator/stream endpoint moved to api/routes/orchestrator.py
 
 
 # ToolOrchestrator Endpoint
@@ -1710,25 +1419,7 @@ async def stream_tool_orchestrator_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
-@app.post("/api/chat/tool-orchestrator/stream")
-async def tool_orchestrator_stream(request: OrchestratorRequest):
-    """
-    Stream ToolOrchestrator-style intelligent orchestration
-    """
-    return StreamingResponse(
-        stream_tool_orchestrator_events(
-            request.query,
-            request.max_tokens,
-            request.temperature,
-            request.max_rounds
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+# /api/chat/tool-orchestrator/stream endpoint moved to api/routes/orchestrator.py
 
 
 # ===== VERBALIZED SAMPLING MODE =====
@@ -1771,50 +1462,7 @@ async def stream_verbalized_sampling_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
-@app.post("/api/verbalized-sampling/stream")
-async def verbalized_sampling_stream(
-    request: VerbalizedSamplingRequest,
-    model: str = "qwen3-4b",
-    num_responses: int = 5,
-    temperature: float = 0.8,
-    max_tokens: int = 2048
-):
-    """
-    Stream Verbalized Sampling responses using Server-Sent Events
-
-    Implements Stanford's Verbalized Sampling technique to mitigate mode collapse
-    and unlock LLM diversity by asking for a distribution of responses.
-
-    Query parameters:
-    - model: Model to use (default: qwen3-4b)
-    - num_responses: Number of diverse responses (default: 5)
-    - temperature: Sampling temperature for diversity (default: 0.8)
-    - max_tokens: Max tokens per response (default: 2048)
-    
-    Request body:
-    - query: User's question or prompt
-    
-    Stream events:
-    - start: Generation begins
-    - chunk: Streaming content chunks
-    - complete: Generation finished with parsed responses and diversity score
-    - error: Error details
-    """
-    return StreamingResponse(
-        stream_verbalized_sampling_events(
-            request.query,
-            model,
-            num_responses,
-            temperature,
-            max_tokens
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+# /api/verbalized-sampling/stream endpoint moved to api/routes/special.py
 
 
 # ===== CONFESSIONS MODE =====
@@ -1845,28 +1493,7 @@ async def stream_confession_events(
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
-@app.post("/api/confessions/stream")
-async def confessions_stream(
-    request: ConfessionRequest,
-    model: str = "qwen3-4b",
-    temperature: float = 0.7,
-    max_tokens: int = 512
-):
-    """Stream answer + confession events."""
-    return StreamingResponse(
-        stream_confession_events(
-            request.query,
-            model,
-            temperature,
-            max_tokens
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+# /api/confessions/stream endpoint moved to api/routes/special.py
 
 
 if __name__ == "__main__":
