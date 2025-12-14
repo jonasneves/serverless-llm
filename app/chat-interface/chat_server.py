@@ -416,6 +416,7 @@ class DiscussionRequest(GenerationParams):
 class OrchestratorRequest(GenerationParams):
     query: str
     model: Optional[str] = None
+    github_token: Optional[str] = None
     max_rounds: int = 5  # Maximum orchestration rounds
 
 class VerbalizedSamplingRequest(BaseModel):
@@ -1469,7 +1470,8 @@ async def stream_orchestrator_events(
     temperature: float,
     max_rounds: int,
     engine: str = "auto",
-    orchestrator_model_id: Optional[str] = None
+    orchestrator_model_id: Optional[str] = None,
+    github_token: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     """
     Stream AutoGen multi-agent orchestration events
@@ -1488,11 +1490,25 @@ async def stream_orchestrator_events(
             
             # Resolve custom model config if provided
             orch_config = None
-            if orchestrator_model_id and orchestrator_model_id in MODEL_ENDPOINTS:
-                orch_config = {
-                    "model": orchestrator_model_id,
-                    "base_url": MODEL_ENDPOINTS[orchestrator_model_id]
-                }
+            if orchestrator_model_id:
+                if orchestrator_model_id in MODEL_ENDPOINTS:
+                    orch_config = {
+                        "model": orchestrator_model_id,
+                        "base_url": MODEL_ENDPOINTS[orchestrator_model_id],
+                        "api_key": "local"
+                    }
+                elif orchestrator_model_id in MODEL_PROFILES and MODEL_PROFILES[orchestrator_model_id].get("model_type") == "api":
+                    # API Model (GitHub Models)
+                    token = github_token or get_default_github_token()
+                    if not token:
+                        yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for API orchestrator.'}, ensure_ascii=False)}\n\n"
+                        return
+                        
+                    orch_config = {
+                        "model": orchestrator_model_id,
+                        "base_url": "https://models.github.ai/inference", # Base URL for GitHub Models
+                        "api_key": token
+                    }
             
             async for event in orch.run_orchestration(
                 query=query, 
@@ -1557,7 +1573,8 @@ async def orchestrator_stream(payload: OrchestratorRequest, req: Request):
             payload.temperature,
             payload.max_rounds,
             engine,
-            orchestrator_model_id=payload.model
+            orchestrator_model_id=payload.model,
+            github_token=payload.github_token
         ),
         media_type="text/event-stream",
         headers={

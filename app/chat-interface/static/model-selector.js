@@ -136,6 +136,10 @@ class ModelSelector {
           // Only auto-select local models by default (API models require token)
           if (model.type === 'local') {
             this.selectedModels.add(id);
+            // If single-select mode, stop after first selection
+            if (!this.options.multiSelect) {
+              break;
+            }
           }
         }
       }

@@ -543,6 +543,14 @@ export default function Playground() {
         return;
       }
 
+      // Enter opens inspector for selected card
+      if (event.key === 'Enter' && selectedCardIds.size === 1) {
+        event.preventDefault();
+        const selectedId = Array.from(selectedCardIds)[0];
+        setActiveInspectorId(selectedId);
+        return;
+      }
+
       // Auto-focus input when typing printable characters (except shortcut keys)
       // Check if it's a printable character (single character, not a modifier key)
       if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -998,6 +1006,20 @@ export default function Playground() {
           ) : contextMenu.modelId ? (
             // Model context menu - different options based on mode
             <>
+              {/* Open Inspector option */}
+              <button
+                className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                onClick={() => {
+                  setActiveInspectorId(contextMenu.modelId!);
+                  setContextMenu(null);
+                }}
+              >
+                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Open
+              </button>
+
               {/* Set as Orchestrator - only in Council/Roundtable modes */}
               {mode !== 'compare' && (
                 <button

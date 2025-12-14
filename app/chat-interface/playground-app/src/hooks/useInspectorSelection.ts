@@ -96,8 +96,7 @@ function reconcileActive(
 ): string | null {
   if (selection.size === 0) return null;
   if (current && selection.has(current)) return current;
-  const first = selection.values().next();
-  return first.done ? null : first.value;
+  return null;
 }
 
 function setsEqual(a: Set<string>, b: Set<string>) {

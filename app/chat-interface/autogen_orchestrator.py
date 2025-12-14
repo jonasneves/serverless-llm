@@ -108,27 +108,24 @@ class AutoGenOrchestrator:
         except:
             return False
 
-    def _create_llm_config(self, base_url: str, model_name: str) -> dict:
+    def _create_llm_config(self, base_url: str, model_name: str, api_key: str = "local", api_type: str = "open_ai") -> dict:
         """Create an AutoGen llm_config"""
-        # Simple availability check
-        if not self._check_endpoint(base_url):
+        # Simple availability check (only for local endpoints)
+        if api_key == "local" and not self._check_endpoint(base_url):
             logger.warning(f"Endpoint {base_url} unreachable. Using MockModelClient.")
-            # We can register a custom model client in AutoGen, but for simplicity in this restricted env,
-            # we might just return the config. 
-            # If the user really has no models, AutoGen WILL fail with connection error.
-            # To fix "network error" completely without models, we'd need to register a custom client class.
             pass
 
         return {
             "config_list": [
                 {
                     "model": model_name,
-                    "base_url": f"{base_url}/v1",
-                    "api_key": "local",
+                    "base_url": f"{base_url}/v1" if api_key == "local" else base_url,
+                    "api_key": api_key,
+                    "api_type": api_type,
                 }
             ],
             "cache_seed": None,  # Disable caching
-            "timeout": 10,       # Short timeout
+            "timeout": 60,       # Longer timeout for orchestration
         }
 
     async def _search_web_wrapper(self, query: str) -> str:
@@ -277,8 +274,9 @@ class AutoGenOrchestrator:
                 # Use user-selected model
                 model_name = orchestrator_config.get("model", "custom-orchestrator")
                 base_url = orchestrator_config.get("base_url", self.qwen_url)
-                logger.info(f"Using custom orchestrator: {model_name} at {base_url}")
-                llm_config = self._create_llm_config(base_url, model_name)
+                api_key = orchestrator_config.get("api_key", "local")
+                logger.info(f"Using custom orchestrator: {model_name}")
+                llm_config = self._create_llm_config(base_url, model_name, api_key)
             else:
                 # Default to Qwen
                 llm_config = self._create_llm_config(self.qwen_url, "qwen-orchestrator")

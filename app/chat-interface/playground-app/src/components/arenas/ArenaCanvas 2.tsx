@@ -245,10 +245,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 modelId: model.id,
                 suppressClickRef,
                 setSelectedCardIds,
-              })}
-              onDoubleClick={(e) => handleCardDoubleClick({
-                e,
-                modelId: model.id,
                 setActiveInspectorId,
               })}
               onMouseEnter={() => isCircleMode && setHoveredCard(model.id)}
@@ -387,11 +383,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             e.stopPropagation();
             if (moderatorId) {
               setSelectedCardIds(new Set([moderatorId]));
-            }
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            if (moderatorId) {
               setActiveInspectorId(moderatorId);
             }
           }}
@@ -559,11 +550,13 @@ function handleCardClick({
   modelId,
   suppressClickRef,
   setSelectedCardIds,
+  setActiveInspectorId,
 }: {
   e: ReactMouseEvent;
   modelId: string;
   suppressClickRef: MutableRefObject<{ card: boolean; background: boolean }>;
   setSelectedCardIds: Dispatch<SetStateAction<Set<string>>>;
+  setActiveInspectorId: (id: string | null) => void;
 }) {
   e.stopPropagation();
   if (suppressClickRef.current.card) {
@@ -581,22 +574,11 @@ function handleCardClick({
       }
       return next;
     });
+    setActiveInspectorId(modelId);
   } else {
     setSelectedCardIds(new Set([modelId]));
+    setActiveInspectorId(modelId);
   }
-}
-
-function handleCardDoubleClick({
-  e,
-  modelId,
-  setActiveInspectorId,
-}: {
-  e: ReactMouseEvent;
-  modelId: string;
-  setActiveInspectorId: (id: string | null) => void;
-}) {
-  e.stopPropagation();
-  setActiveInspectorId(modelId);
 }
 
 function renderCardContent({
