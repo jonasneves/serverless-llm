@@ -147,8 +147,13 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         });
 
         const isHovered = hoveredCard === model.id;
-        const width = isCircleMode ? 96 : GRID_CARD_WIDTH;
-        const height = isCircleMode ? 96 : GRID_CARD_HEIGHT;
+        const circleSize = 112;
+        const width = isCircleMode ? circleSize : GRID_CARD_WIDTH;
+        const height = isCircleMode ? circleSize : GRID_CARD_HEIGHT;
+        const typeBadgeClasses = model.type === 'local'
+          ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-400/40'
+          : 'bg-blue-500/10 text-blue-200 border border-blue-400/40';
+        const showInlinePreview = isCircleMode && hoveredCard !== model.id;
 
         const lineSize = Math.max(800, layoutRadius * 2 + 600);
         const lineCenter = lineSize / 2;
@@ -301,12 +306,33 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               )}
 
               {isCircleMode && (
-                <div className="absolute inset-0 flex items-center justify-center" style={{ transition: 'opacity 0.3s ease-out' }}>
-                  <div className="text-center px-2">
-                    <div className="text-[10px] font-semibold text-slate-200 leading-tight">{model.name}</div>
-                    <div className="flex items-center justify-center mt-3">
-                      <StatusIndicator state={statusState} color={effectiveColor} size={14} />
-                    </div>
+                <div className="absolute inset-0 flex items-center justify-center text-center" style={{ transition: 'opacity 0.3s ease-out' }}>
+                  <div className="absolute inset-[3px] rounded-full border border-white/5" style={{ boxShadow: `inset 0 0 20px ${effectiveColor}15` }} />
+                  <div
+                    className="absolute inset-[-6px] rounded-full opacity-60"
+                    style={{
+                      background: `radial-gradient(circle, ${effectiveColor}22 0%, transparent 65%)`,
+                      filter: 'blur(10px)'
+                    }}
+                  />
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-2 px-3">
+                    <div className="text-[9px] tracking-[0.25em] text-slate-400 uppercase">{statusLabel}</div>
+                    <div className="text-[11px] font-semibold text-slate-100 leading-tight">{model.name}</div>
+                    <StatusIndicator state={statusState} color={effectiveColor} size={14} />
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider ${typeBadgeClasses}`}>
+                      {model.type === 'local' ? 'Local' : 'API'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {showInlinePreview && (
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none"
+                  style={{ top: 'calc(100% + 8px)', width: '180px' }}
+                >
+                  <div className="px-3 py-2 rounded-2xl border border-white/5 bg-slate-900/80 text-[11px] text-slate-300 leading-snug shadow-lg shadow-black/40">
+                    {renderPreviewContent({ model, isSpeaking, getTailSnippet, maxChars: 120 })}
                   </div>
                 </div>
               )}
@@ -602,10 +628,12 @@ function renderPreviewContent({
   model,
   isSpeaking,
   getTailSnippet,
+  maxChars = 220,
 }: {
   model: Model;
   isSpeaking: boolean;
   getTailSnippet: (text: string, maxChars?: number) => string;
+  maxChars?: number;
 }) {
   if (model.statusMessage) {
     if (model.statusMessage.startsWith('<svg')) {
@@ -636,7 +664,7 @@ function renderPreviewContent({
     if (model.response.startsWith('<svg')) {
       return <span dangerouslySetInnerHTML={{ __html: model.response }} />;
     }
-    return getTailSnippet(model.response);
+    return getTailSnippet(model.response, maxChars);
   }
   return <span className="text-slate-500 italic">No response yet.</span>;
 }
