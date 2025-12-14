@@ -167,9 +167,8 @@ export default function ChatView({
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'} ${isGenerating ? 'animate-pulse' : ''}`} />
-                            <span className="text-sm font-semibold text-slate-200 tracking-tight flex items-center gap-2">
-                                {selectedModel ? selectedModel.name : (selectedModelId || '')}
-                                {isGenerating && <span className="font-normal text-slate-400 text-xs">is typing...</span>}
+                            <span className="text-sm font-semibold text-slate-200 tracking-tight">
+                                {selectedModel ? `${selectedModel.name}${isGenerating ? ' is typing...' : ''}` : (selectedModelId ? `${selectedModelId}${isGenerating ? ' is typing...' : ''}` : '')}
                             </span>
                         </div>
                         {selectedModel?.type === 'api' && (
@@ -181,10 +180,10 @@ export default function ChatView({
 
                     <button
                         onClick={handleClear}
-                        className="h-8 px-3 flex items-center gap-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
+                        className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
                         title="Clear History"
                     >
-                        <Eraser size={14} />
+                        <Eraser size={12} />
                         <span>Clear</span>
                     </button>
                 </div>
