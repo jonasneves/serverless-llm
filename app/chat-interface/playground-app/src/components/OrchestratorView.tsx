@@ -186,7 +186,7 @@ export default function OrchestratorView({
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'} ${isRunning ? 'animate-pulse' : ''}`} />
                             <span className="text-sm font-semibold text-slate-200 tracking-tight flex items-center gap-2">
-                                {selectedModel ? selectedModel.name : ''}
+                                {selectedModel ? selectedModel.name : (selectedModelId || '')}
                                 {isRunning && (() => {
                                     const last = events[events.length - 1];
                                     let status = 'working...';
