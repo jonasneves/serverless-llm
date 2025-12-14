@@ -627,13 +627,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-focus logic: Removed aggressive initial focus.
   // Instead, typing anywhere focuses the input.
 
-  // Re-focus input when clicking anywhere in the chat area (for convenience)
-  chatHistory.addEventListener('click', () => {
-    if (!window.getSelection().toString()) {
-      userInput.focus();
-    }
-  });
-
   // Global key listener for "type anywhere"
   document.addEventListener('keydown', (e) => {
     // Handle Escape key
