@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Terminal, Cpu, Bot, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Terminal, Cpu, Bot, CheckCircle, AlertTriangle, Eraser } from 'lucide-react';
 
 interface OrchestratorViewProps {
     id?: string;
@@ -85,6 +85,20 @@ export default function OrchestratorView({
         }
     }, [events, rounds]);
 
+    // Auto-focus input on keydown
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+            if (e.key.length === 1) {
+                inputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     const handleStart = async (text: string) => {
         if (!text.trim() || !selectedModelId || isRunning) return;
 
@@ -149,6 +163,18 @@ export default function OrchestratorView({
         }
     };
 
+    const handleStop = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            setIsRunning(false);
+        }
+    };
+
+    const handleClear = () => {
+        setEvents([]);
+        setRounds([]);
+    };
+
     const selectedModel = models.find(m => m.id === selectedModelId);
 
     return (
@@ -177,8 +203,19 @@ export default function OrchestratorView({
                             </span>
                         )}
                     </div>
-                    <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
-                        AUTOGEN • MULTI-AGENT
+                    
+                    <div className="flex items-center gap-2">
+                         <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
+                            AUTOGEN • MULTI-AGENT
+                        </div>
+                        <button
+                            onClick={handleClear}
+                            className="h-8 px-3 flex items-center gap-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
+                            title="Clear History"
+                        >
+                            <Eraser size={14} />
+                            <span>Clear</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -231,6 +268,8 @@ export default function OrchestratorView({
                 onSendMessage={handleStart}
                 onOpenTopics={onOpenTopics}
                 placeholder={selectedModel ? `Instruct ${selectedModel.name} to solve a complex task...` : "Select a conductor from the dock..."}
+                isGenerating={isRunning}
+                onStop={handleStop}
             />
         </div>
     );

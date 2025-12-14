@@ -40,6 +40,20 @@ export default function ChatView({
         }
     }, [messages, currentResponse, isGenerating]);
 
+    // Auto-focus input on keydown
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+            if (e.key.length === 1) {
+                inputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     const handleSend = async (text: string) => {
         if (!text.trim() || !selectedModelId || isGenerating) return;
 
@@ -124,6 +138,17 @@ export default function ChatView({
         } finally {
             setIsGenerating(false);
             abortControllerRef.current = null;
+        }
+    };
+
+    const handleStop = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            setIsGenerating(false);
+            if (currentResponse) {
+                setMessages(prev => [...prev, { role: 'assistant', content: currentResponse }]);
+                setCurrentResponse('');
+            }
         }
     };
 
@@ -223,6 +248,8 @@ export default function ChatView({
                 onSendMessage={handleSend}
                 onOpenTopics={onOpenTopics}
                 placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting..."}
+                isGenerating={isGenerating}
+                onStop={handleStop}
             />
         </div>
     );

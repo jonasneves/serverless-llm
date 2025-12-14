@@ -403,19 +403,19 @@ export default function Playground() {
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
 
   const [phaseLabel, setPhaseLabel] = useState<string | null>(null);
-  const [councilAggregateRankings, setCouncilAggregateRankings] = useState<Array<{
+  const [councilAggregateRankings, setCouncilAggregateRankings] = useState<Array<{ 
     model_id: string;
     model_name: string;
     average_rank: number;
     votes_count: number;
   }> | null>(null);
-  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<Array<{
+  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<Array<{ 
     reviewer_model_id: string;
     reviewer_model_name: string;
     text: string;
     error?: boolean;
   }>>([]);
-  const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{
+  const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{ 
     turn_number: number;
     response: string;
     evaluation?: any;
@@ -773,6 +773,14 @@ export default function Playground() {
     return `…${text.slice(text.length - maxChars)}`;
   };
 
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsGenerating(false);
+      setIsSynthesizing(false);
+    }
+  };
+
   return (
     <div
       ref={rootContainerRef}
@@ -947,6 +955,8 @@ export default function Playground() {
                     className="relative w-full"
                     style={{ paddingBottom: '0' }}
                     placeholder="Steer the discussion..."
+                    isGenerating={isGenerating || isSynthesizing}
+                    onStop={handleStop}
                   />
                 </div>
               </div>
@@ -1032,6 +1042,8 @@ export default function Playground() {
           setInputFocused={setInputFocused}
           onSendMessage={sendMessage}
           onOpenTopics={() => setShowTopics(true)}
+          isGenerating={isGenerating || isSynthesizing}
+          onStop={handleStop}
         />
       )}
 

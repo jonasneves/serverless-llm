@@ -1,4 +1,5 @@
 import { SUGGESTED_TOPICS } from '../constants';
+import { Square, ArrowUp } from 'lucide-react';
 
 interface PromptInputProps {
   inputRef: React.RefObject<HTMLInputElement>;
@@ -9,6 +10,8 @@ interface PromptInputProps {
   className?: string;
   style?: React.CSSProperties;
   placeholder?: string;
+  isGenerating?: boolean;
+  onStop?: () => void;
 }
 
 export default function PromptInput({
@@ -20,6 +23,8 @@ export default function PromptInput({
   className,
   style,
   placeholder,
+  isGenerating,
+  onStop,
 }: PromptInputProps) {
 
   return (
@@ -78,26 +83,39 @@ export default function PromptInput({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
+                if (isGenerating) {
+                  return; // Don't send if generating, maybe? Or allow queuing? Typically block.
+                }
                 if (inputRef.current?.value) {
                   onSendMessage(inputRef.current.value);
                   inputRef.current.value = '';
                 }
               }
             }}
+            disabled={isGenerating}
           />
           <button
             onClick={() => {
-              if (inputRef.current?.value) {
-                onSendMessage(inputRef.current.value);
-                inputRef.current.value = '';
+              if (isGenerating) {
+                onStop?.();
+              } else {
+                if (inputRef.current?.value) {
+                  onSendMessage(inputRef.current.value);
+                  inputRef.current.value = '';
+                }
               }
             }}
-            className="min-w-[44px] min-h-[44px] p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors active:scale-95 flex items-center justify-center"
-            aria-label="Send message"
+            className={`min-w-[44px] min-h-[44px] p-2 rounded-lg transition-colors active:scale-95 flex items-center justify-center ${isGenerating
+                ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                : 'text-slate-400 hover:text-white hover:bg-white/10'
+              }`}
+            aria-label={isGenerating ? "Stop generation" : "Send message"}
           >
-            <svg className="w-6 h-6 sm:w-5 sm:h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
+            {isGenerating ? (
+              <Square className="w-5 h-5 fill-current" />
+            ) : (
+              <ArrowUp className="w-5 h-5" />
+            )}
           </button>
         </div>
 
