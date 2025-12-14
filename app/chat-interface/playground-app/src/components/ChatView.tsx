@@ -167,49 +167,51 @@ export default function ChatView({
             {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth pb-32"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32"
             >
-                {messages.length === 0 && (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
-                        <Bot size={48} className="mb-4" />
-                        <p className="text-lg">Chat with {selectedModel?.name || 'AI'}</p>
-                    </div>
-                )}
+                <div className="max-w-3xl mx-auto w-full min-h-full flex flex-col space-y-6">
+                    {messages.length === 0 && (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
+                            <Bot size={48} className="mb-4" />
+                            <p className="text-lg">Chat with {selectedModel?.name || 'AI'}</p>
+                        </div>
+                    )}
 
-                {messages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                                : msg.error
-                                    ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                                    : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
-                            }`}>
-                            <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
-                                {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                                {msg.role === 'user' ? 'You' : (selectedModel?.name || 'Assistant')}
-                                {msg.error && <AlertTriangle size={12} className="text-red-400" />}
-                            </div>
-                            <div className="prose prose-invert prose-sm max-w-none">
-                                <FormattedContent text={msg.content} />
+                    {messages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user'
+                                    ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
+                                    : msg.error
+                                        ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
+                                        : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
+                                }`}>
+                                <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
+                                    {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
+                                    {msg.role === 'user' ? 'You' : (selectedModel?.name || 'Assistant')}
+                                    {msg.error && <AlertTriangle size={12} className="text-red-400" />}
+                                </div>
+                                <div className="prose prose-invert prose-sm max-w-none">
+                                    <FormattedContent text={msg.content} />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
 
-                {isGenerating && (
-                    <div className="flex justify-start">
-                        <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-slate-800/60 border border-slate-700/60 text-slate-200">
-                            <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                <Bot size={12} />
-                                {selectedModel?.name || 'Assistant'}
-                            </div>
-                            <div className="prose prose-invert prose-sm max-w-none">
-                                <FormattedContent text={currentResponse} />
-                                <span className="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse align-middle"></span>
+                    {isGenerating && (
+                        <div className="flex justify-start">
+                            <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-slate-800/60 border border-slate-700/60 text-slate-200">
+                                <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    <Bot size={12} />
+                                    {selectedModel?.name || 'Assistant'}
+                                </div>
+                                <div className="prose prose-invert prose-sm max-w-none">
+                                    <FormattedContent text={currentResponse} />
+                                    <span className="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse align-middle"></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Input Area */}
@@ -219,7 +221,7 @@ export default function ChatView({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleSend}
                 onOpenTopics={onOpenTopics}
-                placeholder={selectedModelId ? `Message ${selectedModel?.name}...` : "Select a model to start chatting..."}
+                placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start chatting..."}
             />
         </div>
     );

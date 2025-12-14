@@ -178,39 +178,41 @@ export default function OrchestratorView({
             {/* Main Content Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth pb-32"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32"
             >
-                {events.length === 0 && !isRunning && (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 select-none">
-                        <Terminal size={48} className="mb-4" />
-                        <p className="text-lg">Select a model and describe a task to begin orchestration.</p>
-                    </div>
-                )}
-
-                {rounds.map((roundEvents, roundIdx) => (
-                    <div key={roundIdx} className="border border-white/5 bg-white/5 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* Round header logic if needed */}
-                        <div className="bg-white/5 px-4 py-2 text-xs font-mono text-slate-400 flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                            Round {roundIdx + 1}
+                <div className="max-w-3xl mx-auto w-full min-h-full flex flex-col space-y-6">
+                    {events.length === 0 && !isRunning && (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none">
+                            <Terminal size={48} className="mb-4" />
+                            <p className="text-lg">Select a model and describe a task to begin orchestration.</p>
                         </div>
+                    )}
 
-                        <div className="p-4 space-y-4">
-                            {roundEvents.map((ev, evIdx) => (
-                                <EventRenderer key={evIdx} event={ev} />
-                            ))}
-                        </div>
-                    </div>
-                ))}
+                    {rounds.map((roundEvents, roundIdx) => (
+                        <div key={roundIdx} className="border border-white/5 bg-white/5 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {/* Round header logic if needed */}
+                            <div className="bg-white/5 px-4 py-2 text-xs font-mono text-slate-400 flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                Round {roundIdx + 1}
+                            </div>
 
-                {isRunning && (
-                    <div className="flex justify-center p-4">
-                        <div className="animate-pulse flex items-center gap-2 text-indigo-400 text-sm font-mono">
-                            <Cpu className="animate-spin-slow" size={16} />
-                            Orchestrating...
+                            <div className="p-4 space-y-4">
+                                {roundEvents.map((ev, evIdx) => (
+                                    <EventRenderer key={evIdx} event={ev} />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    ))}
+
+                    {isRunning && (
+                        <div className="flex justify-center p-4">
+                            <div className="animate-pulse flex items-center gap-2 text-indigo-400 text-sm font-mono">
+                                <Cpu className="animate-spin-slow" size={16} />
+                                Orchestrating...
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Input Area */}
@@ -220,7 +222,7 @@ export default function OrchestratorView({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleStart}
                 onOpenTopics={onOpenTopics}
-                placeholder={selectedModelId ? `Instruct ${selectedModel?.name} to solve a complex task...` : "Select a conductor model..."}
+                placeholder={selectedModel ? `Instruct ${selectedModel.name} to solve a complex task...` : "Select a conductor model..."}
             />
         </div>
     );
