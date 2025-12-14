@@ -86,7 +86,7 @@ export default function PromptInput({
                 inputRef.current.value = '';
               }
             }}
-            className="min-w-[44px] min-h-[44px] p-2 -mr-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors active:scale-95"
+            className="min-w-[44px] min-h-[44px] p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors active:scale-95 flex items-center justify-center"
             aria-label="Send message"
           >
             <svg className="w-6 h-6 sm:w-5 sm:h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
