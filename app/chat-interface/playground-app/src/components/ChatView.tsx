@@ -137,16 +137,16 @@ export default function ChatView({
     return (
         <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-slate-900/50 backdrop-blur z-10 rounded-t-xl">
+            <div className="h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md z-10 rounded-t-2xl">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                        <span className="text-sm font-medium text-slate-200">
+                        <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'}`} />
+                        <span className="text-sm font-semibold text-slate-200 tracking-tight">
                             {selectedModel ? selectedModel.name : 'Select a model from the dock'}
                         </span>
                     </div>
                     {selectedModel?.type === 'api' && (
-                        <span className="text-[10px] uppercase tracking-wider bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20">
+                        <span className="text-[10px] uppercase tracking-wider bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 font-medium">
                             API
                         </span>
                     )}
@@ -154,7 +154,7 @@ export default function ChatView({
 
                 <button
                     onClick={handleClear}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-white/5 text-slate-400 hover:text-white transition-colors text-xs"
+                    className="h-8 px-3 flex items-center gap-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
                     title="Clear History"
                 >
                     <Eraser size={14} />
