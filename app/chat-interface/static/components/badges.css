@@ -43,13 +43,13 @@
 
 .model-type-badge.api {
     background: rgba(59, 130, 246, 0.1); /* blue-500 at 10% */
-    color: #93c5fd; /* blue-300 */
+    color: #3b82f6; /* blue-500 */
     border: 1px solid rgba(59, 130, 246, 0.3); /* blue-500 at 30% */
 }
 
 .model-type-badge.local {
     background: rgba(16, 185, 129, 0.1); /* emerald-500 at 10% */
-    color: #6ee7b7; /* emerald-300 */
+    color: #10b981; /* emerald-500 */
     border: 1px solid rgba(16, 185, 129, 0.3); /* emerald-500 at 30% */
 }
 
