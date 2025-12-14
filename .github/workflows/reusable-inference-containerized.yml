@@ -209,7 +209,9 @@ jobs:
             -e MODEL_FILE=\"$MODEL_FILE\" \
             -e PORT=\"$PORT\" \
             -e HF_TOKEN=\"$HF_TOKEN\" \
-            -e HF_HOME=/app/.cache/huggingface"
+            -e HF_HOME=/app/.cache/huggingface \
+            -e INSTANCE_ID=\"${{ matrix.instance }}\" \
+            -e GITHUB_SHA=\"${{ github.sha }}\""
 
           # Add N_CTX if provided
           if [ -n "$N_CTX" ]; then

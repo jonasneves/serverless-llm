@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
 import { BG_STYLES, MODE_COLORS, LAYOUT } from './constants';
 import ModelDock from './components/ModelDock';
@@ -14,8 +14,8 @@ import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
 import { useSelectionBox } from './hooks/useSelectionBox';
 import { useCardReorder } from './hooks/useCardReorder';
-import { CompareArena } from './components/arenas/CompareArena';
-import { CouncilArena, RoundtableArena } from './components/arenas/CircleArena';
+import { useInspectorSelection } from './hooks/useInspectorSelection';
+import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 
@@ -33,6 +33,8 @@ export default function Playground() {
     modelIdToName,
   } = useModelsManager();
   const [mode, setMode] = useState<Mode>('compare');
+  const [linesTransitioning, setLinesTransitioning] = useState(false);
+  const lineTransitionTimeoutRef = useRef<number | null>(null);
 
   // Dock Drag & Drop State (HTML5 DnD for Dock -> Arena)
   const [draggedDockModelId, setDraggedDockModelId] = useState<string | null>(null);
@@ -255,9 +257,16 @@ export default function Playground() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null); // For tiny preview on hover
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
   const [inputFocused, setInputFocused] = useState<boolean>(false);
-  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
-  const [activeInspectorId, setActiveInspectorId] = useState<string | null>(null);
-  const [pinnedModels, setPinnedModels] = useState<Set<string>>(new Set()); // Set of pinned model IDs
+  const {
+    selectedCardIds,
+    setSelectedCardIds,
+    activeInspectorId,
+    setActiveInspectorId,
+    pinnedModels,
+    setPinnedModels,
+    clearInspectorSelection,
+    retainPinnedSelection,
+  } = useInspectorSelection();
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
@@ -275,7 +284,7 @@ export default function Playground() {
     selectionRect,
     isSelecting,
     dragSelectionActiveRef,
-    clearSelection,
+    clearSelection: clearDragSelection,
   } = useSelectionBox({
     rootContainerRef,
     visualizationAreaRef,
@@ -286,8 +295,8 @@ export default function Playground() {
     cardRefs,
     selectedCardIds,
     setSelectedCardIds,
-    pinnedModels,
     setActiveInspectorId,
+    retainPinnedSelection,
     suppressClickRef,
   });
 
@@ -311,6 +320,29 @@ export default function Playground() {
   });
 
   useEffect(() => () => resetPendingStream(), [resetPendingStream]);
+
+  const triggerLineTransition = useCallback(() => {
+    setLinesTransitioning(true);
+    if (lineTransitionTimeoutRef.current) {
+      clearTimeout(lineTransitionTimeoutRef.current);
+    }
+    lineTransitionTimeoutRef.current = window.setTimeout(() => {
+      setLinesTransitioning(false);
+      lineTransitionTimeoutRef.current = null;
+    }, 350);
+  }, []);
+
+  const handleModeChange = useCallback((nextMode: Mode) => {
+    if (nextMode === mode) return;
+    triggerLineTransition();
+    setMode(nextMode);
+  }, [mode, triggerLineTransition]);
+
+  useEffect(() => () => {
+    if (lineTransitionTimeoutRef.current) {
+      clearTimeout(lineTransitionTimeoutRef.current);
+    }
+  }, []);
 
   const [contextMenu, setContextMenu] = useState<ArenaContextMenu>(null);
 
@@ -405,15 +437,12 @@ export default function Playground() {
   // Handle Escape key to close dock and Delete/Backspace to remove selected models
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Escape: unfocus input, close dock, clear hover
+      // Escape: unfocus active element, close dock, clear hover
       if (event.key === 'Escape') {
-        const target = event.target as HTMLElement;
-        // If in an input, just blur it
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-          (target as HTMLInputElement).blur();
-          return;
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (activeEl && activeEl !== document.body) {
+          activeEl.blur();
         }
-        // Otherwise close dock and clear selections
         if (showDock) setShowDock(false);
         setHoveredCard(null);
         return;
@@ -422,6 +451,18 @@ export default function Playground() {
       // Don't trigger keyboard shortcuts if user is typing in an input
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        const order: Mode[] = ['compare', 'council', 'roundtable'];
+        const currentIndex = order.indexOf(mode);
+        if (currentIndex !== -1) {
+          const delta = event.key === 'ArrowRight' ? 1 : -1;
+          const nextIndex = (currentIndex + delta + order.length) % order.length;
+          handleModeChange(order[nextIndex]);
+        }
+        return;
+      }
 
       // 'M' toggles models dock
       if (event.key === 'm' || event.key === 'M') {
@@ -452,7 +493,7 @@ export default function Playground() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showDock, selectedCardIds]);
+  }, [showDock, selectedCardIds, mode, handleModeChange]);
 
   // Handle wheel scroll to move arena up/down
   useEffect(() => {
@@ -621,18 +662,6 @@ export default function Playground() {
   }, [mode, selectedModels.length, selectedModels.map(m => m.id).join(',')]);
 
   useEffect(() => {
-    if (inspectorModels.length === 0) {
-      if (activeInspectorId !== null) setActiveInspectorId(null);
-      return;
-    }
-    if (!activeInspectorId || !selectedCardIds.has(activeInspectorId)) {
-      setActiveInspectorId(inspectorModels[0].id);
-    }
-  }, [inspectorModels.length, selectedCardIds, activeInspectorId]);
-
-
-
-  useEffect(() => {
     const prevMode = prevModeRef.current;
     if (prevMode === 'compare' && mode !== 'compare' && moderator && visualizationAreaRef.current) {
       const rect = compareCardRectsRef.current[moderator];
@@ -680,9 +709,9 @@ export default function Playground() {
       {/* Header */}
       <Header
         mode={mode}
-        setMode={setMode}
+        setMode={handleModeChange}
         setHoveredCard={setHoveredCard}
-        clearSelection={clearSelection}
+        clearSelection={clearDragSelection}
         cycleBgStyle={cycleBgStyle}
         showDock={showDock}
         setShowDock={setShowDock}
@@ -759,16 +788,7 @@ export default function Playground() {
             if (e.target === e.currentTarget || (isSVG && !target.closest('[data-card]'))) {
               setHoveredCard(null);
               if (!suppressClickRef.current) {
-                // Keep only pinned models
-                const onlyPinned = new Set([...selectedCardIds].filter(id => pinnedModels.has(id)));
-                if (onlyPinned.size > 0) {
-                  setSelectedCardIds(onlyPinned);
-                  if (activeInspectorId && !pinnedModels.has(activeInspectorId)) {
-                    setActiveInspectorId([...onlyPinned][0] || null);
-                  }
-                } else {
-                  setSelectedCardIds(new Set());
-                }
+                retainPinnedSelection();
               }
               suppressClickRef.current = false;
             }
@@ -781,88 +801,39 @@ export default function Playground() {
             setContextMenu({ x: e.clientX, y: e.clientY, type: 'background' });
           }}
         >
-          {mode === 'compare' ? (
-            <CompareArena
-              selectedModels={selectedModels}
-              gridCols={gridCols}
-              speaking={speaking}
-              selectedCardIds={selectedCardIds}
-              setSelectedCardIds={setSelectedCardIds}
-              setActiveInspectorId={setActiveInspectorId}
-              pinnedModels={pinnedModels}
-              executionTimes={executionTimes}
-              failedModels={failedModels}
-              cardRefs={cardRefs}
-              handlePointerDown={handlePointerDown}
-              dragState={dragState}
-              handleModelToggle={handleModelToggle}
-              setContextMenu={setContextMenu}
-              suppressClickRef={suppressClickRef}
-              getTailSnippet={getTailSnippet}
-            />
-          ) : mode === 'council' ? (
-            <CouncilArena
-              selectedModels={selectedModels}
-              layoutRadius={layoutRadius}
-              getCirclePosition={getCirclePosition}
-              dragState={dragState}
-              handlePointerDown={handlePointerDown}
-              speaking={speaking}
-              hoveredCard={hoveredCard}
-              setHoveredCard={setHoveredCard}
-              selectedCardIds={selectedCardIds}
-              setSelectedCardIds={setSelectedCardIds}
-              setActiveInspectorId={setActiveInspectorId}
-              pinnedModels={pinnedModels}
-              handleModelToggle={handleModelToggle}
-              executionTimes={executionTimes}
-              failedModels={failedModels}
-              cardRefs={cardRefs}
-              setContextMenu={setContextMenu}
-              suppressClickRef={suppressClickRef}
-              moderatorModel={moderatorModel}
-              moderatorId={moderator}
-              orchestratorTransform={orchestratorTransformWithScale}
-              orchestratorStatus={orchestratorStatus}
-              orchestratorPhaseLabel={orchestratorPhaseLabel}
-              moderatorSynthesis={moderatorSynthesis}
-              isSynthesizing={isSynthesizing}
-              isGenerating={isGenerating}
-              phaseLabel={phaseLabel}
-              getTailSnippet={getTailSnippet}
-            />
-          ) : (
-            <RoundtableArena
-              selectedModels={selectedModels}
-              layoutRadius={layoutRadius}
-              getCirclePosition={getCirclePosition}
-              dragState={dragState}
-              handlePointerDown={handlePointerDown}
-              speaking={speaking}
-              hoveredCard={hoveredCard}
-              setHoveredCard={setHoveredCard}
-              selectedCardIds={selectedCardIds}
-              setSelectedCardIds={setSelectedCardIds}
-              setActiveInspectorId={setActiveInspectorId}
-              pinnedModels={pinnedModels}
-              handleModelToggle={handleModelToggle}
-              executionTimes={executionTimes}
-              failedModels={failedModels}
-              cardRefs={cardRefs}
-              setContextMenu={setContextMenu}
-              suppressClickRef={suppressClickRef}
-              moderatorModel={moderatorModel}
-              moderatorId={moderator}
-              orchestratorTransform={orchestratorTransformWithScale}
-              orchestratorStatus={orchestratorStatus}
-              orchestratorPhaseLabel={orchestratorPhaseLabel}
-              moderatorSynthesis={moderatorSynthesis}
-              isSynthesizing={isSynthesizing}
-              isGenerating={isGenerating}
-              phaseLabel={phaseLabel}
-              getTailSnippet={getTailSnippet}
-            />
-          )}
+          <ArenaCanvas
+            mode={mode}
+            selectedModels={selectedModels}
+            gridCols={gridCols}
+            speaking={speaking}
+            selectedCardIds={selectedCardIds}
+            setSelectedCardIds={setSelectedCardIds}
+            setActiveInspectorId={setActiveInspectorId}
+            pinnedModels={pinnedModels}
+            executionTimes={executionTimes}
+            failedModels={failedModels}
+            cardRefs={cardRefs}
+            handlePointerDown={handlePointerDown}
+            dragState={dragState}
+            handleModelToggle={handleModelToggle}
+            setContextMenu={setContextMenu}
+            suppressClickRef={suppressClickRef}
+            getTailSnippet={getTailSnippet}
+            hoveredCard={hoveredCard}
+            setHoveredCard={setHoveredCard}
+            layoutRadius={layoutRadius}
+            getCirclePosition={getCirclePosition}
+            moderatorModel={moderatorModel}
+            moderatorId={moderator}
+            orchestratorTransform={orchestratorTransformWithScale}
+            orchestratorStatus={orchestratorStatus}
+            orchestratorPhaseLabel={orchestratorPhaseLabel}
+            moderatorSynthesis={moderatorSynthesis}
+            isSynthesizing={isSynthesizing}
+            isGenerating={isGenerating}
+            phaseLabel={phaseLabel}
+            linesTransitioning={linesTransitioning}
+          />
         </div>
 
       </div>
@@ -885,11 +856,7 @@ export default function Playground() {
           models={inspectorModels}
           activeId={activeInspectorId}
           onSelect={setActiveInspectorId}
-          onClose={() => {
-            // Close always works - clear selection but keep pinnedModels info
-            setSelectedCardIds(new Set());
-            setActiveInspectorId(null);
-          }}
+          onClose={clearInspectorSelection}
           speaking={speaking}
           mode={mode}
           moderatorId={moderator}
@@ -899,13 +866,16 @@ export default function Playground() {
           discussionTurnsByModel={discussionTurnsByModel}
           pinned={pinnedModels.has(activeInspectorId)}
           onTogglePin={() => {
-            const newPinned = new Set(pinnedModels);
-            if (newPinned.has(activeInspectorId)) {
-              newPinned.delete(activeInspectorId);
-            } else {
-              newPinned.add(activeInspectorId);
-            }
-            setPinnedModels(newPinned);
+            if (!activeInspectorId) return;
+            setPinnedModels(prev => {
+              const next = new Set(prev);
+              if (next.has(activeInspectorId)) {
+                next.delete(activeInspectorId);
+              } else {
+                next.add(activeInspectorId);
+              }
+              return next;
+            });
           }}
           position={inspectorPosition}
           onTogglePosition={() => setInspectorPosition(prev => prev === 'left' ? 'right' : 'left')}
@@ -1029,6 +999,9 @@ export default function Playground() {
         }
         .card-hover.rounded-full:hover:not(.card-selected):not(.card-speaking) {
           transform: scale(1.05) !important;
+        }
+        .arena-link {
+          animation: flow 1s linear infinite;
         }
       `}</style>
       {isSelecting && (

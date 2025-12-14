@@ -163,9 +163,12 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             "n_threads": int(os.getenv("N_THREADS", str(config.default_n_threads))),
             "n_batch": int(os.getenv("N_BATCH", str(config.n_batch))),
             "max_concurrent": max_concurrent,
+            "active_requests": max_concurrent - inference_lock._value,
+            "available_capacity": inference_lock._value,
             "openblas_num_threads": os.getenv("OPENBLAS_NUM_THREADS"),
             "omp_num_threads": os.getenv("OMP_NUM_THREADS"),
-            "git_sha": os.getenv("GIT_SHA", "unknown"),
+            "instance_id": os.getenv("INSTANCE_ID", "1"),
+            "git_sha": os.getenv("GITHUB_SHA", os.getenv("GIT_SHA", "unknown")),
         }
 
     @app.get("/v1/models")

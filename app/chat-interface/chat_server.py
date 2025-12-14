@@ -653,6 +653,36 @@ async def detailed_health():
 
     return results
 
+
+@app.get("/api/system/loadbalancer")
+async def loadbalancer_status():
+    """
+    Load balancer status showing current capacity and active requests per model
+    """
+    status = {}
+    for model_id, semaphore in MODEL_SEMAPHORES.items():
+        endpoint = MODEL_ENDPOINTS.get(model_id, "unknown")
+        status[model_id] = {
+            "endpoint": endpoint,
+            "configured_capacity": semaphore._bound_value,
+            "active_requests": semaphore._bound_value - semaphore._value,
+            "available_slots": semaphore._value,
+            "utilization_percent": round(
+                ((semaphore._bound_value - semaphore._value) / semaphore._bound_value * 100)
+                if semaphore._bound_value > 0 else 0,
+                1
+            )
+        }
+
+    return {
+        "timestamp": time.time(),
+        "models": status,
+        "total_capacity": sum(s["configured_capacity"] for s in status.values()),
+        "total_active": sum(s["active_requests"] for s in status.values()),
+        "total_available": sum(s["available_slots"] for s in status.values()),
+    }
+
+
 async def _quick_model_health(timeout: float = 3.0):
     """Lightweight /health checks for badge endpoints."""
     client = HTTPClient.get_client()

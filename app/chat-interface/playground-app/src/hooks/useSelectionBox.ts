@@ -26,8 +26,8 @@ interface UseSelectionBoxParams {
   cardRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   selectedCardIds: Set<string>;
   setSelectedCardIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  pinnedModels: Set<string>;
   setActiveInspectorId: React.Dispatch<React.SetStateAction<string | null>>;
+  retainPinnedSelection: () => void;
   suppressClickRef: React.MutableRefObject<boolean>;
 }
 
@@ -56,8 +56,8 @@ export function useSelectionBox({
   cardRefs,
   selectedCardIds,
   setSelectedCardIds,
-  pinnedModels,
   setActiveInspectorId,
+  retainPinnedSelection,
   suppressClickRef,
 }: UseSelectionBoxParams) {
   const [dragSelection, setDragSelection] = useState<SelectionState | null>(null);
@@ -187,17 +187,7 @@ export function useSelectionBox({
           }
           suppressClickRef.current = willTriggerCardClick;
         } else if (!state.active) {
-          const onlyPinned = new Set([...selectedCardIds].filter(id => pinnedModels.has(id)));
-          if (onlyPinned.size > 0) {
-            setSelectedCardIds(onlyPinned);
-            if (onlyPinned.size > 0) {
-              const [first] = onlyPinned;
-              setActiveInspectorId(prev => (prev && onlyPinned.has(prev)) ? prev : first || null);
-            }
-          } else {
-            setSelectedCardIds(new Set());
-            setActiveInspectorId(null);
-          }
+          retainPinnedSelection();
         }
 
         return null;
@@ -218,10 +208,10 @@ export function useSelectionBox({
     visualizationAreaRef,
     selectedModels,
     cardRefs,
-    pinnedModels,
     selectedCardIds,
     setSelectedCardIds,
     setActiveInspectorId,
+    retainPinnedSelection,
     suppressClickRef,
   ]);
 
