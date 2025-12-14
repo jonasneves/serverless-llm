@@ -415,6 +415,7 @@ class DiscussionRequest(GenerationParams):
 
 class OrchestratorRequest(GenerationParams):
     query: str
+    model: Optional[str] = None
     max_rounds: int = 5  # Maximum orchestration rounds
 
 class VerbalizedSamplingRequest(BaseModel):
@@ -1467,7 +1468,8 @@ async def stream_orchestrator_events(
     max_tokens: int,
     temperature: float,
     max_rounds: int,
-    engine: str = "auto"
+    engine: str = "auto",
+    orchestrator_model_id: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     """
     Stream AutoGen multi-agent orchestration events
@@ -1483,7 +1485,20 @@ async def stream_orchestrator_events(
 
         if choice == "autogen":
             orch = AutoGenOrchestrator()
-            async for event in orch.run_orchestration(query=query, max_turns=max_rounds):
+            
+            # Resolve custom model config if provided
+            orch_config = None
+            if orchestrator_model_id and orchestrator_model_id in MODEL_ENDPOINTS:
+                orch_config = {
+                    "model": orchestrator_model_id,
+                    "base_url": MODEL_ENDPOINTS[orchestrator_model_id]
+                }
+            
+            async for event in orch.run_orchestration(
+                query=query, 
+                max_turns=max_rounds,
+                orchestrator_config=orch_config
+            ):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
             return
 
@@ -1542,6 +1557,7 @@ async def orchestrator_stream(payload: OrchestratorRequest, req: Request):
             payload.temperature,
             payload.max_rounds,
             engine,
+            orchestrator_model_id=payload.model
         ),
         media_type="text/event-stream",
         headers={
