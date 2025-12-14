@@ -95,7 +95,8 @@ class DiscussionEngine:
         model_id: str,
         turn_number: int,
         analysis: QueryAnalysis,
-        previous_turns: List[DiscussionTurn]
+        previous_turns: List[DiscussionTurn],
+        participant_ids: Optional[List[str]] = None
     ) -> str:
         """
         Build context-aware prompt for a model's turn
@@ -112,19 +113,32 @@ class DiscussionEngine:
         """
         profile = MODEL_PROFILES[model_id]
         my_name = profile["display_name"]
-        expertise_score = analysis.model_expertise_scores[model_id]
+        expertise_score = analysis.model_expertise_scores.get(model_id, 0.5)
         strengths = ", ".join(profile["primary_strengths"])
 
-        # Get all participant names for roundtable context
-        all_participants = [
-            MODEL_PROFILES[mid]["display_name"]
-            for mid in analysis.model_expertise_scores.keys()
-            if mid in MODEL_PROFILES
-        ]
-        other_participants = [name for name in all_participants if name != my_name]
+        # Determine the actual participants for this discussion (preserve order, skip duplicates)
+        participant_scope = participant_ids or list(analysis.model_expertise_scores.keys())
+
+        def get_display_name(mid: str) -> str:
+            profile = MODEL_PROFILES.get(mid)
+            return profile["display_name"] if profile else mid
+
+        seen = set()
+        other_participants = []
+        for mid in participant_scope:
+            if mid == model_id or mid in seen:
+                continue
+            seen.add(mid)
+            other_participants.append(get_display_name(mid))
         participants_list = ", ".join(other_participants)
 
-        if turn_number == 0:
+        # Use the orchestrator's lead if available, otherwise fall back to the first active participant
+        lead_model_id = analysis.discussion_lead
+        if participant_ids and lead_model_id not in participant_ids:
+            lead_model_id = participant_ids[0]
+        lead_model_name = MODEL_PROFILES.get(lead_model_id, {}).get("display_name", lead_model_id)
+
+        if not previous_turns:
             # Lead model - initial response with domain awareness
             domain_context = ", ".join([
                 f"{domain} ({weight:.0%})"
@@ -149,9 +163,21 @@ class DiscussionEngine:
             else:
                 analysis_instruction = "Provide a clear, concise response."
 
+            roundtable_intro = (
+                f"You are seated at a virtual roundtable with other AI models: {participants_list}."
+                if participants_list else
+                "You are seated at a virtual roundtable and will kick off the discussion."
+            )
+
+            reviewer_line = (
+                f"{participants_list} will review and critique your response next."
+                if participants_list else
+                "You will review your own response afterward."
+            )
+
             return f"""You are {my_name}, participating in a Model Roundtable discussion.
 
-You are seated at a virtual roundtable with other AI models: {participants_list}. You have been selected to LEAD this discussion and speak first based on your expertise in this topic.
+{roundtable_intro} You have been selected to LEAD this discussion and speak first based on your expertise in this topic.
 
 Your strengths: {strengths}
 Your expertise score for this query: {expertise_score:.2f} out of 1.0
@@ -162,7 +188,7 @@ User Query:
 
 As the discussion leader, provide your analysis and response. {analysis_instruction}
 
-{participants_list} will review and critique your response next."""
+{reviewer_line}"""
 
         else:
             # Supporting models - respond with full context including evaluations
@@ -181,11 +207,11 @@ As the discussion leader, provide your analysis and response. {analysis_instruct
             previous_context = "\n\n".join(previous_context_parts)
 
             # Get names of models who have already spoken
-            spoken_models = list(set(turn.model_name for turn in previous_turns))
+            spoken_models = []
+            for turn in previous_turns:
+                if turn.model_name not in spoken_models:
+                    spoken_models.append(turn.model_name)
             spoken_list = ", ".join(spoken_models)
-
-            # Get the lead model's display name
-            lead_model_name = MODEL_PROFILES.get(analysis.discussion_lead, {}).get("display_name", analysis.discussion_lead)
 
             # Determine if query needs detailed verification
             needs_verification = any(
@@ -395,6 +421,7 @@ Discussion so far:
         turn_number: int,
         analysis: QueryAnalysis,
         previous_turns: List[DiscussionTurn],
+        participant_ids: Optional[List[str]] = None,
         max_tokens: int = 512,
         temperature: float = 0.7
     ) -> AsyncGenerator[Dict[str, Any], None]:
@@ -414,7 +441,14 @@ Discussion so far:
             Events: turn_start, turn_chunk, turn_complete
         """
         profile = MODEL_PROFILES[model_id]
-        prompt = self._build_turn_prompt(query, model_id, turn_number, analysis, previous_turns)
+        prompt = self._build_turn_prompt(
+            query,
+            model_id,
+            turn_number,
+            analysis,
+            previous_turns,
+            participant_ids=participant_ids
+        )
 
         # Yield turn start
         yield {
@@ -422,7 +456,7 @@ Discussion so far:
             "turn_number": turn_number,
             "model_id": model_id,
             "model_name": profile["display_name"],
-            "expertise_score": analysis.model_expertise_scores[model_id]
+            "expertise_score": analysis.model_expertise_scores.get(model_id, 0.5)
         }
 
         # Stream response
@@ -480,7 +514,7 @@ Discussion so far:
                     "model": t.model_id,
                     "response": t.response
                 } for t in previous_turns],
-                expertise_score=analysis.model_expertise_scores[model_id]
+                expertise_score=analysis.model_expertise_scores.get(model_id, 0.5)
             )
 
             turn = DiscussionTurn(
@@ -623,6 +657,7 @@ Discussion so far:
                         turn_number=turn_num,
                         analysis=analysis,
                         previous_turns=completed_turns,
+                        participant_ids=participating_models,
                         max_tokens=max_tokens,
                         temperature=temperature
                     ):

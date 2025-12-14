@@ -51,6 +51,7 @@ interface SessionControllerParams {
   historyToText: (history: ChatHistoryEntry[]) => string;
   buildCarryoverHistory: (history: ChatHistoryEntry[], targetMode: Mode) => ChatHistoryEntry[];
   setModelsData: React.Dispatch<React.SetStateAction<Model[]>>;
+  modelIdToName: (id: string) => string;
   setExecutionTimes: React.Dispatch<React.SetStateAction<Record<string, ExecutionTimeData>>>;
   setIsGenerating: (value: boolean) => void;
   setIsSynthesizing: (value: boolean) => void;
@@ -92,6 +93,7 @@ export function useSessionController(params: SessionControllerParams) {
     historyToText,
     buildCarryoverHistory,
     setModelsData,
+    modelIdToName,
     setExecutionTimes,
     setIsGenerating,
     setIsSynthesizing,
@@ -194,6 +196,62 @@ export function useSessionController(params: SessionControllerParams) {
     });
 
     const firstTokenReceived = new Set<string>();
+
+    const formatDomainLabel = (value: string) =>
+      value
+        ? value
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, char => char.toUpperCase())
+        : '';
+
+    const formatPercentage = (value?: number) =>
+      typeof value === 'number' && Number.isFinite(value)
+        ? `${Math.round(value * 100)}%`
+        : '—';
+
+    const buildRoundtableAnalysisSummary = (analysis: any) => {
+      if (!analysis) return '';
+      const domainWeights: Record<string, number> = analysis.domain_weights || {};
+      const expertise = analysis.model_expertise_scores || {};
+      const sortedDomains = Object.entries(domainWeights)
+        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+        .map(([domain, weight]) => `${formatDomainLabel(domain)} ${formatPercentage(weight)}`)
+        .join(', ');
+
+      const participantOrder = sessionModelIds.length > 0
+        ? sessionModelIds
+        : Object.keys(expertise);
+      const participantSummary = participantOrder
+        .filter(Boolean)
+        .map(id => `${modelIdToName(id)} ${formatPercentage(expertise[id])}`)
+        .join(', ');
+
+      const leadName = analysis.discussion_lead
+        ? modelIdToName(analysis.discussion_lead)
+        : '—';
+      const plannedRounds = analysis.expected_turns ?? 2;
+      const reasoning = (analysis.reasoning || '').trim();
+
+      const lines = [
+        `ORCHESTRATOR • ${moderator ? modelIdToName(moderator) : 'Roundtable'}`,
+      ];
+      if (sortedDomains) lines.push(`Domains: ${sortedDomains}`);
+      lines.push(`Lead: ${leadName}`);
+      if (participantSummary) lines.push(`Participants: ${participantSummary}`);
+      lines.push(`Planned rounds: ${plannedRounds}`);
+      if (reasoning) {
+        lines.push('');
+        lines.push(reasoning);
+      }
+
+      return lines.join('\n').trim();
+    };
+
+    const appendRoundtableHistory = (content: string, kind: ChatHistoryEntry['kind']) => {
+      const trimmed = content?.trim();
+      if (!trimmed || skipHistory) return;
+      pushHistoryEntries([{ role: 'assistant', content: trimmed, kind }]);
+    };
 
     const applyThinkingChunk = (modelId: string, rawChunk: string) => {
       const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
@@ -569,16 +627,29 @@ export function useSessionController(params: SessionControllerParams) {
 
         if (eventType === 'analysis_complete') {
           setPhaseLabel('Orchestrating');
+          let analysisText = 'Analysis complete.';
           if (data.analysis) {
             const analysisObj = data.analysis as any;
-            const analysisText = String(analysisObj?.reasoning ?? analysisObj?.summary ?? 'Analysis complete.');
-            setModeratorSynthesis(analysisText);
+            const formatted = buildRoundtableAnalysisSummary(analysisObj);
+            if (formatted) {
+              analysisText = formatted;
+            }
           }
+          setModeratorSynthesis(analysisText);
+          if (moderator) {
+            setModelsData(prev => prev.map(model =>
+              model.id === moderator ? { ...model, response: analysisText } : model,
+            ));
+          }
+          appendRoundtableHistory(analysisText, 'roundtable_analysis');
         }
 
         if (eventType === 'turn_start') {
-          currentTurn = (data as any).turn_number || currentTurn;
-          setPhaseLabel(`Round ${currentTurn}`);
+          const reportedTurn = (data as any).turn_number;
+          if (typeof reportedTurn === 'number') {
+            currentTurn = reportedTurn;
+          }
+          setPhaseLabel(`Round ${currentTurn + 1}`);
         }
 
         if (eventType === 'turn_chunk' && data.model_id) {
@@ -617,6 +688,11 @@ export function useSessionController(params: SessionControllerParams) {
           setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: turnResponse } : model));
           setSpeaking(new Set());
           recordResponse(modelId, turnResponse, { label: `Round ${currentTurn + 1}` });
+          const speakerName = modelIdToName(modelId);
+          appendRoundtableHistory(
+            `${speakerName} · Round ${currentTurn + 1}\n${turnResponse}`,
+            'roundtable_turn',
+          );
         }
 
         if (eventType === 'turn_error' && data.model_id) {
@@ -632,6 +708,10 @@ export function useSessionController(params: SessionControllerParams) {
           setSpeaking(new Set());
           markModelFailed(modelId);
           recordResponse(modelId, errorText, { replace: true });
+          appendRoundtableHistory(
+            `${modelIdToName(modelId)} · Round ${currentTurn + 1}\n${errorText}`,
+            'roundtable_turn',
+          );
         }
 
         if (eventType === 'synthesis_start') {

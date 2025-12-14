@@ -464,6 +464,7 @@ export default function Playground() {
     historyToText,
     buildCarryoverHistory,
     setModelsData,
+    modelIdToName,
     setExecutionTimes,
     setIsGenerating,
     setIsSynthesizing,
