@@ -43,6 +43,7 @@ export default function ChatView({
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
     const abortControllerRef = useRef<AbortController | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -51,7 +52,7 @@ export default function ChatView({
 
     // Use list selection box hook for drag selection
     const { selectionRect } = useListSelectionBox({
-        containerRef: scrollRef,
+        containerRef: containerRef,
         itemRefs: messageRefs,
         setSelectedIndices: setSelectedMessages,
     });
@@ -326,7 +327,7 @@ export default function ChatView({
     };
 
     return (
-        <div className="flex flex-col h-full relative">
+        <div ref={containerRef} className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
             <div className="z-10 w-full flex justify-center pt-6 pb-2">
                 <div className="w-full flex items-center justify-between" style={{ maxWidth: '600px' }}>
@@ -504,27 +505,35 @@ export default function ChatView({
                 </div>
             </div>
 
+
+            {/* Blue Selection Rectangle */}
+            {selectionRect && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: selectionRect.left,
+                        top: selectionRect.top,
+                        width: selectionRect.width,
+                        height: selectionRect.height,
+                        border: '2px solid rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        pointerEvents: 'none',
+                        zIndex: 40,
+                    }}
+                />
+            )}
+
             {/* Messages Area */}
             <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative"
+                onClick={(e) => {
+                    // Clear selection if clicking directly on the messages area (not on a message)
+                    if (e.target === e.currentTarget || !(e.target as HTMLElement).closest('[data-message]')) {
+                        setSelectedMessages(new Set());
+                    }
+                }}
             >
-                {/* Blue Selection Rectangle */}
-                {selectionRect && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            left: selectionRect.left,
-                            top: selectionRect.top,
-                            width: selectionRect.width,
-                            height: selectionRect.height,
-                            border: '2px solid rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            pointerEvents: 'none',
-                            zIndex: 40,
-                        }}
-                    />
-                )}
                 <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
@@ -541,8 +550,23 @@ export default function ChatView({
                                 else messageRefs.current.delete(idx);
                             }}
                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            data-message={idx}
+                            onClick={(e) => {
+                                // Only handle direct clicks, not bubbled clicks from children
+                                if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-message]') === e.currentTarget) {
+                                    setSelectedMessages(prev => {
+                                        const newSet = new Set(prev);
+                                        if (newSet.has(idx)) {
+                                            newSet.delete(idx);
+                                        } else {
+                                            newSet.add(idx);
+                                        }
+                                        return newSet;
+                                    });
+                                }
+                            }}
                         >
-                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 select-none transition-all ${selectedMessages.has(idx)
+                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
                                 ? 'ring-2 ring-blue-500 bg-blue-500/10'
                                 : ''
                                 } ${msg.role === 'user'
