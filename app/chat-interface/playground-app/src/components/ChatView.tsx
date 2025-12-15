@@ -40,6 +40,9 @@ export default function ChatView({
     const [expandedLocalModels, setExpandedLocalModels] = useState(true);
     const [expandedApiModels, setExpandedApiModels] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
+    const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +70,24 @@ export default function ChatView({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Handle delete key for selected messages
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedMessages.size > 0) {
+                    const target = e.target as HTMLElement;
+                    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+                    e.preventDefault();
+                    handleDeleteSelected();
+                }
+            } else if (e.key === 'Escape') {
+                setSelectedMessages(new Set());
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedMessages, messages]);
+
     // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -79,6 +100,16 @@ export default function ChatView({
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Handle mouse up for drag selection
+    useEffect(() => {
+        const handleMouseUp = () => {
+            setIsDragging(false);
+            setDragStartIndex(null);
+        };
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => window.removeEventListener('mouseup', handleMouseUp);
     }, []);
 
     const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string }> => {
@@ -277,6 +308,41 @@ export default function ChatView({
     const handleClear = () => {
         setMessages([]);
         setCurrentResponse('');
+        setSelectedMessages(new Set());
+    };
+
+    const handleMessageMouseDown = (index: number) => {
+        setIsDragging(true);
+        setDragStartIndex(index);
+        // Toggle selection on click
+        setSelectedMessages(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
+
+    const handleMessageMouseEnter = (index: number) => {
+        if (isDragging && dragStartIndex !== null) {
+            // Select range from dragStartIndex to current index
+            const start = Math.min(dragStartIndex, index);
+            const end = Math.max(dragStartIndex, index);
+            const newSet = new Set<number>();
+            for (let i = start; i <= end; i++) {
+                newSet.add(i);
+            }
+            setSelectedMessages(newSet);
+        }
+    };
+
+    const handleDeleteSelected = () => {
+        if (selectedMessages.size === 0) return;
+        setMessages(prev => prev.filter((_, index) => !selectedMessages.has(index)));
+        setSelectedMessages(new Set());
     };
 
     const selectedModel = models.find(m => m.id === selectedModelId);
@@ -484,12 +550,20 @@ export default function ChatView({
                     )}
 
                     {messages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 ${msg.role === 'user'
-                                ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                                : msg.error
-                                    ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                                    : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
+                        <div
+                            key={idx}
+                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            onMouseDown={() => handleMessageMouseDown(idx)}
+                            onMouseEnter={() => handleMessageMouseEnter(idx)}
+                        >
+                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 cursor-pointer select-none transition-all ${selectedMessages.has(idx)
+                                    ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                                    : ''
+                                } ${msg.role === 'user'
+                                    ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
+                                    : msg.error
+                                        ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
+                                        : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
                                 }`}>
                                 <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
                                     {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}

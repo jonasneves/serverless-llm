@@ -59,6 +59,9 @@ export default function OrchestratorView({
     const [showModelSelector, setShowModelSelector] = useState(false);
     const [expandedLocalModels, setExpandedLocalModels] = useState(true);
     const [expandedApiModels, setExpandedApiModels] = useState(false);
+    const [selectedRounds, setSelectedRounds] = useState<Set<number>>(new Set());
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -112,6 +115,24 @@ export default function OrchestratorView({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Handle delete key for selected rounds
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedRounds.size > 0) {
+                    const target = e.target as HTMLElement;
+                    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+                    e.preventDefault();
+                    handleDeleteSelected();
+                }
+            } else if (e.key === 'Escape') {
+                setSelectedRounds(new Set());
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedRounds, rounds]);
+
     // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -124,6 +145,16 @@ export default function OrchestratorView({
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Handle mouse up for drag selection
+    useEffect(() => {
+        const handleMouseUp = () => {
+            setIsDragging(false);
+            setDragStartIndex(null);
+        };
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => window.removeEventListener('mouseup', handleMouseUp);
     }, []);
 
     const tryOrchestrator = async (modelId: string, query: string): Promise<{ success: boolean; error?: string }> => {
@@ -277,6 +308,44 @@ export default function OrchestratorView({
     const handleClear = () => {
         setEvents([]);
         setRounds([]);
+        setSelectedRounds(new Set());
+    };
+
+    const handleRoundMouseDown = (index: number) => {
+        setIsDragging(true);
+        setDragStartIndex(index);
+        // Toggle selection on click
+        setSelectedRounds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
+
+    const handleRoundMouseEnter = (index: number) => {
+        if (isDragging && dragStartIndex !== null) {
+            // Select range from dragStartIndex to current index
+            const start = Math.min(dragStartIndex, index);
+            const end = Math.max(dragStartIndex, index);
+            const newSet = new Set<number>();
+            for (let i = start; i <= end; i++) {
+                newSet.add(i);
+            }
+            setSelectedRounds(newSet);
+        }
+    };
+
+    const handleDeleteSelected = () => {
+        if (selectedRounds.size === 0) return;
+        // Filter out selected rounds and rebuild events
+        const keptRounds = rounds.filter((_, index) => !selectedRounds.has(index));
+        const newEvents = keptRounds.flat();
+        setEvents(newEvents);
+        setSelectedRounds(new Set());
     };
 
     const selectedModel = models.find(m => m.id === selectedModelId);
@@ -484,7 +553,15 @@ export default function OrchestratorView({
                     )}
 
                     {rounds.map((roundEvents, roundIdx) => (
-                        <div key={roundIdx} className="border border-white/5 bg-white/5 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div
+                            key={roundIdx}
+                            className={`border rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 cursor-pointer select-none transition-all ${selectedRounds.has(roundIdx)
+                                    ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500/30'
+                                    : 'border-white/5 bg-white/5'
+                                }`}
+                            onMouseDown={() => handleRoundMouseDown(roundIdx)}
+                            onMouseEnter={() => handleRoundMouseEnter(roundIdx)}
+                        >
                             {/* Round header logic if needed */}
                             <div className="bg-white/5 px-4 py-2 text-xs font-mono text-slate-400 flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
