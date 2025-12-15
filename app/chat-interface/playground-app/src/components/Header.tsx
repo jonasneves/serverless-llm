@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { Mode } from '../types';
 
 interface HeaderProps {
@@ -27,21 +28,46 @@ export default function Header({
   setShowDock,
   onOpenSettings
 }: HeaderProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
   const currentModeIndex = MODES.findIndex(m => m.value === mode);
-  // Default to 0 if not found (e.g. 'chat' mode if not in list)
   const safeIndex = currentModeIndex === -1 ? 0 : currentModeIndex;
+  const currentModeLabel = MODES[safeIndex].label;
+
+  // Close mobile menu on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    }
+    if (isMobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
+
+  const handleModeSelect = (newMode: Mode) => {
+    setMode(newMode);
+    setHoveredCard(null);
+    clearSelection();
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <div className="fixed top-0 left-0 right-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none">
-      {/* Background layer for hit testing if needed, or just let events pass through empty space */}
+      {/* Background layer */}
       <div className="absolute inset-0 pointer-events-auto" style={{ height: '100%', zIndex: -1 }} />
 
-      {/* Left: Dock Toggle Only */}
-      <div className="flex items-center gap-3 flex-1 pointer-events-auto">
+      {/* Left: Dock Toggle */}
+      <div className="flex items-center gap-3 w-10 sm:w-auto pointer-events-auto z-20">
         <button
           id="dockToggleBtn"
           onClick={() => setShowDock(!showDock)}
-          className="min-w-[44px] min-h-[44px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
+          className="min-w-[40px] min-h-[40px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
           title={showDock ? "Close Dock" : "Open Dock"}
         >
           <svg className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,8 +76,8 @@ export default function Header({
         </button>
       </div>
 
-      {/* Center: Unified Title & Mode Toggle */}
-      <div className="absolute left-1/2 -translate-x-1/2 max-w-[calc(100vw-10rem)] sm:max-w-none pointer-events-auto">
+      {/* Center: Desktop Unified Title & Mode Toggle */}
+      <div className="hidden md:block absolute left-1/2 -translate-x-1/2 pointer-events-auto z-20">
         <div className="flex items-center p-1.5 rounded-xl border border-slate-700/40 header-shell">
           {/* Title */}
           <div className="px-2 sm:px-4 flex items-center gap-2">
@@ -75,7 +101,7 @@ export default function Header({
               <button
                 key={m.value}
                 tabIndex={-1}
-                onClick={() => { setMode(m.value); setHoveredCard(null); clearSelection(); }}
+                onClick={() => handleModeSelect(m.value)}
                 className={`relative z-10 py-2 sm:py-1.5 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.value
                   ? 'text-white'
                   : 'text-slate-400 hover:text-slate-200'
@@ -88,12 +114,56 @@ export default function Header({
         </div>
       </div>
 
+      {/* Center: Mobile Mode Dropdown */}
+      <div className="flex md:hidden flex-1 justify-center pointer-events-auto relative z-20">
+        <div className="relative" ref={mobileMenuRef}>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/90 border border-slate-700/50 text-slate-200 font-medium text-sm backdrop-blur-md shadow-lg active:scale-95 transition-all"
+          >
+            <span className="font-bold text-slate-400 hidden xs:inline">Arena</span>
+            <span className="font-bold hidden xs:inline text-slate-600">/</span>
+            <span>{currentModeLabel}</span>
+            <svg
+              className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Mobile Dropdown Menu */}
+          {isMobileMenuOpen && (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 py-1 rounded-xl bg-slate-800 border border-slate-700 shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 origin-top">
+              {MODES.map(m => (
+                <button
+                  key={m.value}
+                  onClick={() => handleModeSelect(m.value)}
+                  className={`px-4 py-3 text-sm text-left w-full transition-colors flex items-center justify-between ${mode === m.value
+                      ? 'bg-blue-500/10 text-blue-400'
+                      : 'text-slate-300 hover:bg-slate-700/50'
+                    }`}
+                >
+                  {m.label}
+                  {mode === m.value && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Right: Settings */}
-      <div className="flex items-center gap-2 flex-1 justify-end pointer-events-auto">
-        {/* Settings */}
+      <div className="flex items-center gap-2 w-10 sm:w-auto justify-end pointer-events-auto z-20">
         <button
           onClick={onOpenSettings}
-          className="min-w-[44px] min-h-[44px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
+          className="min-w-[40px] min-h-[40px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
           title="Settings"
         >
           <svg className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
