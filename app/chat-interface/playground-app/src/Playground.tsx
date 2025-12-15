@@ -597,8 +597,8 @@ export default function Playground() {
         return;
       }
 
-      // Enter opens inspector for selected card
-      if (event.key === 'Enter' && selectedCardIds.size === 1) {
+      // Enter opens inspector for selected card(s)
+      if (event.key === 'Enter' && selectedCardIds.size >= 1) {
         event.preventDefault();
         const selectedId = Array.from(selectedCardIds)[0];
         setActiveInspectorId(selectedId);

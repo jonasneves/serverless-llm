@@ -71,13 +71,13 @@ export default function PromptInput({
         </div>
 
         <div
-          className={`prompt-panel rounded-xl p-4 transition-all duration-300 flex items-center gap-2 ${inputFocused ? 'prompt-panel-focused' : ''}`}
+          className={`rounded-xl p-1.5 transition-all duration-300 flex items-center gap-2 border border-slate-700/40 header-shell ${inputFocused ? 'prompt-panel-focused' : ''}`}
         >
           <input
             ref={inputRef}
             type="text"
             placeholder={placeholder || "Ask a question to compare model responses..."}
-            className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm"
+            className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm px-2.5 py-2"
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             onKeyDown={(e) => {
@@ -105,16 +105,16 @@ export default function PromptInput({
                 }
               }
             }}
-            className={`min-w-[44px] min-h-[44px] p-2 rounded-lg transition-colors active:scale-95 flex items-center justify-center ${isGenerating
-                ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                : 'text-slate-400 hover:text-white hover:bg-white/10'
+            className={`min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] p-2 rounded-lg transition-colors active:scale-95 flex items-center justify-center ${isGenerating
+              ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+              : 'text-slate-400 hover:text-white hover:bg-white/10'
               }`}
             aria-label={isGenerating ? "Stop generation" : "Send message"}
           >
             {isGenerating ? (
-              <Square className="w-7 h-7 sm:w-6 sm:h-6 fill-current" />
+              <Square className="w-5 h-5 sm:w-4 sm:h-4 fill-current" />
             ) : (
-              <ArrowUp className="w-7 h-7 sm:w-6 sm:h-6" strokeWidth={2.5} />
+              <ArrowUp className="w-5 h-5 sm:w-4 sm:h-4" strokeWidth={2.5} />
             )}
           </button>
         </div>
