@@ -860,7 +860,7 @@ export default function Playground() {
       <div
         style={{
           paddingLeft: activeInspectorId && mode === 'compare' && inspectorPosition === 'left' ? '28rem' : '1.5rem',
-          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : '1.5rem',
+          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : mode === 'council' || mode === 'roundtable' ? '0' : '1.5rem',
         }}
       >
         {/* Dock Backdrop */}
@@ -930,7 +930,9 @@ export default function Playground() {
                   alignItems: mode === 'compare' ? 'flex-start' : 'center',
                   justifyContent: 'center',
                   ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
-                  transform: `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
+                  transform: mode === 'council' || mode === 'roundtable'
+                    ? `translateY(calc(var(--arena-offset-y) - 50px)) scale(${isDraggingOver ? 1.02 : 1})`
+                    : `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
                   willChange: 'transform',
                   border: isDraggingOver ? '2px dashed rgba(59, 130, 246, 0.4)' : '2px dashed transparent',
                   borderRadius: isDraggingOver ? '24px' : '0px',
@@ -940,10 +942,14 @@ export default function Playground() {
                   ...(mode === 'compare' ? {
                     minHeight: '300px', // Minimum height to ensure clickable background
                     paddingBottom: '120px', // Extra space at bottom for right-click menu access
+                  } : mode === 'council' || mode === 'roundtable' ? {
+                    height: '100%',
+                    minHeight: '100%',
+                    overflow: 'hidden', // Prevent scroll in arena for council
                   } : {
                     height: '100%',
                     minHeight: '100%',
-                    overflow: 'hidden' // Prevent scroll in arena for council
+                    overflow: 'hidden'
                   }),
 
                   ...(isDraggingOver ? {
@@ -1002,23 +1008,8 @@ export default function Playground() {
                 <DiscussionTranscript
                   history={history}
                   models={modelsData}
-                  className="pt-24 mask-fade-top"
+                  className="pt-24 pb-6 mask-fade-top"
                 />
-
-                <div className="p-4 border-t border-white/5 relative z-[50]">
-                  <PromptInput
-                    inputRef={inputRef}
-                    inputFocused={inputFocused}
-                    setInputFocused={setInputFocused}
-                    onSendMessage={sendMessage}
-                    onOpenTopics={() => setShowTopics(true)}
-                    className="relative w-full"
-                    style={{ paddingBottom: '0' }}
-                    placeholder="Steer the discussion..."
-                    isGenerating={isGenerating || isSynthesizing}
-                    onStop={handleStop}
-                  />
-                </div>
               </div>
             )}
           </div>
@@ -1094,8 +1085,8 @@ export default function Playground() {
         onSelectPrompt={handleSelectPrompt}
       />
 
-      {/* Fixed Prompt Input for Compare Mode ONLY (and not Orchestrator) */}
-      {mode === 'compare' && (
+      {/* Fixed Prompt Input for Compare, Council, and Roundtable Modes */}
+      {(mode === 'compare' || mode === 'council' || mode === 'roundtable') && (
         <PromptInput
           inputRef={inputRef}
           inputFocused={inputFocused}
@@ -1104,6 +1095,7 @@ export default function Playground() {
           onOpenTopics={() => setShowTopics(true)}
           isGenerating={isGenerating || isSynthesizing}
           onStop={handleStop}
+          placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
         />
       )}
 
