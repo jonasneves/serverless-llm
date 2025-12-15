@@ -15,34 +15,53 @@ export interface ChatViewHandle {
     stopGeneration: () => void;
 }
 
+export type ChatAutoModeScope = 'all' | 'local' | 'api';
+
+export interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    modelName?: string;
+    modelId?: string;
+    error?: boolean;
+}
+
 interface ChatViewProps {
     models: Model[];
     selectedModelId: string | null;
     onSelectModel: (id: string) => void;
     githubToken?: string;
     onOpenTopics: () => void;
+    // External state management for persistence across mode switches
+    messages: ChatMessage[];
+    setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+    autoMode: boolean;
+    setAutoMode: (value: boolean) => void;
+    autoModeScope: ChatAutoModeScope;
+    setAutoModeScope: (value: ChatAutoModeScope) => void;
+    onModelUsed?: (modelId: string) => void;
+    onClear?: () => void;
 }
 
-interface ChatMessage {
-    role: 'user' | 'assistant';
-    content: string;
-    modelName?: string;
-    error?: boolean;
-}
+// ChatMessage interface moved above ChatViewProps for export
 
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
     selectedModelId,
     onSelectModel,
     githubToken,
-    onOpenTopics
+    onOpenTopics,
+    messages,
+    setMessages,
+    autoMode,
+    setAutoMode,
+    autoModeScope,
+    setAutoModeScope,
+    onModelUsed,
+    onClear
 }, ref) => {
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentResponse, setCurrentResponse] = useState('');
     const [inputFocused, setInputFocused] = useState(false);
-    const [autoMode, setAutoMode] = useState(true);
-    const [autoModeScope, setAutoModeScope] = useState<AutoModeScope>('local');
     const [showAutoDropdown, setShowAutoDropdown] = useState(false);
     const [showModelSelector, setShowModelSelector] = useState(false);
     const [expandedLocalModels, setExpandedLocalModels] = useState(true);
