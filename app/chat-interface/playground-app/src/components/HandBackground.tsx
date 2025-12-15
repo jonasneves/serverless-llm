@@ -7,7 +7,6 @@ import {
 interface HandBackgroundProps {
     onStopGeneration?: () => void;
     onSendMessage?: (msg: string) => void;
-    onModeSwitch?: (direction: 'next' | 'prev') => void;
     onScroll?: (deltaY: number) => void;
     onPinch?: (x: number, y: number) => void;
 }
@@ -15,21 +14,18 @@ interface HandBackgroundProps {
 export default function HandBackground({
     onStopGeneration,
     onSendMessage,
-    onModeSwitch,
     onScroll,
     onPinch
 }: HandBackgroundProps) {
     // Refs for callbacks to avoid stale closures in RAF loop
     const onStopGenerationRef = useRef(onStopGeneration);
     const onSendMessageRef = useRef(onSendMessage);
-    const onModeSwitchRef = useRef(onModeSwitch);
     const onScrollRef = useRef(onScroll);
     const onPinchRef = useRef(onPinch);
 
     // Update refs on every render
     onStopGenerationRef.current = onStopGeneration;
     onSendMessageRef.current = onSendMessage;
-    onModeSwitchRef.current = onModeSwitch;
     onScrollRef.current = onScroll;
     onPinchRef.current = onPinch;
 
@@ -38,6 +34,7 @@ export default function HandBackground({
     const [loaded, setLoaded] = useState(false);
     const requestRef = useRef<number>();
     const handLandmarkerRef = useRef<HandLandmarker | null>(null);
+    const streamRef = useRef<MediaStream | null>(null); // Store stream for cleanup
 
     // Gesture State
     const lastGestureTime = useRef<number>(0);
@@ -57,6 +54,11 @@ export default function HandBackground({
         lastSwipeX: number | null;
         lastIndexTipY: number | null;
         lastOpenTime: number;
+        // Wave detection: track x positions and direction changes
+        waveXPositions: number[];
+        waveDirectionChanges: number;
+        lastWaveDirection: 'left' | 'right' | null;
+        waveStartTime: number;
     }>>(new Map());
 
     const getHandState = (index: number) => {
@@ -66,7 +68,11 @@ export default function HandBackground({
                 lastScrollY: null,
                 lastSwipeX: null,
                 lastIndexTipY: null,
-                lastOpenTime: 0
+                lastOpenTime: 0,
+                waveXPositions: [],
+                waveDirectionChanges: 0,
+                lastWaveDirection: null,
+                waveStartTime: 0
             });
         }
         return handStates.current.get(index)!;
@@ -191,14 +197,60 @@ export default function HandBackground({
         // -----------------------
         let currentPose = 'NEUTRAL';
 
-        // Check STOP (Open Palm)
-        // Treat Open Palm as a "Wake Word" for Yes/No
+        // Check STOP (Open Palm) - Also tracks wave gesture
         if (fingersExtendedCount >= 4) {
             currentPose = 'STOP';
             state.lastOpenTime = now;
+
+            // Wave detection: track horizontal movement while palm is open
+            const currentX = wrist.x;
+
+            // Start wave tracking if not already started
+            if (state.waveStartTime === 0 || (now - state.waveStartTime) > 2000) {
+                // Reset wave tracking after 2 seconds
+                state.waveXPositions = [currentX];
+                state.waveDirectionChanges = 0;
+                state.lastWaveDirection = null;
+                state.waveStartTime = now;
+            } else {
+                // Track direction changes
+                const lastX = state.waveXPositions[state.waveXPositions.length - 1];
+                const deltaX = currentX - lastX;
+                const moveThreshold = 0.03; // Minimum movement to count as direction
+
+                if (Math.abs(deltaX) > moveThreshold) {
+                    state.waveXPositions.push(currentX);
+                    const newDirection = deltaX > 0 ? 'right' : 'left';
+
+                    if (state.lastWaveDirection && newDirection !== state.lastWaveDirection) {
+                        state.waveDirectionChanges++;
+                    }
+                    state.lastWaveDirection = newDirection;
+
+                    // Wave detected: 3+ direction changes within 2 seconds
+                    if (state.waveDirectionChanges >= 3 && (now - lastGestureTime.current > gestureCooldown)) {
+                        if (onSendMessageRef.current) {
+                            onSendMessageRef.current("Hi");
+                            lastGestureTime.current = now;
+                            // Reset wave state
+                            state.waveDirectionChanges = 0;
+                            state.waveStartTime = 0;
+                            state.lastWaveDirection = null;
+                            state.waveXPositions = [];
+                            return 'WAVE';
+                        }
+                    }
+                }
+            }
         }
         // Check Thumbs Up/Down (Fingers curled)
         else if (fingersExtendedCount <= 1) {
+            // Reset wave tracking when palm is not open
+            state.waveDirectionChanges = 0;
+            state.waveStartTime = 0;
+            state.lastWaveDirection = null;
+            state.waveXPositions = [];
+
             // Only allow Yes/No if we saw an Open Palm recently (Wake Window)
             const canTriggerYesNo = (now - state.lastOpenTime) < 2000; // 2 seconds window
 
@@ -222,6 +274,12 @@ export default function HandBackground({
             if (currentPose === 'NEUTRAL' && fingersExtendedCount === 0) {
                 currentPose = 'FIST';
             }
+        } else {
+            // For other poses (2-3 fingers extended), reset wave tracking
+            state.waveDirectionChanges = 0;
+            state.waveStartTime = 0;
+            state.lastWaveDirection = null;
+            state.waveXPositions = [];
         }
 
         // -----------------------
@@ -432,6 +490,7 @@ export default function HandBackground({
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 // Start camera
                 navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+                    streamRef.current = stream; // Store for cleanup
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
                         videoRef.current.play();
@@ -450,12 +509,38 @@ export default function HandBackground({
 
         return () => {
             if (requestRef.current) cancelAnimationFrame(requestRef.current);
-            if (videoRef.current?.srcObject) {
-                const stream = videoRef.current.srcObject as MediaStream;
-                stream.getTracks().forEach(track => track.stop());
-            }
         }
     }, [loaded]);
+
+    // Cleanup effect - runs on unmount to stop camera
+    useEffect(() => {
+        return () => {
+            // Stop animation frame
+            if (requestRef.current) {
+                cancelAnimationFrame(requestRef.current);
+                requestRef.current = undefined;
+            }
+
+            // Stop all camera tracks
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => {
+                    track.stop();
+                });
+                streamRef.current = null;
+            }
+
+            // Clear video source
+            if (videoRef.current) {
+                videoRef.current.srcObject = null;
+            }
+
+            // Close hand landmarker
+            if (handLandmarkerRef.current) {
+                handLandmarkerRef.current.close();
+                handLandmarkerRef.current = null;
+            }
+        };
+    }, []);
 
     return (
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden scale-x-[-1]">

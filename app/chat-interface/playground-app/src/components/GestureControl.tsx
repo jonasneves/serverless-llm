@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick, Sparkles, Info } from 'lucide-react';
 import HandBackground from './HandBackground';
+
+const STORAGE_KEY = 'gesture-control-skip-intro';
 
 interface GestureControlProps {
   onStopGeneration?: () => void;
   onSendMessage?: (msg: string) => void;
-  onModeSwitch?: (direction: 'next' | 'prev') => void;
   onScroll?: (deltaY: number) => void;
   onPinch?: (x: number, y: number) => void;
 }
@@ -13,18 +14,50 @@ interface GestureControlProps {
 export default function GestureControl(props: GestureControlProps) {
   const [isActive, setIsActive] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [skipIntro, setSkipIntro] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  // Load preference from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'true') {
+      setSkipIntro(true);
+    }
+  }, []);
 
   const toggle = () => {
     if (isActive) {
       setIsActive(false);
+      setShowTooltip(false);
     } else {
-      setShowModal(true);
+      if (skipIntro) {
+        // Skip modal, go directly to camera
+        setIsActive(true);
+        setShowTooltip(true);
+        // Auto-hide tooltip after 5 seconds
+        setTimeout(() => setShowTooltip(false), 5000);
+      } else {
+        setShowModal(true);
+      }
     }
   };
 
-  const startCamera = () => {
+  const startCamera = (rememberChoice: boolean = false) => {
+    if (rememberChoice) {
+      localStorage.setItem(STORAGE_KEY, 'true');
+      setSkipIntro(true);
+    }
     setShowModal(false);
     setIsActive(true);
+    // Show tooltip briefly when starting
+    setShowTooltip(true);
+    setTimeout(() => setShowTooltip(false), 4000);
+  };
+
+  const resetPreference = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setSkipIntro(false);
+    setShowTooltip(false);
   };
 
   const baseClasses = "fixed bottom-36 sm:bottom-5 right-3 sm:right-5 z-50 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95";
@@ -33,6 +66,54 @@ export default function GestureControl(props: GestureControlProps) {
 
   return (
     <>
+      {/* Floating Tooltip - shown when gesture control is active and user has skipped intro */}
+      {isActive && showTooltip && (
+        <div
+          className="fixed bottom-52 sm:bottom-[72px] right-3 sm:right-5 z-50 animate-in slide-in-from-bottom-2 fade-in duration-300"
+          style={{ maxWidth: '220px' }}
+        >
+          <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-xl p-3 relative">
+            {/* Arrow pointing down */}
+            <div className="absolute bottom-0 right-4 transform translate-y-full">
+              <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-slate-700/80" />
+            </div>
+
+            <div className="flex items-start gap-2 mb-2">
+              <Info size={14} className="text-blue-400 shrink-0 mt-0.5" />
+              <span className="text-xs text-slate-300 font-medium">Gesture Controls</span>
+              <button
+                onClick={() => setShowTooltip(false)}
+                className="ml-auto text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <Sparkles size={10} className="text-yellow-400" /> Wave → Hi
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <Hand size={10} className="text-red-400" /> Palm → Stop
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <ThumbsUp size={10} className="text-green-400" /> Up → Yes
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <ThumbsDown size={10} className="text-orange-400" /> Down → No
+              </div>
+            </div>
+
+            <button
+              onClick={resetPreference}
+              className="mt-2 w-full text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Show full guide on next start
+            </button>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={toggle}
         className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
@@ -76,6 +157,11 @@ export default function GestureControl(props: GestureControlProps) {
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <GestureCard
+                  icon={<Sparkles size={18} className="text-yellow-400" />}
+                  label="Wave"
+                  desc="Send 'Hi'"
+                />
+                <GestureCard
                   icon={<Hand size={18} className="text-red-400" />}
                   label="Open Palm"
                   desc="Stop Generation"
@@ -100,29 +186,28 @@ export default function GestureControl(props: GestureControlProps) {
                   label="Tap Index"
                   desc="Click Element"
                 />
-                {/* Pinch also works as a click, but Tap is clearer now. 
-                    I'll update the label for the last card to reflect 'Tap Index' or 'Point & Tap' as well, 
-                    since Pinch/Tap map to the same onPinch event but the user instruction was about Index Poking. 
-                    Actually, let's keep it simple. Index Tap is "Tap". 
-                    The previous "Pinch" card can be renamed to "Index Tap" or just kept as "Tap".
-                    Wait, "Pinch" logic is still in HandBackground? Yes, it is. But user asked for Poking.
-                    I will rename the last card to "Index Tap" and change icon if needed, 
-                    to reflect the primary way we want them to click.
-                */}
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => startCamera(false)}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
+                  >
+                    Enable Camera
+                  </button>
+                </div>
                 <button
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
+                  onClick={() => startCamera(true)}
+                  className="w-full px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-400 hover:text-slate-200 text-xs font-medium transition-colors flex items-center justify-center gap-2"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={startCamera}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
-                >
-                  Enable Camera
+                  <span>Enable & Don't Show Again</span>
                 </button>
               </div>
             </div>

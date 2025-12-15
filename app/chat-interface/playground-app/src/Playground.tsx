@@ -19,7 +19,7 @@ import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import DiscussionTranscript from './components/DiscussionTranscript';
 import OrchestratorView from './components/OrchestratorView';
-import ChatView, { ChatViewHandle } from './components/ChatView';
+import ChatView, { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
 import GestureControl from './components/GestureControl';
@@ -84,6 +84,12 @@ export default function Playground() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastQuery, setLastQuery] = useState('');
+
+  // Chat mode state - persisted across mode switches
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatAutoMode, setChatAutoMode] = useState(true);
+  const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('local');
+  const [lastUsedChatModelId, setLastUsedChatModelId] = useState<string | null>(null);
   const {
     history,
     historyRef: conversationHistoryRef,
@@ -428,8 +434,23 @@ export default function Playground() {
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
     triggerLineTransition();
+
+    // When leaving Chat mode with a used model, ensure it's included in selection for other modes
+    if (mode === 'chat' && lastUsedChatModelId) {
+      // For multi-model modes (compare, council, roundtable), add the chat model to selection
+      if (nextMode === 'compare' || nextMode === 'council' || nextMode === 'roundtable') {
+        if (!selected.includes(lastUsedChatModelId)) {
+          setSelected(prev => [...prev, lastUsedChatModelId]);
+        }
+      }
+      // For single-model modes (orchestrator), set as the selected model
+      else if (nextMode === 'orchestrator') {
+        setSelected([lastUsedChatModelId]);
+      }
+    }
+
     setMode(nextMode);
-  }, [mode, triggerLineTransition]);
+  }, [mode, triggerLineTransition, lastUsedChatModelId, selected, setSelected]);
 
   useEffect(() => () => {
     if (lineTransitionTimeoutRef.current) {
@@ -903,16 +924,6 @@ export default function Playground() {
             sendMessage(msg, {}, activeIds);
           }
         }}
-        onModeSwitch={(dir) => {
-          const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'orchestrator'];
-          const idx = modes.indexOf(mode);
-          if (idx === -1) return;
-
-          const nextIdx = dir === 'next'
-            ? (idx + 1) % modes.length
-            : (idx - 1 + modes.length) % modes.length;
-          setMode(modes[nextIdx]);
-        }}
         onScroll={(deltaY) => {
           arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
           ensureRaf();
@@ -1009,6 +1020,22 @@ export default function Playground() {
               onSelectModel={(id) => setSelected([id])}
               githubToken={githubToken}
               onOpenTopics={() => setShowTopics(true)}
+              messages={chatMessages}
+              setMessages={setChatMessages}
+              autoMode={chatAutoMode}
+              setAutoMode={setChatAutoMode}
+              autoModeScope={chatAutoModeScope}
+              setAutoModeScope={setChatAutoModeScope}
+              onModelUsed={(modelId) => {
+                setLastUsedChatModelId(modelId);
+                // Ensure the model is selected (for mode switching)
+                if (!selected.includes(modelId)) {
+                  setSelected([modelId]);
+                }
+              }}
+              onClear={() => {
+                setLastUsedChatModelId(null);
+              }}
             />
           </div>
         )}

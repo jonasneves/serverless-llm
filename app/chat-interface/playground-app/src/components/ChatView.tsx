@@ -7,7 +7,6 @@ import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import SelectionOverlay from './SelectionOverlay';
 
-type AutoModeScope = 'all' | 'local' | 'api';
 
 export interface ChatViewHandle {
     sendMessage: (text: string) => void;
@@ -285,10 +284,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         setMessages(prev => [...prev, {
                             role: 'assistant',
                             content: result.content,
-                            modelName: model.name
+                            modelName: model.name,
+                            modelId: model.id
                         }]);
                         setCurrentResponse('');
                         setCurrentAutoModel(null);
+                        // Notify parent about the model used (for mode switching)
+                        onModelUsed?.(model.id);
                         return;
                     }
 
@@ -311,8 +313,11 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     setMessages(prev => [...prev, {
                         role: 'assistant',
                         content: result.content,
-                        modelName: model?.name
+                        modelName: model?.name,
+                        modelId: selectedModelId
                     }]);
+                    // Notify parent about the model used (for mode switching)
+                    onModelUsed?.(selectedModelId);
                 } else {
                     setMessages(prev => [...prev, {
                         role: 'assistant',
@@ -351,6 +356,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         setMessages([]);
         setCurrentResponse('');
         setSelectedMessages(new Set());
+        onClear?.();
     };
 
     const handleDeleteSelected = () => {
@@ -364,7 +370,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         ? models.find(m => m.id === currentAutoModel)
         : selectedModel;
 
-    const autoScopeLabels: Record<AutoModeScope, string> = {
+    const autoScopeLabels: Record<ChatAutoModeScope, string> = {
         all: 'All',
         local: 'Local',
         api: 'API'
@@ -390,7 +396,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                                 {showAutoDropdown && (
                                     <div className="absolute top-full left-0 mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                        {(['all', 'local', 'api'] as AutoModeScope[]).map(scope => (
+                                        {(['all', 'local', 'api'] as ChatAutoModeScope[]).map(scope => (
                                             <button
                                                 key={scope}
                                                 onClick={() => {
@@ -640,14 +646,43 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                     {isGenerating && (
                         <div className="flex justify-start">
-                            <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 pt-3 pb-0 bg-slate-800/60 border border-slate-700/60 text-slate-200">
-                                <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                    <Bot size={12} />
+                            <div
+                                className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 pt-3 pb-0 text-slate-200 relative"
+                                style={{
+                                    background: 'rgba(30, 41, 59, 0.8)',
+                                    border: '1px solid rgba(251, 191, 36, 0.4)',
+                                    boxShadow: '0 0 20px rgba(251, 191, 36, 0.15), inset 0 0 30px rgba(251, 191, 36, 0.03)'
+                                }}
+                            >
+                                <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
+                                    {/* Spinning indicator */}
+                                    <div className="relative flex items-center justify-center" style={{ width: '14px', height: '14px' }}>
+                                        <svg
+                                            width={14}
+                                            height={14}
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            style={{
+                                                filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.55))',
+                                                animation: 'spin 0.6s linear infinite'
+                                            }}
+                                        >
+                                            <defs>
+                                                <linearGradient id="chatSpinnerGradient" gradientUnits="userSpaceOnUse" x1="3" y1="12" x2="12" y2="3">
+                                                    <stop offset="0%" stopColor="#fbbf24" stopOpacity="1" />
+                                                    <stop offset="60%" stopColor="#fbbf24" stopOpacity="0.5" />
+                                                    <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+                                                </linearGradient>
+                                            </defs>
+                                            <circle cx="12" cy="12" r="9" stroke="rgba(251, 191, 36, 0.15)" strokeWidth="2" fill="none" />
+                                            <path d="M 12 3 A 9 9 0 1 1 3 12" stroke="url(#chatSpinnerGradient)" strokeWidth="2" strokeLinecap="round" fill="none" />
+                                            <circle cx="3" cy="12" r="1.4" fill="#fbbf24" />
+                                        </svg>
+                                    </div>
                                     {displayModel?.name || 'Assistant'}
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none">
                                     <FormattedContent text={currentResponse} />
-                                    <span className="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse align-middle"></span>
                                 </div>
                             </div>
                         </div>

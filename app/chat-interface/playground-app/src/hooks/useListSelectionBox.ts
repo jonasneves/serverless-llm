@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 type SelectionPoint = { x: number; y: number };
 
 interface SelectionState {
-    origin: SelectionPoint;
-    current: SelectionPoint;
+    origin: SelectionPoint; // Screen coordinates
+    current: SelectionPoint; // Screen coordinates
     active: boolean;
 }
 
@@ -36,6 +36,19 @@ function normalizeRect(a: SelectionPoint, b: SelectionPoint) {
     };
 }
 
+// Check if two rectangles overlap - all in screen coordinates
+function rectsIntersect(
+    r1: { left: number; right: number; top: number; bottom: number },
+    r2: { left: number; right: number; top: number; bottom: number }
+): boolean {
+    return !(
+        r1.right < r2.left ||
+        r1.left > r2.right ||
+        r1.bottom < r2.top ||
+        r1.top > r2.bottom
+    );
+}
+
 export function useListSelectionBox({
     containerRef,
     itemRefs,
@@ -60,13 +73,20 @@ export function useListSelectionBox({
             const clickedOnInteractive = target.closest('button, a, input, textarea, select, [role="button"]');
             if (clickedOnInteractive) return;
 
-            // Allow selection to start from outside (consistent with Arena behavior)
-            // if (!containerRef.current.contains(target)) return;
-
+            // Check if we're within the container bounds
             const containerBounds = containerRef.current.getBoundingClientRect();
+            const isInsideContainer =
+                event.clientX >= containerBounds.left &&
+                event.clientX <= containerBounds.right &&
+                event.clientY >= containerBounds.top &&
+                event.clientY <= containerBounds.bottom;
+
+            if (!isInsideContainer) return;
+
+            // Use screen coordinates for origin
             const point: SelectionPoint = {
-                x: event.clientX - containerBounds.left,
-                y: event.clientY - containerBounds.top,
+                x: event.clientX,
+                y: event.clientY,
             };
 
             event.preventDefault();
@@ -90,50 +110,55 @@ export function useListSelectionBox({
         document.addEventListener('selectstart', handleSelectStart);
 
         const handleMouseMove = (event: MouseEvent) => {
-            const containerBounds = containerRef.current!.getBoundingClientRect();
             const point: SelectionPoint = {
-                x: event.clientX - containerBounds.left,
-                y: event.clientY - containerBounds.top,
+                x: event.clientX,
+                y: event.clientY,
             };
 
             setDragSelection((state) => {
                 if (!state) return state;
                 const rect = normalizeRect(state.origin, point);
-                const active = state.active || rect.width > 4 || rect.height > 4;
+                // Lower threshold (2px instead of 4px) for more sensitive detection
+                const active = state.active || rect.width > 2 || rect.height > 2;
                 return { ...state, current: point, active };
             });
         };
 
         const handleMouseUp = (event: MouseEvent) => {
             dragSelectionActiveRef.current = false;
-            const containerBounds = containerRef.current!.getBoundingClientRect();
+
             const point: SelectionPoint = {
-                x: event.clientX - containerBounds.left,
-                y: event.clientY - containerBounds.top,
+                x: event.clientX,
+                y: event.clientY,
             };
 
             setDragSelection((state) => {
                 if (!state) return null;
 
-                const rect = normalizeRect(state.origin, point);
+                const screenRect = normalizeRect(state.origin, point);
 
-                if (state.active && rect.width > 0 && rect.height > 0) {
+                // Lower minimums for more forgiving selection
+                if (state.active && screenRect.width > 1 && screenRect.height > 1) {
                     const matched: number[] = [];
-                    const currentContainerBounds = containerRef.current!.getBoundingClientRect();
-                    const selectionRectScreen = {
-                        left: currentContainerBounds.left + rect.left,
-                        right: currentContainerBounds.left + rect.right,
-                        top: currentContainerBounds.top + rect.top,
-                        bottom: currentContainerBounds.top + rect.bottom,
-                    };
 
+                    // Iterate through all item refs and check intersection using screen coordinates
                     for (const [index, element] of itemRefs.current.entries()) {
                         const itemBounds = element.getBoundingClientRect();
-                        const intersects = !(
-                            itemBounds.right < selectionRectScreen.left ||
-                            itemBounds.left > selectionRectScreen.right ||
-                            itemBounds.bottom < selectionRectScreen.top ||
-                            itemBounds.top > selectionRectScreen.bottom
+
+                        // Both rects are now in screen coordinates
+                        const intersects = rectsIntersect(
+                            {
+                                left: screenRect.left,
+                                right: screenRect.right,
+                                top: screenRect.top,
+                                bottom: screenRect.bottom,
+                            },
+                            {
+                                left: itemBounds.left,
+                                right: itemBounds.right,
+                                top: itemBounds.top,
+                                bottom: itemBounds.bottom,
+                            }
                         );
 
                         if (intersects) matched.push(index);
@@ -156,17 +181,23 @@ export function useListSelectionBox({
         };
     }, [dragSelection, containerRef, itemRefs, setSelectedIndices]);
 
+    // Convert screen coordinates to container-relative coordinates for the visual rect
     const selectionRect: SelectionRect | null = useMemo(() => {
-        if (!dragSelection || !dragSelection.active) return null;
-        const rect = normalizeRect(dragSelection.origin, dragSelection.current);
-        if (rect.width <= 0 || rect.height <= 0) return null;
+        if (!dragSelection || !dragSelection.active || !containerRef.current) return null;
+
+        const containerBounds = containerRef.current.getBoundingClientRect();
+        const screenRect = normalizeRect(dragSelection.origin, dragSelection.current);
+
+        if (screenRect.width <= 0 || screenRect.height <= 0) return null;
+
+        // Convert to container-relative coordinates for display
         return {
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height,
+            left: screenRect.left - containerBounds.left,
+            top: screenRect.top - containerBounds.top,
+            width: screenRect.width,
+            height: screenRect.height,
         };
-    }, [dragSelection]);
+    }, [dragSelection, containerRef]);
 
     const clearSelection = useCallback(() => {
         setDragSelection(null);

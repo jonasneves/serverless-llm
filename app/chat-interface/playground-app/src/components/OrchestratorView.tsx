@@ -493,7 +493,7 @@ export default function OrchestratorView({
                     {/* Center: Badge */}
                     <div className="flex-1 flex justify-center items-center">
                         <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
-                            AUTOGEN • MULTI-AGENT
+                            AUTOGEN • TOOLORCHESTRA
                         </div>
                     </div>
 
