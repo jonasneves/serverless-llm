@@ -412,7 +412,7 @@ export default function Playground() {
   // Orchestrator auto mode state
   type OrchestratorAutoScope = 'all' | 'local' | 'api';
   const [orchestratorAutoMode, setOrchestratorAutoMode] = useState(true);
-  const [orchestratorAutoScope, setOrchestratorAutoScope] = useState<OrchestratorAutoScope>('api');
+  const [orchestratorAutoScope, setOrchestratorAutoScope] = useState<OrchestratorAutoScope>('local');
   const [showOrchestratorMenu, setShowOrchestratorMenu] = useState(false);
   const orchestratorMenuRef = useRef<HTMLDivElement>(null);
 

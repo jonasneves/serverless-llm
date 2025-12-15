@@ -598,7 +598,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             <span className="text-[10px] text-slate-500">{orchestratorPhaseLabel}</span>
           </div>
 
-          {hoveredCard === 'moderator' && (
+          {hoveredCard === 'moderator' && !showOrchestratorMenu && (
             <div
               data-card
               onClick={(e) => e.stopPropagation()}
