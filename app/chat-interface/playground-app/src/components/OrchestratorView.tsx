@@ -5,6 +5,7 @@ import PromptInput from './PromptInput';
 import { Terminal, Cpu, Bot, CheckCircle, AlertTriangle, Eraser, Zap, ChevronDown } from 'lucide-react';
 import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
+import SelectionOverlay from './SelectionOverlay';
 
 type AutoModeScope = 'all' | 'local' | 'api';
 
@@ -508,23 +509,8 @@ export default function OrchestratorView({
                 </div>
             </div>
 
-
             {/* Blue Selection Rectangle */}
-            {selectionRect && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: selectionRect.left,
-                        top: selectionRect.top,
-                        width: selectionRect.width,
-                        height: selectionRect.height,
-                        border: '2px solid rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        pointerEvents: 'none',
-                        zIndex: 40,
-                    }}
-                />
-            )}
+            <SelectionOverlay rect={selectionRect} />
 
             {/* Main Content Area */}
             <div

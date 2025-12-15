@@ -21,6 +21,7 @@ import DiscussionTranscript from './components/DiscussionTranscript';
 import OrchestratorView from './components/OrchestratorView';
 import ChatView from './components/ChatView';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
+import SelectionOverlay from './components/SelectionOverlay';
 import './playground.css';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
@@ -1018,17 +1019,7 @@ export default function Playground() {
       </div>
 
       {/* Selection rectangle overlay - positioned relative to root container */}
-      {selectionRect && (
-        <div
-          className="absolute pointer-events-none border-2 border-blue-400 bg-blue-400/10 z-50"
-          style={{
-            left: `${selectionRect.left}px`,
-            top: `${selectionRect.top}px`,
-            width: `${selectionRect.width}px`,
-            height: `${selectionRect.height}px`,
-          }}
-        />
-      )}
+      <SelectionOverlay rect={selectionRect} />
 
       {activeInspectorId && inspectorModels.length > 0 && (
         <ResponseInspector

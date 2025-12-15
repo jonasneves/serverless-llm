@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Model, ChatHistoryEntry } from '../types';
 import FormattedContent from './FormattedContent';
+import { MessageSquare } from 'lucide-react';
 
 interface DiscussionTranscriptProps {
     history: ChatHistoryEntry[];
@@ -128,13 +129,14 @@ export default function DiscussionTranscript({ history, models, className = '' }
     return (
         <div
             ref={containerRef}
-            className={`flex-1 overflow-y-auto px-4 py-6 scroll-smooth ${className}`}
+            className={`flex-1 overflow-y-auto px-4 py-6 scroll-smooth ${className} [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]`}
             data-no-arena-scroll // Prevent arena scroll capture
         >
             <div className="max-w-3xl mx-auto flex flex-col justify-end min-h-full">
                 {history.length === 0 && (
-                    <div className="flex-1 flex items-center justify-center text-slate-500 italic pb-20">
-                        Start a discussion to see the transcript.
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
+                        <MessageSquare size={48} className="mb-4" />
+                        <p className="text-lg">Start a discussion to see the transcript.</p>
                     </div>
                 )}
                 {history.map(renderEntry)}

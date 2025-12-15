@@ -60,7 +60,8 @@ export function useListSelectionBox({
             const clickedOnInteractive = target.closest('button, a, input, textarea, select, [role="button"]');
             if (clickedOnInteractive) return;
 
-            if (!containerRef.current.contains(target)) return;
+            // Allow selection to start from outside (consistent with Arena behavior)
+            // if (!containerRef.current.contains(target)) return;
 
             const containerBounds = containerRef.current.getBoundingClientRect();
             const point: SelectionPoint = {
