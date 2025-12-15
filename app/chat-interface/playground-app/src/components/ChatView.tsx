@@ -4,6 +4,7 @@ import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
 import { Bot, AlertTriangle, User, Eraser, Zap, ChevronDown } from 'lucide-react';
 import { getModelPriority } from '../constants';
+import { useListSelectionBox } from '../hooks/useListSelectionBox';
 
 type AutoModeScope = 'all' | 'local' | 'api';
 
@@ -41,13 +42,19 @@ export default function ChatView({
     const [expandedApiModels, setExpandedApiModels] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const modelSelectorRef = useRef<HTMLDivElement>(null);
+    const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+    // Use list selection box hook for drag selection
+    const { selectionRect } = useListSelectionBox({
+        containerRef: scrollRef,
+        itemRefs: messageRefs,
+        setSelectedIndices: setSelectedMessages,
+    });
 
     // Auto-scroll
     useEffect(() => {
@@ -100,16 +107,6 @@ export default function ChatView({
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    // Handle mouse up for drag selection
-    useEffect(() => {
-        const handleMouseUp = () => {
-            setIsDragging(false);
-            setDragStartIndex(null);
-        };
-        window.addEventListener('mouseup', handleMouseUp);
-        return () => window.removeEventListener('mouseup', handleMouseUp);
     }, []);
 
     const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string }> => {
@@ -311,34 +308,6 @@ export default function ChatView({
         setSelectedMessages(new Set());
     };
 
-    const handleMessageMouseDown = (index: number) => {
-        setIsDragging(true);
-        setDragStartIndex(index);
-        // Toggle selection on click
-        setSelectedMessages(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(index)) {
-                newSet.delete(index);
-            } else {
-                newSet.add(index);
-            }
-            return newSet;
-        });
-    };
-
-    const handleMessageMouseEnter = (index: number) => {
-        if (isDragging && dragStartIndex !== null) {
-            // Select range from dragStartIndex to current index
-            const start = Math.min(dragStartIndex, index);
-            const end = Math.max(dragStartIndex, index);
-            const newSet = new Set<number>();
-            for (let i = start; i <= end; i++) {
-                newSet.add(i);
-            }
-            setSelectedMessages(newSet);
-        }
-    };
-
     const handleDeleteSelected = () => {
         if (selectedMessages.size === 0) return;
         setMessages(prev => prev.filter((_, index) => !selectedMessages.has(index)));
@@ -538,9 +507,24 @@ export default function ChatView({
             {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll"
-                data-no-arena-scroll
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative"
             >
+                {/* Blue Selection Rectangle */}
+                {selectionRect && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: selectionRect.left,
+                            top: selectionRect.top,
+                            width: selectionRect.width,
+                            height: selectionRect.height,
+                            border: '2px solid rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            pointerEvents: 'none',
+                            zIndex: 40,
+                        }}
+                    />
+                )}
                 <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
@@ -552,13 +536,15 @@ export default function ChatView({
                     {messages.map((msg, idx) => (
                         <div
                             key={idx}
+                            ref={(el) => {
+                                if (el) messageRefs.current.set(idx, el);
+                                else messageRefs.current.delete(idx);
+                            }}
                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            onMouseDown={() => handleMessageMouseDown(idx)}
-                            onMouseEnter={() => handleMessageMouseEnter(idx)}
                         >
-                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 cursor-pointer select-none transition-all ${selectedMessages.has(idx)
-                                    ? 'ring-2 ring-blue-500 bg-blue-500/10'
-                                    : ''
+                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 select-none transition-all ${selectedMessages.has(idx)
+                                ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                                : ''
                                 } ${msg.role === 'user'
                                     ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
                                     : msg.error

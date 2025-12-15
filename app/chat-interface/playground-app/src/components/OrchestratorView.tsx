@@ -541,9 +541,17 @@ export default function OrchestratorView({
             {/* Main Content Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative"
                 data-no-arena-scroll
             >
+                {/* Drag Selection Indicator */}
+                {isDragging && selectedRounds.size > 0 && (
+                    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                        <div className="bg-blue-500/90 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                            {selectedRounds.size} round{selectedRounds.size !== 1 ? 's' : ''} selected
+                        </div>
+                    </div>
+                )}
                 <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {events.length === 0 && !isRunning && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none">
@@ -556,8 +564,8 @@ export default function OrchestratorView({
                         <div
                             key={roundIdx}
                             className={`border rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 cursor-pointer select-none transition-all ${selectedRounds.has(roundIdx)
-                                    ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500/30'
-                                    : 'border-white/5 bg-white/5'
+                                ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500/30'
+                                : 'border-white/5 bg-white/5'
                                 }`}
                             onMouseDown={() => handleRoundMouseDown(roundIdx)}
                             onMouseEnter={() => handleRoundMouseEnter(roundIdx)}
