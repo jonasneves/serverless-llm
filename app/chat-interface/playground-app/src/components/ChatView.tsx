@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
@@ -8,6 +8,12 @@ import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import SelectionOverlay from './SelectionOverlay';
 
 type AutoModeScope = 'all' | 'local' | 'api';
+
+export interface ChatViewHandle {
+    sendMessage: (text: string) => void;
+    setInput: (text: string) => void;
+    stopGeneration: () => void;
+}
 
 interface ChatViewProps {
     models: Model[];
@@ -24,13 +30,13 @@ interface ChatMessage {
     error?: boolean;
 }
 
-export default function ChatView({
+const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
     selectedModelId,
     onSelectModel,
     githubToken,
     onOpenTopics
-}: ChatViewProps) {
+}, ref) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentResponse, setCurrentResponse] = useState('');
@@ -50,6 +56,24 @@ export default function ChatView({
     const dropdownRef = useRef<HTMLDivElement>(null);
     const modelSelectorRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+    useImperativeHandle(ref, () => ({
+        sendMessage: (text: string) => {
+            if (inputRef.current) {
+                inputRef.current.value = text;
+            }
+            handleSend(text);
+        },
+        setInput: (text: string) => {
+            if (inputRef.current) {
+                inputRef.current.value = text;
+                inputRef.current.focus();
+            }
+        },
+        stopGeneration: () => {
+            handleStop();
+        }
+    }));
 
     // Use list selection box hook for drag selection
     const { selectionRect } = useListSelectionBox({
@@ -605,4 +629,6 @@ export default function ChatView({
             />
         </div>
     );
-}
+});
+
+export default ChatView;

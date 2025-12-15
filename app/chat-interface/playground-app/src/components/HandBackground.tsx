@@ -19,6 +19,20 @@ export default function HandBackground({
     onScroll,
     onPinch
 }: HandBackgroundProps) {
+    // Refs for callbacks to avoid stale closures in RAF loop
+    const onStopGenerationRef = useRef(onStopGeneration);
+    const onSendMessageRef = useRef(onSendMessage);
+    const onModeSwitchRef = useRef(onModeSwitch);
+    const onScrollRef = useRef(onScroll);
+    const onPinchRef = useRef(onPinch);
+
+    // Update refs on every render
+    onStopGenerationRef.current = onStopGeneration;
+    onSendMessageRef.current = onSendMessage;
+    onModeSwitchRef.current = onModeSwitch;
+    onScrollRef.current = onScroll;
+    onPinchRef.current = onPinch;
+
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [loaded, setLoaded] = useState(false);
@@ -31,12 +45,19 @@ export default function HandBackground({
     const swipeCooldown = 800;
     const pinchCooldown = 500; // debounce pinch clicks
 
+    // Persistence for static gestures (Stop, Yes, No) to prevent accidental triggers
+    // Require ~15 frames (approx 0.5s at 30fps) of consistent detection
+    const PERSISTENCE_THRESHOLD = 15;
+    const gesturePersistence = useRef<Map<number, { candidate: string, frames: number }>>(new Map());
+
     // Track state per hand to prevent conflicts
     // Key: hand index (0 or 1)
     const handStates = useRef<Map<number, {
         isScrolling: boolean;
         lastScrollY: number | null;
         lastSwipeX: number | null;
+        lastIndexTipY: number | null;
+        lastOpenTime: number;
     }>>(new Map());
 
     const getHandState = (index: number) => {
@@ -44,10 +65,19 @@ export default function HandBackground({
             handStates.current.set(index, {
                 isScrolling: false,
                 lastScrollY: null,
-                lastSwipeX: null
+                lastSwipeX: null,
+                lastIndexTipY: null,
+                lastOpenTime: 0
             });
         }
         return handStates.current.get(index)!;
+    };
+
+    const getPersistence = (index: number) => {
+        if (!gesturePersistence.current.has(index)) {
+            gesturePersistence.current.set(index, { candidate: 'NEUTRAL', frames: 0 });
+        }
+        return gesturePersistence.current.get(index)!;
     };
 
     useEffect(() => {
@@ -85,45 +115,45 @@ export default function HandBackground({
 
     const detectGesture = (landmarks: any[], now: number, handIndex: number) => {
         const state = getHandState(handIndex);
+        const persistence = getPersistence(handIndex);
 
         // Basic finger states
         // Note: Coordinates are normalized [0,1]. Y increases downwards.
-
         // 0: Wrist, 4: ThumbTip
-        // 8: IndexTip, 6: IndexPIP
-        // 12: MiddleTip, 10: MiddlePIP
-        // 16: RingTip, 14: RingPIP
-        // 20: PinkyTip, 18: PinkyPIP
+        // 8: IndexTip, 6: IndexPIP ...
 
-        const indexExt = landmarks[8].y < landmarks[6].y;
-        const middleExt = landmarks[12].y < landmarks[10].y;
-        const ringExt = landmarks[16].y < landmarks[14].y;
-        const pinkyExt = landmarks[20].y < landmarks[18].y;
+        const indexTip = landmarks[8];
+        const indexPip = landmarks[6];
+        const middleTip = landmarks[12];
+        const middlePip = landmarks[10];
+        const ringTip = landmarks[16];
+        const ringPip = landmarks[14];
+        const pinkyTip = landmarks[20];
+        const pinkyPip = landmarks[18];
+        const thumbTip = landmarks[4];
+        const thumbIp = landmarks[3];
+        const wrist = landmarks[0];
+
+        const indexExt = indexTip.y < indexPip.y;
+        const middleExt = middleTip.y < middlePip.y;
+        const ringExt = ringTip.y < ringPip.y;
+        const pinkyExt = pinkyTip.y < pinkyPip.y;
 
         const fingersExtendedCount = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
 
         // -----------------------
-        // 0. PINCH (Click/Select)
+        // 0. PINCH (Click/Select) - Immediate, Debounced
         // -----------------------
-        // Distance between Thumb Tip (4) and Index Tip (8)
-        const thumbTip = landmarks[4];
-        const indexTip = landmarks[8];
-        const distance = Math.sqrt(
+        const pinchDistance = Math.sqrt(
             Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2)
         );
 
-        // Threshold for pinch. 0.05 is roughly touching.
-        if (distance < 0.05) {
+        if (pinchDistance < 0.05) {
             if (now - lastGestureTime.current > pinchCooldown) {
-                if (onPinch) {
-                    // Calculate midpoint
+                if (onPinchRef.current) {
                     const midX = (thumbTip.x + indexTip.x) / 2;
                     const midY = (thumbTip.y + indexTip.y) / 2;
-
-                    // Mirror X for screen coordinates (Since CSS scales -1)
-                    // Visual X = 1 - Normalized X
-                    onPinch(1 - midX, midY);
-
+                    onPinchRef.current(1 - midX, midY); // Mirror X
                     lastGestureTime.current = now;
                     return 'PINCH';
                 }
@@ -131,106 +161,154 @@ export default function HandBackground({
         }
 
         // -----------------------
-        // 1. OPEN PALM (Stop)
+        // 0.5 INDEX TAP (Pointing triggers Click)
         // -----------------------
-        // Heuristic: All 4 fingers extended
-        if (fingersExtendedCount >= 4) {
-            state.isScrolling = false;
-            state.lastScrollY = null;
-            // Trigger Stop if cooldown passed
-            if (now - lastGestureTime.current > gestureCooldown) {
-                if (onStopGeneration) {
-                    onStopGeneration();
-                    // Store result but return 'STOP' for visual
-                    lastGestureTime.current = now;
-                    return 'STOP';
-                }
-            }
-            return 'OPEN';
-        }
+        // Heuristic: Only Index extended.
+        // Action: Quick downward movement of Index Tip.
 
-        // -----------------------
-        // 2. FIST (Scroll)
-        // -----------------------
-        if (fingersExtendedCount === 0) {
-            // Fist detected
-            const currentY = landmarks[0].y; // Use wrist Y for stability
+        const isPointing = indexExt && !middleExt && !ringExt && !pinkyExt;
 
-            if (!state.isScrolling) {
-                state.isScrolling = true;
-                state.lastScrollY = currentY;
-            } else {
-                // Determine delta
-                if (state.lastScrollY !== null) {
-                    const delta = (currentY - state.lastScrollY);
-                    // Send scroll event if delta is significant
-                    // Threshold to avoid jitter
-                    if (Math.abs(delta) > 0.002 && onScroll) {
-                        // Pass inverted delta because moving hand up (lower Y) should likely scroll down (content moves up)
-                        onScroll(delta * 1500); // Scale factor
+        if (isPointing) {
+            const currentY = indexTip.y;
+            if (state.lastIndexTipY !== null) {
+                const dy = currentY - state.lastIndexTipY; // Positive = Down
+                // Threshold for tap (velocity). 
+                // Lowered to 0.015 to be more responsive.
+                if (dy > 0.015 && (now - lastGestureTime.current > pinchCooldown)) {
+                    if (onPinchRef.current) {
+                        // Use the Y position from the START of the tap (lastIndexTipY) 
+                        // to aim at what the user was pointing at before they moved their finger down.
+                        onPinchRef.current(1 - indexTip.x, state.lastIndexTipY);
+                        lastGestureTime.current = now;
+                        return 'TAP';
                     }
-                    state.lastScrollY = currentY;
                 }
             }
-            return 'FIST';
+            state.lastIndexTipY = currentY;
         } else {
-            state.isScrolling = false;
+            state.lastIndexTipY = null;
         }
 
         // -----------------------
-        // 3. THUMBS UP / DOWN
+        // 1. SWIPE (Mode Switch) - Velocity Based
         // -----------------------
-        // Heuristic: Index/Middle/Ring/Pinky curled (count=0 or 1 loose one)
-        if (fingersExtendedCount <= 1) {
-            const thumbIP = landmarks[3];
-
-            if (now - lastGestureTime.current > gestureCooldown) {
-                // Thumbs UP: Tip is significantly above IP (Remember Y is inverted) -> Tip.y < IP.y
-                if (thumbTip.y < thumbIP.y - 0.05) {
-                    if (onSendMessage) {
-                        onSendMessage("Yes");
-                        lastGestureTime.current = now;
-                        return 'THUMBS_UP';
-                    }
-                }
-
-                // Thumbs DOWN: Tip is significantly below IP -> Tip.y > IP.y
-                if (thumbTip.y > thumbIP.y + 0.05) {
-                    if (onSendMessage) {
-                        onSendMessage("No");
-                        lastGestureTime.current = now;
-                        return 'THUMBS_DOWN';
-                    }
-                }
-            }
-        }
-
-        // -----------------------
-        // 4. SWIPE (Mode Switch)
-        // -----------------------
-        // Track Wrist X movement 
-        const currentX = landmarks[0].x;
+        const currentX = wrist.x;
         if (state.lastSwipeX !== null) {
             const dx = currentX - state.lastSwipeX;
-            // Detect fast swipe
-            if (Math.abs(dx) > 0.15 && (now - lastGestureTime.current > swipeCooldown)) {
-                if (onModeSwitch) {
-                    // Let's assume standard camera view: Hand moves Right -> dx > 0.
-                    // If mirrored on screen, moving "Right" physically (your right) looks like moving Right on screen.
+            if (Math.abs(dx) > 0.10 && (now - lastGestureTime.current > swipeCooldown)) { // Reduced threshold slightly, increased cooldown logic elsewhere?
+                if (onModeSwitchRef.current) {
+                    if (dx > 0) onModeSwitchRef.current('next');
+                    else onModeSwitchRef.current('prev');
 
-                    if (dx > 0) {
-                        onModeSwitch('next');
-                    } else {
-                        onModeSwitch('prev');
-                    }
                     lastGestureTime.current = now;
+                    // Reset state to avoid double trigger
+                    state.lastSwipeX = currentX;
                     return 'SWIPE';
                 }
             }
         }
         state.lastSwipeX = currentX;
 
-        return null;
+        // -----------------------
+        // 2. POSE IDENTIFICATION (Candidate Selection)
+        // -----------------------
+        let currentPose = 'NEUTRAL';
+
+        // Check STOP (Open Palm)
+        // Treat Open Palm as a "Wake Word" for Yes/No
+        if (fingersExtendedCount >= 4) {
+            currentPose = 'STOP';
+            state.lastOpenTime = now;
+        }
+        // Check Thumbs Up/Down (Fingers curled)
+        else if (fingersExtendedCount <= 1) {
+            // Only allow Yes/No if we saw an Open Palm recently (Wake Window)
+            const canTriggerYesNo = (now - state.lastOpenTime) < 2000; // 2 seconds window
+
+            if (canTriggerYesNo) {
+                // Thumbs Up: Tip significantly above IP
+                if (thumbTip.y < thumbIp.y - 0.05) {
+                    currentPose = 'YES';
+                }
+                // Thumbs Down: Tip significantly below IP
+                else if (thumbTip.y > thumbIp.y + 0.05) {
+                    currentPose = 'NO';
+                }
+            }
+
+            // Fist can happen anytime (scrolling)
+            // But if we fail Yes/No (due to no wake word), we don't necessarily want to default to FIST immediately if it looks like Yes/No?
+            // Actually, Fist requires thumb curled or side. Thumbs up has thumb extended.
+            // If we are in "Yes" pose but strict mode blocks it, "currentPose" remains NEUTRAL.
+            // We should check that `fingersExtendedCount === 0` strictly for FIST.
+
+            if (currentPose === 'NEUTRAL' && fingersExtendedCount === 0) {
+                currentPose = 'FIST';
+            }
+        }
+
+        // -----------------------
+        // 3. PERSISTENCE & TRIGGER
+        // -----------------------
+
+        // Update persistence
+        if (currentPose === persistence.candidate && currentPose !== 'NEUTRAL') {
+            persistence.frames++;
+        } else {
+            persistence.candidate = currentPose;
+            persistence.frames = 1;
+        }
+
+        // Handle Triggers
+        if (now - lastGestureTime.current > gestureCooldown) {
+            if (persistence.frames >= PERSISTENCE_THRESHOLD) {
+                if (currentPose === 'STOP' && onStopGenerationRef.current) {
+                    onStopGenerationRef.current();
+                    lastGestureTime.current = now;
+                    persistence.frames = 0; // Reset
+                    return 'STOP';
+                }
+                if (currentPose === 'YES' && onSendMessageRef.current) {
+                    onSendMessageRef.current("Yes");
+                    lastGestureTime.current = now;
+                    persistence.frames = 0;
+                    return 'THUMBS_UP';
+                }
+                if (currentPose === 'NO' && onSendMessageRef.current) {
+                    onSendMessageRef.current("No");
+                    lastGestureTime.current = now;
+                    persistence.frames = 0; // Reset
+                    return 'THUMBS_DOWN';
+                }
+            }
+        }
+
+        // -----------------------
+        // 4. CONTINUOUS ACTIONS (Fist Scroll)
+        // -----------------------
+        // Scroll is special: it doesn't wait for "Trigger", it works while held.
+        // But we rely on correct classification (Fist vs Yes).
+        // If currentPose is 'FIST', we scroll.
+
+        if (currentPose === 'FIST') {
+            const currentY = wrist.y;
+            if (!state.isScrolling) {
+                state.isScrolling = true;
+                state.lastScrollY = currentY;
+            } else if (state.lastScrollY !== null) {
+                const delta = (currentY - state.lastScrollY);
+                if (Math.abs(delta) > 0.002 && onScrollRef.current) {
+                    onScrollRef.current(delta * 1500);
+                }
+                state.lastScrollY = currentY;
+            }
+            return 'FIST';
+        } else {
+            state.isScrolling = false;
+            state.lastScrollY = null;
+        }
+
+        return currentPose === 'NEUTRAL' ? null : currentPose;
     };
 
     const draw = () => {

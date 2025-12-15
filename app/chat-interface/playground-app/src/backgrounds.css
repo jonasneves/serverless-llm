@@ -60,10 +60,23 @@
 }
 
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%; }
-  25% { background-position: 100% 0%, 100% 100%, 0% 100%, 0% 0%; }
-  50% { background-position: 100% 100%, 0% 100%, 0% 0%, 100% 0%; }
-  75% { background-position: 0% 100%, 0% 0%, 100% 0%, 100% 100%; }
+
+  0%,
+  100% {
+    background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%;
+  }
+
+  25% {
+    background-position: 100% 0%, 100% 100%, 0% 100%, 0% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%, 0% 100%, 0% 0%, 100% 0%;
+  }
+
+  75% {
+    background-position: 0% 100%, 0% 0%, 100% 0%, 100% 100%;
+  }
 }
 
 /* Vignette overlay - Adds depth to any background */
@@ -85,9 +98,4 @@
   opacity: 0.03;
   pointer-events: none;
   z-index: 1;
-}
-
-/* Option 7: Hand Camera */
-.bg-hand-cam {
-  background-color: #0f172a;
 }

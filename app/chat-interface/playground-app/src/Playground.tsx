@@ -19,10 +19,10 @@ import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import DiscussionTranscript from './components/DiscussionTranscript';
 import OrchestratorView from './components/OrchestratorView';
-import ChatView from './components/ChatView';
+import ChatView, { ChatViewHandle } from './components/ChatView';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
-import HandBackground from './components/HandBackground';
+import GestureControl from './components/GestureControl';
 import './playground.css';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
@@ -315,6 +315,8 @@ export default function Playground() {
   }, [mode, activeInspectorId, inspectorPosition]); // Recalculate when layout changes
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
+
+  const chatViewRef = useRef<ChatViewHandle>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const lastSelectedCardRef = useRef<string | null>(null);
@@ -870,73 +872,82 @@ export default function Playground() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
-      {bgStyle === 'hand-cam' && (
-        <HandBackground
-          onStopGeneration={handleStop}
-          onSendMessage={(msg) => {
-            if (inputRef.current) {
-              inputRef.current.value = msg;
-              inputRef.current.focus();
-            }
+      <GestureControl
+        onStopGeneration={() => {
+          if (mode === 'chat' && chatViewRef.current) {
+            chatViewRef.current.stopGeneration();
+            return;
+          }
+          handleStop();
+        }}
+        onSendMessage={(msg) => {
+          if (mode === 'chat' && chatViewRef.current) {
+            chatViewRef.current.sendMessage(msg);
+            return;
+          }
 
-            const activeIds = mode === 'chat' || mode === 'orchestrator'
+          if (inputRef.current) {
+            inputRef.current.value = msg;
+            inputRef.current.focus();
+          }
+
+          const activeIds = mode === 'orchestrator'
+            ? selected
+            : mode === 'compare'
               ? selected
-              : mode === 'compare'
+              : mode === 'council' || mode === 'roundtable'
                 ? selected
-                : mode === 'council' || mode === 'roundtable'
-                  ? selected
-                  : [];
+                : [];
 
-            if (activeIds.length > 0) {
-              sendMessage(msg, {}, activeIds);
+          if (activeIds.length > 0) {
+            sendMessage(msg, {}, activeIds);
+          }
+        }}
+        onModeSwitch={(dir) => {
+          const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'orchestrator'];
+          const idx = modes.indexOf(mode);
+          if (idx === -1) return;
+
+          const nextIdx = dir === 'next'
+            ? (idx + 1) % modes.length
+            : (idx - 1 + modes.length) % modes.length;
+          setMode(modes[nextIdx]);
+        }}
+        onScroll={(deltaY) => {
+          arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
+          ensureRaf();
+        }}
+        onPinch={(xOfScreen, yOfScreen) => {
+          const clickX = xOfScreen * window.innerWidth;
+          const clickY = yOfScreen * window.innerHeight;
+
+          const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
+          if (el) {
+            const clickable = el.closest('button') || el.closest('[role="button"]');
+            if (clickable) {
+              (clickable as HTMLElement).click();
+
+              const ripple = document.createElement('div');
+              ripple.style.position = 'fixed';
+              ripple.style.left = `${clickX}px`;
+              ripple.style.top = `${clickY}px`;
+              ripple.style.width = '20px';
+              ripple.style.height = '20px';
+              ripple.style.background = 'rgba(236, 72, 153, 0.5)';
+              ripple.style.borderRadius = '50%';
+              ripple.style.transform = 'translate(-50%, -50%)';
+              ripple.style.pointerEvents = 'none';
+              ripple.style.zIndex = '9999';
+              document.body.appendChild(ripple);
+
+              ripple.animate([
+                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
+              ], { duration: 400 }).onfinish = () => ripple.remove();
             }
-          }}
-          onModeSwitch={(dir) => {
-            const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'orchestrator'];
-            const idx = modes.indexOf(mode);
-            if (idx === -1) return;
-
-            const nextIdx = dir === 'next'
-              ? (idx + 1) % modes.length
-              : (idx - 1 + modes.length) % modes.length;
-            setMode(modes[nextIdx]);
-          }}
-          onScroll={(deltaY) => {
-            arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
-            ensureRaf();
-          }}
-          onPinch={(xOfScreen, yOfScreen) => {
-            const clickX = xOfScreen * window.innerWidth;
-            const clickY = yOfScreen * window.innerHeight;
-
-            const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
-            if (el) {
-              const clickable = el.closest('button') || el.closest('[role="button"]');
-              if (clickable) {
-                (clickable as HTMLElement).click();
-
-                const ripple = document.createElement('div');
-                ripple.style.position = 'fixed';
-                ripple.style.left = `${clickX}px`;
-                ripple.style.top = `${clickY}px`;
-                ripple.style.width = '20px';
-                ripple.style.height = '20px';
-                ripple.style.background = 'rgba(236, 72, 153, 0.5)';
-                ripple.style.borderRadius = '50%';
-                ripple.style.transform = 'translate(-50%, -50%)';
-                ripple.style.pointerEvents = 'none';
-                ripple.style.zIndex = '9999';
-                document.body.appendChild(ripple);
-
-                ripple.animate([
-                  { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
-                  { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
-                ], { duration: 400 }).onfinish = () => ripple.remove();
-              }
-            }
-          }}
-        />
-      )}
+          }
+        }}
+      />
       {/* Header */}
       <Header
         mode={mode}
@@ -992,6 +1003,7 @@ export default function Playground() {
         {mode === 'chat' && (
           <div className="fixed inset-0 pt-20 pb-6 px-6">
             <ChatView
+              ref={chatViewRef}
               models={modelsData}
               selectedModelId={selected[0] || null}
               onSelectModel={(id) => setSelected([id])}

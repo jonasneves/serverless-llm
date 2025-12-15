@@ -203,7 +203,7 @@ export const TRENDING_FALLBACK: TrendingTopic[] = [
   },
 ];
 
-export const BG_STYLES: BackgroundStyle[] = ['dots-mesh', 'dots', 'dots-fade', 'grid', 'mesh', 'animated-mesh', 'hand-cam', 'none'];
+export const BG_STYLES: BackgroundStyle[] = ['dots-mesh', 'dots', 'dots-fade', 'grid', 'mesh', 'animated-mesh', 'none'];
 
 const BASE_BACKGROUND = '#0f172a'; // Unified playground background tone
 
