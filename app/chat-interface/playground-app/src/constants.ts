@@ -5,6 +5,49 @@ export const MODEL_META: Record<string, { color: string; name?: string }> = {
   api: { color: '#3b82f6' },   // Blue for API models
 };
 
+// Model priority for auto mode (lower number = higher priority)
+// Separate lists allow fine-grained control over local vs API model preferences
+
+// Local models - typically preferred when available (no quota issues)
+export const LOCAL_MODEL_PRIORITIES: Record<string, number> = {
+  'llama-3.3-70b': 1,
+  'llama-4-scout-17b-16e-instruct': 2,
+  'qwen': 3,
+  'phi': 4,
+  'mistral': 5,
+  'gemma': 6,
+};
+
+// API models - used when local models fail or as fallback
+export const API_MODEL_PRIORITIES: Record<string, number> = {
+  'gpt-4o': 1,
+  'gpt-4.1': 2,
+  'gpt-5': 3,
+  'gpt-5-mini': 4,
+  'gpt-5-nano': 5,
+  'llama-3.3-70b': 6,
+  'llama-4-scout-17b-16e-instruct': 7,
+  'deepseek-v3-0324': 8,
+  'mistral-large': 9,
+  'command-r-plus': 10,
+};
+
+export const LOCAL_DEFAULT_PRIORITY = 50;
+export const API_DEFAULT_PRIORITY = 100;
+
+export function getModelPriority(modelId: string, modelType: 'local' | 'api'): number {
+  const priorityMap = modelType === 'local' ? LOCAL_MODEL_PRIORITIES : API_MODEL_PRIORITIES;
+  const defaultPriority = modelType === 'local' ? LOCAL_DEFAULT_PRIORITY : API_DEFAULT_PRIORITY;
+
+  for (const [pattern, priority] of Object.entries(priorityMap)) {
+    if (modelId.toLowerCase().includes(pattern.toLowerCase())) {
+      return priority;
+    }
+  }
+
+  return defaultPriority;
+}
+
 // Curated static topics grounded in current-ish industry/news contexts
 export const CURATED_TOPICS: TopicPrompt[] = [
   {

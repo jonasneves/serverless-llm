@@ -236,7 +236,8 @@ export default function OrchestratorView({
             {/* Main Content Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll"
+                data-no-arena-scroll
             >
                 <div className="max-w-3xl mx-auto w-full min-h-full flex flex-col space-y-6">
                     {events.length === 0 && !isRunning && (

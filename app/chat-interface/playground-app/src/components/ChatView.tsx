@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Eraser } from 'lucide-react';
+import { Bot, AlertTriangle, User, Eraser, Zap, ChevronDown } from 'lucide-react';
+import { getModelPriority } from '../constants';
+
+type AutoModeScope = 'all' | 'local' | 'api';
 
 interface ChatViewProps {
     models: Model[];
@@ -21,7 +24,7 @@ interface ChatMessage {
 export default function ChatView({
     models,
     selectedModelId,
-    // onSelectModel,
+    onSelectModel,
     githubToken,
     onOpenTopics
 }: ChatViewProps) {
@@ -29,9 +32,16 @@ export default function ChatView({
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentResponse, setCurrentResponse] = useState('');
     const [inputFocused, setInputFocused] = useState(false);
+    const [autoMode, setAutoMode] = useState(true);
+    const [autoModeScope, setAutoModeScope] = useState<AutoModeScope>('all');
+    const [showAutoDropdown, setShowAutoDropdown] = useState(false);
+    const [showModelSelector, setShowModelSelector] = useState(false);
+    const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const modelSelectorRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll
     useEffect(() => {
@@ -54,43 +64,45 @@ export default function ChatView({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const handleSend = async (text: string) => {
-        if (!text.trim() || !selectedModelId || isGenerating) return;
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setShowAutoDropdown(false);
+            }
+            if (modelSelectorRef.current && !modelSelectorRef.current.contains(e.target as Node)) {
+                setShowModelSelector(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-        const userMessage: ChatMessage = { role: 'user', content: text };
-        setMessages(prev => [...prev, userMessage]);
-        setIsGenerating(true);
-        setCurrentResponse('');
-
-        abortControllerRef.current = new AbortController();
-
+    const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string }> => {
         try {
-            // Prepare history for API
-            const apiMessages = [...messages, userMessage].map(m => ({
-                role: m.role,
-                content: m.content
-            }));
-
             const response = await fetch('/api/chat/stream', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    models: [selectedModelId],
+                    models: [modelId],
                     messages: apiMessages,
                     max_tokens: 2048,
                     temperature: 0.7,
                     github_token: githubToken || null
                 }),
-                signal: abortControllerRef.current.signal
+                signal: abortControllerRef.current?.signal
             });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            if (!response.body) return;
+            if (!response.body) {
+                throw new Error('No response body');
+            }
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -116,19 +128,111 @@ export default function ChatView({
                                 responseContent += data.content;
                                 setCurrentResponse(prev => prev + data.content);
                             } else if (data.error) {
-                                setMessages(prev => [...prev, { role: 'assistant', content: data.content, error: true }]);
-                                setIsGenerating(false);
-                                return;
+                                throw new Error(data.content);
                             }
                         } catch (e) {
-                            // ignore parse errors for keep-alives etc
+                            if (e instanceof Error && e.message !== jsonStr) {
+                                throw e;
+                            }
                         }
                     }
                 }
             }
 
-            // Finalize
-            setMessages(prev => [...prev, { role: 'assistant', content: responseContent }]);
+            return { success: true, content: responseContent };
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                throw error;
+            }
+            return { success: false, content: error.message };
+        }
+    };
+
+    const handleSend = async (text: string) => {
+        if (!text.trim() || isGenerating) return;
+        if (!autoMode && !selectedModelId) return;
+
+        const userMessage: ChatMessage = { role: 'user', content: text };
+        setMessages(prev => [...prev, userMessage]);
+        setIsGenerating(true);
+        setCurrentResponse('');
+
+        abortControllerRef.current = new AbortController();
+
+        try {
+            const apiMessages = [...messages, userMessage].map(m => ({
+                role: m.role,
+                content: m.content
+            }));
+
+            if (autoMode) {
+                // Filter models based on scope
+                const scopedModels = models.filter(m => {
+                    if (autoModeScope === 'all') return true;
+                    if (autoModeScope === 'local') return m.type === 'local';
+                    if (autoModeScope === 'api') return m.type === 'api';
+                    return true;
+                });
+
+                const sortedModels = scopedModels
+                    .map(m => {
+                        const basePriority = getModelPriority(m.id, m.type || 'local');
+                        // When scope is 'all', ensure local models always come before API models
+                        // by adding 1000 to API model priorities
+                        const adjustedPriority = autoModeScope === 'all' && m.type === 'api'
+                            ? basePriority + 1000
+                            : basePriority;
+                        return { ...m, priority: adjustedPriority };
+                    })
+                    .sort((a, b) => {
+                        // Sort by priority first
+                        if (a.priority !== b.priority) {
+                            return a.priority - b.priority;
+                        }
+                        // If priorities are equal, sort by type (local before api)
+                        if (a.type !== b.type) {
+                            return a.type === 'local' ? -1 : 1;
+                        }
+                        // Finally sort by id for consistency
+                        return a.id.localeCompare(b.id);
+                    });
+
+                let lastError: string | null = null;
+
+                for (const model of sortedModels) {
+                    setCurrentAutoModel(model.id);
+                    setCurrentResponse('');
+
+                    const result = await tryModelStream(model.id, apiMessages);
+
+                    if (result.success) {
+                        setMessages(prev => [...prev, { role: 'assistant', content: result.content }]);
+                        setCurrentResponse('');
+                        setCurrentAutoModel(null);
+                        return;
+                    }
+
+                    lastError = result.content;
+                }
+
+                const scopeLabel = autoModeScope === 'all' ? 'all' : autoModeScope;
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: `All ${scopeLabel} models failed to respond. Last error: ${lastError}`,
+                    error: true
+                }]);
+                setCurrentAutoModel(null);
+            } else {
+                if (!selectedModelId) return;
+                const result = await tryModelStream(selectedModelId, apiMessages);
+
+                if (result.success) {
+                    setMessages(prev => [...prev, { role: 'assistant', content: result.content }]);
+                } else {
+                    setMessages(prev => [...prev, { role: 'assistant', content: result.content, error: true }]);
+                }
+            }
+
             setCurrentResponse('');
 
         } catch (error: any) {
@@ -137,6 +241,7 @@ export default function ChatView({
             }
         } finally {
             setIsGenerating(false);
+            setCurrentAutoModel(null);
             abortControllerRef.current = null;
         }
     };
@@ -158,6 +263,15 @@ export default function ChatView({
     };
 
     const selectedModel = models.find(m => m.id === selectedModelId);
+    const displayModel = autoMode && currentAutoModel
+        ? models.find(m => m.id === currentAutoModel)
+        : selectedModel;
+
+    const autoScopeLabels: Record<AutoModeScope, string> = {
+        all: 'All',
+        local: 'Local',
+        api: 'API'
+    };
 
     return (
         <div className="flex flex-col h-full relative">
@@ -165,34 +279,181 @@ export default function ChatView({
             <div className="z-10 w-full flex justify-center">
                 <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'} ${isGenerating ? 'animate-pulse' : ''}`} />
-                            <span className="text-sm font-semibold text-slate-200 tracking-tight">
-                                {selectedModel ? `${selectedModel.name}${isGenerating ? ' is typing...' : ''}` : (selectedModelId ? `${selectedModelId}${isGenerating ? ' is typing...' : ''}` : '')}
-                            </span>
-                        </div>
-                        {selectedModel?.type === 'api' && (
-                            <span className="text-[10px] uppercase tracking-wider bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 font-medium">
-                                API
-                            </span>
+                        {autoMode ? (
+                            // Auto mode: Just show status indicator and scope
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${isGenerating ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)] animate-pulse' : 'bg-yellow-500/60'}`} />
+                                <span className="text-sm font-semibold text-yellow-300 tracking-tight flex items-center gap-1.5">
+                                    <Zap size={14} />
+                                    Auto: {autoScopeLabels[autoModeScope]}
+                                    {isGenerating && currentAutoModel && (
+                                        <span className="text-xs text-slate-400 font-normal">
+                                            ({models.find(m => m.id === currentAutoModel)?.name})
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        ) : (
+                            // Manual mode: Show clickable model selector
+                            <div className="relative" ref={modelSelectorRef}>
+                                <button
+                                    onClick={() => setShowModelSelector(!showModelSelector)}
+                                    className="flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded-lg transition-colors"
+                                    disabled={isGenerating}
+                                >
+                                    <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'} ${isGenerating ? 'animate-pulse' : ''}`} />
+                                    <span className="text-sm font-semibold text-slate-200 tracking-tight">
+                                        {selectedModel ? selectedModel.name : 'Select model...'}
+                                        {isGenerating && ' is typing...'}
+                                    </span>
+                                    {!isGenerating && <ChevronDown size={12} className="text-slate-400" />}
+                                </button>
+
+                                {showModelSelector && !isGenerating && (
+                                    <div className="absolute top-full left-0 mt-1 w-64 max-h-80 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
+                                        {models.length === 0 ? (
+                                            <div className="px-3 py-4 text-xs text-slate-500 text-center">
+                                                No models available
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {models.filter(m => m.type === 'local').length > 0 && (
+                                                    <>
+                                                        <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
+                                                            Local Models
+                                                        </div>
+                                                        {models.filter(m => m.type === 'local').map(model => (
+                                                            <button
+                                                                key={model.id}
+                                                                onClick={() => {
+                                                                    onSelectModel(model.id);
+                                                                    setShowModelSelector(false);
+                                                                }}
+                                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
+                                                                    selectedModelId === model.id
+                                                                        ? 'bg-blue-500/20 text-blue-300'
+                                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <span>{model.name}</span>
+                                                                    {selectedModelId === model.id && (
+                                                                        <span className="text-blue-400">✓</span>
+                                                                    )}
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </>
+                                                )}
+                                                {models.filter(m => m.type === 'api').length > 0 && (
+                                                    <>
+                                                        <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50 mt-1">
+                                                            API Models
+                                                        </div>
+                                                        {models.filter(m => m.type === 'api').map(model => (
+                                                            <button
+                                                                key={model.id}
+                                                                onClick={() => {
+                                                                    onSelectModel(model.id);
+                                                                    setShowModelSelector(false);
+                                                                }}
+                                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
+                                                                    selectedModelId === model.id
+                                                                        ? 'bg-blue-500/20 text-blue-300'
+                                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <span>{model.name}</span>
+                                                                    {selectedModelId === model.id && (
+                                                                        <span className="text-blue-400">✓</span>
+                                                                    )}
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
 
-                    <button
-                        onClick={handleClear}
-                        className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
-                        title="Clear History"
-                    >
-                        <Eraser size={12} />
-                        <span>Clear</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => {
+                                    if (!autoMode) {
+                                        setAutoMode(true);
+                                    } else {
+                                        setShowAutoDropdown(!showAutoDropdown);
+                                    }
+                                }}
+                                className={`h-8 px-2 flex items-center gap-1.5 rounded-lg border transition-all active:scale-95 text-xs font-medium ${autoMode
+                                    ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/30 text-yellow-300'
+                                    : 'bg-white/5 hover:bg-white/10 border-white/5 text-slate-400 hover:text-white'
+                                }`}
+                                title={autoMode ? `Auto mode: ${autoScopeLabels[autoModeScope]}` : "Enable Auto Mode"}
+                            >
+                                <Zap size={12} />
+                                <span>Auto: {autoScopeLabels[autoModeScope]}</span>
+                                <ChevronDown size={12} className={`transition-transform ${showAutoDropdown ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {showAutoDropdown && (
+                                <div className="absolute top-full right-0 mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                    {(['all', 'local', 'api'] as AutoModeScope[]).map(scope => (
+                                        <button
+                                            key={scope}
+                                            onClick={() => {
+                                                setAutoModeScope(scope);
+                                                setShowAutoDropdown(false);
+                                            }}
+                                            className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
+                                                autoModeScope === scope
+                                                    ? 'bg-yellow-500/20 text-yellow-300'
+                                                    : 'text-slate-300 hover:bg-slate-700/50'
+                                            }`}
+                                        >
+                                            {autoScopeLabels[scope]}
+                                            {scope === 'all' && <span className="text-[10px] text-slate-500 ml-1">(local → API)</span>}
+                                            {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
+                                            {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
+                                        </button>
+                                    ))}
+                                    <div className="border-t border-slate-700">
+                                        <button
+                                            onClick={() => {
+                                                setAutoMode(false);
+                                                setShowAutoDropdown(false);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
+                                        >
+                                            Disable Auto
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={handleClear}
+                            className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
+                            title="Clear History"
+                        >
+                            <Eraser size={12} />
+                            <span>Clear</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll"
+                data-no-arena-scroll
             >
                 <div className="max-w-3xl mx-auto w-full min-h-full flex flex-col space-y-6">
                     {messages.length === 0 && (
@@ -212,7 +473,7 @@ export default function ChatView({
                                 }`}>
                                 <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
                                     {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                                    {msg.role === 'user' ? 'You' : (selectedModel?.name || 'Assistant')}
+                                    {msg.role === 'user' ? 'You' : (displayModel?.name || 'Assistant')}
                                     {msg.error && <AlertTriangle size={12} className="text-red-400" />}
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none">
@@ -227,7 +488,10 @@ export default function ChatView({
                             <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-slate-800/60 border border-slate-700/60 text-slate-200">
                                 <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                     <Bot size={12} />
-                                    {selectedModel?.name || 'Assistant'}
+                                    {displayModel?.name || 'Assistant'}
+                                    {autoMode && currentAutoModel && (
+                                        <span className="text-yellow-400">(Auto)</span>
+                                    )}
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none">
                                     <FormattedContent text={currentResponse} />
@@ -246,7 +510,7 @@ export default function ChatView({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleSend}
                 onOpenTopics={onOpenTopics}
-                placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting..."}
+                placeholder={autoMode ? "Message (Auto mode - will use best available model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
                 isGenerating={isGenerating}
                 onStop={handleStop}
             />

@@ -841,7 +841,7 @@ export default function Playground() {
 
         {/* Orchestrator View */}
         {mode === 'orchestrator' && (
-          <div className="flex-1 h-screen pt-20 pb-6 px-6">
+          <div className="fixed inset-0 pt-20 pb-6 px-6">
             <OrchestratorView
               models={availableModels}
               selectedModelId={selected[0] || null}
@@ -854,9 +854,9 @@ export default function Playground() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="flex-1 h-screen pt-20 pb-6 px-6">
+          <div className="fixed inset-0 pt-20 pb-6 px-6">
             <ChatView
-              models={availableModels}
+              models={modelsData}
               selectedModelId={selected[0] || null}
               onSelectModel={(id) => setSelected([id])}
               githubToken={githubToken}
