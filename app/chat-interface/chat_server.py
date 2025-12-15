@@ -37,14 +37,7 @@ from orchestrator import GitHubModelsOrchestrator
 from discussion_engine import DiscussionEngine
 from model_profiles import MODEL_PROFILES
 
-# Orchestrator mode imports
-try:
-    from autogen_orchestrator import AutoGenOrchestrator
-except ImportError:
-    print("AutoGen not available. Orchestrator mode disabled.")
-    AutoGenOrchestrator = None
 
-from tool_orchestrator import ToolOrchestrator
 
 # Verbalized Sampling mode imports
 from verbalized_sampling_engine import VerbalizedSamplingEngine
@@ -199,11 +192,10 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(static_dir))
 
 # Include API routers
-from api.routes import chat, models, orchestrator, discussion, council, special, health
+from api.routes import chat, models, discussion, council, special, health
 
 app.include_router(chat.router)
 app.include_router(models.router)
-app.include_router(orchestrator.router)
 app.include_router(discussion.router)
 app.include_router(council.router)
 app.include_router(special.router)
@@ -285,7 +277,6 @@ from api.models import (
     ModelStatus,
     CouncilRequest,
     DiscussionRequest,
-    OrchestratorRequest,
     VerbalizedSamplingRequest,
     ConfessionRequest
 )
@@ -647,100 +638,6 @@ async def stream_council_events(
         logger.error(f"Council Error: {e}")
         yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
 
-
-# Orchestrator Mode Endpoint
-async def stream_orchestrator_events(
-    query: str,
-    max_tokens: int,
-    temperature: float,
-    max_rounds: int,
-    engine: str = "auto",
-    orchestrator_model_id: Optional[str] = None,
-    github_token: Optional[str] = None
-) -> AsyncGenerator[str, None]:
-    """
-    Stream AutoGen multi-agent orchestration events
-
-    Uses Microsoft AutoGen framework with specialist agents
-    """
-    try:
-        choice = (engine or "auto").lower()
-        if choice == "autogen" and AutoGenOrchestrator is None:
-            choice = "tools"
-        if choice == "auto":
-            choice = "autogen" if AutoGenOrchestrator is not None else "tools"
-
-        if choice == "autogen":
-            orch = AutoGenOrchestrator()
-            
-            # Resolve custom model config if provided
-            orch_config = None
-            if orchestrator_model_id:
-                if orchestrator_model_id in MODEL_ENDPOINTS:
-                    orch_config = {
-                        "model": orchestrator_model_id,
-                        "base_url": MODEL_ENDPOINTS[orchestrator_model_id],
-                        "api_key": "local"
-                    }
-                elif orchestrator_model_id in MODEL_PROFILES and MODEL_PROFILES[orchestrator_model_id].get("model_type") == "api":
-                    # API Model (GitHub Models)
-                    token = github_token or get_default_github_token()
-                    if not token:
-                        yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for API orchestrator.'}, ensure_ascii=False)}\n\n"
-                        return
-                        
-                    orch_config = {
-                        "model": orchestrator_model_id,
-                        "base_url": "https://models.github.ai/inference", # Base URL for GitHub Models
-                        "api_key": token
-                    }
-            
-            async for event in orch.run_orchestration(
-                query=query, 
-                max_turns=max_rounds,
-                orchestrator_config=orch_config
-            ):
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-            return
-
-        # tools (fallback or explicit)
-        engine_impl = ToolOrchestrator(max_rounds=max_rounds)
-        async for event in engine_impl.run_orchestration(
-            query=query,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        ):
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-        return
-
-    except Exception as e:
-        logger.error(f"Orchestrator error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
-
-
-# ToolOrchestrator Endpoint
-async def stream_tool_orchestrator_events(
-    query: str,
-    max_tokens: int,
-    temperature: float,
-    max_rounds: int
-) -> AsyncGenerator[str, None]:
-    """
-    Stream ToolOrchestrator events (formerly OrchestratorEngine)
-    """
-    try:
-        engine = ToolOrchestrator(max_rounds=max_rounds)
-
-        async for event in engine.run_orchestration(
-            query=query,
-            max_tokens=max_tokens,
-            temperature=temperature
-        ):
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-
-    except Exception as e:
-        logger.error(f"ToolOrchestrator error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
 
 
 # ===== VERBALIZED SAMPLING MODE =====

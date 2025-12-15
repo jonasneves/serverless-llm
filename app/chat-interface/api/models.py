@@ -50,13 +50,6 @@ class DiscussionRequest(GenerationParams):
     participants: Optional[List[str]] = None  # List of model IDs to participate (default: all local models)
 
 
-class OrchestratorRequest(GenerationParams):
-    query: str
-    model: Optional[str] = None
-    github_token: Optional[str] = None
-    max_rounds: int = 5  # Maximum orchestration rounds
-
-
 class VerbalizedSamplingRequest(BaseModel):
     query: str
 

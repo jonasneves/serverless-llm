@@ -15,8 +15,7 @@ const MODES: { value: Mode; label: string }[] = [
   { value: 'chat', label: 'Chat' },
   { value: 'compare', label: 'Compare' },
   { value: 'council', label: 'Council' },
-  { value: 'roundtable', label: 'Roundtable' },
-  { value: 'orchestrator', label: 'Orchestrator' }
+  { value: 'roundtable', label: 'Roundtable' }
 ];
 
 export default function Header({
@@ -142,8 +141,8 @@ export default function Header({
                   key={m.value}
                   onClick={() => handleModeSelect(m.value)}
                   className={`px-4 py-3 text-sm text-left w-full transition-colors flex items-center justify-between ${mode === m.value
-                      ? 'bg-blue-500/10 text-blue-400'
-                      : 'text-slate-300 hover:bg-slate-700/50'
+                    ? 'bg-blue-500/10 text-blue-400'
+                    : 'text-slate-300 hover:bg-slate-700/50'
                     }`}
                 >
                   {m.label}

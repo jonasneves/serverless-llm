@@ -18,7 +18,7 @@ import { useInspectorSelection } from './hooks/useInspectorSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import DiscussionTranscript from './components/DiscussionTranscript';
-import OrchestratorView from './components/OrchestratorView';
+
 import ChatView, { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
@@ -170,7 +170,7 @@ export default function Playground() {
     e.preventDefault();
     setIsDraggingOver(false);
     if (draggedDockModelId) {
-      if (mode === 'chat' || mode === 'orchestrator') {
+      if (mode === 'chat') {
         setSelected([draggedDockModelId]);
       } else if (!selected.includes(draggedDockModelId)) {
         setSelected(prev => [...prev, draggedDockModelId]);
@@ -180,7 +180,7 @@ export default function Playground() {
   };
 
   const handleModelToggle = (modelId: string) => {
-    if (mode === 'chat' || mode === 'orchestrator') {
+    if (mode === 'chat') {
       setSelected(prev => prev.includes(modelId) ? [] : [modelId]);
       return;
     }
@@ -443,10 +443,6 @@ export default function Playground() {
           setSelected(prev => [...prev, lastUsedChatModelId]);
         }
       }
-      // For single-model modes (orchestrator), set as the selected model
-      else if (nextMode === 'orchestrator') {
-        setSelected([lastUsedChatModelId]);
-      }
     }
 
     setMode(nextMode);
@@ -619,7 +615,7 @@ export default function Playground() {
 
       if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
         event.preventDefault();
-        const order: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'orchestrator'];
+        const order: Mode[] = ['chat', 'compare', 'council', 'roundtable'];
         const currentIndex = order.indexOf(mode);
         if (currentIndex !== -1) {
           const delta = event.key === 'ArrowRight' ? 1 : -1;
@@ -912,13 +908,11 @@ export default function Playground() {
             inputRef.current.focus();
           }
 
-          const activeIds = mode === 'orchestrator'
+          const activeIds = mode === 'compare'
             ? selected
-            : mode === 'compare'
+            : mode === 'council' || mode === 'roundtable'
               ? selected
-              : mode === 'council' || mode === 'roundtable'
-                ? selected
-                : [];
+              : [];
 
           if (activeIds.length > 0) {
             sendMessage(msg, {}, activeIds);
@@ -997,18 +991,7 @@ export default function Playground() {
           dockRef={dockRef}
         />
 
-        {/* Orchestrator View */}
-        {mode === 'orchestrator' && (
-          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6" data-no-arena-scroll>
-            <OrchestratorView
-              models={availableModels}
-              selectedModelId={selected[0] || null}
-              onSelectModel={(id) => setSelected([id])}
-              githubToken={githubToken}
-              onOpenTopics={() => setShowTopics(true)}
-            />
-          </div>
-        )}
+
 
         {/* Chat View */}
         {mode === 'chat' && (
@@ -1040,8 +1023,8 @@ export default function Playground() {
           </div>
         )}
 
-        {/* Main Content Area (Arena/Transcript) - Hidden in Orchestrator/Chat Mode */}
-        {mode !== 'orchestrator' && mode !== 'chat' && (
+        {/* Main Content Area (Arena/Transcript) - Hidden in Chat Mode */}
+        {mode !== 'chat' && (
           <div className="flex h-screen w-full relative">
             {/* Left/Main Visualization Area */}
             <div
