@@ -17,7 +17,7 @@ export default function FormattedContent({ text, thinkingText, showThinking = tr
 
   return (
     <div>
-      {thinking && showThinking && (
+      {thinking && thinking.trim() && showThinking && (
         <details className="mb-3 rounded-lg border border-slate-700/50 bg-slate-900/40">
           <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-300">
             Thinking
