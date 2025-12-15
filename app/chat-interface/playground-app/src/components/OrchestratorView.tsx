@@ -59,7 +59,7 @@ export default function OrchestratorView({
     const [showModelSelector, setShowModelSelector] = useState(false);
     const [expandedLocalModels, setExpandedLocalModels] = useState(true);
     const [expandedApiModels, setExpandedApiModels] = useState(false);
-    const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
+
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -231,11 +231,11 @@ export default function OrchestratorView({
                 let lastError: string | undefined;
 
                 for (const model of sortedModels) {
-                    setCurrentAutoModel(model.id);
+
                     const result = await tryOrchestrator(model.id, text);
 
                     if (result.success) {
-                        setCurrentAutoModel(null);
+
                         return;
                     }
 
@@ -247,7 +247,7 @@ export default function OrchestratorView({
                     event: 'error',
                     error: `All ${scopeLabel} models failed to respond. Last error: ${lastError}`
                 }]);
-                setCurrentAutoModel(null);
+
             } else {
                 if (!selectedModelId) return;
                 const result = await tryOrchestrator(selectedModelId, text);
@@ -262,7 +262,7 @@ export default function OrchestratorView({
             }
         } finally {
             setIsRunning(false);
-            setCurrentAutoModel(null);
+
             abortControllerRef.current = null;
         }
     };
@@ -447,12 +447,6 @@ export default function OrchestratorView({
                                     </div>
                                 )}
                             </div>
-                        )}
-
-                        {isRunning && currentAutoModel && autoMode && (
-                            <span className="text-xs text-slate-400">
-                                {models.find(m => m.id === currentAutoModel)?.name}
-                            </span>
                         )}
                     </div>
 

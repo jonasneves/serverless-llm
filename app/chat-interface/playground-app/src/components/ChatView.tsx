@@ -455,12 +455,6 @@ export default function ChatView({
                             </div>
                         )}
 
-                        {/* Show current model when generating in auto mode */}
-                        {isGenerating && currentAutoModel && autoMode && (
-                            <span className="text-xs text-slate-400">
-                                {models.find(m => m.id === currentAutoModel)?.name}
-                            </span>
-                        )}
                     </div>
 
                     {/* Right: Clear button */}
@@ -515,9 +509,6 @@ export default function ChatView({
                                 <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                     <Bot size={12} />
                                     {displayModel?.name || 'Assistant'}
-                                    {autoMode && currentAutoModel && (
-                                        <span className="text-yellow-400">(Auto)</span>
-                                    )}
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none">
                                     <FormattedContent text={currentResponse} />
