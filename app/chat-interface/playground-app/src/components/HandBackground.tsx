@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
     FilesetResolver,
-    HandLandmarker,
-    DrawingUtils
+    HandLandmarker
 } from '@mediapipe/tasks-vision';
 
 export default function HandBackground() {
@@ -75,17 +74,63 @@ export default function HandBackground() {
 
         // Draw
         if (results.landmarks) {
-            const drawingUtils = new DrawingUtils(ctx);
             for (const landmarks of results.landmarks) {
-                drawingUtils.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, {
-                    color: "#3b82f6", // Blue-500
-                    lineWidth: 2
-                });
-                drawingUtils.drawLandmarks(landmarks, {
-                    color: "#60a5fa", // Blue-400
-                    lineWidth: 1,
-                    radius: 3
-                });
+                // Draw connections with gradient
+                for (const { start, end } of HandLandmarker.HAND_CONNECTIONS) {
+                    const startPoint = landmarks[start];
+                    const endPoint = landmarks[end];
+
+                    const gradient = ctx.createLinearGradient(
+                        startPoint.x * width, startPoint.y * height,
+                        endPoint.x * width, endPoint.y * height
+                    );
+                    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)'); // Blue-500
+                    gradient.addColorStop(1, 'rgba(96, 165, 250, 0.8)'); // Blue-400
+
+                    ctx.beginPath();
+                    ctx.moveTo(startPoint.x * width, startPoint.y * height);
+                    ctx.lineTo(endPoint.x * width, endPoint.y * height);
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = 2; // Slightly thicker for visibility
+                    ctx.shadowColor = '#3b82f6';
+                    ctx.shadowBlur = 8;
+                    ctx.stroke();
+                }
+
+                // Draw landmarks
+                for (let i = 0; i < landmarks.length; i++) {
+                    const point = landmarks[i];
+                    const x = point.x * width;
+                    const y = point.y * height;
+
+                    // Depth effect: closer points (smaller negative Z or smaller Z depending on model) appear larger/brighter
+                    // Mediapipe Z is relative to wrist. Negative is closer to camera.
+                    // We'll trust the 2D simplicity for now but add specific styling.
+
+                    const isFingertip = [4, 8, 12, 16, 20].includes(i);
+                    const radius = isFingertip ? 4 : 2;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+
+                    if (isFingertip) {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.shadowColor = '#60a5fa'; // Brighter blue
+                        ctx.shadowBlur = 15;
+                    } else {
+                        ctx.fillStyle = '#1e293b'; // Slate-800 center
+                        ctx.strokeStyle = '#60a5fa';
+                        ctx.lineWidth = 1.5;
+                        ctx.shadowColor = '#3b82f6';
+                        ctx.shadowBlur = 5;
+                    }
+
+                    ctx.fill();
+                    if (!isFingertip) ctx.stroke();
+                }
+
+                // Reset shadow
+                ctx.shadowBlur = 0;
             }
         }
 
@@ -101,6 +146,7 @@ export default function HandBackground() {
                         videoRef.current.srcObject = stream;
                         videoRef.current.play();
                         videoRef.current.addEventListener('loadeddata', () => {
+                            if (requestRef.current) cancelAnimationFrame(requestRef.current);
                             requestRef.current = requestAnimationFrame(draw);
                         });
                     }
@@ -122,10 +168,10 @@ export default function HandBackground() {
     }, [loaded]);
 
     return (
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden scale-x-[-1]">
             {/* Video is hidden, we only show the canvas */}
             <video ref={videoRef} className="hidden" playsInline muted autoPlay />
-            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-40 mix-blend-screen" />
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-60 mix-blend-screen" />
         </div>
     )
 }
