@@ -1,13 +1,13 @@
 import {
+  useState,
   useEffect,
-  useRef,
-  useState as useComponentState,
   type Dispatch,
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
   type MouseEvent as ReactMouseEvent,
   type SetStateAction,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { LAYOUT } from '../../constants';
 import type { Model, Mode, Position } from '../../types';
 import StatusIndicator from '../StatusIndicator';
@@ -121,132 +121,24 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
           ? 'Done'
           : 'Ready';
 
-  // Smart positioning for orchestrator menu
-  const [menuFlipped, setMenuFlipped] = useComponentState(false);
-  const orchestratorElementRef = useRef<HTMLDivElement | null>(null);
+  // Store menu click position for portal rendering
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
+  // Close menu when clicking outside
   useEffect(() => {
-    if (showOrchestratorMenu && orchestratorMenuRef.current && orchestratorElementRef.current) {
-      // Use triple requestAnimationFrame to ensure menu is fully rendered and positioned
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (!orchestratorMenuRef.current || !orchestratorElementRef.current) return;
+    if (!showOrchestratorMenu) return;
 
-            const menu = orchestratorMenuRef.current;
-            const orchestratorElement = orchestratorElementRef.current;
-            
-            // Get orchestrator element's position
-            const orchestratorRect = orchestratorElement.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const viewportWidth = window.innerWidth;
-            
-            // Get menu dimensions (after it's rendered)
-            const menuHeight = menu.offsetHeight || menu.scrollHeight;
-            const menuWidth = menu.offsetWidth || 256; // w-64 = 256px
-            
-            // Calculate available space above and below orchestrator
-            const spaceBelow = viewportHeight - orchestratorRect.bottom;
-            const spaceAbove = orchestratorRect.top;
-            
-            // Add padding from viewport edges
-            const padding = 20;
-            const margin = 8; // mb-2 or mt-2 = 8px
-            const minSpaceRequired = menuHeight + margin + padding;
-            
-            // Check if menu would be cut off at bottom (when positioned below)
-            const wouldBeCutOffBottom = spaceBelow < minSpaceRequired;
-            // Check if menu would be cut off at top (when positioned above)
-            const wouldBeCutOffTop = spaceAbove < minSpaceRequired;
-            
-            // Determine best vertical position:
-            // 1. If both sides have enough space, prefer bottom (unless top has significantly more space)
-            // 2. If one side is cut off, use the other
-            // 3. If both are cut off, use the side with more space
-            let shouldFlip = false;
-            
-            if (wouldBeCutOffBottom && !wouldBeCutOffTop) {
-              // Bottom is cut off, top has space
-              shouldFlip = true;
-            } else if (!wouldBeCutOffBottom && wouldBeCutOffTop) {
-              // Top is cut off, bottom has space
-              shouldFlip = false;
-            } else if (wouldBeCutOffBottom && wouldBeCutOffTop) {
-              // Both are cut off, use the side with more space
-              shouldFlip = spaceAbove > spaceBelow;
-            } else {
-              // Both have space, prefer bottom unless top has significantly more space
-              shouldFlip = spaceAbove > spaceBelow + 50;
-            }
-            
-            setMenuFlipped(shouldFlip);
-            
-            // Calculate where menu would actually be positioned after flip decision
-            const menuTopWhenBelow = orchestratorRect.bottom + margin;
-            const menuTopWhenAbove = orchestratorRect.top - margin - menuHeight;
-            const actualMenuTop = shouldFlip ? menuTopWhenAbove : menuTopWhenBelow;
-            const actualMenuBottom = actualMenuTop + menuHeight;
-            
-            // Check if menu would still be cut off after positioning
-            const isCutOffAtTop = actualMenuTop < padding;
-            const isCutOffAtBottom = actualMenuBottom > viewportHeight - padding;
-            
-            // Check horizontal boundaries
-            const menuCenterX = orchestratorRect.left + orchestratorRect.width / 2;
-            const menuLeftEdge = menuCenterX - menuWidth / 2;
-            const menuRightEdge = menuCenterX + menuWidth / 2;
-            const wouldBeCutOffLeft = menuLeftEdge < padding;
-            const wouldBeCutOffRight = menuRightEdge > viewportWidth - padding;
-            
-            // Always use fixed positioning to ensure menu stays within viewport
-            // This prevents any issues with relative positioning and scrolling
-            let constrainedTop = actualMenuTop;
-            if (isCutOffAtTop) {
-              constrainedTop = padding;
-            } else if (isCutOffAtBottom) {
-              constrainedTop = viewportHeight - menuHeight - padding;
-            }
-            
-            let constrainedLeft = menuCenterX;
-            if (wouldBeCutOffLeft) {
-              constrainedLeft = padding + menuWidth / 2;
-            } else if (wouldBeCutOffRight) {
-              constrainedLeft = viewportWidth - padding - menuWidth / 2;
-            }
-            
-            // Use fixed positioning to ensure menu stays within viewport
-            menu.style.position = 'fixed';
-            menu.style.top = `${constrainedTop}px`;
-            menu.style.left = `${constrainedLeft}px`;
-            menu.style.transform = 'translateX(-50%)';
-            
-            // Double-check the actual rendered position after applying styles
-            requestAnimationFrame(() => {
-              if (!orchestratorMenuRef.current) return;
-              const finalRect = orchestratorMenuRef.current.getBoundingClientRect();
-              const finalBottom = finalRect.bottom;
-              const finalTop = finalRect.top;
-              
-              // If still cut off, adjust
-              if (finalBottom > viewportHeight - padding) {
-                orchestratorMenuRef.current.style.top = `${viewportHeight - finalRect.height - padding}px`;
-              } else if (finalTop < padding) {
-                orchestratorMenuRef.current.style.top = `${padding}px`;
-              }
-            });
-          });
-        });
-      });
-    } else {
-      // Reset positioning when menu is closed
-      if (orchestratorMenuRef.current) {
-        orchestratorMenuRef.current.style.position = '';
-        orchestratorMenuRef.current.style.top = '';
-        orchestratorMenuRef.current.style.left = '';
-        orchestratorMenuRef.current.style.transform = '';
+    const handleClickOutside = (e: MouseEvent) => {
+      if (orchestratorMenuRef.current && !orchestratorMenuRef.current.contains(e.target as Node)) {
+        setShowOrchestratorMenu(false);
+        setMenuPosition(null);
       }
-    }
-  }, [showOrchestratorMenu, orchestratorMenuRef]);
+    };
+
+    // Use capture phase to ensure we catch the click before it propagates
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [showOrchestratorMenu, orchestratorMenuRef, setShowOrchestratorMenu]);
 
   return (
     <>
@@ -530,7 +422,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
 
       {mode !== 'compare' && moderatorModel && (
         <div
-          ref={orchestratorElementRef}
           data-card
           className="absolute z-20 transition-all duration-700 ease-out cursor-pointer"
           style={{
@@ -555,7 +446,13 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setShowOrchestratorMenu(!showOrchestratorMenu);
+            if (showOrchestratorMenu) {
+              setShowOrchestratorMenu(false);
+              setMenuPosition(null);
+            } else {
+              setMenuPosition({ x: e.clientX, y: e.clientY });
+              setShowOrchestratorMenu(true);
+            }
           }}
           onMouseEnter={() => setHoveredCard('moderator')}
           onMouseLeave={() => setHoveredCard(null)}
@@ -638,13 +535,18 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             </div>
           )}
 
-          {/* Auto Mode Context Menu */}
-          {showOrchestratorMenu && (
+          {/* Auto Mode Context Menu - Rendered via Portal */}
+          {showOrchestratorMenu && menuPosition && createPortal(
             <div
               ref={orchestratorMenuRef}
-              className={`absolute left-1/2 -translate-x-1/2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[300] ${
-                menuFlipped ? 'bottom-full mb-2' : 'top-full mt-2'
-              }`}
+              className="w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden"
+              style={{
+                position: 'fixed',
+                top: `${menuPosition.y}px`,
+                left: `${menuPosition.x}px`,
+                transform: 'translateY(-50%)',
+                zIndex: 9999,
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               {orchestratorAutoMode ? (
@@ -659,11 +561,10 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                         setOrchestratorAutoScope(scope);
                         setShowOrchestratorMenu(false);
                       }}
-                      className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
-                        orchestratorAutoScope === scope
-                          ? 'bg-yellow-500/20 text-yellow-300'
-                          : 'text-slate-300 hover:bg-slate-700/50'
-                      }`}
+                      className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${orchestratorAutoScope === scope
+                        ? 'bg-yellow-500/20 text-yellow-300'
+                        : 'text-slate-300 hover:bg-slate-700/50'
+                        }`}
                     >
                       {scope === 'all' && 'All'}
                       {scope === 'local' && 'Local'}
@@ -704,11 +605,10 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                             setModerator(model.id);
                             setShowOrchestratorMenu(false);
                           }}
-                          className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
-                            moderatorId === model.id
-                              ? 'bg-blue-500/20 text-blue-300'
-                              : 'text-slate-300 hover:bg-slate-700/50'
-                          }`}
+                          className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${moderatorId === model.id
+                            ? 'bg-blue-500/20 text-blue-300'
+                            : 'text-slate-300 hover:bg-slate-700/50'
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <span>{model.name}</span>
@@ -732,11 +632,10 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                             setModerator(model.id);
                             setShowOrchestratorMenu(false);
                           }}
-                          className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
-                            moderatorId === model.id
-                              ? 'bg-blue-500/20 text-blue-300'
-                              : 'text-slate-300 hover:bg-slate-700/50'
-                          }`}
+                          className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${moderatorId === model.id
+                            ? 'bg-blue-500/20 text-blue-300'
+                            : 'text-slate-300 hover:bg-slate-700/50'
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <span>{model.name}</span>
@@ -762,7 +661,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   </div>
                 </>
               )}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       )}
