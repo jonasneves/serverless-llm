@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
 import { BG_STYLES, MODE_COLORS, LAYOUT } from './constants';
 import ModelDock from './components/ModelDock';
@@ -122,8 +122,7 @@ export default function Playground() {
     .map(id => modelsData.find(m => m.id === id))
     .filter((m): m is Model => !!m && (mode === 'compare' || m.id !== moderator));
 
-  // Dynamic layout radius calculation (Moved up for scope access in drag handlers)
-  const layoutRadius = mode === 'compare' ? 0 : Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
+
 
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'council') {
@@ -257,23 +256,46 @@ export default function Playground() {
     clearInspectorSelection,
   } = useInspectorSelection();
 
+  const [arenaSize, setArenaSize] = useState<{ width: number; height: number } | null>(null);
+
+  // Dynamic layout radius calculation
+  // Expand to fill available space but enforce minimums to prevent overlap
+  const layoutRadius = useMemo(() => {
+    if (mode === 'compare') return 0;
+
+    // Minimum radius required to fit all cards without overlapping
+    const minRequiredRadius = Math.max(LAYOUT.baseRadius, LAYOUT.minRadius + selectedModels.length * LAYOUT.radiusPerModel);
+
+    if (!arenaSize) return minRequiredRadius;
+
+    // Calculate maximum radius that fits in the viewport
+    // Use smaller dimension, subtract padding for card size (buffer ~140px)
+    const minDimension = Math.min(arenaSize.width, arenaSize.height);
+    const safeMaxRadius = (minDimension / 2) - 140;
+
+    // Use safeMaxRadius to expand, but ensure we never shrink below minRequiredRadius
+    return Math.max(minRequiredRadius, safeMaxRadius);
+  }, [mode, selectedModels.length, arenaSize]);
+
   // Dynamic grid column calculation - placed here after activeInspectorId is declared
   useEffect(() => {
-    const calculateGridCols = () => {
+    const calculateLayout = () => {
       if (!visualizationAreaRef.current) return;
-      const availableWidth = visualizationAreaRef.current.clientWidth;
-      let newCols = Math.floor(availableWidth / (LAYOUT.cardWidth + LAYOUT.gapX));
+      const { clientWidth, clientHeight } = visualizationAreaRef.current;
+
+      // Update Grid Cols
+      let newCols = Math.floor(clientWidth / (LAYOUT.cardWidth + LAYOUT.gapX));
       newCols = Math.max(1, newCols); // Ensure at least 1 column
       setGridCols(newCols);
+
+      // Update Arena Size
+      setArenaSize({ width: clientWidth, height: clientHeight });
     };
 
     const resizeObserver = new ResizeObserver(entries => {
       for (let entry of entries) {
         if (entry.target === visualizationAreaRef.current) {
-          const availableWidth = entry.contentRect.width;
-          let newCols = Math.floor(availableWidth / (LAYOUT.cardWidth + LAYOUT.gapX));
-          newCols = Math.max(1, newCols); // Ensure at least 1 column
-          setGridCols(newCols);
+          calculateLayout();
         }
       }
     });
@@ -281,7 +303,7 @@ export default function Playground() {
     if (visualizationAreaRef.current) {
       resizeObserver.observe(visualizationAreaRef.current);
       // Trigger initial calculation
-      calculateGridCols();
+      calculateLayout();
     }
 
     return () => {
