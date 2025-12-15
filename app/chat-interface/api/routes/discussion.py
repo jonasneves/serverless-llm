@@ -81,7 +81,10 @@ async def stream_discussion_events(
             )
 
         # Run discussion with orchestrator
-        engine = DiscussionEngine(orchestrator=orchestrator)
+        engine = DiscussionEngine(
+            orchestrator=orchestrator,
+            model_endpoints=MODEL_ENDPOINTS
+        )
         async for event in engine.run_discussion(
             query=query,
             max_tokens=max_tokens,

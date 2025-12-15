@@ -34,7 +34,7 @@ export default function PromptInput({
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
       }}
     >
-      <div className="max-w-xl w-full pointer-events-auto">
+      <div className="w-full pointer-events-auto" style={{ maxWidth: '600px' }}>
         <div className="mb-4 flex items-center gap-2">
           <button
             onClick={onOpenTopics}

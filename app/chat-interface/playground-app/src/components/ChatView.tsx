@@ -18,6 +18,7 @@ interface ChatViewProps {
 interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
+    modelName?: string;
     error?: boolean;
 }
 
@@ -208,7 +209,11 @@ export default function ChatView({
                     const result = await tryModelStream(model.id, apiMessages);
 
                     if (result.success) {
-                        setMessages(prev => [...prev, { role: 'assistant', content: result.content }]);
+                        setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: result.content,
+                            modelName: model.name
+                        }]);
                         setCurrentResponse('');
                         setCurrentAutoModel(null);
                         return;
@@ -226,12 +231,22 @@ export default function ChatView({
                 setCurrentAutoModel(null);
             } else {
                 if (!selectedModelId) return;
+                const model = models.find(m => m.id === selectedModelId);
                 const result = await tryModelStream(selectedModelId, apiMessages);
 
                 if (result.success) {
-                    setMessages(prev => [...prev, { role: 'assistant', content: result.content }]);
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: result.content,
+                        modelName: model?.name
+                    }]);
                 } else {
-                    setMessages(prev => [...prev, { role: 'assistant', content: result.content, error: true }]);
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: result.content,
+                        modelName: model?.name,
+                        error: true
+                    }]);
                 }
             }
 
@@ -278,8 +293,8 @@ export default function ChatView({
     return (
         <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
-            <div className="z-10 w-full flex justify-center">
-                <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
+            <div className="z-10 w-full flex justify-center pt-6 pb-2">
+                <div className="w-full flex items-center justify-between" style={{ maxWidth: '600px' }}>
                     {/* Left: Main control (Auto or Model selector) */}
                     <div className="flex items-center gap-2">
                         {autoMode ? (
@@ -302,11 +317,10 @@ export default function ChatView({
                                                     setAutoModeScope(scope);
                                                     setShowAutoDropdown(false);
                                                 }}
-                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
-                                                    autoModeScope === scope
-                                                        ? 'bg-yellow-500/20 text-yellow-300'
-                                                        : 'text-slate-300 hover:bg-slate-700/50'
-                                                }`}
+                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${autoModeScope === scope
+                                                    ? 'bg-yellow-500/20 text-yellow-300'
+                                                    : 'text-slate-300 hover:bg-slate-700/50'
+                                                    }`}
                                             >
                                                 {autoScopeLabels[scope]}
                                                 {scope === 'all' && <span className="text-[10px] text-slate-500 ml-1">(local → API)</span>}
@@ -366,11 +380,10 @@ export default function ChatView({
                                                                             onSelectModel(model.id);
                                                                             setShowModelSelector(false);
                                                                         }}
-                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
-                                                                            selectedModelId === model.id
-                                                                                ? 'bg-blue-500/20 text-blue-300'
-                                                                                : 'text-slate-300 hover:bg-slate-700/50'
-                                                                        }`}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                            ? 'bg-blue-500/20 text-blue-300'
+                                                                            : 'text-slate-300 hover:bg-slate-700/50'
+                                                                            }`}
                                                                     >
                                                                         <div className="flex items-center justify-between">
                                                                             <span>{model.name}</span>
@@ -404,11 +417,10 @@ export default function ChatView({
                                                                             onSelectModel(model.id);
                                                                             setShowModelSelector(false);
                                                                         }}
-                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
-                                                                            selectedModelId === model.id
-                                                                                ? 'bg-blue-500/20 text-blue-300'
-                                                                                : 'text-slate-300 hover:bg-slate-700/50'
-                                                                        }`}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                            ? 'bg-blue-500/20 text-blue-300'
+                                                                            : 'text-slate-300 hover:bg-slate-700/50'
+                                                                            }`}
                                                                     >
                                                                         <div className="flex items-center justify-between">
                                                                             <span>{model.name}</span>
@@ -469,7 +481,7 @@ export default function ChatView({
                 className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll"
                 data-no-arena-scroll
             >
-                <div className="max-w-3xl mx-auto w-full min-h-full flex flex-col space-y-6">
+                <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
                             <Bot size={48} className="mb-4" />
@@ -479,15 +491,15 @@ export default function ChatView({
 
                     {messages.map((msg, idx) => (
                         <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                    ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                                    : msg.error
-                                        ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                                        : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
+                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 ${msg.role === 'user'
+                                ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
+                                : msg.error
+                                    ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
+                                    : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
                                 }`}>
                                 <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
                                     {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                                    {msg.role === 'user' ? 'You' : (displayModel?.name || 'Assistant')}
+                                    {msg.role === 'user' ? 'You' : (msg.modelName || 'Assistant')}
                                     {msg.error && <AlertTriangle size={12} className="text-red-400" />}
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none">
@@ -499,7 +511,7 @@ export default function ChatView({
 
                     {isGenerating && (
                         <div className="flex justify-start">
-                            <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-slate-800/60 border border-slate-700/60 text-slate-200">
+                            <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 pt-3 pb-0 bg-slate-800/60 border border-slate-700/60 text-slate-200">
                                 <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                     <Bot size={12} />
                                     {displayModel?.name || 'Assistant'}

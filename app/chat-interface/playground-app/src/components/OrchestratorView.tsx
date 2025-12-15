@@ -290,8 +290,8 @@ export default function OrchestratorView({
     return (
         <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
-            <div className="z-10 w-full flex justify-center">
-                <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
+            <div className="z-10 w-full flex justify-center pt-6 pb-2">
+                <div className="w-full flex items-center justify-between" style={{ maxWidth: '600px' }}>
                     {/* Left: Main control (Auto or Model selector) */}
                     <div className="flex items-center gap-2">
                         {autoMode ? (
@@ -314,11 +314,10 @@ export default function OrchestratorView({
                                                     setAutoModeScope(scope);
                                                     setShowAutoDropdown(false);
                                                 }}
-                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
-                                                    autoModeScope === scope
-                                                        ? 'bg-yellow-500/20 text-yellow-300'
-                                                        : 'text-slate-300 hover:bg-slate-700/50'
-                                                }`}
+                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${autoModeScope === scope
+                                                    ? 'bg-yellow-500/20 text-yellow-300'
+                                                    : 'text-slate-300 hover:bg-slate-700/50'
+                                                    }`}
                                             >
                                                 {autoScopeLabels[scope]}
                                                 {scope === 'all' && <span className="text-[10px] text-slate-500 ml-1">(local → API)</span>}
@@ -377,11 +376,10 @@ export default function OrchestratorView({
                                                                             onSelectModel(model.id);
                                                                             setShowModelSelector(false);
                                                                         }}
-                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
-                                                                            selectedModelId === model.id
-                                                                                ? 'bg-blue-500/20 text-blue-300'
-                                                                                : 'text-slate-300 hover:bg-slate-700/50'
-                                                                        }`}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                            ? 'bg-blue-500/20 text-blue-300'
+                                                                            : 'text-slate-300 hover:bg-slate-700/50'
+                                                                            }`}
                                                                     >
                                                                         <div className="flex items-center justify-between">
                                                                             <span>{model.name}</span>
@@ -414,11 +412,10 @@ export default function OrchestratorView({
                                                                             onSelectModel(model.id);
                                                                             setShowModelSelector(false);
                                                                         }}
-                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
-                                                                            selectedModelId === model.id
-                                                                                ? 'bg-blue-500/20 text-blue-300'
-                                                                                : 'text-slate-300 hover:bg-slate-700/50'
-                                                                        }`}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                            ? 'bg-blue-500/20 text-blue-300'
+                                                                            : 'text-slate-300 hover:bg-slate-700/50'
+                                                                            }`}
                                                                     >
                                                                         <div className="flex items-center justify-between">
                                                                             <span>{model.name}</span>
@@ -461,7 +458,7 @@ export default function OrchestratorView({
 
                     {/* Center: Badge */}
                     <div className="flex-1 flex justify-center items-center">
-                         <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
+                        <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
                             AUTOGEN • MULTI-AGENT
                         </div>
                     </div>
@@ -484,7 +481,7 @@ export default function OrchestratorView({
                 className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll"
                 data-no-arena-scroll
             >
-                <div className="max-w-3xl mx-auto w-full min-h-full flex flex-col space-y-6">
+                <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {events.length === 0 && !isRunning && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none">
                             <Terminal size={48} className="mb-4" />
