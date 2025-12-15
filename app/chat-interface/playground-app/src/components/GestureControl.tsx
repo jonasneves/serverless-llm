@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick, Sparkles, Info } from 'lucide-react';
+import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick, Sparkles, HelpCircle, Check } from 'lucide-react';
 import HandBackground from './HandBackground';
 
 const STORAGE_KEY = 'gesture-control-skip-intro';
@@ -16,6 +16,13 @@ export default function GestureControl(props: GestureControlProps) {
   const [showModal, setShowModal] = useState(false);
   const [skipIntro, setSkipIntro] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [rememberChoice, setRememberChoice] = useState(false);
+  const [gestureState, setGestureState] = useState<{
+    gesture: string | null;
+    progress: number;
+    triggered: boolean;
+  }>({ gesture: null, progress: 0, triggered: false });
+  const [flashTrigger, setFlashTrigger] = useState(false);
 
   // Load preference from localStorage on mount
   useEffect(() => {
@@ -25,6 +32,43 @@ export default function GestureControl(props: GestureControlProps) {
     }
   }, []);
 
+  // Close tooltip on ESC key or click outside
+  useEffect(() => {
+    if (!showTooltip) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowTooltip(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't close if clicking the help button or the tooltip itself
+      if (target.closest('[data-tooltip]') || target.closest('[data-help-button]')) {
+        return;
+      }
+      setShowTooltip(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('click', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('click', handleClickOutside);
+    };
+  }, [showTooltip]);
+
+  // Handle gesture state updates
+  const handleGestureState = (state: { gesture: string | null; progress: number; triggered: boolean }) => {
+    setGestureState(state);
+    if (state.triggered) {
+      setFlashTrigger(true);
+      setTimeout(() => setFlashTrigger(false), 300);
+    }
+  };
+
   const toggle = () => {
     if (isActive) {
       setIsActive(false);
@@ -33,25 +77,25 @@ export default function GestureControl(props: GestureControlProps) {
       if (skipIntro) {
         // Skip modal, go directly to camera
         setIsActive(true);
-        setShowTooltip(true);
-        // Auto-hide tooltip after 5 seconds
-        setTimeout(() => setShowTooltip(false), 5000);
       } else {
         setShowModal(true);
       }
     }
   };
 
-  const startCamera = (rememberChoice: boolean = false) => {
+  const toggleTooltip = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowTooltip(prev => !prev);
+  };
+
+  const startCamera = () => {
     if (rememberChoice) {
       localStorage.setItem(STORAGE_KEY, 'true');
       setSkipIntro(true);
     }
     setShowModal(false);
     setIsActive(true);
-    // Show tooltip briefly when starting
-    setShowTooltip(true);
-    setTimeout(() => setShowTooltip(false), 4000);
+    setRememberChoice(false);
   };
 
   const resetPreference = () => {
@@ -66,9 +110,22 @@ export default function GestureControl(props: GestureControlProps) {
 
   return (
     <>
-      {/* Floating Tooltip - shown when gesture control is active and user has skipped intro */}
+      {/* Info Button - centered above the stop button */}
+      {isActive && (
+        <button
+          onClick={toggleTooltip}
+          data-help-button
+          className="fixed bottom-[12.25rem] sm:bottom-[4.5rem] right-5 sm:right-7 z-50 flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95 bg-slate-900/80 backdrop-blur-md border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-600"
+          title="Show gesture shortcuts"
+        >
+          <HelpCircle size={12} />
+        </button>
+      )}
+
+      {/* Floating Tooltip - shown when info button is clicked */}
       {isActive && showTooltip && (
         <div
+          data-tooltip
           className="fixed bottom-52 sm:bottom-[72px] right-3 sm:right-5 z-50 animate-in slide-in-from-bottom-2 fade-in duration-300"
           style={{ maxWidth: '220px' }}
         >
@@ -79,8 +136,8 @@ export default function GestureControl(props: GestureControlProps) {
             </div>
 
             <div className="flex items-start gap-2 mb-2">
-              <Info size={14} className="text-blue-400 shrink-0 mt-0.5" />
-              <span className="text-xs text-slate-300 font-medium">Gesture Controls</span>
+              <Hand size={14} className="text-blue-400 shrink-0 mt-0.5" />
+              <span className="text-xs text-slate-300 font-medium">Gesture Shortcuts</span>
               <button
                 onClick={() => setShowTooltip(false)}
                 className="ml-auto text-slate-500 hover:text-slate-300 transition-colors"
@@ -94,7 +151,7 @@ export default function GestureControl(props: GestureControlProps) {
                 <Sparkles size={10} className="text-yellow-400" /> Wave → Hi
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
-                <Hand size={10} className="text-red-400" /> Palm → Stop
+                <Hand size={10} className="text-red-400" /> Palm+Close → Stop
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
                 <ThumbsUp size={10} className="text-green-400" /> Up → Yes
@@ -102,15 +159,60 @@ export default function GestureControl(props: GestureControlProps) {
               <div className="flex items-center gap-1.5 text-slate-400">
                 <ThumbsDown size={10} className="text-orange-400" /> Down → No
               </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <MoveVertical size={10} className="text-purple-400" /> Fist → Scroll
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <MousePointerClick size={10} className="text-pink-400" /> Hold Point → Click
+              </div>
             </div>
 
-            <button
-              onClick={resetPreference}
-              className="mt-2 w-full text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Show full guide on next start
-            </button>
+            {skipIntro && (
+              <button
+                onClick={resetPreference}
+                className="mt-2 w-full text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                Show full guide on next start
+              </button>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* Visual feedback ring showing gesture progress */}
+      {isActive && gestureState.progress > 0 && (
+        <div
+          className="fixed bottom-36 sm:bottom-5 right-3 sm:right-5 z-40 pointer-events-none"
+          style={{ width: '48px', height: '48px', marginRight: '-4px', marginBottom: '-4px' }}
+        >
+          <svg width="48" height="48" viewBox="0 0 48 48" className="transform -rotate-90">
+            {/* Background ring */}
+            <circle
+              cx="24"
+              cy="24"
+              r="21"
+              fill="none"
+              stroke="rgba(100, 116, 139, 0.3)"
+              strokeWidth="3"
+            />
+            {/* Progress ring */}
+            <circle
+              cx="24"
+              cy="24"
+              r="21"
+              fill="none"
+              stroke={flashTrigger ? '#22c55e' : '#fbbf24'}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={`${gestureState.progress * 132} 132`}
+              style={{
+                filter: flashTrigger
+                  ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.8))'
+                  : 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.5))',
+                transition: 'stroke 0.2s, filter 0.2s'
+              }}
+            />
+          </svg>
         </div>
       )}
 
@@ -163,8 +265,8 @@ export default function GestureControl(props: GestureControlProps) {
                 />
                 <GestureCard
                   icon={<Hand size={18} className="text-red-400" />}
-                  label="Open Palm"
-                  desc="Stop Generation"
+                  label="Palm + Close"
+                  desc="Stop (bring hand close)"
                 />
                 <GestureCard
                   icon={<ThumbsUp size={18} className="text-green-400" />}
@@ -183,31 +285,39 @@ export default function GestureControl(props: GestureControlProps) {
                 />
                 <GestureCard
                   icon={<MousePointerClick size={18} className="text-pink-400" />}
-                  label="Tap Index"
-                  desc="Click Element"
+                  label="Point & Hold"
+                  desc="Click (hold 1.5s)"
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => startCamera(false)}
-                    className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
-                  >
-                    Enable Camera
-                  </button>
-                </div>
-                <button
-                  onClick={() => startCamera(true)}
-                  className="w-full px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-400 hover:text-slate-200 text-xs font-medium transition-colors flex items-center justify-center gap-2"
+              {/* Remember choice checkbox */}
+              <label className="flex items-center gap-2 mb-4 cursor-pointer group">
+                <div
+                  className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${rememberChoice
+                    ? 'bg-blue-600 border-blue-500'
+                    : 'border-slate-600 hover:border-slate-500 group-hover:bg-slate-800/50'
+                    }`}
+                  onClick={() => setRememberChoice(!rememberChoice)}
                 >
-                  <span>Enable & Don't Show Again</span>
+                  {rememberChoice && <Check size={12} className="text-white" />}
+                </div>
+                <span className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors select-none">
+                  Don't show this guide again
+                </span>
+              </label>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={startCamera}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
+                >
+                  Enable Camera
                 </button>
               </div>
             </div>
@@ -216,7 +326,7 @@ export default function GestureControl(props: GestureControlProps) {
       )}
 
       {isActive && (
-        <HandBackground {...props} />
+        <HandBackground {...props} onGestureState={handleGestureState} />
       )}
     </>
   );

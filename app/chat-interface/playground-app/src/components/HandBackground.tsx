@@ -9,25 +9,40 @@ interface HandBackgroundProps {
     onSendMessage?: (msg: string) => void;
     onScroll?: (deltaY: number) => void;
     onPinch?: (x: number, y: number) => void;
+    onGestureState?: (state: {
+        gesture: string | null;
+        progress: number; // 0-1 progress toward trigger
+        triggered: boolean;
+    }) => void;
 }
+
+// Hysteresis thresholds - different values for entering vs exiting states
+// This prevents flickering at the boundary
+const HYSTERESIS = {
+    pinch: { enter: 0.04, exit: 0.08 },
+    fingerExtend: { enter: -0.02, exit: 0.02 }, // y difference threshold
+};
 
 export default function HandBackground({
     onStopGeneration,
     onSendMessage,
     onScroll,
-    onPinch
+    onPinch,
+    onGestureState
 }: HandBackgroundProps) {
     // Refs for callbacks to avoid stale closures in RAF loop
     const onStopGenerationRef = useRef(onStopGeneration);
     const onSendMessageRef = useRef(onSendMessage);
     const onScrollRef = useRef(onScroll);
     const onPinchRef = useRef(onPinch);
+    const onGestureStateRef = useRef(onGestureState);
 
     // Update refs on every render
     onStopGenerationRef.current = onStopGeneration;
     onSendMessageRef.current = onSendMessage;
     onScrollRef.current = onScroll;
     onPinchRef.current = onPinch;
+    onGestureStateRef.current = onGestureState;
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,7 +54,6 @@ export default function HandBackground({
     // Gesture State
     const lastGestureTime = useRef<number>(0);
     const gestureCooldown = 1500; // ms between discrete gestures like Yes/No
-    const pinchCooldown = 500; // debounce pinch clicks
 
     // Persistence for static gestures (Stop, Yes, No) to prevent accidental triggers
     // Require ~15 frames (approx 0.5s at 30fps) of consistent detection
@@ -59,6 +73,10 @@ export default function HandBackground({
         waveDirectionChanges: number;
         lastWaveDirection: 'left' | 'right' | null;
         waveStartTime: number;
+        // Dwell click detection (hold to click)
+        dwellStartTime: number;
+        dwellPosition: { x: number; y: number } | null;
+        isPinching: boolean; // Track if currently in pinch state
     }>>(new Map());
 
     const getHandState = (index: number) => {
@@ -72,7 +90,10 @@ export default function HandBackground({
                 waveXPositions: [],
                 waveDirectionChanges: 0,
                 lastWaveDirection: null,
-                waveStartTime: 0
+                waveStartTime: 0,
+                dwellStartTime: 0,
+                dwellPosition: null,
+                isPinching: false
             });
         }
         return handStates.current.get(index)!;
@@ -147,48 +168,100 @@ export default function HandBackground({
         const fingersExtendedCount = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
 
         // -----------------------
-        // 0. PINCH (Click/Select) - Immediate, Debounced
+        // 0. PINCH (Double-Pinch to Click) with Hysteresis
         // -----------------------
         const pinchDistance = Math.sqrt(
             Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2)
         );
 
-        if (pinchDistance < 0.05) {
-            if (now - lastGestureTime.current > pinchCooldown) {
+        // Apply hysteresis: use different thresholds for entering vs exiting pinch state
+        const wasPinching = state.isPinching;
+        let isPinching: boolean;
+        if (wasPinching) {
+            // Already pinching - use looser threshold to exit (must move fingers further apart)
+            isPinching = pinchDistance < HYSTERESIS.pinch.exit;
+        } else {
+            // Not pinching - use tighter threshold to enter (must get fingers closer)
+            isPinching = pinchDistance < HYSTERESIS.pinch.enter;
+        }
+
+        // Detect pinch release (transition from pinching to not pinching)
+        // This triggers an immediate click
+        const PINCH_COOLDOWN = 500; // ms cooldown between pinch clicks
+        if (wasPinching && !isPinching) {
+            if (now - lastGestureTime.current > PINCH_COOLDOWN) {
+                const midX = (thumbTip.x + indexTip.x) / 2;
+                const midY = (thumbTip.y + indexTip.y) / 2;
+
                 if (onPinchRef.current) {
-                    const midX = (thumbTip.x + indexTip.x) / 2;
-                    const midY = (thumbTip.y + indexTip.y) / 2;
                     onPinchRef.current(1 - midX, midY); // Mirror X
                     lastGestureTime.current = now;
+                    state.isPinching = false;
+                    // Report triggered gesture
+                    if (onGestureStateRef.current) {
+                        onGestureStateRef.current({ gesture: 'PINCH', progress: 1, triggered: true });
+                    }
                     return 'PINCH';
                 }
             }
         }
+        state.isPinching = isPinching;
 
         // -----------------------
-        // 0.5 INDEX TAP (Pointing triggers Click)
+        // 0.5 DWELL CLICK (Point and Hold to Click)
         // -----------------------
         const isPointing = indexExt && !middleExt && !ringExt && !pinkyExt;
+        const DWELL_TIME = 1500; // 1.5 seconds to trigger click
+        const DWELL_MOVE_THRESHOLD = 0.05; // Max movement allowed while dwelling
 
         if (isPointing) {
-            const currentY = indexTip.y;
-            if (state.lastIndexTipY !== null) {
-                const dy = currentY - state.lastIndexTipY; // Positive = Down
-                // Threshold for tap (velocity). 
-                // Lowered to 0.015 to be more responsive.
-                if (dy > 0.015 && (now - lastGestureTime.current > pinchCooldown)) {
-                    if (onPinchRef.current) {
-                        // Use start Y to target
-                        onPinchRef.current(1 - indexTip.x, state.lastIndexTipY);
+            const currentPos = { x: indexTip.x, y: indexTip.y };
+
+            if (state.dwellPosition === null) {
+                // Start dwelling
+                state.dwellStartTime = now;
+                state.dwellPosition = currentPos;
+            } else {
+                // Check if position is stable (hasn't moved too much)
+                const moveDistance = Math.sqrt(
+                    Math.pow(currentPos.x - state.dwellPosition.x, 2) +
+                    Math.pow(currentPos.y - state.dwellPosition.y, 2)
+                );
+
+                if (moveDistance > DWELL_MOVE_THRESHOLD) {
+                    // Moved too much, reset dwell
+                    state.dwellStartTime = now;
+                    state.dwellPosition = currentPos;
+                } else {
+                    // Check if dwell time is reached
+                    const dwellDuration = now - state.dwellStartTime;
+                    if (dwellDuration >= DWELL_TIME && onPinchRef.current) {
+                        // Trigger click!
+                        onPinchRef.current(1 - currentPos.x, currentPos.y); // Mirror X
                         lastGestureTime.current = now;
-                        return 'TAP';
+                        // Reset dwell state
+                        state.dwellStartTime = 0;
+                        state.dwellPosition = null;
+                        if (onGestureStateRef.current) {
+                            onGestureStateRef.current({ gesture: 'DWELL_CLICK', progress: 1, triggered: true });
+                        }
+                        return 'DWELL_CLICK';
+                    }
+
+                    // Report dwell progress for visual feedback
+                    if (onGestureStateRef.current) {
+                        const progress = Math.min(1, dwellDuration / DWELL_TIME);
+                        onGestureStateRef.current({ gesture: 'POINTING', progress, triggered: false });
                     }
                 }
             }
-            state.lastIndexTipY = currentY;
-            // Return POINTING to visualize the cursor if no tap was detected
+
+            state.lastIndexTipY = indexTip.y;
             return 'POINTING';
         } else {
+            // Not pointing, reset dwell state
+            state.dwellStartTime = 0;
+            state.dwellPosition = null;
             state.lastIndexTipY = null;
         }
 
@@ -197,9 +270,21 @@ export default function HandBackground({
         // -----------------------
         let currentPose = 'NEUTRAL';
 
-        // Check STOP (Open Palm) - Also tracks wave gesture
+        // Calculate hand size (distance from wrist to middle finger tip)
+        // This helps differentiate STOP (close/large) from wave (any distance)
+        const middleTipPos = landmarks[12];
+        const handSize = Math.sqrt(
+            Math.pow(middleTipPos.x - wrist.x, 2) + Math.pow(middleTipPos.y - wrist.y, 2)
+        );
+        const STOP_SIZE_THRESHOLD = 0.35; // Hand must be this large to trigger STOP (close to camera)
+
+        // Check for Open Palm (for both STOP and Wave)
         if (fingersExtendedCount >= 4) {
-            currentPose = 'STOP';
+            // Only set STOP if hand is large enough (close to camera)
+            // Otherwise it's just an open palm for wave detection
+            if (handSize >= STOP_SIZE_THRESHOLD) {
+                currentPose = 'STOP';
+            }
             state.lastOpenTime = now;
 
             // Wave detection: track horizontal movement while palm is open
@@ -255,24 +340,77 @@ export default function HandBackground({
             const canTriggerYesNo = (now - state.lastOpenTime) < 2000; // 2 seconds window
 
             if (canTriggerYesNo) {
-                // Thumbs Up: Tip significantly above IP
-                if (thumbTip.y < thumbIp.y - 0.05) {
-                    currentPose = 'YES';
-                }
-                // Thumbs Down: Tip significantly below IP
-                else if (thumbTip.y > thumbIp.y + 0.05) {
-                    currentPose = 'NO';
+                // Calculate thumb direction vector (from IP to Tip)
+                const thumbDirX = thumbTip.x - thumbIp.x;
+                const thumbDirY = thumbTip.y - thumbIp.y;
+
+                // Calculate palm orientation using wrist to middle finger base
+                const middleMcp = landmarks[9]; // Middle finger MCP (base)
+                const palmDirX = middleMcp.x - wrist.x;
+                const palmDirY = middleMcp.y - wrist.y;
+
+                // Normalize vectors
+                const thumbLen = Math.sqrt(thumbDirX * thumbDirX + thumbDirY * thumbDirY);
+                const palmLen = Math.sqrt(palmDirX * palmDirX + palmDirY * palmDirY);
+
+                if (thumbLen > 0.01 && palmLen > 0.01) {
+                    // Calculate cross product to determine if thumb is "left" or "right" of palm direction
+                    // For a right hand facing camera: 
+                    // - Thumbs up: thumb points perpendicular to palm, in the "counterclockwise" direction
+                    // - Thumbs down: thumb points perpendicular to palm, in the "clockwise" direction
+                    const cross = (thumbDirX * palmDirY - thumbDirY * palmDirX) / (thumbLen * palmLen);
+
+                    // Check thumb is extended enough (not curled)
+                    const thumbIsExtended = thumbLen > 0.06;
+
+                    // Use magnitude of cross product to determine if thumb is perpendicular to palm
+                    // Positive cross = thumb points to the "left" of palm direction = thumbs up (for right hand)
+                    // But we need to handle both hands and orientations...
+
+                    // Simpler approach: check if thumb is pointing generally "up" in any orientation
+                    // by checking if the thumb direction has a significant component perpendicular to fingers
+
+                    // For natural gestures, also consider:
+                    // - Y-axis: thumbTip.y < thumbIp.y means pointing up in screen coords
+                    // - X-axis: for sideways hand, thumb extends horizontally
+
+                    // Combined approach: check thumb direction relative to both axes
+                    const thumbPointsUp = thumbDirY < -0.04; // Traditional vertical up
+                    const thumbPointsDown = thumbDirY > 0.04; // Traditional vertical down
+
+                    // For sideways hands (palm facing camera): check if thumb extends opposite to wrist
+                    // When hand is sideways with fingers pointing right, thumbs up has thumb pointing UP or LEFT
+                    // Use cross product for sideways detection (works regardless of hand rotation)
+                    const thumbPointsUpSideways = cross > 0.3;
+                    const thumbPointsDownSideways = cross < -0.3;
+
+                    if (thumbIsExtended) {
+                        // Thumbs UP: thumb points up vertically OR is perpendicular in the "up" direction
+                        if (thumbPointsUp || thumbPointsUpSideways) {
+                            currentPose = 'YES';
+                        }
+                        // Thumbs DOWN: thumb points down vertically OR is perpendicular in the "down" direction
+                        else if (thumbPointsDown || thumbPointsDownSideways) {
+                            currentPose = 'NO';
+                        }
+                    }
                 }
             }
 
-            // Fist can happen anytime (scrolling)
-            // But if we fail Yes/No (due to no wake word), we don't necessarily want to default to FIST immediately if it looks like Yes/No?
-            // Actually, Fist requires thumb curled or side. Thumbs up has thumb extended.
-            // If we are in "Yes" pose but strict mode blocks it, "currentPose" remains NEUTRAL.
-            // We should check that `fingersExtendedCount === 0` strictly for FIST.
+            // Fist requires ALL fingers curled AND thumb tucked in (not extended toward index for pinch)
+            // Also, don't trigger fist if we're currently pinching
+            if (currentPose === 'NEUTRAL' && fingersExtendedCount === 0 && !state.isPinching) {
+                // Check thumb is not extended (should be curled or to the side, not pointing at index)
+                const thumbDirX = thumbTip.x - thumbIp.x;
+                const thumbDirY = thumbTip.y - thumbIp.y;
+                const thumbLen = Math.sqrt(thumbDirX * thumbDirX + thumbDirY * thumbDirY);
+                const thumbExtended = thumbLen > 0.07;
+                const thumbTowardIndex = Math.abs(thumbTip.x - indexTip.x) < 0.08 &&
+                    Math.abs(thumbTip.y - indexTip.y) < 0.08; // Near index (pinch-like)
 
-            if (currentPose === 'NEUTRAL' && fingersExtendedCount === 0) {
-                currentPose = 'FIST';
+                if (!thumbExtended && !thumbTowardIndex) {
+                    currentPose = 'FIST';
+                }
             }
         } else {
             // For other poses (2-3 fingers extended), reset wave tracking
@@ -301,18 +439,27 @@ export default function HandBackground({
                     onStopGenerationRef.current();
                     lastGestureTime.current = now;
                     persistence.frames = 0; // Reset
+                    if (onGestureStateRef.current) {
+                        onGestureStateRef.current({ gesture: 'STOP', progress: 1, triggered: true });
+                    }
                     return 'STOP';
                 }
                 if (currentPose === 'YES' && onSendMessageRef.current) {
                     onSendMessageRef.current("Yes");
                     lastGestureTime.current = now;
                     persistence.frames = 0;
+                    if (onGestureStateRef.current) {
+                        onGestureStateRef.current({ gesture: 'YES', progress: 1, triggered: true });
+                    }
                     return 'THUMBS_UP';
                 }
                 if (currentPose === 'NO' && onSendMessageRef.current) {
                     onSendMessageRef.current("No");
                     lastGestureTime.current = now;
                     persistence.frames = 0; // Reset
+                    if (onGestureStateRef.current) {
+                        onGestureStateRef.current({ gesture: 'NO', progress: 1, triggered: true });
+                    }
                     return 'THUMBS_DOWN';
                 }
             }
@@ -321,18 +468,19 @@ export default function HandBackground({
         // -----------------------
         // 4. CONTINUOUS ACTIONS (Fist Scroll)
         // -----------------------
-        // Scroll is special: it doesn't wait for "Trigger", it works while held.
-        // But we rely on correct classification (Fist vs Yes).
-        // If currentPose is 'FIST', we scroll.
+        // Scroll is special: it doesn't wait for full "Trigger", but requires some stability.
+        // Require at least 5 frames of FIST before scrolling starts to avoid accidental triggers.
+        const SCROLL_STABILIZATION_FRAMES = 5;
 
-        if (currentPose === 'FIST') {
+        if (currentPose === 'FIST' && persistence.frames >= SCROLL_STABILIZATION_FRAMES) {
             const currentY = wrist.y;
             if (!state.isScrolling) {
                 state.isScrolling = true;
                 state.lastScrollY = currentY;
             } else if (state.lastScrollY !== null) {
                 const delta = (currentY - state.lastScrollY);
-                if (Math.abs(delta) > 0.002 && onScrollRef.current) {
+                // Require slightly larger movement to scroll
+                if (Math.abs(delta) > 0.004 && onScrollRef.current) {
                     onScrollRef.current(delta * 1500);
                 }
                 state.lastScrollY = currentY;
@@ -341,6 +489,18 @@ export default function HandBackground({
         } else {
             state.isScrolling = false;
             state.lastScrollY = null;
+        }
+
+        // Report gesture state for visual feedback (progress toward trigger)
+        if (onGestureStateRef.current && currentPose !== 'NEUTRAL') {
+            const progress = Math.min(1, persistence.frames / PERSISTENCE_THRESHOLD);
+            onGestureStateRef.current({
+                gesture: currentPose,
+                progress,
+                triggered: false
+            });
+        } else if (onGestureStateRef.current && currentPose === 'NEUTRAL') {
+            onGestureStateRef.current({ gesture: null, progress: 0, triggered: false });
         }
 
         return currentPose === 'NEUTRAL' ? null : currentPose;
