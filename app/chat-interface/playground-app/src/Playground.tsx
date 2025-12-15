@@ -48,6 +48,7 @@ export default function Playground() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const [showDock, setShowDock] = useState(false);
+  const [gestureActive, setGestureActive] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
   // Arena vertical offset is visual-only; keep it in refs to avoid full re-renders on scroll.
   const arenaOffsetYRef = useRef(0);
@@ -354,7 +355,11 @@ export default function Playground() {
   });
 
   const handleSelectPrompt = (prompt: string) => {
-    if (inputRef.current) {
+    // In chat mode, use ChatView's setInput method
+    if (mode === 'chat' && chatViewRef.current) {
+      chatViewRef.current.setInput(prompt);
+    } else if (inputRef.current) {
+      // For other modes, use the Playground's inputRef
       inputRef.current.value = prompt;
       inputRef.current.focus();
       setInputFocused(true);
@@ -890,6 +895,8 @@ export default function Playground() {
       onContextMenu={handleBackgroundContextMenu}
     >
       <GestureControl
+        externalActive={gestureActive}
+        onExternalToggle={() => setGestureActive(prev => !prev)}
         onStopGeneration={() => {
           if (mode === 'chat' && chatViewRef.current) {
             chatViewRef.current.stopGeneration();
@@ -962,6 +969,8 @@ export default function Playground() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
+        gestureActive={gestureActive}
+        onToggleGesture={() => setGestureActive(prev => !prev)}
       />
 
       {/* Content Wrapper with Sidebar Offset */}

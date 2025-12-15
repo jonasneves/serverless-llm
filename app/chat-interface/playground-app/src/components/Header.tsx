@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mode } from '../types';
+import { Hand } from 'lucide-react';
 
 interface HeaderProps {
   mode: Mode;
@@ -9,6 +10,8 @@ interface HeaderProps {
   showDock: boolean;
   setShowDock: (show: boolean) => void;
   onOpenSettings: () => void;
+  gestureActive?: boolean;
+  onToggleGesture?: () => void;
 }
 
 const MODES: { value: Mode; label: string }[] = [
@@ -25,7 +28,9 @@ export default function Header({
   clearSelection,
   showDock,
   setShowDock,
-  onOpenSettings
+  onOpenSettings,
+  gestureActive,
+  onToggleGesture
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -61,27 +66,36 @@ export default function Header({
       {/* Background layer */}
       <div className="absolute inset-0 pointer-events-auto" style={{ height: '100%', zIndex: -1 }} />
 
-      {/* Left: Dock Toggle */}
-      <div className="flex items-center gap-3 w-10 sm:w-auto pointer-events-auto z-20">
-        <button
-          id="dockToggleBtn"
-          onClick={() => setShowDock(!showDock)}
-          className="min-w-[40px] min-h-[40px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
-          title={showDock ? "Close Dock" : "Open Dock"}
-        >
-          <svg className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
+      {/* Left: Empty spacer for balance */}
+      <div className="flex items-center gap-3 w-10 sm:w-auto pointer-events-auto z-20" />
 
       {/* Center: Desktop Unified Title & Mode Toggle */}
       <div className="hidden md:block absolute left-1/2 -translate-x-1/2 pointer-events-auto z-20">
         <div className="flex items-center p-1.5 rounded-xl border border-slate-700/40 header-shell">
-          {/* Title */}
-          <div className="px-2 sm:px-4 flex items-center gap-2">
-            <span className="font-bold text-slate-100 tracking-tight whitespace-nowrap text-sm sm:text-base">Model Arena</span>
-          </div>
+          {/* Menu Icon */}
+          <button
+            onClick={() => setShowDock(!showDock)}
+            className="px-2 sm:px-3 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+            title="Toggle Model Dock"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          {/* Gesture Toggle */}
+          {onToggleGesture && (
+            <button
+              onClick={onToggleGesture}
+              className={`px-2 sm:px-3 flex items-center justify-center transition-colors ${gestureActive
+                ? 'text-red-400 hover:text-red-300'
+                : 'text-slate-400 hover:text-white'
+                }`}
+              title={gestureActive ? 'Stop Gestures' : 'Enable Gestures'}
+            >
+              <Hand size={18} />
+            </button>
+          )}
 
           {/* Divider */}
           <div className="w-px h-5 bg-slate-700/50 mx-0.5 sm:mx-1"></div>
