@@ -181,11 +181,7 @@ export function useSelectionBox({
           }
 
           setSelectedCardIds(new Set(matched));
-          if (matched.length > 0) {
-            setActiveInspectorId(prev => (prev && matched.includes(prev)) ? prev : matched[0]);
-          } else {
-            setActiveInspectorId(null);
-          }
+          // Don't auto-open inspector - user must press Enter or use context menu
           if (willTriggerCardClick) {
             suppressClickRef.current.card = true;
           } else if (matched.length > 0) {
