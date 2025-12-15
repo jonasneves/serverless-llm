@@ -42,7 +42,6 @@ export default function HandBackground({
     // Gesture State
     const lastGestureTime = useRef<number>(0);
     const gestureCooldown = 1500; // ms between discrete gestures like Yes/No
-    const swipeCooldown = 800;
     const pinchCooldown = 500; // debounce pinch clicks
 
     // Persistence for static gestures (Stop, Yes, No) to prevent accidental triggers
@@ -163,9 +162,6 @@ export default function HandBackground({
         // -----------------------
         // 0.5 INDEX TAP (Pointing triggers Click)
         // -----------------------
-        // Heuristic: Only Index extended.
-        // Action: Quick downward movement of Index Tip.
-
         const isPointing = indexExt && !middleExt && !ringExt && !pinkyExt;
 
         if (isPointing) {
@@ -176,8 +172,7 @@ export default function HandBackground({
                 // Lowered to 0.015 to be more responsive.
                 if (dy > 0.015 && (now - lastGestureTime.current > pinchCooldown)) {
                     if (onPinchRef.current) {
-                        // Use the Y position from the START of the tap (lastIndexTipY) 
-                        // to aim at what the user was pointing at before they moved their finger down.
+                        // Use start Y to target
                         onPinchRef.current(1 - indexTip.x, state.lastIndexTipY);
                         lastGestureTime.current = now;
                         return 'TAP';
@@ -185,29 +180,11 @@ export default function HandBackground({
                 }
             }
             state.lastIndexTipY = currentY;
+            // Return POINTING to visualize the cursor if no tap was detected
+            return 'POINTING';
         } else {
             state.lastIndexTipY = null;
         }
-
-        // -----------------------
-        // 1. SWIPE (Mode Switch) - Velocity Based
-        // -----------------------
-        const currentX = wrist.x;
-        if (state.lastSwipeX !== null) {
-            const dx = currentX - state.lastSwipeX;
-            if (Math.abs(dx) > 0.10 && (now - lastGestureTime.current > swipeCooldown)) { // Reduced threshold slightly, increased cooldown logic elsewhere?
-                if (onModeSwitchRef.current) {
-                    if (dx > 0) onModeSwitchRef.current('next');
-                    else onModeSwitchRef.current('prev');
-
-                    lastGestureTime.current = now;
-                    // Reset state to avoid double trigger
-                    state.lastSwipeX = currentX;
-                    return 'SWIPE';
-                }
-            }
-        }
-        state.lastSwipeX = currentX;
 
         // -----------------------
         // 2. POSE IDENTIFICATION (Candidate Selection)
@@ -362,9 +339,12 @@ export default function HandBackground({
                 } else if (gesture === 'FIST') {
                     mainColor = '#a855f7'; // Purple
                     glowColor = '#d8b4fe';
-                } else if (gesture === 'PINCH') {
+                } else if (gesture === 'PINCH' || gesture === 'TAP') {
                     mainColor = '#ec4899'; // Pink
                     glowColor = '#fbcfe8';
+                } else if (gesture === 'POINTING') {
+                    mainColor = '#06b6d4'; // Cyan
+                    glowColor = '#67e8f9';
                 }
 
                 // Draw connections with gradient
@@ -416,6 +396,29 @@ export default function HandBackground({
                     ctx.fill();
                     if (!isFingertip) ctx.stroke();
                 }
+
+                // Draw Cursor for Pointing
+                if (gesture === 'POINTING' || gesture === 'TAP') {
+                    const indexTip = landmarks[8];
+                    const cx = indexTip.x * width;
+                    const cy = indexTip.y * height;
+
+                    // Outer Ring
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+                    ctx.strokeStyle = gesture === 'TAP' ? '#ec4899' : '#06b6d4';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = gesture === 'TAP' ? '#fbcfe8' : '#67e8f9';
+                    ctx.shadowBlur = 10;
+                    ctx.stroke();
+
+                    // Inner Dot
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                }
+
                 // Reset shadow after drawing each hand
                 ctx.shadowBlur = 0;
             }

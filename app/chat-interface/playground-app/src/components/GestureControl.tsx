@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick, MoveHorizontal } from 'lucide-react';
+import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick } from 'lucide-react';
 import HandBackground from './HandBackground';
 
 interface GestureControlProps {
@@ -96,15 +96,19 @@ export default function GestureControl(props: GestureControlProps) {
                   desc="Scroll Page"
                 />
                 <GestureCard
-                  icon={<MoveHorizontal size={18} className="text-blue-400" />}
-                  label="Swipe"
-                  desc="Switch Mode"
-                />
-                <GestureCard
                   icon={<MousePointerClick size={18} className="text-pink-400" />}
-                  label="Pinch"
+                  label="Tap Index"
                   desc="Click Element"
                 />
+                {/* Pinch also works as a click, but Tap is clearer now. 
+                    I'll update the label for the last card to reflect 'Tap Index' or 'Point & Tap' as well, 
+                    since Pinch/Tap map to the same onPinch event but the user instruction was about Index Poking. 
+                    Actually, let's keep it simple. Index Tap is "Tap". 
+                    The previous "Pinch" card can be renamed to "Index Tap" or just kept as "Tap".
+                    Wait, "Pinch" logic is still in HandBackground? Yes, it is. But user asked for Poking.
+                    I will rename the last card to "Index Tap" and change icon if needed, 
+                    to reflect the primary way we want them to click.
+                */}
               </div>
 
               <div className="flex gap-3">
