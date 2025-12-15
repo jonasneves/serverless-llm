@@ -33,7 +33,7 @@ export default function ChatView({
     const [currentResponse, setCurrentResponse] = useState('');
     const [inputFocused, setInputFocused] = useState(false);
     const [autoMode, setAutoMode] = useState(true);
-    const [autoModeScope, setAutoModeScope] = useState<AutoModeScope>('all');
+    const [autoModeScope, setAutoModeScope] = useState<AutoModeScope>('local');
     const [showAutoDropdown, setShowAutoDropdown] = useState(false);
     const [showModelSelector, setShowModelSelector] = useState(false);
     const [expandedLocalModels, setExpandedLocalModels] = useState(true);

@@ -37,7 +37,7 @@ export default function Playground() {
     allSelectedByType,
     modelIdToName,
   } = useModelsManager();
-  const [mode, setMode] = useState<Mode>('compare');
+  const [mode, setMode] = useState<Mode>('chat');
   const [linesTransitioning, setLinesTransitioning] = useState(false);
   const lineTransitionTimeoutRef = useRef<number | null>(null);
 
@@ -412,7 +412,7 @@ export default function Playground() {
   // Orchestrator auto mode state
   type OrchestratorAutoScope = 'all' | 'local' | 'api';
   const [orchestratorAutoMode, setOrchestratorAutoMode] = useState(true);
-  const [orchestratorAutoScope, setOrchestratorAutoScope] = useState<OrchestratorAutoScope>('local');
+  const [orchestratorAutoScope, setOrchestratorAutoScope] = useState<OrchestratorAutoScope>('api');
   const [showOrchestratorMenu, setShowOrchestratorMenu] = useState(false);
   const orchestratorMenuRef = useRef<HTMLDivElement>(null);
 

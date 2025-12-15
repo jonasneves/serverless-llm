@@ -127,79 +127,79 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
 
   useEffect(() => {
     if (showOrchestratorMenu && orchestratorMenuRef.current && orchestratorElementRef.current) {
-      // Use double requestAnimationFrame to ensure menu is fully rendered and positioned
+      // Use triple requestAnimationFrame to ensure menu is fully rendered and positioned
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (!orchestratorMenuRef.current || !orchestratorElementRef.current) return;
+          requestAnimationFrame(() => {
+            if (!orchestratorMenuRef.current || !orchestratorElementRef.current) return;
 
-          const menu = orchestratorMenuRef.current;
-          const orchestratorElement = orchestratorElementRef.current;
-          
-          // Get orchestrator element's position
-          const orchestratorRect = orchestratorElement.getBoundingClientRect();
-          const viewportHeight = window.innerHeight;
-          const viewportWidth = window.innerWidth;
-          
-          // Get menu dimensions (after it's rendered)
-          const menuHeight = menu.offsetHeight || menu.scrollHeight;
-          const menuWidth = menu.offsetWidth || 256; // w-64 = 256px
-          
-          // Calculate available space above and below orchestrator
-          const spaceBelow = viewportHeight - orchestratorRect.bottom;
-          const spaceAbove = orchestratorRect.top;
-          
-          // Add padding from viewport edges
-          const padding = 20;
-          const margin = 8; // mb-2 or mt-2 = 8px
-          const minSpaceRequired = menuHeight + margin + padding;
-          
-          // Check if menu would be cut off at bottom (when positioned below)
-          const wouldBeCutOffBottom = spaceBelow < minSpaceRequired;
-          // Check if menu would be cut off at top (when positioned above)
-          const wouldBeCutOffTop = spaceAbove < minSpaceRequired;
-          
-          // Determine best vertical position:
-          // 1. If both sides have enough space, prefer bottom (unless top has significantly more space)
-          // 2. If one side is cut off, use the other
-          // 3. If both are cut off, use the side with more space
-          let shouldFlip = false;
-          
-          if (wouldBeCutOffBottom && !wouldBeCutOffTop) {
-            // Bottom is cut off, top has space
-            shouldFlip = true;
-          } else if (!wouldBeCutOffBottom && wouldBeCutOffTop) {
-            // Top is cut off, bottom has space
-            shouldFlip = false;
-          } else if (wouldBeCutOffBottom && wouldBeCutOffTop) {
-            // Both are cut off, use the side with more space
-            shouldFlip = spaceAbove > spaceBelow;
-          } else {
-            // Both have space, prefer bottom unless top has significantly more space
-            shouldFlip = spaceAbove > spaceBelow + 50;
-          }
-          
-          setMenuFlipped(shouldFlip);
-          
-          // Calculate where menu would actually be positioned after flip decision
-          const menuTopWhenBelow = orchestratorRect.bottom + margin;
-          const menuTopWhenAbove = orchestratorRect.top - margin - menuHeight;
-          const actualMenuTop = shouldFlip ? menuTopWhenAbove : menuTopWhenBelow;
-          const actualMenuBottom = actualMenuTop + menuHeight;
-          
-          // Check if menu would still be cut off after positioning
-          const isCutOffAtTop = actualMenuTop < padding;
-          const isCutOffAtBottom = actualMenuBottom > viewportHeight - padding;
-          
-          // Check horizontal boundaries
-          const menuCenterX = orchestratorRect.left + orchestratorRect.width / 2;
-          const menuLeftEdge = menuCenterX - menuWidth / 2;
-          const menuRightEdge = menuCenterX + menuWidth / 2;
-          const wouldBeCutOffLeft = menuLeftEdge < padding;
-          const wouldBeCutOffRight = menuRightEdge > viewportWidth - padding;
-          
-          // If menu would be cut off vertically or horizontally, use fixed positioning
-          if (isCutOffAtTop || isCutOffAtBottom || wouldBeCutOffLeft || wouldBeCutOffRight) {
-            // Calculate constrained position
+            const menu = orchestratorMenuRef.current;
+            const orchestratorElement = orchestratorElementRef.current;
+            
+            // Get orchestrator element's position
+            const orchestratorRect = orchestratorElement.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            
+            // Get menu dimensions (after it's rendered)
+            const menuHeight = menu.offsetHeight || menu.scrollHeight;
+            const menuWidth = menu.offsetWidth || 256; // w-64 = 256px
+            
+            // Calculate available space above and below orchestrator
+            const spaceBelow = viewportHeight - orchestratorRect.bottom;
+            const spaceAbove = orchestratorRect.top;
+            
+            // Add padding from viewport edges
+            const padding = 20;
+            const margin = 8; // mb-2 or mt-2 = 8px
+            const minSpaceRequired = menuHeight + margin + padding;
+            
+            // Check if menu would be cut off at bottom (when positioned below)
+            const wouldBeCutOffBottom = spaceBelow < minSpaceRequired;
+            // Check if menu would be cut off at top (when positioned above)
+            const wouldBeCutOffTop = spaceAbove < minSpaceRequired;
+            
+            // Determine best vertical position:
+            // 1. If both sides have enough space, prefer bottom (unless top has significantly more space)
+            // 2. If one side is cut off, use the other
+            // 3. If both are cut off, use the side with more space
+            let shouldFlip = false;
+            
+            if (wouldBeCutOffBottom && !wouldBeCutOffTop) {
+              // Bottom is cut off, top has space
+              shouldFlip = true;
+            } else if (!wouldBeCutOffBottom && wouldBeCutOffTop) {
+              // Top is cut off, bottom has space
+              shouldFlip = false;
+            } else if (wouldBeCutOffBottom && wouldBeCutOffTop) {
+              // Both are cut off, use the side with more space
+              shouldFlip = spaceAbove > spaceBelow;
+            } else {
+              // Both have space, prefer bottom unless top has significantly more space
+              shouldFlip = spaceAbove > spaceBelow + 50;
+            }
+            
+            setMenuFlipped(shouldFlip);
+            
+            // Calculate where menu would actually be positioned after flip decision
+            const menuTopWhenBelow = orchestratorRect.bottom + margin;
+            const menuTopWhenAbove = orchestratorRect.top - margin - menuHeight;
+            const actualMenuTop = shouldFlip ? menuTopWhenAbove : menuTopWhenBelow;
+            const actualMenuBottom = actualMenuTop + menuHeight;
+            
+            // Check if menu would still be cut off after positioning
+            const isCutOffAtTop = actualMenuTop < padding;
+            const isCutOffAtBottom = actualMenuBottom > viewportHeight - padding;
+            
+            // Check horizontal boundaries
+            const menuCenterX = orchestratorRect.left + orchestratorRect.width / 2;
+            const menuLeftEdge = menuCenterX - menuWidth / 2;
+            const menuRightEdge = menuCenterX + menuWidth / 2;
+            const wouldBeCutOffLeft = menuLeftEdge < padding;
+            const wouldBeCutOffRight = menuRightEdge > viewportWidth - padding;
+            
+            // Always use fixed positioning to ensure menu stays within viewport
+            // This prevents any issues with relative positioning and scrolling
             let constrainedTop = actualMenuTop;
             if (isCutOffAtTop) {
               constrainedTop = padding;
@@ -219,13 +219,22 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             menu.style.top = `${constrainedTop}px`;
             menu.style.left = `${constrainedLeft}px`;
             menu.style.transform = 'translateX(-50%)';
-          } else {
-            // Use default relative positioning with Tailwind classes
-            menu.style.position = '';
-            menu.style.top = '';
-            menu.style.left = '';
-            menu.style.transform = '';
-          }
+            
+            // Double-check the actual rendered position after applying styles
+            requestAnimationFrame(() => {
+              if (!orchestratorMenuRef.current) return;
+              const finalRect = orchestratorMenuRef.current.getBoundingClientRect();
+              const finalBottom = finalRect.bottom;
+              const finalTop = finalRect.top;
+              
+              // If still cut off, adjust
+              if (finalBottom > viewportHeight - padding) {
+                orchestratorMenuRef.current.style.top = `${viewportHeight - finalRect.height - padding}px`;
+              } else if (finalTop < padding) {
+                orchestratorMenuRef.current.style.top = `${padding}px`;
+              }
+            });
+          });
         });
       });
     } else {
