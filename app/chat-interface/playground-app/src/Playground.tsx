@@ -58,7 +58,7 @@ export default function Playground() {
     deserialize: (stored, fallback) => stored ?? fallback,
   });
 
-  const [inspectorPosition, setInspectorPosition] = usePersistedSetting<'left' | 'right' >(
+  const [inspectorPosition, setInspectorPosition] = usePersistedSetting<'left' | 'right'>(
     'inspector_position',
     'right',
     {
@@ -112,29 +112,7 @@ export default function Playground() {
     return entries.map(({ id, text }) => `${modelIdToName(id)}:\n${text}`).join('\n\n');
   };
 
-  // Dynamic grid column calculation
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        if (entry.target === visualizationAreaRef.current) {
-          const availableWidth = entry.contentRect.width;
-          let newCols = Math.floor(availableWidth / (LAYOUT.cardWidth + LAYOUT.gapX));
-          newCols = Math.max(1, newCols); // Ensure at least 1 column
-          setGridCols(newCols);
-        }
-      }
-    });
 
-    if (visualizationAreaRef.current) {
-      resizeObserver.observe(visualizationAreaRef.current);
-    }
-
-    return () => {
-      if (visualizationAreaRef.current) {
-        resizeObserver.unobserve(visualizationAreaRef.current);
-      }
-    };
-  }, []);
 
   // Local state for GitHub Models token is persisted via usePersistedSetting
 
@@ -277,6 +255,40 @@ export default function Playground() {
     setActiveInspectorId,
     clearInspectorSelection,
   } = useInspectorSelection();
+
+  // Dynamic grid column calculation - placed here after activeInspectorId is declared
+  useEffect(() => {
+    const calculateGridCols = () => {
+      if (!visualizationAreaRef.current) return;
+      const availableWidth = visualizationAreaRef.current.clientWidth;
+      let newCols = Math.floor(availableWidth / (LAYOUT.cardWidth + LAYOUT.gapX));
+      newCols = Math.max(1, newCols); // Ensure at least 1 column
+      setGridCols(newCols);
+    };
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry.target === visualizationAreaRef.current) {
+          const availableWidth = entry.contentRect.width;
+          let newCols = Math.floor(availableWidth / (LAYOUT.cardWidth + LAYOUT.gapX));
+          newCols = Math.max(1, newCols); // Ensure at least 1 column
+          setGridCols(newCols);
+        }
+      }
+    });
+
+    if (visualizationAreaRef.current) {
+      resizeObserver.observe(visualizationAreaRef.current);
+      // Trigger initial calculation
+      calculateGridCols();
+    }
+
+    return () => {
+      if (visualizationAreaRef.current) {
+        resizeObserver.unobserve(visualizationAreaRef.current);
+      }
+    };
+  }, [mode, activeInspectorId, inspectorPosition]); // Recalculate when layout changes
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
@@ -442,19 +454,19 @@ export default function Playground() {
   }, [showOrchestratorMenu]);
 
   const [phaseLabel, setPhaseLabel] = useState<string | null>(null);
-  const [councilAggregateRankings, setCouncilAggregateRankings] = useState<Array<{ 
+  const [councilAggregateRankings, setCouncilAggregateRankings] = useState<Array<{
     model_id: string;
     model_name: string;
     average_rank: number;
     votes_count: number;
   }> | null>(null);
-  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<Array<{ 
+  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<Array<{
     reviewer_model_id: string;
     reviewer_model_name: string;
     text: string;
     error?: boolean;
   }>>([]);
-  const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{ 
+  const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{
     turn_number: number;
     response: string;
     evaluation?: any;
