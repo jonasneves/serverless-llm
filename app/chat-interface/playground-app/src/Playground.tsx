@@ -409,6 +409,38 @@ export default function Playground() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
 
+  // Orchestrator auto mode state
+  type OrchestratorAutoScope = 'all' | 'local' | 'api';
+  const [orchestratorAutoMode, setOrchestratorAutoMode] = useState(true);
+  const [orchestratorAutoScope, setOrchestratorAutoScope] = useState<OrchestratorAutoScope>('api');
+  const [showOrchestratorMenu, setShowOrchestratorMenu] = useState(false);
+  const orchestratorMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close orchestrator menu on click outside or ESC
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (orchestratorMenuRef.current && !orchestratorMenuRef.current.contains(e.target as Node)) {
+        setShowOrchestratorMenu(false);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowOrchestratorMenu(false);
+      }
+    };
+
+    if (showOrchestratorMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showOrchestratorMenu]);
+
   const [phaseLabel, setPhaseLabel] = useState<string | null>(null);
   const [councilAggregateRankings, setCouncilAggregateRankings] = useState<Array<{ 
     model_id: string;
@@ -939,6 +971,15 @@ export default function Playground() {
                   phaseLabel={phaseLabel}
                   linesTransitioning={linesTransitioning}
                   lastSelectedCardRef={lastSelectedCardRef}
+                  orchestratorAutoMode={orchestratorAutoMode}
+                  orchestratorAutoScope={orchestratorAutoScope}
+                  showOrchestratorMenu={showOrchestratorMenu}
+                  setShowOrchestratorMenu={setShowOrchestratorMenu}
+                  setOrchestratorAutoMode={setOrchestratorAutoMode}
+                  setOrchestratorAutoScope={setOrchestratorAutoScope}
+                  orchestratorMenuRef={orchestratorMenuRef}
+                  availableModels={availableModels}
+                  setModerator={setModerator}
                 />
               </div>
             </div>

@@ -1,9 +1,12 @@
-import type {
-  Dispatch,
-  MutableRefObject,
-  PointerEvent as ReactPointerEvent,
-  MouseEvent as ReactMouseEvent,
-  SetStateAction,
+import {
+  useEffect,
+  useRef,
+  useState as useComponentState,
+  type Dispatch,
+  type MutableRefObject,
+  type PointerEvent as ReactPointerEvent,
+  type MouseEvent as ReactMouseEvent,
+  type SetStateAction,
 } from 'react';
 import { LAYOUT } from '../../constants';
 import type { Model, Mode, Position } from '../../types';
@@ -12,6 +15,9 @@ import ExecutionTimeDisplay, { ExecutionTimeData } from '../ExecutionTimeDisplay
 import Typewriter from '../Typewriter';
 import { DragState } from '../../hooks/useCardReorder';
 import { ArenaContextMenu } from './types';
+import { Zap } from 'lucide-react';
+
+type OrchestratorAutoScope = 'all' | 'local' | 'api';
 
 interface ArenaCanvasProps {
   mode: Mode;
@@ -45,6 +51,15 @@ interface ArenaCanvasProps {
   phaseLabel: string | null;
   linesTransitioning: boolean;
   lastSelectedCardRef: MutableRefObject<string | null>;
+  orchestratorAutoMode: boolean;
+  orchestratorAutoScope: OrchestratorAutoScope;
+  showOrchestratorMenu: boolean;
+  setShowOrchestratorMenu: Dispatch<SetStateAction<boolean>>;
+  setOrchestratorAutoMode: Dispatch<SetStateAction<boolean>>;
+  setOrchestratorAutoScope: Dispatch<SetStateAction<OrchestratorAutoScope>>;
+  orchestratorMenuRef: MutableRefObject<HTMLDivElement | null>;
+  availableModels: Model[];
+  setModerator: (id: string) => void;
 }
 
 const GRID_CARD_WIDTH = 256;
@@ -84,6 +99,15 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     phaseLabel,
     linesTransitioning,
     lastSelectedCardRef,
+    orchestratorAutoMode,
+    orchestratorAutoScope,
+    showOrchestratorMenu,
+    setShowOrchestratorMenu,
+    setOrchestratorAutoMode,
+    setOrchestratorAutoScope,
+    orchestratorMenuRef,
+    availableModels,
+    setModerator,
   } = props;
 
   const isCircleMode = mode !== 'compare';
@@ -96,6 +120,124 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         : orchestratorStatus === 'done'
           ? 'Done'
           : 'Ready';
+
+  // Smart positioning for orchestrator menu
+  const [menuFlipped, setMenuFlipped] = useComponentState(false);
+  const orchestratorElementRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (showOrchestratorMenu && orchestratorMenuRef.current && orchestratorElementRef.current) {
+      // Use double requestAnimationFrame to ensure menu is fully rendered and positioned
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!orchestratorMenuRef.current || !orchestratorElementRef.current) return;
+
+          const menu = orchestratorMenuRef.current;
+          const orchestratorElement = orchestratorElementRef.current;
+          
+          // Get orchestrator element's position
+          const orchestratorRect = orchestratorElement.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          const viewportWidth = window.innerWidth;
+          
+          // Get menu dimensions (after it's rendered)
+          const menuHeight = menu.offsetHeight || menu.scrollHeight;
+          const menuWidth = menu.offsetWidth || 256; // w-64 = 256px
+          
+          // Calculate available space above and below orchestrator
+          const spaceBelow = viewportHeight - orchestratorRect.bottom;
+          const spaceAbove = orchestratorRect.top;
+          
+          // Add padding from viewport edges
+          const padding = 20;
+          const margin = 8; // mb-2 or mt-2 = 8px
+          const minSpaceRequired = menuHeight + margin + padding;
+          
+          // Check if menu would be cut off at bottom (when positioned below)
+          const wouldBeCutOffBottom = spaceBelow < minSpaceRequired;
+          // Check if menu would be cut off at top (when positioned above)
+          const wouldBeCutOffTop = spaceAbove < minSpaceRequired;
+          
+          // Determine best vertical position:
+          // 1. If both sides have enough space, prefer bottom (unless top has significantly more space)
+          // 2. If one side is cut off, use the other
+          // 3. If both are cut off, use the side with more space
+          let shouldFlip = false;
+          
+          if (wouldBeCutOffBottom && !wouldBeCutOffTop) {
+            // Bottom is cut off, top has space
+            shouldFlip = true;
+          } else if (!wouldBeCutOffBottom && wouldBeCutOffTop) {
+            // Top is cut off, bottom has space
+            shouldFlip = false;
+          } else if (wouldBeCutOffBottom && wouldBeCutOffTop) {
+            // Both are cut off, use the side with more space
+            shouldFlip = spaceAbove > spaceBelow;
+          } else {
+            // Both have space, prefer bottom unless top has significantly more space
+            shouldFlip = spaceAbove > spaceBelow + 50;
+          }
+          
+          setMenuFlipped(shouldFlip);
+          
+          // Calculate where menu would actually be positioned after flip decision
+          const menuTopWhenBelow = orchestratorRect.bottom + margin;
+          const menuTopWhenAbove = orchestratorRect.top - margin - menuHeight;
+          const actualMenuTop = shouldFlip ? menuTopWhenAbove : menuTopWhenBelow;
+          const actualMenuBottom = actualMenuTop + menuHeight;
+          
+          // Check if menu would still be cut off after positioning
+          const isCutOffAtTop = actualMenuTop < padding;
+          const isCutOffAtBottom = actualMenuBottom > viewportHeight - padding;
+          
+          // Check horizontal boundaries
+          const menuCenterX = orchestratorRect.left + orchestratorRect.width / 2;
+          const menuLeftEdge = menuCenterX - menuWidth / 2;
+          const menuRightEdge = menuCenterX + menuWidth / 2;
+          const wouldBeCutOffLeft = menuLeftEdge < padding;
+          const wouldBeCutOffRight = menuRightEdge > viewportWidth - padding;
+          
+          // If menu would be cut off vertically or horizontally, use fixed positioning
+          if (isCutOffAtTop || isCutOffAtBottom || wouldBeCutOffLeft || wouldBeCutOffRight) {
+            // Calculate constrained position
+            let constrainedTop = actualMenuTop;
+            if (isCutOffAtTop) {
+              constrainedTop = padding;
+            } else if (isCutOffAtBottom) {
+              constrainedTop = viewportHeight - menuHeight - padding;
+            }
+            
+            let constrainedLeft = menuCenterX;
+            if (wouldBeCutOffLeft) {
+              constrainedLeft = padding + menuWidth / 2;
+            } else if (wouldBeCutOffRight) {
+              constrainedLeft = viewportWidth - padding - menuWidth / 2;
+            }
+            
+            // Use fixed positioning to ensure menu stays within viewport
+            menu.style.position = 'fixed';
+            menu.style.top = `${constrainedTop}px`;
+            menu.style.left = `${constrainedLeft}px`;
+            menu.style.transform = 'translateX(-50%)';
+          } else {
+            // Use default relative positioning with Tailwind classes
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.transform = '';
+          }
+        });
+      });
+    } else {
+      // Reset positioning when menu is closed
+      if (orchestratorMenuRef.current) {
+        orchestratorMenuRef.current.style.position = '';
+        orchestratorMenuRef.current.style.top = '';
+        orchestratorMenuRef.current.style.left = '';
+        orchestratorMenuRef.current.style.transform = '';
+      }
+    }
+  }, [showOrchestratorMenu, orchestratorMenuRef]);
 
   return (
     <>
@@ -379,6 +521,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
 
       {mode !== 'compare' && moderatorModel && (
         <div
+          ref={orchestratorElementRef}
           data-card
           className="absolute z-20 transition-all duration-700 ease-out cursor-pointer"
           style={{
@@ -403,11 +546,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setContextMenu({
-              x: e.clientX,
-              y: e.clientY,
-              modelId: moderatorId
-            });
+            setShowOrchestratorMenu(!showOrchestratorMenu);
           }}
           onMouseEnter={() => setHoveredCard('moderator')}
           onMouseLeave={() => setHoveredCard(null)}
@@ -487,6 +626,133 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   getTailSnippet,
                 })}
               </p>
+            </div>
+          )}
+
+          {/* Auto Mode Context Menu */}
+          {showOrchestratorMenu && (
+            <div
+              ref={orchestratorMenuRef}
+              className={`absolute left-1/2 -translate-x-1/2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[300] ${
+                menuFlipped ? 'bottom-full mb-2' : 'top-full mt-2'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {orchestratorAutoMode ? (
+                <>
+                  <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
+                    Auto Mode: {orchestratorAutoScope.toUpperCase()}
+                  </div>
+                  {(['all', 'local', 'api'] as OrchestratorAutoScope[]).map(scope => (
+                    <button
+                      key={scope}
+                      onClick={() => {
+                        setOrchestratorAutoScope(scope);
+                        setShowOrchestratorMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
+                        orchestratorAutoScope === scope
+                          ? 'bg-yellow-500/20 text-yellow-300'
+                          : 'text-slate-300 hover:bg-slate-700/50'
+                      }`}
+                    >
+                      {scope === 'all' && 'All'}
+                      {scope === 'local' && 'Local'}
+                      {scope === 'api' && 'API'}
+                      <span className="text-[10px] text-slate-500 ml-1">
+                        {scope === 'all' && '(local → API)'}
+                        {scope === 'local' && '(no quota)'}
+                        {scope === 'api' && '(cloud only)'}
+                      </span>
+                    </button>
+                  ))}
+                  <div className="border-t border-slate-700">
+                    <button
+                      onClick={() => {
+                        setOrchestratorAutoMode(false);
+                        setShowOrchestratorMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
+                    >
+                      Manual Mode
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
+                    Select Orchestrator
+                  </div>
+                  {availableModels.filter(m => m.type === 'api').length > 0 && (
+                    <>
+                      <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-600 font-semibold">
+                        API Models
+                      </div>
+                      {availableModels.filter(m => m.type === 'api').map(model => (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            setModerator(model.id);
+                            setShowOrchestratorMenu(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
+                            moderatorId === model.id
+                              ? 'bg-blue-500/20 text-blue-300'
+                              : 'text-slate-300 hover:bg-slate-700/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{model.name}</span>
+                            {moderatorId === model.id && (
+                              <span className="text-blue-400">✓</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {availableModels.filter(m => m.type === 'local').length > 0 && (
+                    <>
+                      <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-600 font-semibold border-t border-slate-700/50 mt-1">
+                        Local Models
+                      </div>
+                      {availableModels.filter(m => m.type === 'local').map(model => (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            setModerator(model.id);
+                            setShowOrchestratorMenu(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
+                            moderatorId === model.id
+                              ? 'bg-blue-500/20 text-blue-300'
+                              : 'text-slate-300 hover:bg-slate-700/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{model.name}</span>
+                            {moderatorId === model.id && (
+                              <span className="text-blue-400">✓</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  <div className="border-t border-slate-700">
+                    <button
+                      onClick={() => {
+                        setOrchestratorAutoMode(true);
+                        setShowOrchestratorMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-medium text-yellow-400 hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                    >
+                      <Zap size={12} />
+                      <span>Enable Auto Mode</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

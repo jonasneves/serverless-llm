@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Terminal, Cpu, Bot, CheckCircle, AlertTriangle, Eraser } from 'lucide-react';
+import { Terminal, Cpu, Bot, CheckCircle, AlertTriangle, Eraser, Zap, ChevronDown } from 'lucide-react';
+import { getModelPriority } from '../constants';
+
+type AutoModeScope = 'all' | 'local' | 'api';
 
 interface OrchestratorViewProps {
     id?: string;
@@ -38,30 +41,11 @@ interface OrchestrationEvent {
     message?: string;
 }
 
-// Helper function to render status text (outside the component)
-const renderOrchestratorStatus = (
-    isRunning: boolean,
-    events: OrchestrationEvent[],
-    selectedModel: Model | undefined,
-    selectedModelId: string | null
-) => {
-    const modelName = selectedModel ? selectedModel.name : (selectedModelId || '');
-    let statusPart = '';
-    if (isRunning) {
-        const last = events[events.length - 1];
-        if (last?.event === 'agent_message') statusPart = ` ${last.agent} is speaking...`;
-        else if (last?.event === 'tool_call') statusPart = ` using ${last.tool}...`;
-        else if (last?.event === 'orchestrator_thinking') statusPart = ' thinking...';
-        else statusPart = ' orchestrating...';
-    }
-    return `${modelName}${statusPart}`;
-};
-
 
 export default function OrchestratorView({
     models,
     selectedModelId,
-    // onSelectModel,
+    onSelectModel,
     githubToken,
     onOpenTopics
 }: OrchestratorViewProps) {
@@ -69,9 +53,18 @@ export default function OrchestratorView({
     const [rounds, setRounds] = useState<OrchestrationEvent[][]>([]);
     const [isRunning, setIsRunning] = useState(false);
     const [inputFocused, setInputFocused] = useState(false);
+    const [autoMode, setAutoMode] = useState(true);
+    const [autoModeScope, setAutoModeScope] = useState<AutoModeScope>('all');
+    const [showAutoDropdown, setShowAutoDropdown] = useState(false);
+    const [showModelSelector, setShowModelSelector] = useState(false);
+    const [expandedLocalModels, setExpandedLocalModels] = useState(true);
+    const [expandedApiModels, setExpandedApiModels] = useState(false);
+    const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const modelSelectorRef = useRef<HTMLDivElement>(null);
 
     // Group events into rounds for display
     useEffect(() => {
@@ -119,13 +112,21 @@ export default function OrchestratorView({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const handleStart = async (text: string) => {
-        if (!text.trim() || !selectedModelId || isRunning) return;
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setShowAutoDropdown(false);
+            }
+            if (modelSelectorRef.current && !modelSelectorRef.current.contains(e.target as Node)) {
+                setShowModelSelector(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-        setIsRunning(true);
-        setEvents([]); // Clear previous run
-        abortControllerRef.current = new AbortController();
-
+    const tryOrchestrator = async (modelId: string, query: string): Promise<{ success: boolean; error?: string }> => {
         try {
             const response = await fetch(`/api/chat/orchestrator/stream?engine=autogen`, {
                 method: 'POST',
@@ -133,21 +134,24 @@ export default function OrchestratorView({
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query: text,
-                    model: selectedModelId,
-                    max_rounds: 10, // Default
-                    temperature: 0.7, // Default
-                    max_tokens: 2048, // Default
+                    query,
+                    model: modelId,
+                    max_rounds: 10,
+                    temperature: 0.7,
+                    max_tokens: 2048,
                     github_token: githubToken || null
                 }),
-                signal: abortControllerRef.current.signal
+                signal: abortControllerRef.current?.signal
             });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            if (!response.body) return;
+            if (!response.body) {
+                throw new Error('No response body');
+            }
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -163,14 +167,93 @@ export default function OrchestratorView({
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
+                        const jsonStr = line.slice(6);
                         try {
-                            const jsonStr = line.slice(6);
                             const event: OrchestrationEvent = JSON.parse(jsonStr);
                             setEvents(prev => [...prev, event]);
+
+                            if (event.event === 'error') {
+                                throw new Error(event.error || 'Unknown error');
+                            }
                         } catch (e) {
-                            console.error('Failed to parse SSE event', e);
+                            if (e instanceof Error && e.message !== jsonStr) {
+                                throw e;
+                            }
                         }
                     }
+                }
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                throw error;
+            }
+            return { success: false, error: error.message };
+        }
+    };
+
+    const handleStart = async (text: string) => {
+        if (!text.trim() || isRunning) return;
+        if (!autoMode && !selectedModelId) return;
+
+        setIsRunning(true);
+        setEvents([]);
+        abortControllerRef.current = new AbortController();
+
+        try {
+            if (autoMode) {
+                const scopedModels = models.filter(m => {
+                    if (autoModeScope === 'all') return true;
+                    if (autoModeScope === 'local') return m.type === 'local';
+                    if (autoModeScope === 'api') return m.type === 'api';
+                    return true;
+                });
+
+                const sortedModels = scopedModels
+                    .map(m => {
+                        const basePriority = getModelPriority(m.id, m.type || 'local');
+                        const adjustedPriority = autoModeScope === 'all' && m.type === 'api'
+                            ? basePriority + 1000
+                            : basePriority;
+                        return { ...m, priority: adjustedPriority };
+                    })
+                    .sort((a, b) => {
+                        if (a.priority !== b.priority) {
+                            return a.priority - b.priority;
+                        }
+                        if (a.type !== b.type) {
+                            return a.type === 'local' ? -1 : 1;
+                        }
+                        return a.id.localeCompare(b.id);
+                    });
+
+                let lastError: string | undefined;
+
+                for (const model of sortedModels) {
+                    setCurrentAutoModel(model.id);
+                    const result = await tryOrchestrator(model.id, text);
+
+                    if (result.success) {
+                        setCurrentAutoModel(null);
+                        return;
+                    }
+
+                    lastError = result.error;
+                }
+
+                const scopeLabel = autoModeScope === 'all' ? 'all' : autoModeScope;
+                setEvents(prev => [...prev, {
+                    event: 'error',
+                    error: `All ${scopeLabel} models failed to respond. Last error: ${lastError}`
+                }]);
+                setCurrentAutoModel(null);
+            } else {
+                if (!selectedModelId) return;
+                const result = await tryOrchestrator(selectedModelId, text);
+
+                if (!result.success && result.error) {
+                    setEvents(prev => [...prev, { event: 'error', error: result.error }]);
                 }
             }
         } catch (error: any) {
@@ -179,6 +262,7 @@ export default function OrchestratorView({
             }
         } finally {
             setIsRunning(false);
+            setCurrentAutoModel(null);
             abortControllerRef.current = null;
         }
     };
@@ -197,31 +281,192 @@ export default function OrchestratorView({
 
     const selectedModel = models.find(m => m.id === selectedModelId);
 
+    const autoScopeLabels: Record<AutoModeScope, string> = {
+        all: 'All',
+        local: 'Local',
+        api: 'API'
+    };
+
     return (
         <div className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
             <div className="z-10 w-full flex justify-center">
                 <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-600'} ${isRunning ? 'animate-pulse' : ''}`} />
-                            <span className="text-sm font-semibold text-slate-200 tracking-tight">
-                                {renderOrchestratorStatus(isRunning, events, selectedModel, selectedModelId)}
-                            </span>
-                        </div>
-                        {selectedModel?.type === 'api' && (
-                            <span className="text-[10px] uppercase tracking-wider bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20 font-medium">
-                                API
+                    {/* Left: Main control (Auto or Model selector) */}
+                    <div className="flex items-center gap-2">
+                        {autoMode ? (
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setShowAutoDropdown(!showAutoDropdown)}
+                                    className="h-8 px-2 flex items-center gap-1.5 rounded-lg border bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/30 text-yellow-300 transition-all active:scale-95 text-xs font-medium"
+                                >
+                                    <Zap size={12} />
+                                    <span>Auto: {autoScopeLabels[autoModeScope]}</span>
+                                    <ChevronDown size={12} className={`transition-transform ${showAutoDropdown ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showAutoDropdown && (
+                                    <div className="absolute top-full left-0 mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                        {(['all', 'local', 'api'] as AutoModeScope[]).map(scope => (
+                                            <button
+                                                key={scope}
+                                                onClick={() => {
+                                                    setAutoModeScope(scope);
+                                                    setShowAutoDropdown(false);
+                                                }}
+                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
+                                                    autoModeScope === scope
+                                                        ? 'bg-yellow-500/20 text-yellow-300'
+                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                }`}
+                                            >
+                                                {autoScopeLabels[scope]}
+                                                {scope === 'all' && <span className="text-[10px] text-slate-500 ml-1">(local → API)</span>}
+                                                {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
+                                                {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
+                                            </button>
+                                        ))}
+                                        <div className="border-t border-slate-700">
+                                            <button
+                                                onClick={() => {
+                                                    setAutoMode(false);
+                                                    setShowAutoDropdown(false);
+                                                }}
+                                                className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
+                                            >
+                                                Manual Mode
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="relative" ref={modelSelectorRef}>
+                                <button
+                                    onClick={() => setShowModelSelector(!showModelSelector)}
+                                    className="h-8 px-2 flex items-center gap-1.5 rounded-lg border bg-white/5 hover:bg-white/10 border-white/5 text-slate-200 transition-all active:scale-95 text-xs font-medium"
+                                    disabled={isRunning}
+                                >
+                                    <span>{selectedModel ? selectedModel.name : 'Select model'}</span>
+                                    {!isRunning && <ChevronDown size={12} />}
+                                </button>
+
+                                {showModelSelector && !isRunning && (
+                                    <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                        {models.length === 0 ? (
+                                            <div className="px-3 py-4 text-xs text-slate-500 text-center">
+                                                No models available
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {models.filter(m => m.type === 'local').length > 0 && (
+                                                    <div>
+                                                        <button
+                                                            onClick={() => setExpandedLocalModels(!expandedLocalModels)}
+                                                            className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors"
+                                                        >
+                                                            <span>Local Models</span>
+                                                            <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
+                                                        </button>
+                                                        {expandedLocalModels && (
+                                                            <div>
+                                                                {models.filter(m => m.type === 'local').map(model => (
+                                                                    <button
+                                                                        key={model.id}
+                                                                        onClick={() => {
+                                                                            onSelectModel(model.id);
+                                                                            setShowModelSelector(false);
+                                                                        }}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
+                                                                            selectedModelId === model.id
+                                                                                ? 'bg-blue-500/20 text-blue-300'
+                                                                                : 'text-slate-300 hover:bg-slate-700/50'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span>{model.name}</span>
+                                                                            {selectedModelId === model.id && (
+                                                                                <span className="text-blue-400">✓</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {models.filter(m => m.type === 'api').length > 0 && (
+                                                    <div>
+                                                        <button
+                                                            onClick={() => setExpandedApiModels(!expandedApiModels)}
+                                                            className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors border-t border-slate-700/50"
+                                                        >
+                                                            <span>API Models</span>
+                                                            <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
+                                                        </button>
+                                                        {expandedApiModels && (
+                                                            <div>
+                                                                {models.filter(m => m.type === 'api').map(model => (
+                                                                    <button
+                                                                        key={model.id}
+                                                                        onClick={() => {
+                                                                            onSelectModel(model.id);
+                                                                            setShowModelSelector(false);
+                                                                        }}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
+                                                                            selectedModelId === model.id
+                                                                                ? 'bg-blue-500/20 text-blue-300'
+                                                                                : 'text-slate-300 hover:bg-slate-700/50'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span>{model.name}</span>
+                                                                            {selectedModelId === model.id && (
+                                                                                <span className="text-blue-400">✓</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <div className="border-t border-slate-700">
+                                                    <button
+                                                        onClick={() => {
+                                                            setAutoMode(true);
+                                                            setShowModelSelector(false);
+                                                        }}
+                                                        className="w-full px-3 py-2 text-left text-xs font-medium text-yellow-400 hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                                                    >
+                                                        <Zap size={12} />
+                                                        <span>Enable Auto Mode</span>
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {isRunning && currentAutoModel && autoMode && (
+                            <span className="text-xs text-slate-400">
+                                {models.find(m => m.id === currentAutoModel)?.name}
                             </span>
                         )}
                     </div>
-                    
+
+                    {/* Center: Badge */}
                     <div className="flex-1 flex justify-center items-center">
                          <div className="text-[10px] font-mono text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
                             AUTOGEN • MULTI-AGENT
                         </div>
                     </div>
 
+                    {/* Right: Clear button */}
                     <button
                         onClick={handleClear}
                         className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"

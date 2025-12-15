@@ -36,6 +36,8 @@ export default function ChatView({
     const [autoModeScope, setAutoModeScope] = useState<AutoModeScope>('all');
     const [showAutoDropdown, setShowAutoDropdown] = useState(false);
     const [showModelSelector, setShowModelSelector] = useState(false);
+    const [expandedLocalModels, setExpandedLocalModels] = useState(true);
+    const [expandedApiModels, setExpandedApiModels] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -278,174 +280,186 @@ export default function ChatView({
             {/* Header / Config Bar */}
             <div className="z-10 w-full flex justify-center">
                 <div className="max-w-3xl w-full h-14 px-4 flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 backdrop-blur-md rounded-t-2xl">
-                    <div className="flex items-center gap-3">
+                    {/* Left: Main control (Auto or Model selector) */}
+                    <div className="flex items-center gap-2">
                         {autoMode ? (
-                            // Auto mode: Just show status indicator and scope
-                            <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${isGenerating ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)] animate-pulse' : 'bg-yellow-500/60'}`} />
-                                <span className="text-sm font-semibold text-yellow-300 tracking-tight flex items-center gap-1.5">
-                                    <Zap size={14} />
-                                    Auto: {autoScopeLabels[autoModeScope]}
-                                    {isGenerating && currentAutoModel && (
-                                        <span className="text-xs text-slate-400 font-normal">
-                                            ({models.find(m => m.id === currentAutoModel)?.name})
-                                        </span>
-                                    )}
-                                </span>
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setShowAutoDropdown(!showAutoDropdown)}
+                                    className="h-8 px-2 flex items-center gap-1.5 rounded-lg border bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/30 text-yellow-300 transition-all active:scale-95 text-xs font-medium"
+                                >
+                                    <Zap size={12} />
+                                    <span>Auto: {autoScopeLabels[autoModeScope]}</span>
+                                    <ChevronDown size={12} className={`transition-transform ${showAutoDropdown ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showAutoDropdown && (
+                                    <div className="absolute top-full left-0 mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                        {(['all', 'local', 'api'] as AutoModeScope[]).map(scope => (
+                                            <button
+                                                key={scope}
+                                                onClick={() => {
+                                                    setAutoModeScope(scope);
+                                                    setShowAutoDropdown(false);
+                                                }}
+                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
+                                                    autoModeScope === scope
+                                                        ? 'bg-yellow-500/20 text-yellow-300'
+                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                }`}
+                                            >
+                                                {autoScopeLabels[scope]}
+                                                {scope === 'all' && <span className="text-[10px] text-slate-500 ml-1">(local → API)</span>}
+                                                {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
+                                                {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
+                                            </button>
+                                        ))}
+                                        <div className="border-t border-slate-700">
+                                            <button
+                                                onClick={() => {
+                                                    setAutoMode(false);
+                                                    setShowAutoDropdown(false);
+                                                }}
+                                                className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
+                                            >
+                                                Manual Mode
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
-                            // Manual mode: Show clickable model selector
                             <div className="relative" ref={modelSelectorRef}>
                                 <button
                                     onClick={() => setShowModelSelector(!showModelSelector)}
-                                    className="flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded-lg transition-colors"
+                                    className="h-8 px-2 flex items-center gap-1.5 rounded-lg border bg-white/5 hover:bg-white/10 border-white/5 text-slate-200 transition-all active:scale-95 text-xs font-medium"
                                     disabled={isGenerating}
                                 >
-                                    <div className={`w-2 h-2 rounded-full ${selectedModel ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-600'} ${isGenerating ? 'animate-pulse' : ''}`} />
-                                    <span className="text-sm font-semibold text-slate-200 tracking-tight">
-                                        {selectedModel ? selectedModel.name : 'Select model...'}
-                                        {isGenerating && ' is typing...'}
-                                    </span>
-                                    {!isGenerating && <ChevronDown size={12} className="text-slate-400" />}
+                                    <span>{selectedModel ? selectedModel.name : 'Select model'}</span>
+                                    {!isGenerating && <ChevronDown size={12} />}
                                 </button>
 
                                 {showModelSelector && !isGenerating && (
-                                    <div className="absolute top-full left-0 mt-1 w-64 max-h-80 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
+                                    <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
                                         {models.length === 0 ? (
                                             <div className="px-3 py-4 text-xs text-slate-500 text-center">
                                                 No models available
                                             </div>
                                         ) : (
                                             <>
+                                                {/* Local Models Section */}
                                                 {models.filter(m => m.type === 'local').length > 0 && (
-                                                    <>
-                                                        <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
-                                                            Local Models
-                                                        </div>
-                                                        {models.filter(m => m.type === 'local').map(model => (
-                                                            <button
-                                                                key={model.id}
-                                                                onClick={() => {
-                                                                    onSelectModel(model.id);
-                                                                    setShowModelSelector(false);
-                                                                }}
-                                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
-                                                                    selectedModelId === model.id
-                                                                        ? 'bg-blue-500/20 text-blue-300'
-                                                                        : 'text-slate-300 hover:bg-slate-700/50'
-                                                                }`}
-                                                            >
-                                                                <div className="flex items-center justify-between">
-                                                                    <span>{model.name}</span>
-                                                                    {selectedModelId === model.id && (
-                                                                        <span className="text-blue-400">✓</span>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </>
+                                                    <div>
+                                                        <button
+                                                            onClick={() => setExpandedLocalModels(!expandedLocalModels)}
+                                                            className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors"
+                                                        >
+                                                            <span>Local Models</span>
+                                                            <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
+                                                        </button>
+                                                        {expandedLocalModels && (
+                                                            <div>
+                                                                {models.filter(m => m.type === 'local').map(model => (
+                                                                    <button
+                                                                        key={model.id}
+                                                                        onClick={() => {
+                                                                            onSelectModel(model.id);
+                                                                            setShowModelSelector(false);
+                                                                        }}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
+                                                                            selectedModelId === model.id
+                                                                                ? 'bg-blue-500/20 text-blue-300'
+                                                                                : 'text-slate-300 hover:bg-slate-700/50'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span>{model.name}</span>
+                                                                            {selectedModelId === model.id && (
+                                                                                <span className="text-blue-400">✓</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
+
+                                                {/* API Models Section */}
                                                 {models.filter(m => m.type === 'api').length > 0 && (
-                                                    <>
-                                                        <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50 mt-1">
-                                                            API Models
-                                                        </div>
-                                                        {models.filter(m => m.type === 'api').map(model => (
-                                                            <button
-                                                                key={model.id}
-                                                                onClick={() => {
-                                                                    onSelectModel(model.id);
-                                                                    setShowModelSelector(false);
-                                                                }}
-                                                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
-                                                                    selectedModelId === model.id
-                                                                        ? 'bg-blue-500/20 text-blue-300'
-                                                                        : 'text-slate-300 hover:bg-slate-700/50'
-                                                                }`}
-                                                            >
-                                                                <div className="flex items-center justify-between">
-                                                                    <span>{model.name}</span>
-                                                                    {selectedModelId === model.id && (
-                                                                        <span className="text-blue-400">✓</span>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </>
+                                                    <div>
+                                                        <button
+                                                            onClick={() => setExpandedApiModels(!expandedApiModels)}
+                                                            className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors border-t border-slate-700/50"
+                                                        >
+                                                            <span>API Models</span>
+                                                            <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
+                                                        </button>
+                                                        {expandedApiModels && (
+                                                            <div>
+                                                                {models.filter(m => m.type === 'api').map(model => (
+                                                                    <button
+                                                                        key={model.id}
+                                                                        onClick={() => {
+                                                                            onSelectModel(model.id);
+                                                                            setShowModelSelector(false);
+                                                                        }}
+                                                                        className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
+                                                                            selectedModelId === model.id
+                                                                                ? 'bg-blue-500/20 text-blue-300'
+                                                                                : 'text-slate-300 hover:bg-slate-700/50'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span>{model.name}</span>
+                                                                            {selectedModelId === model.id && (
+                                                                                <span className="text-blue-400">✓</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
+
+                                                {/* Enable Auto Mode */}
+                                                <div className="border-t border-slate-700">
+                                                    <button
+                                                        onClick={() => {
+                                                            setAutoMode(true);
+                                                            setShowModelSelector(false);
+                                                        }}
+                                                        className="w-full px-3 py-2 text-left text-xs font-medium text-yellow-400 hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                                                    >
+                                                        <Zap size={12} />
+                                                        <span>Enable Auto Mode</span>
+                                                    </button>
+                                                </div>
                                             </>
                                         )}
                                     </div>
                                 )}
                             </div>
                         )}
+
+                        {/* Show current model when generating in auto mode */}
+                        {isGenerating && currentAutoModel && autoMode && (
+                            <span className="text-xs text-slate-400">
+                                {models.find(m => m.id === currentAutoModel)?.name}
+                            </span>
+                        )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <div className="relative" ref={dropdownRef}>
-                            <button
-                                onClick={() => {
-                                    if (!autoMode) {
-                                        setAutoMode(true);
-                                    } else {
-                                        setShowAutoDropdown(!showAutoDropdown);
-                                    }
-                                }}
-                                className={`h-8 px-2 flex items-center gap-1.5 rounded-lg border transition-all active:scale-95 text-xs font-medium ${autoMode
-                                    ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/30 text-yellow-300'
-                                    : 'bg-white/5 hover:bg-white/10 border-white/5 text-slate-400 hover:text-white'
-                                }`}
-                                title={autoMode ? `Auto mode: ${autoScopeLabels[autoModeScope]}` : "Enable Auto Mode"}
-                            >
-                                <Zap size={12} />
-                                <span>Auto: {autoScopeLabels[autoModeScope]}</span>
-                                <ChevronDown size={12} className={`transition-transform ${showAutoDropdown ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {showAutoDropdown && (
-                                <div className="absolute top-full right-0 mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                    {(['all', 'local', 'api'] as AutoModeScope[]).map(scope => (
-                                        <button
-                                            key={scope}
-                                            onClick={() => {
-                                                setAutoModeScope(scope);
-                                                setShowAutoDropdown(false);
-                                            }}
-                                            className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
-                                                autoModeScope === scope
-                                                    ? 'bg-yellow-500/20 text-yellow-300'
-                                                    : 'text-slate-300 hover:bg-slate-700/50'
-                                            }`}
-                                        >
-                                            {autoScopeLabels[scope]}
-                                            {scope === 'all' && <span className="text-[10px] text-slate-500 ml-1">(local → API)</span>}
-                                            {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
-                                            {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
-                                        </button>
-                                    ))}
-                                    <div className="border-t border-slate-700">
-                                        <button
-                                            onClick={() => {
-                                                setAutoMode(false);
-                                                setShowAutoDropdown(false);
-                                            }}
-                                            className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
-                                        >
-                                            Disable Auto
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            onClick={handleClear}
-                            className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
-                            title="Clear History"
-                        >
-                            <Eraser size={12} />
-                            <span>Clear</span>
-                        </button>
-                    </div>
+                    {/* Right: Clear button */}
+                    <button
+                        onClick={handleClear}
+                        className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
+                        title="Clear History"
+                    >
+                        <Eraser size={12} />
+                        <span>Clear</span>
+                    </button>
                 </div>
             </div>
 
