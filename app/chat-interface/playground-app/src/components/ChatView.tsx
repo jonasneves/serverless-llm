@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Eraser, Zap, ChevronDown } from 'lucide-react';
+import { Bot, AlertTriangle, User, Eraser, Zap, ChevronDown, Info } from 'lucide-react';
 import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import SelectionOverlay from './SelectionOverlay';
@@ -531,6 +531,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             </div>
 
 
+
+
             {/* Blue Selection Rectangle */}
             <SelectionOverlay rect={selectionRect} />
 
@@ -550,7 +552,25 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
                             <Bot size={48} className="mb-4" />
-                            <p className="text-lg">Chat with AI</p>
+                            <p className="text-lg mb-4">Chat with AI</p>
+
+                            <div className="max-w-sm text-center">
+                                {((!autoMode && selectedModel?.type === 'local') || (autoMode && autoModeScope === 'local')) && (
+                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-400 text-xs">
+                                        <Info size={14} className="shrink-0" />
+                                        <span>Small language models hosted in our servers.</span>
+                                    </div>
+                                )}
+                                {((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
+                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-400 text-xs">
+                                        <Info size={14} className="shrink-0" />
+                                        <span>
+                                            Uses GitHub Models with free quota.
+                                            {!githubToken && " Configure token in Settings for dedicated quota."}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -623,7 +643,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 setInputFocused={setInputFocused}
                 onSendMessage={handleSend}
                 onOpenTopics={onOpenTopics}
-                placeholder={autoMode ? "Message (Auto mode - will use best available model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
+                placeholder={autoMode ? "Message (Auto mode - will use auto-selected model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
                 isGenerating={isGenerating}
                 onStop={handleStop}
             />
