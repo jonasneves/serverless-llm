@@ -27,7 +27,7 @@ export default function GestureControl(props: GestureControlProps) {
     setIsActive(true);
   };
 
-  const baseClasses = "fixed bottom-5 right-5 z-50 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95";
+  const baseClasses = "fixed bottom-36 sm:bottom-5 right-3 sm:right-5 z-50 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95";
   const activeClasses = "bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500";
   const inactiveClasses = "bg-slate-900/80 backdrop-blur-md border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-600";
 

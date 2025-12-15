@@ -988,7 +988,7 @@ export default function Playground() {
 
         {/* Orchestrator View */}
         {mode === 'orchestrator' && (
-          <div className="fixed inset-0 pt-20 pb-6 px-6">
+          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6">
             <OrchestratorView
               models={availableModels}
               selectedModelId={selected[0] || null}
@@ -1001,7 +1001,7 @@ export default function Playground() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="fixed inset-0 pt-20 pb-6 px-6">
+          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6">
             <ChatView
               ref={chatViewRef}
               models={modelsData}
@@ -1142,7 +1142,7 @@ export default function Playground() {
         )
       }
       {/* Background Style Cycler (Bottom Left) */}
-      <div className="fixed bottom-6 left-6 z-50 flex items-center rounded-lg bg-slate-800/50 backdrop-blur-md border border-slate-700/50 shadow-lg">
+      <div className="fixed bottom-36 left-3 sm:left-6 sm:bottom-6 z-50 flex items-center rounded-lg bg-slate-800/50 backdrop-blur-md border border-slate-700/50 shadow-lg">
         <button
           onClick={() => cycleBgStyle('prev')}
           className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none border-r border-slate-700/50"
