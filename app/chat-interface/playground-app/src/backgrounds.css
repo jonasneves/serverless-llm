@@ -86,3 +86,8 @@
   pointer-events: none;
   z-index: 1;
 }
+
+/* Option 7: Hand Camera */
+.bg-hand-cam {
+  background-color: #0f172a;
+}

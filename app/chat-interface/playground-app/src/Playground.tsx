@@ -22,6 +22,7 @@ import OrchestratorView from './components/OrchestratorView';
 import ChatView from './components/ChatView';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
+import HandBackground from './components/HandBackground';
 import './playground.css';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
@@ -868,6 +869,7 @@ export default function Playground() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
+      {bgStyle === 'hand-cam' && <HandBackground />}
       {/* Header */}
       <Header
         mode={mode}
@@ -946,10 +948,8 @@ export default function Playground() {
                 onDrop={handleDrop}
                 className={`relative w-full h-full z-0 transition-all duration-300`}
                 style={{
-                  // Base styles for all modes
                   position: 'relative',
                   display: 'flex',
-                  // Compare mode aligns top for scrolling, others center
                   alignItems: mode === 'compare' ? 'flex-start' : 'center',
                   justifyContent: 'center',
                   ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
@@ -1043,23 +1043,25 @@ export default function Playground() {
       {/* Selection rectangle overlay - positioned relative to root container */}
       <SelectionOverlay rect={selectionRect} />
 
-      {activeInspectorId && inspectorModels.length > 0 && (
-        <ResponseInspector
-          models={inspectorModels}
-          activeId={activeInspectorId}
-          onSelect={setActiveInspectorId}
-          onClose={clearInspectorSelection}
-          speaking={speaking}
-          mode={mode}
-          moderatorId={moderator}
-          councilAggregateRankings={councilAggregateRankings}
-          councilAnonymousReviews={councilAnonymousReviews}
-          showCouncilReviewerNames={showCouncilReviewerNames}
-          discussionTurnsByModel={discussionTurnsByModel}
-          position={inspectorPosition}
-          onTogglePosition={() => setInspectorPosition(prev => prev === 'left' ? 'right' : 'left')}
-        />
-      )}
+      {
+        activeInspectorId && inspectorModels.length > 0 && (
+          <ResponseInspector
+            models={inspectorModels}
+            activeId={activeInspectorId}
+            onSelect={setActiveInspectorId}
+            onClose={clearInspectorSelection}
+            speaking={speaking}
+            mode={mode}
+            moderatorId={moderator}
+            councilAggregateRankings={councilAggregateRankings}
+            councilAnonymousReviews={councilAnonymousReviews}
+            showCouncilReviewerNames={showCouncilReviewerNames}
+            discussionTurnsByModel={discussionTurnsByModel}
+            position={inspectorPosition}
+            onTogglePosition={() => setInspectorPosition(prev => prev === 'left' ? 'right' : 'left')}
+          />
+        )
+      }
       {/* Background Style Cycler (Bottom Left) */}
       <div className="fixed bottom-6 left-6 z-50 flex items-center rounded-lg bg-slate-800/50 backdrop-blur-md border border-slate-700/50 shadow-lg">
         <button
@@ -1099,105 +1101,109 @@ export default function Playground() {
       />
 
       {/* Fixed Prompt Input for Compare, Council, and Roundtable Modes */}
-      {(mode === 'compare' || mode === 'council' || mode === 'roundtable') && (
-        <PromptInput
-          inputRef={inputRef}
-          inputFocused={inputFocused}
-          setInputFocused={setInputFocused}
-          onSendMessage={sendMessage}
-          onOpenTopics={() => setShowTopics(true)}
-          isGenerating={isGenerating || isSynthesizing}
-          onStop={handleStop}
-          placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
-        />
-      )}
+      {
+        (mode === 'compare' || mode === 'council' || mode === 'roundtable') && (
+          <PromptInput
+            inputRef={inputRef}
+            inputFocused={inputFocused}
+            setInputFocused={setInputFocused}
+            onSendMessage={sendMessage}
+            onOpenTopics={() => setShowTopics(true)}
+            isGenerating={isGenerating || isSynthesizing}
+            onStop={handleStop}
+            placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
+          />
+        )
+      }
 
       {/* Custom Context Menu */}
-      {contextMenu && (
-        <div
-          className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.type === 'background' ? (
-            // Background context menu - Add Model option
-            <button
-              className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
-              onClick={() => {
-                setShowDock(true);
-                setContextMenu(null);
-              }}
-            >
-              <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Model
-            </button>
-          ) : contextMenu.modelId ? (
-            // Model context menu - different options based on mode
-            <>
-              {/* Open Inspector option */}
+      {
+        contextMenu && (
+          <div
+            className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-[200] min-w-[160px]"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {contextMenu.type === 'background' ? (
+              // Background context menu - Add Model option
               <button
                 className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
                 onClick={() => {
-                  setActiveInspectorId(contextMenu.modelId!);
+                  setShowDock(true);
                   setContextMenu(null);
                 }}
               >
                 <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Open
+                Add Model
               </button>
-
-              {/* Set as Orchestrator - only in Council/Roundtable modes and not already the orchestrator */}
-              {mode !== 'compare' && contextMenu.modelId !== moderator && (
+            ) : contextMenu.modelId ? (
+              // Model context menu - different options based on mode
+              <>
+                {/* Open Inspector option */}
                 <button
                   className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
                   onClick={() => {
-                    setModerator(contextMenu.modelId!);
+                    setActiveInspectorId(contextMenu.modelId!);
                     setContextMenu(null);
                   }}
                 >
-                  <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  Set as Orchestrator
+                  Open
                 </button>
-              )}
 
-              {/* Remove Model option - available in all modes */}
-              <button
-                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors flex items-center gap-2"
-                onClick={() => {
-                  const removingModerator = contextMenu.modelId === moderator;
+                {/* Set as Orchestrator - only in Council/Roundtable modes and not already the orchestrator */}
+                {mode !== 'compare' && contextMenu.modelId !== moderator && (
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                    onClick={() => {
+                      setModerator(contextMenu.modelId!);
+                      setContextMenu(null);
+                    }}
+                  >
+                    <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                    Set as Orchestrator
+                  </button>
+                )}
 
-                  // Remove the model from selected
-                  handleModelToggle(contextMenu.modelId!);
+                {/* Remove Model option - available in all modes */}
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    const removingModerator = contextMenu.modelId === moderator;
 
-                  // If removing the orchestrator, auto-select a new one from remaining models
-                  if (removingModerator && mode !== 'compare') {
-                    const remaining = selected.filter(id => id !== contextMenu.modelId);
-                    if (remaining.length > 0) {
-                      setModerator(remaining[0]);
-                    } else {
-                      // If no models remain, clear moderator
-                      setModerator('');
+                    // Remove the model from selected
+                    handleModelToggle(contextMenu.modelId!);
+
+                    // If removing the orchestrator, auto-select a new one from remaining models
+                    if (removingModerator && mode !== 'compare') {
+                      const remaining = selected.filter(id => id !== contextMenu.modelId);
+                      if (remaining.length > 0) {
+                        setModerator(remaining[0]);
+                      } else {
+                        // If no models remain, clear moderator
+                        setModerator('');
+                      }
                     }
-                  }
-                  setContextMenu(null);
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Remove
-              </button>
-            </>
-          ) : null}
-        </div>
-      )}
+                    setContextMenu(null);
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Remove
+                </button>
+              </>
+            ) : null}
+          </div>
+        )
+      }
 
-    </div>
+    </div >
   );
 }

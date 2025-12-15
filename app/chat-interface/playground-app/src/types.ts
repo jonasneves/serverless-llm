@@ -17,7 +17,7 @@ export interface Position {
   angle: number;
 }
 
-export type BackgroundStyle = 'dots' | 'dots-fade' | 'grid' | 'mesh' | 'dots-mesh' | 'animated-mesh' | 'none';
+export type BackgroundStyle = 'dots' | 'dots-fade' | 'grid' | 'mesh' | 'dots-mesh' | 'animated-mesh' | 'hand-cam' | 'none';
 
 export interface TopicPrompt {
   id: string;
