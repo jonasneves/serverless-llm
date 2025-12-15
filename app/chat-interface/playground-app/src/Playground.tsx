@@ -655,41 +655,46 @@ export default function Playground() {
   ]);
 
   // Handle wheel scroll to move arena up/down
-  useEffect(() => {
-    const applyOffset = (offset: number) => {
-      const el = visualizationAreaRef.current;
-      if (!el) return;
-      el.style.setProperty('--arena-offset-y', `${offset}px`);
-    };
+  // Helpers for Arena Scrolling (Hoisted for HandBackground access)
+  const touchActiveRef = useRef(false);
+  const lastTouchYRef = useRef(0);
 
-    const clampTarget = (value: number) =>
-      Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, value));
+  const applyOffset = (offset: number) => {
+    const el = visualizationAreaRef.current;
+    if (!el) return;
+    el.style.setProperty('--arena-offset-y', `${offset}px`);
+  };
 
-    const step = () => {
-      const current = arenaOffsetYRef.current;
-      const target = arenaTargetYRef.current;
-      const diff = target - current;
+  const clampTarget = (value: number) =>
+    Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, value));
 
-      if (Math.abs(diff) < 0.5) {
-        arenaOffsetYRef.current = target;
-        applyOffset(target);
-        wheelRafRef.current = null;
-        return;
-      }
+  const step = () => {
+    const current = arenaOffsetYRef.current;
+    const target = arenaTargetYRef.current;
+    const diff = target - current;
 
-      // Ease toward target for a more natural feel.
-      const next = current + diff * 0.35;
-      arenaOffsetYRef.current = next;
-      applyOffset(next);
+    if (Math.abs(diff) < 0.5) {
+      arenaOffsetYRef.current = target;
+      applyOffset(target);
+      wheelRafRef.current = null;
+      return;
+    }
+
+    // Ease toward target for a more natural feel.
+    const next = current + diff * 0.35;
+    arenaOffsetYRef.current = next;
+    applyOffset(next);
+    wheelRafRef.current = requestAnimationFrame(step);
+  };
+
+  const ensureRaf = () => {
+    if (wheelRafRef.current == null) {
       wheelRafRef.current = requestAnimationFrame(step);
-    };
+    }
+  };
 
-    const ensureRaf = () => {
-      if (wheelRafRef.current == null) {
-        wheelRafRef.current = requestAnimationFrame(step);
-      }
-    };
-
+  // Handle wheel scroll to move arena up/down
+  useEffect(() => {
     const handleWheel = (event: WheelEvent) => {
       if (dragSelectionActiveRef.current) return;
       const target = event.target as HTMLElement | null;
@@ -703,10 +708,6 @@ export default function Playground() {
       ensureRaf();
     };
 
-    // Touch / mobile panning (single-finger vertical)
-    let touchActive = false;
-    let lastTouchY = 0;
-
     const shouldIgnoreTouch = (target: HTMLElement | null) => {
       if (!target) return false;
       return Boolean(
@@ -718,22 +719,22 @@ export default function Playground() {
       if (event.touches.length !== 1) return;
       const target = event.target as HTMLElement | null;
       if (shouldIgnoreTouch(target)) return;
-      touchActive = true;
-      lastTouchY = event.touches[0].clientY;
+      touchActiveRef.current = true;
+      lastTouchYRef.current = event.touches[0].clientY;
     };
 
     const handleTouchMove = (event: TouchEvent) => {
       if (dragSelectionActiveRef.current) return;
-      if (!touchActive || event.touches.length !== 1) return;
+      if (!touchActiveRef.current || event.touches.length !== 1) return;
       const target = event.target as HTMLElement | null;
       if (shouldIgnoreTouch(target)) {
-        touchActive = false;
+        touchActiveRef.current = false;
         return;
       }
 
       const touchY = event.touches[0].clientY;
-      const deltaY = touchY - lastTouchY;
-      lastTouchY = touchY;
+      const deltaY = touchY - lastTouchYRef.current;
+      lastTouchYRef.current = touchY;
 
       event.preventDefault();
       arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
@@ -741,15 +742,15 @@ export default function Playground() {
     };
 
     const handleTouchEnd = () => {
-      touchActive = false;
+      touchActiveRef.current = false;
     };
 
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd);
     window.addEventListener('touchcancel', handleTouchEnd);
-
     window.addEventListener('wheel', handleWheel, { passive: false });
+
     return () => {
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
@@ -869,7 +870,73 @@ export default function Playground() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
-      {bgStyle === 'hand-cam' && <HandBackground />}
+      {bgStyle === 'hand-cam' && (
+        <HandBackground
+          onStopGeneration={handleStop}
+          onSendMessage={(msg) => {
+            if (inputRef.current) {
+              inputRef.current.value = msg;
+              inputRef.current.focus();
+            }
+
+            const activeIds = mode === 'chat' || mode === 'orchestrator'
+              ? selected
+              : mode === 'compare'
+                ? selected
+                : mode === 'council' || mode === 'roundtable'
+                  ? selected
+                  : [];
+
+            if (activeIds.length > 0) {
+              sendMessage(msg, {}, activeIds);
+            }
+          }}
+          onModeSwitch={(dir) => {
+            const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'orchestrator'];
+            const idx = modes.indexOf(mode);
+            if (idx === -1) return;
+
+            const nextIdx = dir === 'next'
+              ? (idx + 1) % modes.length
+              : (idx - 1 + modes.length) % modes.length;
+            setMode(modes[nextIdx]);
+          }}
+          onScroll={(deltaY) => {
+            arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
+            ensureRaf();
+          }}
+          onPinch={(xOfScreen, yOfScreen) => {
+            const clickX = xOfScreen * window.innerWidth;
+            const clickY = yOfScreen * window.innerHeight;
+
+            const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
+            if (el) {
+              const clickable = el.closest('button') || el.closest('[role="button"]');
+              if (clickable) {
+                (clickable as HTMLElement).click();
+
+                const ripple = document.createElement('div');
+                ripple.style.position = 'fixed';
+                ripple.style.left = `${clickX}px`;
+                ripple.style.top = `${clickY}px`;
+                ripple.style.width = '20px';
+                ripple.style.height = '20px';
+                ripple.style.background = 'rgba(236, 72, 153, 0.5)';
+                ripple.style.borderRadius = '50%';
+                ripple.style.transform = 'translate(-50%, -50%)';
+                ripple.style.pointerEvents = 'none';
+                ripple.style.zIndex = '9999';
+                document.body.appendChild(ripple);
+
+                ripple.animate([
+                  { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                  { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
+                ], { duration: 400 }).onfinish = () => ripple.remove();
+              }
+            }
+          }}
+        />
+      )}
       {/* Header */}
       <Header
         mode={mode}
