@@ -78,7 +78,7 @@ export default function PromptInput({
             ref={inputRef}
             type="text"
             placeholder={placeholder || "Ask a question to compare model responses..."}
-            className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-sm px-2.5 py-2.5"
+            className="w-full bg-transparent text-slate-200 placeholder-slate-500 outline-none text-base sm:text-sm px-2.5 py-2.5"
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             onKeyDown={(e) => {

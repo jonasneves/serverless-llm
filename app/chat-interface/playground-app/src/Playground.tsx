@@ -988,7 +988,7 @@ export default function Playground() {
 
         {/* Orchestrator View */}
         {mode === 'orchestrator' && (
-          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6">
+          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6" data-no-arena-scroll>
             <OrchestratorView
               models={availableModels}
               selectedModelId={selected[0] || null}
@@ -1001,7 +1001,7 @@ export default function Playground() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6">
+          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6" data-no-arena-scroll>
             <ChatView
               ref={chatViewRef}
               models={modelsData}
