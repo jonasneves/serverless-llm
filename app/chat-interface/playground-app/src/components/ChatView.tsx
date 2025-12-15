@@ -526,7 +526,8 @@ export default function ChatView({
             {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
+                data-no-arena-scroll
                 onClick={(e) => {
                     // Clear selection if clicking directly on the messages area (not on a message)
                     if (e.target === e.currentTarget || !(e.target as HTMLElement).closest('[data-message]')) {
@@ -538,7 +539,7 @@ export default function ChatView({
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
                             <Bot size={48} className="mb-4" />
-                            <p className="text-lg">Chat with {selectedModel?.name || 'AI'}</p>
+                            <p className="text-lg">Chat with AI</p>
                         </div>
                     )}
 

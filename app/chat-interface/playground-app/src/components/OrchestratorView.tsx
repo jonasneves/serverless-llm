@@ -4,6 +4,7 @@ import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
 import { Terminal, Cpu, Bot, CheckCircle, AlertTriangle, Eraser, Zap, ChevronDown } from 'lucide-react';
 import { getModelPriority } from '../constants';
+import { useListSelectionBox } from '../hooks/useListSelectionBox';
 
 type AutoModeScope = 'all' | 'local' | 'api';
 
@@ -60,14 +61,21 @@ export default function OrchestratorView({
     const [expandedLocalModels, setExpandedLocalModels] = useState(true);
     const [expandedApiModels, setExpandedApiModels] = useState(false);
     const [selectedRounds, setSelectedRounds] = useState<Set<number>>(new Set());
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
 
     const abortControllerRef = useRef<AbortController | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const modelSelectorRef = useRef<HTMLDivElement>(null);
+    const roundRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+    // Use list selection box hook for drag selection
+    const { selectionRect } = useListSelectionBox({
+        containerRef: containerRef,
+        itemRefs: roundRefs,
+        setSelectedIndices: setSelectedRounds,
+    });
 
     // Group events into rounds for display
     useEffect(() => {
@@ -145,16 +153,6 @@ export default function OrchestratorView({
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    // Handle mouse up for drag selection
-    useEffect(() => {
-        const handleMouseUp = () => {
-            setIsDragging(false);
-            setDragStartIndex(null);
-        };
-        window.addEventListener('mouseup', handleMouseUp);
-        return () => window.removeEventListener('mouseup', handleMouseUp);
     }, []);
 
     const tryOrchestrator = async (modelId: string, query: string): Promise<{ success: boolean; error?: string }> => {
@@ -311,34 +309,6 @@ export default function OrchestratorView({
         setSelectedRounds(new Set());
     };
 
-    const handleRoundMouseDown = (index: number) => {
-        setIsDragging(true);
-        setDragStartIndex(index);
-        // Toggle selection on click
-        setSelectedRounds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(index)) {
-                newSet.delete(index);
-            } else {
-                newSet.add(index);
-            }
-            return newSet;
-        });
-    };
-
-    const handleRoundMouseEnter = (index: number) => {
-        if (isDragging && dragStartIndex !== null) {
-            // Select range from dragStartIndex to current index
-            const start = Math.min(dragStartIndex, index);
-            const end = Math.max(dragStartIndex, index);
-            const newSet = new Set<number>();
-            for (let i = start; i <= end; i++) {
-                newSet.add(i);
-            }
-            setSelectedRounds(newSet);
-        }
-    };
-
     const handleDeleteSelected = () => {
         if (selectedRounds.size === 0) return;
         // Filter out selected rounds and rebuild events
@@ -357,7 +327,7 @@ export default function OrchestratorView({
     };
 
     return (
-        <div className="flex flex-col h-full relative">
+        <div ref={containerRef} className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
             <div className="z-10 w-full flex justify-center pt-6 pb-2">
                 <div className="w-full flex items-center justify-between" style={{ maxWidth: '600px' }}>
@@ -538,20 +508,36 @@ export default function OrchestratorView({
                 </div>
             </div>
 
+
+            {/* Blue Selection Rectangle */}
+            {selectionRect && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: selectionRect.left,
+                        top: selectionRect.top,
+                        width: selectionRect.width,
+                        height: selectionRect.height,
+                        border: '2px solid rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        pointerEvents: 'none',
+                        zIndex: 40,
+                    }}
+                />
+            )}
+
             {/* Main Content Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
                 data-no-arena-scroll
+                onClick={(e) => {
+                    // Clear selection if clicking directly on the messages area (not on a round)
+                    if (e.target === e.currentTarget || !(e.target as HTMLElement).closest('[data-round]')) {
+                        setSelectedRounds(new Set());
+                    }
+                }}
             >
-                {/* Drag Selection Indicator */}
-                {isDragging && selectedRounds.size > 0 && (
-                    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-                        <div className="bg-blue-500/90 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
-                            {selectedRounds.size} round{selectedRounds.size !== 1 ? 's' : ''} selected
-                        </div>
-                    </div>
-                )}
                 <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {events.length === 0 && !isRunning && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none">
@@ -563,12 +549,29 @@ export default function OrchestratorView({
                     {rounds.map((roundEvents, roundIdx) => (
                         <div
                             key={roundIdx}
+                            ref={(el) => {
+                                if (el) roundRefs.current.set(roundIdx, el);
+                                else roundRefs.current.delete(roundIdx);
+                            }}
+                            data-round={roundIdx}
+                            onClick={(e) => {
+                                // Only handle direct clicks, not bubbled clicks from children if they are interactive
+                                if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-round]') === e.currentTarget) {
+                                    setSelectedRounds(prev => {
+                                        const newSet = new Set(prev);
+                                        if (newSet.has(roundIdx)) {
+                                            newSet.delete(roundIdx);
+                                        } else {
+                                            newSet.add(roundIdx);
+                                        }
+                                        return newSet;
+                                    });
+                                }
+                            }}
                             className={`border rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 cursor-pointer select-none transition-all ${selectedRounds.has(roundIdx)
                                 ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500/30'
                                 : 'border-white/5 bg-white/5'
                                 }`}
-                            onMouseDown={() => handleRoundMouseDown(roundIdx)}
-                            onMouseEnter={() => handleRoundMouseEnter(roundIdx)}
                         >
                             {/* Round header logic if needed */}
                             <div className="bg-white/5 px-4 py-2 text-xs font-mono text-slate-400 flex items-center gap-2">

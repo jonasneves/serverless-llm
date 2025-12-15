@@ -58,8 +58,7 @@ export function useListSelectionBox({
 
             // Don't start selection if clicking on interactive elements
             const clickedOnInteractive = target.closest('button, a, input, textarea, select, [role="button"]');
-            const clickedInNoSelectArea = target.closest('[data-no-arena-scroll]');
-            if (clickedOnInteractive || clickedInNoSelectArea) return;
+            if (clickedOnInteractive) return;
 
             if (!containerRef.current.contains(target)) return;
 
