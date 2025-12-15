@@ -301,7 +301,7 @@ export default function ChatView({
                             <div className="relative" ref={dropdownRef}>
                                 <button
                                     onClick={() => setShowAutoDropdown(!showAutoDropdown)}
-                                    className="h-8 px-2 flex items-center gap-1.5 rounded-lg border bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/30 text-yellow-300 transition-all active:scale-95 text-xs font-medium"
+                                    className="h-8 px-2 flex items-center gap-1.5 rounded-lg border bg-yellow-500/30 hover:bg-yellow-500/40 border-yellow-500/30 text-yellow-300 transition-all active:scale-95 text-xs font-medium"
                                 >
                                     <Zap size={12} />
                                     <span>Auto: {autoScopeLabels[autoModeScope]}</span>
@@ -466,7 +466,7 @@ export default function ChatView({
                     {/* Right: Clear button */}
                     <button
                         onClick={handleClear}
-                        className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
+                        className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
                         title="Clear History"
                     >
                         <Eraser size={12} />
