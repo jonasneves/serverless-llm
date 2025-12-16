@@ -30,7 +30,7 @@
   {% block extra_css %}{% endblock %}
 
   <!-- Shared Scripts -->
-  <script defer src="/static/settings.js?v={{ settings_js }}"></script>
+
   <!-- KaTeX for LaTeX rendering -->
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
     integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8"
@@ -38,56 +38,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 
-  <script>
-    // Smart dropdown positioning utility
-    document.addEventListener('DOMContentLoaded', function () {
-      const dropdowns = document.querySelectorAll('.mode-dropdown');
 
-      dropdowns.forEach(dropdown => {
-        const trigger = dropdown.querySelector('.dropdown-trigger');
-        const menu = dropdown.querySelector('.dropdown-menu');
-
-        if (!trigger || !menu) return;
-
-        // Position dropdown intelligently based on available space
-        const positionDropdown = () => {
-          // Reset positioning class
-          menu.classList.remove('open-above');
-
-          // Use requestAnimationFrame to ensure accurate measurements
-          requestAnimationFrame(() => {
-            const triggerRect = trigger.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-
-            // Get actual menu height if visible, otherwise estimate
-            let menuHeight = menu.offsetHeight || 200;
-
-            // Calculate space above and below the trigger
-            const spaceBelow = viewportHeight - triggerRect.bottom - 8; // 8px margin
-            const spaceAbove = triggerRect.top - 8; // 8px margin
-
-            // If not enough space below but more space above, open above
-            if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
-              menu.classList.add('open-above');
-            }
-          });
-        };
-
-        // Trigger positioning on interaction events
-        dropdown.addEventListener('mouseenter', positionDropdown);
-        dropdown.addEventListener('focusin', positionDropdown);
-
-        // Reposition on window resize/scroll
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-          clearTimeout(resizeTimeout);
-          resizeTimeout = setTimeout(positionDropdown, 100);
-        });
-
-        window.addEventListener('scroll', positionDropdown, { passive: true });
-      });
-    });
-  </script>
   {% block extra_js %}{% endblock %}
 </head>
 
@@ -113,23 +64,7 @@
         </a>
       </nav>
 
-      <div class="header-controls">
-        <button id="statusBtn" class="icon-btn" title="System Status" onclick="window.location.href='/status'">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-          </svg>
-        </button>
-        <button id="settingsBtn" class="icon-btn" title="Settings" data-settings-trigger>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path
-              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z">
-            </path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-      </div>
+
     </div>
   </header>
 

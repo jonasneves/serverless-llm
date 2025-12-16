@@ -636,7 +636,7 @@ export default function Playground() {
 
       if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
         event.preventDefault();
-        const order: Mode[] = ['chat', 'compare', 'council', 'roundtable'];
+        const order: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
         const currentIndex = order.indexOf(mode);
         if (currentIndex !== -1) {
           const delta = event.key === 'ArrowRight' ? 1 : -1;

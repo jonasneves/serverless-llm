@@ -243,8 +243,6 @@ def get_static_versions() -> dict:
         "badges_css": get_file_version("components/badges.css"),
         "modals_css": get_file_version("components/modals.css"),
         "common_css": get_file_version("common.css"),
-        "settings_js": get_file_version("settings.js"),
-        "content_formatter_js": get_file_version("content-formatter.js"),
     }
 
 # Models ordered by capability (Dec 2025 benchmarks)

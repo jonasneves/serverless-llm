@@ -9,69 +9,89 @@
      COLOR TOKENS
      ======================================== */
 
+    /* ========================================
+     COLOR TOKENS (Playground / Slate Theme)
+     ======================================== */
+
     /* Background Colors */
-    --bg-primary: #ffffff;
-    --bg-secondary: #FAFAFA;
-    --bg-tertiary: #F3F4F6;
+    --bg-primary: #0f172a;
+    /* slate-900 */
+    --bg-secondary: #1e293b;
+    /* slate-800 */
+    --bg-tertiary: #334155;
+    /* slate-700 */
 
     /* Text Colors */
-    --text-primary: #111827;
-    --text-secondary: #6B7280;
-    --text-tertiary: #9CA3AF;
+    --text-primary: #f8fafc;
+    /* slate-50 */
+    --text-secondary: #94a3b8;
+    /* slate-400 */
+    --text-tertiary: #64748b;
+    /* slate-500 */
 
     /* Border Colors */
-    --border-color: #E5E7EB;
-    --border-color-light: #F3F4F6;
-    --border-color-dark: #D1D5DB;
+    --border-color: #334155;
+    /* slate-700 */
+    --border-color-light: #475569;
+    /* slate-600 */
+    --border-color-dark: #1e293b;
+    /* slate-800 */
 
     /* Brand Colors */
-    --accent-color: #1e3a5f;
-    --accent-hover: #2c4f7c;
-    --accent-active: #152a45;
+    --accent-color: #3b82f6;
+    /* blue-500 */
+    --accent-hover: #2563eb;
+    /* blue-600 */
+    --accent-active: #1d4ed8;
+    /* blue-700 */
     --accent-text: #ffffff;
 
     /* Semantic Colors */
-    --danger-color: #DC2626;
-    --danger-bg: #FEE2E2;
-    --warning-color: #D97706;
-    --warning-bg: #FEF3C7;
-    --success-color: #059669;
-    --success-bg: #D1FAE5;
-    --info-color: #0284C7;
-    --info-bg: #E0F2FE;
+    --danger-color: #ef4444;
+    /* red-500 */
+    --danger-bg: rgba(239, 68, 68, 0.1);
+    --warning-color: #f59e0b;
+    /* amber-500 */
+    --warning-bg: rgba(245, 158, 11, 0.1);
+    --success-color: #10b981;
+    /* emerald-500 */
+    --success-bg: rgba(16, 185, 129, 0.1);
+    --info-color: #3b82f6;
+    /* blue-500 */
+    --info-bg: rgba(59, 130, 246, 0.1);
 
     /* Legacy aliases */
     --error-color: var(--danger-color);
     --error-bg: var(--danger-bg);
 
     /* Feature-specific colors */
-    --direct-color: #64748b;
-    --vs-color: #7c3aed;
-    --prob-badge: #0284C7;
-    --grade-pass: #3DB08B;
-    --grade-fail: #E57373;
-    --grade-warn: #FFB74D;
+    --direct-color: #94a3b8;
+    --vs-color: #8b5cf6;
+    --prob-badge: #3b82f6;
+    --grade-pass: #10b981;
+    --grade-fail: #ef4444;
+    --grade-warn: #f59e0b;
 
     /* Confessions feature - Semantic color system */
     /* Answer (neutral, polished output) */
-    --confession-answer-primary: #64748b;
-    --confession-answer-secondary: #94a3b8;
-    --confession-answer-surface: rgba(100, 116, 139, 0.08);
-    --confession-answer-border: rgba(100, 116, 139, 0.2);
+    --confession-answer-primary: #94a3b8;
+    --confession-answer-secondary: #cbd5e1;
+    --confession-answer-surface: rgba(148, 163, 184, 0.1);
+    --confession-answer-border: rgba(148, 163, 184, 0.25);
 
     /* Confession (warm, revealing truth) */
-    --confession-truth-primary: #f59e0b;
-    --confession-truth-secondary: #fbbf24;
-    --confession-truth-surface: #fffbeb;
-    --confession-truth-border: rgba(245, 158, 11, 0.3);
+    --confession-truth-primary: #fbbf24;
+    --confession-truth-secondary: #fcd34d;
+    --confession-truth-surface: rgba(251, 191, 36, 0.08);
+    --confession-truth-border: rgba(251, 191, 36, 0.25);
 
     /* Compliance states */
-    --confession-positive: #10b981;
-    --confession-positive-bg: rgba(16, 185, 129, 0.12);
-    --confession-negative: #ef4444;
-    --confession-negative-bg: rgba(239, 68, 68, 0.12);
-    --confession-partial: #f59e0b;
-    --confession-partial-bg: rgba(245, 158, 11, 0.12);
+    --confession-positive: #34d399;
+    --confession-positive-bg: rgba(52, 211, 153, 0.1);
+    --confession-negative: #f87171;
+    --confession-negative-bg: rgba(248, 113, 113, 0.1);
+    --confession-partial: #fbbf24;
+    --confession-partial-bg: rgba(251, 191, 36, 0.1);
 
     /* Status indicators */
     --confession-streaming: var(--info-color);
@@ -274,12 +294,12 @@
      SHADOW TOKENS
      ======================================== */
 
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
     --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
 
     /* ========================================
@@ -319,71 +339,4 @@
     --breakpoint-lg: 1024px;
     --breakpoint-xl: 1280px;
     --breakpoint-2xl: 1536px;
-}
-
-/* ========================================
-   DARK MODE TOKENS
-   ======================================== */
-
-[data-theme="dark"] {
-    /* Background Colors */
-    --bg-primary: #0a0e14;
-    --bg-secondary: #12161e;
-    --bg-tertiary: #1a1f2b;
-
-    /* Text Colors */
-    --text-primary: #e4e7eb;
-    --text-secondary: #9ca3af;
-    --text-tertiary: #6b7280;
-
-    /* Border Colors */
-    --border-color: #1f2937;
-    --border-color-light: #374151;
-    --border-color-dark: #111827;
-
-    /* Brand Colors - slightly adjusted for dark mode */
-    --accent-color: #2c5282;
-    --accent-hover: #3d6ba3;
-    --accent-active: #1e3a5f;
-
-    /* Semantic Colors - adjusted for dark mode */
-    --danger-color: #EF4444;
-    --danger-bg: #450a0a;
-    --warning-color: #F59E0B;
-    --warning-bg: #451a03;
-    --success-color: #10B981;
-    --success-bg: #064e3b;
-    --info-color: #3B82F6;
-    --info-bg: #1e3a8a;
-
-    /* Feature-specific colors */
-    --direct-color: #94a3b8;
-    --vs-color: #8b5cf6;
-    --prob-badge: #3B82F6;
-
-    /* Confessions feature - Dark mode adjustments */
-    --confession-answer-primary: #94a3b8;
-    --confession-answer-secondary: #cbd5e1;
-    --confession-answer-surface: rgba(148, 163, 184, 0.1);
-    --confession-answer-border: rgba(148, 163, 184, 0.25);
-
-    --confession-truth-primary: #fbbf24;
-    --confession-truth-secondary: #fcd34d;
-    --confession-truth-surface: rgba(251, 191, 36, 0.08);
-    --confession-truth-border: rgba(251, 191, 36, 0.25);
-
-    --confession-positive: #34d399;
-    --confession-positive-bg: rgba(52, 211, 153, 0.1);
-    --confession-negative: #f87171;
-    --confession-negative-bg: rgba(248, 113, 113, 0.1);
-    --confession-partial: #fbbf24;
-    --confession-partial-bg: rgba(251, 191, 36, 0.1);
-
-    /* Shadows - stronger for dark mode */
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
-    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
 }
