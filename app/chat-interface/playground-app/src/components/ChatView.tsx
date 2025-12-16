@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Zap, ChevronDown, Info } from 'lucide-react';
+import { Bot, AlertTriangle, User, Zap, ChevronDown, Info, Server, Infinity, Cloud, Sparkles, Key } from 'lucide-react';
 import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import SelectionOverlay from './SelectionOverlay';
@@ -395,41 +395,27 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             >
                 <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {messages.length === 0 && (
-                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 select-none pb-20">
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 select-none pb-20 relative">
                             <Bot size={48} className="mb-4 opacity-50" />
                             <div className="flex items-center gap-2 mb-4">
                                 <p className="text-base opacity-50">Chat with</p>
                                 {autoMode ? (
-                                    <div className="relative" ref={dropdownRef}>
-                                        <button
-                                            onClick={() => setShowAutoDropdown(!showAutoDropdown)}
-                                            onMouseEnter={() => setShowTooltip(true)}
-                                            onMouseLeave={() => setShowTooltip(false)}
-                                            className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
-                                        >
-                                            <Zap size={12} className="text-yellow-400" />
-                                            <span className="text-slate-200/60">
-                                                {autoModeScope === 'local' && 'Local Models (Auto)'}
-                                                {autoModeScope === 'api' && 'API Models (Auto)'}
-                                            </span>
-                                            <Info size={11} className="text-slate-400/60" />
-                                            <ChevronDown size={11} className="text-slate-200/60 transition-transform" />
-                                        </button>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="relative" ref={dropdownRef}>
+                                            <button
+                                                onClick={() => setShowAutoDropdown(!showAutoDropdown)}
+                                                className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
+                                            >
+                                                <Zap size={12} className="text-yellow-400" />
+                                                <span className="text-slate-200/60">
+                                                    {autoModeScope === 'local' && 'Local Models (Auto)'}
+                                                    {autoModeScope === 'api' && 'API Models (Auto)'}
+                                                </span>
+                                                <ChevronDown size={11} className="text-slate-200/60 transition-transform" />
+                                            </button>
 
-                                        {showTooltip && !showAutoDropdown && (
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs whitespace-nowrap z-50 shadow-xl">
-                                                <div className="flex items-center gap-2">
-                                                    <Info size={12} className="shrink-0" />
-                                                    <span>
-                                                        {autoModeScope === 'local' && 'Small language models hosted in our servers'}
-                                                        {autoModeScope === 'api' && `Uses GitHub Models with free quota${!githubToken ? '. Configure token in Settings for dedicated quota' : ''}`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {showAutoDropdown && (
-                                            <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                            {showAutoDropdown && (
+                                                <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
                                                 {(['local', 'api'] as ChatAutoModeScope[]).map(scope => (
                                                     <button
                                                         key={scope}
@@ -459,39 +445,70 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                     </button>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="relative" ref={modelSelectorRef}>
-                                        <button
-                                            onClick={() => setShowModelSelector(!showModelSelector)}
+                                            )}
+                                        </div>
+
+                                        <div
+                                            className="relative"
                                             onMouseEnter={() => setShowTooltip(true)}
                                             onMouseLeave={() => setShowTooltip(false)}
-                                            className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
-                                            disabled={isGenerating}
                                         >
-                                            {selectedModel && (
-                                                <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-                                            )}
-                                            <span className="text-slate-200/60">{selectedModel ? selectedModel.name : 'Select a model'}</span>
-                                            {selectedModel && <Info size={11} className="text-slate-400/60" />}
-                                            {!isGenerating && <ChevronDown size={11} className="text-slate-200/60" />}
-                                        </button>
-
-                                        {showTooltip && !showModelSelector && selectedModel && (
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs whitespace-nowrap z-50 shadow-xl">
-                                                <div className="flex items-center gap-2">
-                                                    <Info size={12} className="shrink-0" />
-                                                    <span>
-                                                        {selectedModel.type === 'local' && 'Small language models hosted in our servers'}
-                                                        {selectedModel.type === 'api' && `Uses GitHub Models with free quota${!githubToken ? '. Configure token in Settings for dedicated quota' : ''}`}
-                                                    </span>
+                                            <Info size={13} className="text-slate-500/60 hover:text-slate-400/80 transition-colors cursor-help" />
+                                            {showTooltip && (
+                                                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs z-50 shadow-xl w-48">
+                                                    {autoModeScope === 'local' && (
+                                                        <ul className="space-y-1.5">
+                                                            <li className="flex items-center gap-2">
+                                                                <Zap size={11} className="shrink-0 text-emerald-400" />
+                                                                <span>Small language models</span>
+                                                            </li>
+                                                            <li className="flex items-center gap-2">
+                                                                <Server size={11} className="shrink-0 text-slate-400" />
+                                                                <span>Hosted on our servers</span>
+                                                            </li>
+                                                            <li className="flex items-center gap-2">
+                                                                <Infinity size={11} className="shrink-0 text-blue-400" />
+                                                                <span>No quota limits</span>
+                                                            </li>
+                                                        </ul>
+                                                    )}
+                                                    {autoModeScope === 'api' && (
+                                                        <ul className="space-y-1.5">
+                                                            <li className="flex items-center gap-2">
+                                                                <Cloud size={11} className="shrink-0 text-blue-400" />
+                                                                <span>Cloud-based models</span>
+                                                            </li>
+                                                            <li className="flex items-center gap-2">
+                                                                <Sparkles size={11} className="shrink-0 text-yellow-400" />
+                                                                <span>Free quota available</span>
+                                                            </li>
+                                                            <li className="flex items-center gap-2">
+                                                                <Zap size={11} className="shrink-0 text-purple-400" />
+                                                                <span>More capable models</span>
+                                                            </li>
+                                                        </ul>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="relative" ref={modelSelectorRef}>
+                                            <button
+                                                onClick={() => setShowModelSelector(!showModelSelector)}
+                                                className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
+                                                disabled={isGenerating}
+                                            >
+                                                {selectedModel && (
+                                                    <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                                )}
+                                                <span className="text-slate-200/60">{selectedModel ? selectedModel.name : 'Select a model'}</span>
+                                                {!isGenerating && <ChevronDown size={11} className="text-slate-200/60" />}
+                                            </button>
 
-                                        {showModelSelector && !isGenerating && (
-                                            <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                            {showModelSelector && !isGenerating && (
+                                                <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
                                                 {models.length === 0 ? (
                                                     <div className="px-3 py-4 text-xs text-slate-500 text-center">
                                                         No models available
@@ -597,10 +614,64 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                     </>
                                                 )}
                                             </div>
+                                            )}
+                                        </div>
+
+                                        {selectedModel && (
+                                            <div
+                                                className="relative"
+                                                onMouseEnter={() => setShowTooltip(true)}
+                                                onMouseLeave={() => setShowTooltip(false)}
+                                            >
+                                                <Info size={13} className="text-slate-500/60 hover:text-slate-400/80 transition-colors cursor-help" />
+                                                {showTooltip && (
+                                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs z-50 shadow-xl w-48">
+                                                        {selectedModel.type === 'local' && (
+                                                            <ul className="space-y-1.5">
+                                                                <li className="flex items-center gap-2">
+                                                                    <Zap size={11} className="shrink-0 text-emerald-400" />
+                                                                    <span>Small language models</span>
+                                                                </li>
+                                                                <li className="flex items-center gap-2">
+                                                                    <Server size={11} className="shrink-0 text-slate-400" />
+                                                                    <span>Hosted on our servers</span>
+                                                                </li>
+                                                                <li className="flex items-center gap-2">
+                                                                    <Infinity size={11} className="shrink-0 text-blue-400" />
+                                                                    <span>No quota limits</span>
+                                                                </li>
+                                                            </ul>
+                                                        )}
+                                                        {selectedModel.type === 'api' && (
+                                                            <ul className="space-y-1.5">
+                                                                <li className="flex items-center gap-2">
+                                                                    <Cloud size={11} className="shrink-0 text-blue-400" />
+                                                                    <span>Cloud-based models</span>
+                                                                </li>
+                                                                <li className="flex items-center gap-2">
+                                                                    <Sparkles size={11} className="shrink-0 text-yellow-400" />
+                                                                    <span>Free quota available</span>
+                                                                </li>
+                                                                <li className="flex items-center gap-2">
+                                                                    <Zap size={11} className="shrink-0 text-purple-400" />
+                                                                    <span>More capable models</span>
+                                                                </li>
+                                                            </ul>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 )}
                             </div>
+
+                            {!githubToken && ((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-16 flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800/40 border border-slate-700/40 text-slate-400 text-xs">
+                                    <Key size={11} className="shrink-0 text-slate-500" />
+                                    <span>Add GitHub token in Settings for dedicated quota</span>
+                                </div>
+                            )}
                         </div>
                     )}
 
