@@ -159,7 +159,7 @@ export default function DiscussionTranscript({
     return (
         <div
             ref={containerRef}
-            className={`flex-1 overflow-y-auto px-4 py-6 scroll-smooth ${className} [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]`}
+            className={`flex-1 overflow-y-auto px-4 py-6 scroll-smooth ${className} [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_100%)]`}
             data-no-arena-scroll // Prevent arena scroll capture
         >
             {/* Stage Indicator Banner */}
