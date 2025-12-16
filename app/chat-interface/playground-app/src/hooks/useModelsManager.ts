@@ -17,8 +17,14 @@ interface ModelsApiResponse {
 
 export function useModelsManager() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
+  
+  // Multi-model selection (for Compare, Council, Roundtable, Personalities)
   const [persistedSelected, setPersistedSelected] = usePersistedSetting<string[] | null>('playground_selected_models', null);
   const isSelectionInitialized = useRef(persistedSelected !== null);
+
+  // Chat mode uses a separate, independent model selection
+  const [chatModelId, setChatModelId] = usePersistedSetting<string | null>('playground_chat_model', null);
+  const isChatModelInitialized = useRef(chatModelId !== null);
 
   const selected = useMemo(() => persistedSelected ?? [], [persistedSelected]);
 
@@ -60,9 +66,17 @@ export function useModelsManager() {
 
         setModelsData(apiModels);
 
+        // Initialize multi-model selection (for Compare, Council, etc.) with local models
         if (!isSelectionInitialized.current) {
           setPersistedSelected(apiModels.filter(m => m.type === 'local').map(m => m.id));
           isSelectionInitialized.current = true;
+        }
+
+        // Initialize chat model with first local model
+        if (!isChatModelInitialized.current) {
+          const firstLocalModel = apiModels.find(m => m.type === 'local');
+          setChatModelId(firstLocalModel?.id || apiModels[0]?.id || null);
+          isChatModelInitialized.current = true;
         }
 
         const apiModeratorCandidate = apiModels.find(m => m.type === 'api');
@@ -113,6 +127,8 @@ export function useModelsManager() {
     setModelsData,
     selected,
     setSelected,
+    chatModelId,
+    setChatModelId,
     moderator,
     setModerator,
     availableModels,

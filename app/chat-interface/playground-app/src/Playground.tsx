@@ -35,6 +35,8 @@ export default function Playground() {
     setModelsData,
     selected,
     setSelected,
+    chatModelId,
+    setChatModelId,
     moderator,
     setModerator,
     availableModels,
@@ -93,11 +95,47 @@ export default function Playground() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastQuery, setLastQuery] = useState('');
 
+  // Toast notification for API limit
+  const [apiLimitToast, setApiLimitToast] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
+
+  const showApiLimitToast = useCallback((message: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setApiLimitToast(message);
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setApiLimitToast(null);
+      toastTimeoutRef.current = null;
+    }, 5000);
+  }, []);
+
+  // Check if user can add an API model (requires GitHub token for multi-model modes)
+  const canAddApiModel = useCallback((modelId: string): boolean => {
+    // Chat mode doesn't have this restriction
+    if (mode === 'chat') return true;
+    // If they have a token, allow it
+    if (githubToken) return true;
+    // Check if the model is an API model
+    const model = modelsData.find(m => m.id === modelId);
+    if (!model || model.type !== 'api') return true;
+    // No token + API model = blocked
+    return false;
+  }, [mode, githubToken, modelsData]);
+
+  const canAddApiGroup = useCallback((): boolean => {
+    // Chat mode doesn't have this restriction
+    if (mode === 'chat') return true;
+    // If they have a token, allow it
+    if (githubToken) return true;
+    // No token = blocked for API group
+    return false;
+  }, [mode, githubToken]);
+
   // Chat mode state - persisted across mode switches
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatAutoMode, setChatAutoMode] = useState(true);
   const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('local');
-  const [lastUsedChatModelId, setLastUsedChatModelId] = useState<string | null>(null);
   const {
     history,
     historyRef: conversationHistoryRef,
@@ -179,8 +217,15 @@ export default function Playground() {
     setIsDraggingOver(false);
     if (draggedDockModelId) {
       if (mode === 'chat') {
-        setSelected([draggedDockModelId]);
+        // Chat mode uses separate selection state
+        setChatModelId(draggedDockModelId);
       } else if (!selected.includes(draggedDockModelId)) {
+        // Check API model limit for multi-model modes
+        if (!canAddApiModel(draggedDockModelId)) {
+          showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
+          setDraggedDockModelId(null);
+          return;
+        }
         setSelected(prev => [...prev, draggedDockModelId]);
       }
       setDraggedDockModelId(null);
@@ -189,11 +234,13 @@ export default function Playground() {
 
   const handleModelToggle = (modelId: string) => {
     if (mode === 'chat') {
-      setSelected(prev => prev.includes(modelId) ? [] : [modelId]);
+      // Chat mode uses separate selection state
+      setChatModelId(chatModelId === modelId ? null : modelId);
       return;
     }
 
     if (selected.includes(modelId)) {
+      // Removing is always allowed
       // Removing a model
       const isRemovingActive = isGenerating && sessionModelIdsRef.current.includes(modelId);
 
@@ -239,7 +286,11 @@ export default function Playground() {
       }
 
     } else {
-      // Adding a model
+      // Adding a model - check API limit for multi-model modes
+      if (!canAddApiModel(modelId)) {
+        showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
+        return;
+      }
       setSelected(prev => [...prev, modelId]);
     }
   };
@@ -249,7 +300,14 @@ export default function Playground() {
     const isAllSelected = idsOfType.length > 0 && idsOfType.every(id => selected.includes(id));
 
     if (isAllSelected) {
+      // Removing is always allowed
       setSelected(prev => prev.filter(id => !idsOfType.includes(id)));
+      return;
+    }
+
+    // Check API limit for multi-model modes when adding API group
+    if (type === 'api' && !canAddApiGroup()) {
+      showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
       return;
     }
 
@@ -446,19 +504,16 @@ export default function Playground() {
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
     triggerLineTransition();
-
-    // When leaving Chat mode with a used model, ensure it's included in selection for other modes
-    if (mode === 'chat' && lastUsedChatModelId) {
-      // For multi-model modes (compare, council, roundtable, personality), add the chat model to selection
-      if (nextMode === 'compare' || nextMode === 'council' || nextMode === 'roundtable' || nextMode === 'personality') {
-        if (!selected.includes(lastUsedChatModelId)) {
-          setSelected(prev => [...prev, lastUsedChatModelId]);
-        }
-      }
-    }
-
+    // Chat mode uses separate selection (chatModelId) - no cross-mode selection sync needed
     setMode(nextMode);
-  }, [mode, triggerLineTransition, lastUsedChatModelId, selected, setSelected]);
+  }, [mode, triggerLineTransition]);
+
+  // Cleanup toast timeout on unmount
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => () => {
     if (lineTransitionTimeoutRef.current) {
@@ -1092,8 +1147,8 @@ export default function Playground() {
                 <ChatView
                   ref={chatViewRef}
                   models={modelsData}
-                  selectedModelId={selected[0] || null}
-                  onSelectModel={(id) => setSelected([id])}
+                  selectedModelId={chatModelId}
+                  onSelectModel={setChatModelId}
                   githubToken={githubToken}
                   onOpenTopics={() => setShowTopics(true)}
                   messages={chatMessages}
@@ -1102,13 +1157,7 @@ export default function Playground() {
                   setAutoMode={setChatAutoMode}
                   autoModeScope={chatAutoModeScope}
                   setAutoModeScope={setChatAutoModeScope}
-                  onModelUsed={(modelId) => {
-                    setLastUsedChatModelId(modelId);
-                    // Ensure the model is selected (for mode switching)
-                    if (!selected.includes(modelId)) {
-                      setSelected([modelId]);
-                    }
-                  }}
+                  onModelUsed={setChatModelId}
                 />
               </Suspense>
             </ErrorBoundary>
@@ -1282,6 +1331,34 @@ export default function Playground() {
         </button>
       </div>
 
+      {/* API Limit Toast Notification */}
+      {apiLimitToast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 backdrop-blur-md shadow-xl">
+            <svg className="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-sm text-amber-100">{apiLimitToast}</span>
+            <button
+              onClick={() => {
+                setApiLimitToast(null);
+                setShowSettings(true);
+              }}
+              className="ml-2 px-3 py-1 text-xs font-medium text-amber-900 bg-amber-400 hover:bg-amber-300 rounded-md transition-colors"
+            >
+              Open Settings
+            </button>
+            <button
+              onClick={() => setApiLimitToast(null)}
+              className="ml-1 p-1 text-amber-400/60 hover:text-amber-400 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       <Suspense fallback={null}>
         <SettingsModal
