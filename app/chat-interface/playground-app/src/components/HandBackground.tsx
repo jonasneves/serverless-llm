@@ -4,6 +4,35 @@ import {
     HandLandmarker
 } from '@mediapipe/tasks-vision';
 
+interface GestureConfig {
+    twoFingerTapWindow: number;
+    twoFingerTapCooldown: number;
+    twoFingerMinFrames: number;
+    minPointingTime: number;
+    dwellTime: number;
+    cursorSmoothing: number;
+}
+
+interface DebugInfo {
+    indexExtended: boolean;
+    middleExtended: boolean;
+    ringExtended: boolean;
+    pinkyExtended: boolean;
+    wasPointingOnly: boolean;
+    twoFingerFrames: number;
+    clickLocked: boolean;
+}
+
+interface LandmarkData {
+    landmarks: Array<{ x: number; y: number; z: number }> | null;
+    handedness: 'Left' | 'Right' | null;
+}
+
+interface PerformanceMetrics {
+    fps: number;
+    detectionTime: number;
+}
+
 interface HandBackgroundProps {
     onStopGeneration?: () => void;
     onSendMessage?: (msg: string) => void;
@@ -16,6 +45,10 @@ interface HandBackgroundProps {
         triggered: boolean;
     }) => void;
     onError?: (message: string) => void; // Called when camera access fails
+    config?: GestureConfig; // Adjustable gesture parameters
+    onDebugInfo?: (info: DebugInfo) => void; // Real-time debug info
+    onLandmarkData?: (data: LandmarkData) => void; // Raw landmark positions
+    onPerformance?: (metrics: PerformanceMetrics) => void; // Performance metrics
 }
 
 // Cursor position state for the floating pointer indicator
@@ -33,6 +66,16 @@ const HYSTERESIS = {
     fingerExtend: { enter: -0.02, exit: 0.02 }, // y difference threshold
 };
 
+// Default config values
+const DEFAULT_CONFIG: GestureConfig = {
+    twoFingerTapWindow: 600,
+    twoFingerTapCooldown: 500,
+    twoFingerMinFrames: 3,
+    minPointingTime: 150,
+    dwellTime: 1500,
+    cursorSmoothing: 0.4,
+};
+
 export default function HandBackground({
     onStopGeneration,
     onSendMessage,
@@ -40,7 +83,11 @@ export default function HandBackground({
     onPinch,
     onHover,
     onGestureState,
-    onError
+    onError,
+    config = DEFAULT_CONFIG,
+    onDebugInfo,
+    onLandmarkData,
+    onPerformance
 }: HandBackgroundProps) {
     // Refs for callbacks to avoid stale closures in RAF loop
     const onStopGenerationRef = useRef(onStopGeneration);
@@ -49,6 +96,10 @@ export default function HandBackground({
     const onPinchRef = useRef(onPinch);
     const onHoverRef = useRef(onHover);
     const onGestureStateRef = useRef(onGestureState);
+    const onDebugInfoRef = useRef(onDebugInfo);
+    const onLandmarkDataRef = useRef(onLandmarkData);
+    const onPerformanceRef = useRef(onPerformance);
+    const configRef = useRef(config);
 
     // Update refs on every render
     onStopGenerationRef.current = onStopGeneration;
@@ -57,8 +108,15 @@ export default function HandBackground({
     onPinchRef.current = onPinch;
     onHoverRef.current = onHover;
     onGestureStateRef.current = onGestureState;
+    onDebugInfoRef.current = onDebugInfo;
+    onLandmarkDataRef.current = onLandmarkData;
+    onPerformanceRef.current = onPerformance;
+    configRef.current = config;
     const onErrorRef = useRef(onError);
     onErrorRef.current = onError;
+
+    // Performance tracking
+    const fpsRef = useRef({ frames: 0, lastTime: performance.now(), fps: 0 });
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -124,7 +182,8 @@ export default function HandBackground({
                 isPinching: false,
                 wasPointingOnly: false,
                 pointingOnlyStartTime: 0,
-                twoFingerFrames: 0
+                twoFingerFrames: 0,
+                clickLocked: false
             });
         }
         return handStates.current.get(index)!;
@@ -247,51 +306,75 @@ export default function HandBackground({
         // Two-finger point: index AND middle extended, others curled (for click trigger)
         const isTwoFingerPoint = indexExt && middleExt && !ringExt && !pinkyExt;
 
-        const DWELL_TIME = 1500; // 1.5 seconds to trigger click (fallback)
+        // Use config values (can be adjusted in debug panel)
+        const cfg = configRef.current;
+        const DWELL_TIME = cfg.dwellTime;
         const DWELL_MOVE_THRESHOLD = 0.05; // Max movement allowed while dwelling
-        const TWO_FINGER_TAP_WINDOW = 600; // ms window to add second finger for click (reduced from 800)
-        const TWO_FINGER_TAP_COOLDOWN = 500; // ms cooldown between two-finger taps (increased from 400)
-        const TWO_FINGER_MIN_FRAMES = 3; // Require 3 frames of two-finger gesture to trigger (debounce)
-        const MIN_POINTING_TIME = 150; // Minimum ms of pointing before allowing two-finger tap
+        const TWO_FINGER_TAP_WINDOW = cfg.twoFingerTapWindow;
+        const TWO_FINGER_TAP_COOLDOWN = cfg.twoFingerTapCooldown;
+        const TWO_FINGER_MIN_FRAMES = cfg.twoFingerMinFrames;
+        const MIN_POINTING_TIME = cfg.minPointingTime;
+
+        // Emit debug info
+        if (onDebugInfoRef.current) {
+            onDebugInfoRef.current({
+                indexExtended: indexExt,
+                middleExtended: middleExt,
+                ringExtended: ringExt,
+                pinkyExtended: pinkyExt,
+                wasPointingOnly: state.wasPointingOnly,
+                twoFingerFrames: state.twoFingerFrames,
+                clickLocked: state.clickLocked,
+            });
+        }
 
         // -----------------------
         // TWO-FINGER TAP: Point with index, then bring middle finger to click
         // Requires holding two-finger gesture for a few frames to prevent accidental triggers
+        // Click is SINGLE - must release gesture completely before clicking again
         // -----------------------
-        if (isTwoFingerPoint && state.wasPointingOnly) {
-            // Increment two-finger frame counter
-            state.twoFingerFrames++;
-            
-            // Check timing and debounce requirements
-            const timeSincePointing = now - state.pointingOnlyStartTime;
-            const hasPointedLongEnough = timeSincePointing >= MIN_POINTING_TIME;
-            const withinWindow = timeSincePointing < TWO_FINGER_TAP_WINDOW;
-            const cooldownPassed = (now - lastGestureTime.current) > TWO_FINGER_TAP_COOLDOWN;
-            const heldLongEnough = state.twoFingerFrames >= TWO_FINGER_MIN_FRAMES;
-            
-            if (hasPointedLongEnough && withinWindow && cooldownPassed && heldLongEnough) {
-                // Trigger click at index finger position
-                const clickX = indexTip.x;
-                const clickY = indexTip.y;
+        if (isTwoFingerPoint) {
+            if (state.wasPointingOnly && !state.clickLocked) {
+                // Increment two-finger frame counter
+                state.twoFingerFrames++;
+                
+                // Check timing and debounce requirements
+                const timeSincePointing = now - state.pointingOnlyStartTime;
+                const hasPointedLongEnough = timeSincePointing >= MIN_POINTING_TIME;
+                const withinWindow = timeSincePointing < TWO_FINGER_TAP_WINDOW;
+                const cooldownPassed = (now - lastGestureTime.current) > TWO_FINGER_TAP_COOLDOWN;
+                const heldLongEnough = state.twoFingerFrames >= TWO_FINGER_MIN_FRAMES;
+                
+                if (hasPointedLongEnough && withinWindow && cooldownPassed && heldLongEnough) {
+                    // Trigger click at index finger position
+                    const clickX = indexTip.x;
+                    const clickY = indexTip.y;
 
-                if (onPinchRef.current) {
-                    onPinchRef.current(1 - clickX, clickY); // Mirror X
-                    lastGestureTime.current = now;
-                    // Reset states
-                    state.wasPointingOnly = false;
-                    state.pointingOnlyStartTime = 0;
-                    state.twoFingerFrames = 0;
-                    state.dwellStartTime = 0;
-                    state.dwellPosition = null;
-                    if (onGestureStateRef.current) {
-                        onGestureStateRef.current({ gesture: 'TWO_FINGER_TAP', progress: 1, triggered: true });
+                    if (onPinchRef.current) {
+                        onPinchRef.current(1 - clickX, clickY); // Mirror X
+                        lastGestureTime.current = now;
+                        // Lock click - must release gesture before clicking again
+                        state.clickLocked = true;
+                        state.wasPointingOnly = false;
+                        state.pointingOnlyStartTime = 0;
+                        state.twoFingerFrames = 0;
+                        state.dwellStartTime = 0;
+                        state.dwellPosition = null;
+                        if (onGestureStateRef.current) {
+                            onGestureStateRef.current({ gesture: 'TWO_FINGER_TAP', progress: 1, triggered: true });
+                        }
+                        return 'TWO_FINGER_TAP';
                     }
-                    return 'TWO_FINGER_TAP';
                 }
             }
+            // Keep click locked while still in two-finger gesture
         } else {
-            // Reset two-finger frame counter when not in two-finger gesture
+            // Not in two-finger gesture - reset frame counter and unlock click
             state.twoFingerFrames = 0;
+            if (state.clickLocked && !isTwoFingerPoint) {
+                // Unlock when user releases the two-finger gesture
+                state.clickLocked = false;
+            }
         }
 
         // Track pointing state for two-finger tap detection
@@ -613,15 +696,38 @@ export default function HandBackground({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        let startTimeMs = performance.now();
+        const startTimeMs = performance.now();
         // Detect
         const results = handLandmarkerRef.current.detectForVideo(video, startTimeMs);
+        const detectionTime = Math.round(performance.now() - startTimeMs);
+
+        // Track FPS
+        fpsRef.current.frames++;
+        const elapsed = startTimeMs - fpsRef.current.lastTime;
+        if (elapsed >= 1000) {
+            fpsRef.current.fps = Math.round(fpsRef.current.frames * 1000 / elapsed);
+            fpsRef.current.frames = 0;
+            fpsRef.current.lastTime = startTimeMs;
+            // Emit performance metrics
+            if (onPerformanceRef.current) {
+                onPerformanceRef.current({ fps: fpsRef.current.fps, detectionTime });
+            }
+        }
 
         // Clear canvas
         ctx.clearRect(0, 0, width, height);
 
         // Draw
         if (results.landmarks && results.landmarks.length > 0) {
+            // Emit landmark data for first hand (for debug panel)
+            if (onLandmarkDataRef.current && results.landmarks[0]) {
+                const handedness = results.handednesses?.[0]?.[0]?.categoryName as 'Left' | 'Right' | undefined;
+                onLandmarkDataRef.current({
+                    landmarks: results.landmarks[0].map(l => ({ x: l.x, y: l.y, z: l.z })),
+                    handedness: handedness ?? null
+                });
+            }
+
             // Iterate through all detected hands
             for (let i = 0; i < results.landmarks.length; i++) {
                 const landmarks = results.landmarks[i];
@@ -707,7 +813,7 @@ export default function HandBackground({
                     const isTapGesture = gesture === 'TAP' || gesture === 'TWO_FINGER_TAP' || gesture === 'TWO_FINGER_POINT';
                     
                     // Smooth cursor movement with lerp (reduces jitter)
-                    const SMOOTHING = 0.4; // 0 = no smoothing, 1 = instant
+                    const SMOOTHING = configRef.current.cursorSmoothing; // 0 = no smoothing, 1 = instant
                     const smoothed = smoothedCursorRef.current;
                     if (!cursorStateRef.current.visible) {
                         // First frame - jump to position
@@ -749,12 +855,15 @@ export default function HandBackground({
                 ctx.shadowBlur = 0;
             }
         } else {
-            // No hands detected - hide cursor
+            // No hands detected - hide cursor and clear landmark data
             if (cursorStateRef.current.visible) {
                 if (cursorRef.current) {
                     cursorRef.current.style.opacity = '0';
                 }
                 cursorStateRef.current.visible = false;
+            }
+            if (onLandmarkDataRef.current) {
+                onLandmarkDataRef.current({ landmarks: null, handedness: null });
             }
         }
 

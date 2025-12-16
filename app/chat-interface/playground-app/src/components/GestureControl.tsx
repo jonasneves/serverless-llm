@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick, Sparkles, HelpCircle, Check } from 'lucide-react';
 import HandBackground from './HandBackground';
+import GestureDebugPanel, { GestureConfig, DEFAULT_GESTURE_CONFIG } from './GestureDebugPanel';
 
 const STORAGE_KEY = 'gesture-control-skip-intro';
+const DEBUG_CONFIG_KEY = 'gesture-debug-config';
 
 interface GestureControlProps {
   onStopGeneration?: () => void;
@@ -26,6 +28,36 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
   }>({ gesture: null, progress: 0, triggered: false });
   const [flashTrigger, setFlashTrigger] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // Debug panel state
+  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [mouseSimulation, setMouseSimulation] = useState(false);
+  const [gestureConfig, setGestureConfig] = useState<GestureConfig>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(DEBUG_CONFIG_KEY);
+      if (saved) {
+        try { return JSON.parse(saved); } catch { }
+      }
+    }
+    return DEFAULT_GESTURE_CONFIG;
+  });
+  const [debugInfo, setDebugInfo] = useState<{
+    indexExtended: boolean;
+    middleExtended: boolean;
+    ringExtended: boolean;
+    pinkyExtended: boolean;
+    wasPointingOnly: boolean;
+    twoFingerFrames: number;
+    clickLocked: boolean;
+  } | undefined>(undefined);
+  const [landmarkData, setLandmarkData] = useState<{
+    landmarks: Array<{ x: number; y: number; z: number }> | null;
+    handedness: 'Left' | 'Right' | null;
+  } | undefined>(undefined);
+  const [performanceMetrics, setPerformanceMetrics] = useState<{
+    fps: number;
+    detectionTime: number;
+  } | undefined>(undefined);
 
   // Load preference from localStorage on mount
   useEffect(() => {
@@ -114,6 +146,74 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
     setSkipIntro(false);
     setShowTooltip(false);
   };
+
+  // Save gesture config to localStorage when changed
+  const handleConfigChange = useCallback((newConfig: GestureConfig) => {
+    setGestureConfig(newConfig);
+    localStorage.setItem(DEBUG_CONFIG_KEY, JSON.stringify(newConfig));
+  }, []);
+
+  // Mouse simulation - use mouse position as finger pointer
+  useEffect(() => {
+    if (!mouseSimulation) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Simulate hover at mouse position
+      if (props.onHover) {
+        props.onHover(e.clientX / window.innerWidth, e.clientY / window.innerHeight);
+      }
+      // Update gesture state to show pointing
+      setGestureState({ gesture: 'POINTING', progress: 0, triggered: false });
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Don't simulate click on UI elements
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('[data-debug-panel]')) {
+        return;
+      }
+      // Simulate two-finger tap (click)
+      setGestureState({ gesture: 'TWO_FINGER_POINT', progress: 0.5, triggered: false });
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('[data-debug-panel]')) {
+        return;
+      }
+      // Trigger click
+      if (props.onPinch) {
+        props.onPinch(e.clientX / window.innerWidth, e.clientY / window.innerHeight);
+      }
+      setGestureState({ gesture: 'TWO_FINGER_TAP', progress: 1, triggered: true });
+      setFlashTrigger(true);
+      setTimeout(() => setFlashTrigger(false), 300);
+      setTimeout(() => {
+        setGestureState({ gesture: 'POINTING', progress: 0, triggered: false });
+      }, 100);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [mouseSimulation, props.onHover, props.onPinch]);
+
+  // Handle debug info updates from HandBackground
+  const handleDebugInfo = useCallback((info: typeof debugInfo) => {
+    setDebugInfo(info);
+  }, []);
+
+  // Hover handlers for debug panel activation (attached to hand button)
+  const [debugHoverHandlers, setDebugHoverHandlers] = useState<{
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
+  } | null>(null);
 
   // Right offset for transcript panel
   const rightOffset = transcriptPanelOpen ? 'right-[412px] sm:right-[417px] xl:right-[492px] xl:sm:right-[497px]' : 'right-3 sm:right-5';
@@ -233,6 +333,8 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
 
       <button
         onClick={toggle}
+        onMouseEnter={debugHoverHandlers?.onMouseEnter}
+        onMouseLeave={debugHoverHandlers?.onMouseLeave}
         className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
         title={isActive ? "Stop Gesture Control" : "Start Gesture Control"}
       >
@@ -340,9 +442,39 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
         </div>
       )}
 
-      {isActive && (
-        <HandBackground {...props} onGestureState={handleGestureState} onError={handleCameraError} />
+      {isActive && !mouseSimulation && (
+        <HandBackground 
+          {...props} 
+          onGestureState={handleGestureState} 
+          onError={handleCameraError}
+          config={gestureConfig}
+          onDebugInfo={handleDebugInfo}
+          onLandmarkData={setLandmarkData}
+          onPerformance={setPerformanceMetrics}
+        />
       )}
+
+      {/* Debug Panel */}
+      <GestureDebugPanel
+        enabled={debugEnabled}
+        onToggle={() => setDebugEnabled(!debugEnabled)}
+        gestureState={gestureState}
+        config={gestureConfig}
+        onConfigChange={handleConfigChange}
+        mouseSimulation={mouseSimulation}
+        onMouseSimulationToggle={() => {
+          setMouseSimulation(!mouseSimulation);
+          if (!mouseSimulation) {
+            // Turning on mouse simulation - activate gesture mode
+            setIsActive(true);
+          }
+        }}
+        transcriptPanelOpen={transcriptPanelOpen}
+        onHoverHandlers={setDebugHoverHandlers}
+        debugInfo={debugInfo}
+        landmarkData={landmarkData}
+        performance={performanceMetrics}
+      />
 
       {/* Camera Error Toast */}
       {cameraError && (
