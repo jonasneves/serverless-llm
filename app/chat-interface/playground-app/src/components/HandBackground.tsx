@@ -61,19 +61,20 @@ interface CursorState {
 
 // Hysteresis thresholds - different values for entering vs exiting states
 // This prevents flickering at the boundary
+// Pinch thresholds increased to avoid accidental triggers (two-finger tap is more reliable)
 const HYSTERESIS = {
-    pinch: { enter: 0.04, exit: 0.08 },
+    pinch: { enter: 0.035, exit: 0.07 },  // Tighter threshold - pinch must be more intentional
     fingerExtend: { enter: -0.02, exit: 0.02 }, // y difference threshold
 };
 
-// Default config values
+// Default config values - optimized for reliability
 const DEFAULT_CONFIG: GestureConfig = {
-    twoFingerTapWindow: 600,
-    twoFingerTapCooldown: 500,
-    twoFingerMinFrames: 3,
-    minPointingTime: 150,
-    dwellTime: 1500,
-    cursorSmoothing: 0.4,
+    twoFingerTapWindow: 500,    // ms - time window to bring second finger
+    twoFingerTapCooldown: 400,  // ms - prevents double-clicks
+    twoFingerMinFrames: 4,      // frames - debounce for reliability
+    minPointingTime: 100,       // ms - ensures intentional pointing
+    dwellTime: 1200,            // ms - hold-to-click fallback
+    cursorSmoothing: 0.5,       // smoother cursor movement
 };
 
 export default function HandBackground({
@@ -278,7 +279,8 @@ export default function HandBackground({
 
         // Detect pinch release (transition from pinching to not pinching)
         // This triggers an immediate click
-        const PINCH_COOLDOWN = 500; // ms cooldown between pinch clicks
+        // Note: Two-finger tap is more reliable - pinch is secondary click method
+        const PINCH_COOLDOWN = 600; // ms cooldown between pinch clicks (longer to avoid accidents)
         if (wasPinching && !isPinching) {
             if (now - lastGestureTime.current > PINCH_COOLDOWN) {
                 const midX = (thumbTip.x + indexTip.x) / 2;

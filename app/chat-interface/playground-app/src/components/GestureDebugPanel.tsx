@@ -11,13 +11,14 @@ export interface GestureConfig {
   cursorSmoothing: number;
 }
 
+// Optimized defaults based on testing - prioritizes reliability over speed
 export const DEFAULT_GESTURE_CONFIG: GestureConfig = {
-  twoFingerTapWindow: 600,
-  twoFingerTapCooldown: 500,
-  twoFingerMinFrames: 3,
-  minPointingTime: 150,
-  dwellTime: 1500,
-  cursorSmoothing: 0.4,
+  twoFingerTapWindow: 500,    // ms - time window to bring second finger (shorter = more responsive)
+  twoFingerTapCooldown: 400,  // ms - prevents accidental double-clicks
+  twoFingerMinFrames: 4,      // frames - ~130ms at 30fps, prevents accidental triggers
+  minPointingTime: 100,       // ms - minimum pointing before tap allowed (ensures intent)
+  dwellTime: 1200,            // ms - hold-to-click fallback (faster than before)
+  cursorSmoothing: 0.5,       // 0-1 - higher = smoother but slightly more lag
 };
 
 // Landmark names for the 21 hand landmarks
