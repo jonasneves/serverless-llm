@@ -64,75 +64,135 @@ class PersonalityEngine:
         except Exception as e:
             yield {"error": str(e)}
 
+    def _strip_thinking_blocks(self, text: str) -> str:
+        """Remove <think>, <thinking>, or similar reasoning blocks from text"""
+        import re
+        # Remove <think>...</think> and <thinking>...</thinking> blocks
+        text = re.sub(r'<think(?:ing)?>\s*.*?\s*</think(?:ing)?>', '', text, flags=re.DOTALL | re.IGNORECASE)
+        return text.strip()
+
+    def _find_first_emoji(self, text: str) -> str:
+        """Find the first emoji character in text"""
+        import re
+        # Common emoji ranges (simplified - covers most common emojis)
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F300-\U0001F9FF"  # Misc Symbols, Emoticons, Dingbats, etc.
+            "\U00002600-\U000027BF"  # Misc symbols
+            "\U0001FA00-\U0001FAFF"  # Chess, symbols
+            "]+", 
+            flags=re.UNICODE
+        )
+        match = emoji_pattern.search(text)
+        if match:
+            return match.group()[0]  # Return just the first emoji character
+        return "🎭"  # Default
+
+    def _try_parse_persona_line(self, line: str) -> Dict[str, str] | None:
+        """Try to parse a single line as persona header. Returns None if parsing fails."""
+        line = line.strip()
+        if not line:
+            return None
+        
+        # Extract emoji (first character if it's an emoji)
+        persona_emoji = "🎭"
+        text = line
+        if line and ord(line[0]) > 127:  # Likely emoji/unicode
+            persona_emoji = line[0]
+            text = line[1:].strip()
+        
+        # Must have a dash for "Name - trait" format
+        if '-' not in text:
+            return None
+        
+        try:
+            # Split on dash to get name and trait
+            dash_idx = text.find(' - ')
+            if dash_idx == -1:
+                dash_idx = text.find('-')
+            
+            if dash_idx <= 0:
+                return None
+            
+            name_part = text[:dash_idx].strip()
+            trait_part = text[dash_idx:].lstrip('-').strip()
+            
+            # Remove ** bold markers if present
+            persona_name = name_part.replace('**', '').strip()
+            persona_trait = trait_part.replace('**', '').strip()
+            
+            # Reject placeholder brackets or invalid patterns
+            if not persona_name or persona_name.startswith('[') or '[Name]' in persona_name or persona_name == 'Name':
+                return None
+            if persona_trait.startswith('[') or persona_trait == 'Key trait':
+                persona_trait = "unique perspective"
+            
+            # Reject if name is too long (probably not a persona header)
+            if len(persona_name) > 40:
+                return None
+            
+            # Clean up long traits
+            if len(persona_trait) > 50:
+                persona_trait = persona_trait[:50].rsplit(' ', 1)[0] + "..."
+            
+            return {
+                "persona_emoji": persona_emoji,
+                "persona_name": persona_name,
+                "persona_trait": persona_trait
+            }
+        except Exception:
+            return None
+
     def _extract_persona_info(self, response: str) -> Dict[str, str]:
         """
         Extract persona emoji, name and trait from response
 
-        Supported formats:
-        🎭 **Persona Name** - Key trait
-        🎭 Persona Name - Key trait (without bold markers)
-        🎭 **Persona Name** - Key trait
+        Handles:
+        - Standard format: 🎭 **Persona Name** - Key trait
+        - Without bold: 🎭 Persona Name - Key trait
+        - With thinking blocks: <think>...</think> before/after persona
+        - Emoji anywhere in response as fallback
 
         Returns:
             Dict with persona_emoji, persona_name, persona_trait, and header_line_count
         """
-        lines = response.strip().split('\n')
-        if not lines:
+        if not response or not response.strip():
             return {
                 "persona_emoji": "🎭",
                 "persona_name": "Unknown",
                 "persona_trait": "general perspective",
                 "header_line_count": 0
             }
-
-        first_line = lines[0].strip()
-
-        # Extract emoji (first character if it's an emoji)
-        persona_emoji = "🎭"  # default
-        text = first_line
-        if first_line and ord(first_line[0]) > 127:  # Likely emoji/unicode
-            persona_emoji = first_line[0]
-            text = first_line[1:].strip()
-
-        # Try to parse Name - trait format (with or without ** bold markers)
-        if '-' in text:
-            try:
-                # Split on dash to get name and trait
-                dash_idx = text.find(' - ')
-                if dash_idx == -1:
-                    dash_idx = text.find('-')
-                
-                if dash_idx > 0:
-                    name_part = text[:dash_idx].strip()
-                    trait_part = text[dash_idx:].lstrip('-').strip()
-                    
-                    # Remove ** bold markers if present
-                    persona_name = name_part.replace('**', '').strip()
-                    persona_trait = trait_part.replace('**', '').strip()
-                    
-                    # Reject placeholder brackets - model didn't follow instructions
-                    if persona_name.startswith('[') or '[Name]' in persona_name or persona_name == 'Name':
-                        persona_name = "Creative Thinker"
-                    if persona_trait.startswith('[') or persona_trait == 'Key trait':
-                        persona_trait = "unique perspective"
-                    
-                    # Clean up long traits (some models add extra text)
-                    if len(persona_trait) > 50:
-                        persona_trait = persona_trait[:50].rsplit(' ', 1)[0] + "..."
-                    
-                    if persona_name and len(persona_name) <= 40:  # Valid name
-                        return {
-                            "persona_emoji": persona_emoji,
-                            "persona_name": persona_name,
-                            "persona_trait": persona_trait,
-                            "header_line_count": 1
-                        }
-            except Exception:
-                pass
-
-        # Fallback: use defaults
+        
+        # Strip thinking blocks first
+        cleaned = self._strip_thinking_blocks(response)
+        if not cleaned:
+            cleaned = response  # Fallback to original if stripping removed everything
+        
+        lines = cleaned.split('\n')
+        
+        # Try first 5 non-empty lines to find persona header
+        # (some models might have blank lines or preamble before the header)
+        lines_checked = 0
+        for i, line in enumerate(lines):
+            if not line.strip():
+                continue
+            lines_checked += 1
+            if lines_checked > 5:
+                break
+            
+            result = self._try_parse_persona_line(line)
+            if result:
+                return {
+                    **result,
+                    "header_line_count": 1
+                }
+        
+        # Fallback: Find first emoji anywhere in the response
+        first_emoji = self._find_first_emoji(response)
+        
         return {
-            "persona_emoji": persona_emoji,
+            "persona_emoji": first_emoji,
             "persona_name": "Unnamed Persona",
             "persona_trait": "unique perspective",
             "header_line_count": 0
