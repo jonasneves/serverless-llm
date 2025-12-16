@@ -9,6 +9,7 @@ interface HeaderProps {
   showDock: boolean;
   setShowDock: (show: boolean) => void;
   onOpenSettings: () => void;
+  transcriptPanelOpen?: boolean;
 }
 
 const MODES: { value: Mode; label: string }[] = [
@@ -26,7 +27,8 @@ export default function Header({
   clearSelection,
   showDock,
   setShowDock,
-  onOpenSettings
+  onOpenSettings,
+  transcriptPanelOpen = false
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -58,7 +60,7 @@ export default function Header({
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none">
+    <div className={`fixed top-0 left-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none transition-all duration-300 ${transcriptPanelOpen ? 'right-[400px] xl:right-[480px]' : 'right-0'}`}>
       {/* Background layer */}
       <div className="absolute inset-0 pointer-events-auto" style={{ height: '100%', zIndex: -1 }} />
 

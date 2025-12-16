@@ -915,6 +915,7 @@ export default function Playground() {
       onContextMenu={handleBackgroundContextMenu}
     >
       <GestureControl
+        transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
         onStopGeneration={() => {
           if (mode === 'chat' && chatViewRef.current) {
             chatViewRef.current.stopGeneration();
@@ -987,6 +988,7 @@ export default function Playground() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
+        transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
       />
 
       {/* Content Wrapper with Sidebar Offset */}
@@ -1236,6 +1238,12 @@ export default function Playground() {
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : mode === 'personality' ? "Ask the personas..." : "Steer the discussion..."}
+            className={mode !== 'compare' 
+              ? "fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300" 
+              : undefined}
+            style={mode !== 'compare' 
+              ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' } 
+              : undefined}
           />
         )
       }

@@ -9,9 +9,10 @@ interface GestureControlProps {
   onSendMessage?: (msg: string) => void;
   onScroll?: (deltaY: number) => void;
   onPinch?: (x: number, y: number) => void;
+  transcriptPanelOpen?: boolean;
 }
 
-export default function GestureControl(props: GestureControlProps) {
+export default function GestureControl({ transcriptPanelOpen = false, ...props }: GestureControlProps) {
   const [isActive, setIsActive] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [skipIntro, setSkipIntro] = useState(false);
@@ -113,7 +114,11 @@ export default function GestureControl(props: GestureControlProps) {
     setShowTooltip(false);
   };
 
-  const baseClasses = "fixed bottom-36 sm:bottom-5 right-3 sm:right-5 z-50 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95";
+  // Right offset for transcript panel
+  const rightOffset = transcriptPanelOpen ? 'right-[412px] sm:right-[417px] xl:right-[492px] xl:sm:right-[497px]' : 'right-3 sm:right-5';
+  const rightOffsetHelp = transcriptPanelOpen ? 'right-[414px] sm:right-[419px] xl:right-[494px] xl:sm:right-[499px]' : 'right-5 sm:right-7';
+  
+  const baseClasses = `fixed bottom-36 sm:bottom-5 ${rightOffset} z-50 flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95`;
   const activeClasses = "bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500";
   const inactiveClasses = "bg-slate-900/80 backdrop-blur-md border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-600";
 
@@ -124,7 +129,7 @@ export default function GestureControl(props: GestureControlProps) {
         <button
           onClick={toggleTooltip}
           data-help-button
-          className="fixed bottom-[12.25rem] sm:bottom-[4.5rem] right-5 sm:right-7 z-50 flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95 bg-slate-900/80 backdrop-blur-md border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-600"
+          className={`fixed bottom-[12.25rem] sm:bottom-[4.5rem] ${rightOffsetHelp} z-50 flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 border shadow-sm hover:shadow-md active:scale-95 bg-slate-900/80 backdrop-blur-md border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-600`}
           title="Show gesture shortcuts"
         >
           <HelpCircle size={12} />
@@ -135,7 +140,7 @@ export default function GestureControl(props: GestureControlProps) {
       {isActive && showTooltip && (
         <div
           data-tooltip
-          className="fixed bottom-52 sm:bottom-[72px] right-3 sm:right-5 z-50 animate-in slide-in-from-bottom-2 fade-in duration-300"
+          className={`fixed bottom-52 sm:bottom-[72px] ${rightOffset} z-50 animate-in slide-in-from-bottom-2 fade-in duration-300`}
           style={{ maxWidth: '220px' }}
         >
           <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-xl p-3 relative">
@@ -191,7 +196,7 @@ export default function GestureControl(props: GestureControlProps) {
       {/* Visual feedback ring showing gesture progress */}
       {isActive && gestureState.progress > 0 && (
         <div
-          className="fixed bottom-36 sm:bottom-5 right-3 sm:right-5 z-40 pointer-events-none"
+          className={`fixed bottom-36 sm:bottom-5 ${rightOffset} z-40 pointer-events-none`}
           style={{ width: '48px', height: '48px', marginRight: '-4px', marginBottom: '-4px' }}
         >
           <svg width="48" height="48" viewBox="0 0 48 48" className="transform -rotate-90">
