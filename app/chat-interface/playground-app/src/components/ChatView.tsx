@@ -667,7 +667,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             </div>
 
                             {!githubToken && ((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-16 flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800/40 border border-slate-700/40 text-slate-400 text-xs whitespace-nowrap">
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-16 flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs whitespace-nowrap">
                                     <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
                                     <span>Add GitHub token in Settings for dedicated quota</span>
                                 </div>
