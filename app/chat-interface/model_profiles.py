@@ -491,7 +491,8 @@ GEMMA2_9B_PROFILE = {
     ],
 
     "context_length": 8192,
-    "description": "Well-rounded 9B model with strong reasoning and safety guarantees"
+    "description": "Well-rounded 9B model with strong reasoning and safety guarantees",
+    "no_system_role": True,  # Gemma doesn't support system role in message format
 }
 
 # DeepSeek R1 Distill Qwen 1.5B (local, GGUF)

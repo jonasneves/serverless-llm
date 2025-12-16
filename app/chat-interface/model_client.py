@@ -33,6 +33,45 @@ class ModelClient:
         profile = MODEL_PROFILES.get(model_id)
         return profile is not None and profile.get("model_type") == "api"
 
+    def _requires_system_conversion(self, model_id: str) -> bool:
+        """Check if model doesn't support system role and needs conversion"""
+        profile = MODEL_PROFILES.get(model_id, {})
+        return profile.get("no_system_role", False)
+
+    def _convert_system_messages(self, model_id: str, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """
+        Convert system messages to user messages for models that don't support system role.
+        Prepends system content to the first user message.
+        """
+        if not self._requires_system_conversion(model_id):
+            return messages
+        
+        # Separate system and non-system messages
+        system_content = []
+        other_messages = []
+        
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_content.append(msg.get("content", ""))
+            else:
+                other_messages.append(msg.copy())
+        
+        if not system_content:
+            return messages  # No system messages to convert
+        
+        # Combine system content
+        combined_system = "\n\n".join(system_content)
+        
+        # Prepend to first user message
+        if other_messages and other_messages[0].get("role") == "user":
+            other_messages[0]["content"] = f"[System Instructions]\n{combined_system}\n\n[User Message]\n{other_messages[0]['content']}"
+        else:
+            # No user message found, prepend as a new user message
+            other_messages.insert(0, {"role": "user", "content": f"[System Instructions]\n{combined_system}"})
+        
+        logger.debug(f"Converted system messages for {model_id}: {len(system_content)} system -> user prefix")
+        return other_messages
+
     def get_model_endpoint(self, model_id: str) -> str:
         """Get the endpoint URL for a local model"""
         if model_id not in MODEL_ENDPOINTS:
@@ -51,10 +90,13 @@ class ModelClient:
         Make a non-streaming call to a model (local or API)
         Returns the full response content and usage.
         """
+        # Convert system messages for models that don't support system role
+        converted_messages = self._convert_system_messages(model_id, messages)
+        
         if self.is_api_model(model_id):
-            return await self._call_api_model(model_id, messages, max_tokens, temperature, response_format)
+            return await self._call_api_model(model_id, converted_messages, max_tokens, temperature, response_format)
         else:
-            return await self._call_local_model(model_id, messages, max_tokens, temperature, response_format)
+            return await self._call_local_model(model_id, converted_messages, max_tokens, temperature, response_format)
 
     async def stream_model(
         self,
@@ -72,11 +114,14 @@ class ModelClient:
         - {"type": "error", "error": ...}
         - {"type": "done", "full_content": ..., "usage": ...}
         """
+        # Convert system messages for models that don't support system role
+        converted_messages = self._convert_system_messages(model_id, messages)
+        
         if self.is_api_model(model_id):
-             async for event in self._stream_api_model(model_id, messages, max_tokens, temperature):
+             async for event in self._stream_api_model(model_id, converted_messages, max_tokens, temperature):
                  yield event
         else:
-             async for event in self._stream_local_model(model_id, messages, max_tokens, temperature):
+             async for event in self._stream_local_model(model_id, converted_messages, max_tokens, temperature):
                  yield event
 
     async def _call_local_model(self, model_id, messages, max_tokens, temperature, response_format):

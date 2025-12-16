@@ -100,6 +100,13 @@ class PersonalityEngine:
                 if len(parts) >= 2:
                     persona_name = name_part.strip() if name_part else parts[0].replace('**', '').strip()
                     persona_trait = parts[1].strip()
+                    
+                    # Reject placeholder brackets - model didn't follow instructions
+                    if persona_name.startswith('[') or '[Name]' in persona_name or persona_name == 'Name':
+                        persona_name = "Creative Thinker"
+                    if persona_trait.startswith('[') or persona_trait == 'Key trait':
+                        persona_trait = "unique perspective"
+                    
                     return {
                         "persona_emoji": persona_emoji,
                         "persona_name": persona_name,
