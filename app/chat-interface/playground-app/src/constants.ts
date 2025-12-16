@@ -136,21 +136,22 @@ export const CURATED_TOPICS: TopicPrompt[] = [
 ];
 
 // Mode-specific example prompts for "try an example" (hardcoded, not in ticker)
+// Designed for demo brevity: built-in constraints, opinionated/fun, quick to read
 export const MODE_EXAMPLE_PROMPTS: Record<Mode, string[]> = {
   council: [
-    "Three light switches in one room control three bulbs in another room. You can flip switches as much as you want, but can only visit the room with bulbs once. How do you determine which switch controls which bulb?",
-    "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
-    "A man walks into a bar and asks for water. The bartender pulls out a gun and points it at him. The man says 'thank you' and leaves. Why?",
+    "Tabs or spaces? Give your verdict in under 50 words.",
+    "Rock, paper, scissors—which is objectively the best opening move?",
+    "In one sentence: should AI be allowed to write its own code?",
   ],
   roundtable: [
-    "Write a two-sentence horror story where the second sentence recontextualizes the first in a chilling way.",
-    "What comes next in this sequence: 2, 4, 8, 16, 31, ? Explain the pattern you identified.",
-    "A man walks into a bar and asks for water. The bartender pulls out a gun and points it at him. The man says 'thank you' and leaves. Why?",
+    "Write a two-sentence horror story where the second sentence recontextualizes the first.",
+    "Complete this thought: 'AI will never be able to...'",
+    "Pitch a startup in one sentence. No buzzwords allowed.",
   ],
   personality: [
-    "What's the meaning of life?",
-    "Describe your ideal Saturday.",
-    "What superpower would you choose and why?",
+    "Coffee or tea? Defend your choice.",
+    "Hot take: pineapple on pizza.",
+    "What's the most overrated thing everyone pretends to like?",
   ],
   compare: [],
   chat: [],
