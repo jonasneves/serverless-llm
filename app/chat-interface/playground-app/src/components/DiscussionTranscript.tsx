@@ -1,17 +1,23 @@
 import { useEffect, useRef } from 'react';
-import { Model, ChatHistoryEntry } from '../types';
+import { Model, ChatHistoryEntry, Mode } from '../types';
 import FormattedContent from './FormattedContent';
 import { MessageSquare } from 'lucide-react';
+import { MODE_EXAMPLE_PROMPTS } from '../constants';
 
 interface DiscussionTranscriptProps {
     history: ChatHistoryEntry[];
     models: Model[];
+    mode?: Mode;
+    onSelectPrompt?: (prompt: string) => void;
     className?: string; // For layout positioning
 }
 
-export default function DiscussionTranscript({ history, models, className = '' }: DiscussionTranscriptProps) {
+export default function DiscussionTranscript({ history, models, mode, onSelectPrompt, className = '' }: DiscussionTranscriptProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
+
+    // Get example prompts for current mode
+    const examplePrompts = mode ? MODE_EXAMPLE_PROMPTS[mode] : [];
 
     // Auto-scroll to bottom when history changes
     useEffect(() => {
@@ -134,9 +140,24 @@ export default function DiscussionTranscript({ history, models, className = '' }
         >
             <div className="max-w-3xl mx-auto flex flex-col justify-end min-h-full">
                 {history.length === 0 && (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 opacity-50 select-none pb-20">
-                        <MessageSquare size={48} className="mb-4" />
-                        <p className="text-lg">Start a discussion to see the transcript.</p>
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 pb-20">
+                        <MessageSquare size={48} className="mb-4 opacity-50" />
+                        <p className="text-lg mb-8 opacity-50">Start a discussion to see the transcript.</p>
+
+                        {examplePrompts.length > 0 && onSelectPrompt && (
+                            <div className="flex flex-col gap-3 w-full max-w-md">
+                                <p className="text-sm text-slate-400 text-center mb-2">Try an example:</p>
+                                {examplePrompts.map((example, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => onSelectPrompt(example)}
+                                        className="text-sm text-slate-300 hover:text-blue-400 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/40 hover:border-blue-400/40 rounded-lg px-4 py-3 transition-all active:scale-[0.98] text-left"
+                                    >
+                                        {example}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
                 {history.map(renderEntry)}

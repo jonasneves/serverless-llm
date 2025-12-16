@@ -9,18 +9,10 @@ interface GestureControlProps {
   onSendMessage?: (msg: string) => void;
   onScroll?: (deltaY: number) => void;
   onPinch?: (x: number, y: number) => void;
-  // External control from header
-  externalActive?: boolean;
-  onExternalToggle?: () => void;
 }
 
 export default function GestureControl(props: GestureControlProps) {
-  const { externalActive, onExternalToggle } = props;
-  const [internalActive, setInternalActive] = useState(false);
-
-  // Use external state if provided, otherwise use internal
-  const isActive = externalActive !== undefined ? externalActive : internalActive;
-  const setIsActive = onExternalToggle ? (_val: boolean | ((prev: boolean) => boolean)) => onExternalToggle() : setInternalActive;
+  const [isActive, setIsActive] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [skipIntro, setSkipIntro] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -224,20 +216,17 @@ export default function GestureControl(props: GestureControlProps) {
         </div>
       )}
 
-      {/* Only show floating toggle when not externally controlled */}
-      {!onExternalToggle && (
-        <button
-          onClick={toggle}
-          className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
-          title={isActive ? "Stop Gesture Control" : "Start Gesture Control"}
-        >
-          {isActive ? (
-            <X size={18} />
-          ) : (
-            <Hand size={18} />
-          )}
-        </button>
-      )}
+      <button
+        onClick={toggle}
+        className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
+        title={isActive ? "Stop Gesture Control" : "Start Gesture Control"}
+      >
+        {isActive ? (
+          <X size={18} />
+        ) : (
+          <Hand size={18} />
+        )}
+      </button>
 
       {showModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

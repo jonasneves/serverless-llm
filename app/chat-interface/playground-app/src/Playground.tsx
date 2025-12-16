@@ -48,7 +48,6 @@ export default function Playground() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const [showDock, setShowDock] = useState(false);
-  const [gestureActive, setGestureActive] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
   // Arena vertical offset is visual-only; keep it in refs to avoid full re-renders on scroll.
   const arenaOffsetYRef = useRef(0);
@@ -614,6 +613,23 @@ export default function Playground() {
         return;
       }
 
+      // Cmd+A / Ctrl+A to select all visible cards (only if not in chat mode)
+      if ((event.metaKey || event.ctrlKey) && (event.key === 'a' || event.key === 'A')) {
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+        if (mode === 'chat') return; // Chat handles its own selection
+
+        event.preventDefault();
+
+        // Select all active models
+        // Note: In visual modes, 'selected' array contains the active model IDs
+        if (selected.length > 0) {
+          setSelectedCardIds(new Set(selected));
+        }
+        return;
+      }
+
       // Don't trigger keyboard shortcuts if user is typing in an input
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
@@ -895,8 +911,6 @@ export default function Playground() {
       onContextMenu={handleBackgroundContextMenu}
     >
       <GestureControl
-        externalActive={gestureActive}
-        onExternalToggle={() => setGestureActive(prev => !prev)}
         onStopGeneration={() => {
           if (mode === 'chat' && chatViewRef.current) {
             chatViewRef.current.stopGeneration();
@@ -969,8 +983,6 @@ export default function Playground() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
-        gestureActive={gestureActive}
-        onToggleGesture={() => setGestureActive(prev => !prev)}
       />
 
       {/* Content Wrapper with Sidebar Offset */}
@@ -1024,9 +1036,6 @@ export default function Playground() {
                 if (!selected.includes(modelId)) {
                   setSelected([modelId]);
                 }
-              }}
-              onClear={() => {
-                setLastUsedChatModelId(null);
               }}
             />
           </div>
@@ -1129,6 +1138,13 @@ export default function Playground() {
                 <DiscussionTranscript
                   history={history}
                   models={modelsData}
+                  mode={mode}
+                  onSelectPrompt={(prompt) => {
+                    if (inputRef.current) {
+                      inputRef.current.value = prompt;
+                      inputRef.current.focus();
+                    }
+                  }}
                   className="pt-24 pb-6 mask-fade-top"
                 />
               </div>
@@ -1210,6 +1226,7 @@ export default function Playground() {
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
+            mode={mode}
           />
         )
       }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mode } from '../types';
-import { Hand } from 'lucide-react';
 
 interface HeaderProps {
   mode: Mode;
@@ -10,8 +9,6 @@ interface HeaderProps {
   showDock: boolean;
   setShowDock: (show: boolean) => void;
   onOpenSettings: () => void;
-  gestureActive?: boolean;
-  onToggleGesture?: () => void;
 }
 
 const MODES: { value: Mode; label: string }[] = [
@@ -28,9 +25,7 @@ export default function Header({
   clearSelection,
   showDock,
   setShowDock,
-  onOpenSettings,
-  gestureActive,
-  onToggleGesture
+  onOpenSettings
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -82,20 +77,6 @@ export default function Header({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-
-          {/* Gesture Toggle */}
-          {onToggleGesture && (
-            <button
-              onClick={onToggleGesture}
-              className={`px-2 sm:px-3 flex items-center justify-center transition-colors ${gestureActive
-                ? 'text-red-400 hover:text-red-300'
-                : 'text-slate-400 hover:text-white'
-                }`}
-              title={gestureActive ? 'Stop Gestures' : 'Enable Gestures'}
-            >
-              <Hand size={18} />
-            </button>
-          )}
 
           {/* Divider */}
           <div className="w-px h-5 bg-slate-700/50 mx-0.5 sm:mx-1"></div>

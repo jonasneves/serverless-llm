@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Eraser, Zap, ChevronDown, Info } from 'lucide-react';
+import { Bot, AlertTriangle, User, Zap, ChevronDown, Info } from 'lucide-react';
 import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import SelectionOverlay from './SelectionOverlay';
@@ -38,7 +38,7 @@ interface ChatViewProps {
     autoModeScope: ChatAutoModeScope;
     setAutoModeScope: (value: ChatAutoModeScope) => void;
     onModelUsed?: (modelId: string) => void;
-    onClear?: () => void;
+
 }
 
 // ChatMessage interface moved above ChatViewProps for export
@@ -56,7 +56,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     autoModeScope,
     setAutoModeScope,
     onModelUsed,
-    onClear
 }, ref) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentResponse, setCurrentResponse] = useState('');
@@ -121,9 +120,22 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Handle delete key for selected messages
+    // Handle keyboard shortcuts (Delete/Backspace, Escape, Cmd+A)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Select All (Cmd+A / Ctrl+A)
+            if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+                const target = e.target as HTMLElement;
+                // Allow default behavior in inputs
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+                e.preventDefault();
+                // Select all messages (indices 0 to messages.length - 1)
+                const allIndices = new Set(messages.map((_, idx) => idx));
+                setSelectedMessages(allIndices);
+                return;
+            }
+
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 if (selectedMessages.size > 0) {
                     const target = e.target as HTMLElement;
@@ -352,12 +364,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }
     };
 
-    const handleClear = () => {
-        setMessages([]);
-        setCurrentResponse('');
-        setSelectedMessages(new Set());
-        onClear?.();
-    };
+
 
     const handleDeleteSelected = () => {
         if (selectedMessages.size === 0) return;
@@ -380,8 +387,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         <div ref={containerRef} className="flex flex-col h-full relative">
             {/* Header / Config Bar */}
             <div className="z-10 w-full flex justify-center pt-6 pb-2">
-                <div className="w-full flex items-center justify-between" style={{ maxWidth: '600px' }}>
-                    {/* Left: Main control (Auto or Model selector) */}
+                <div className="w-full flex items-center justify-center" style={{ maxWidth: '600px' }}>
+                    {/* Main control (Auto or Model selector) */}
                     <div className="flex items-center gap-2">
                         {autoMode ? (
                             <div className="relative" ref={dropdownRef}>
@@ -544,14 +551,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     </div>
 
                     {/* Right: Clear button */}
-                    <button
-                        onClick={handleClear}
-                        className="h-8 px-2 flex items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-slate-400 hover:text-white transition-all active:scale-95 text-xs font-medium"
-                        title="Clear History"
-                    >
-                        <Eraser size={12} />
-                        <span>Clear</span>
-                    </button>
+
                 </div>
             </div>
 
@@ -700,6 +700,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 placeholder={autoMode ? "Message (Auto mode - will use auto-selected model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
                 isGenerating={isGenerating}
                 onStop={handleStop}
+                mode="chat"
             />
         </div>
     );
