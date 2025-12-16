@@ -263,22 +263,22 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
 
             <div className="grid grid-cols-2 gap-1.5 text-[10px]">
               <div className="flex items-center gap-1.5 text-slate-400">
-                <Sparkles size={10} className="text-yellow-400" /> Wave → Hi
+                <MousePointerClick size={10} className="text-pink-400" /> Point+2nd → Click
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
-                <MousePointerClick size={10} className="text-pink-400" /> Point+2nd → Click
+                <Hand size={10} className="text-cyan-400" /> Hold 1.2s → Click
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <MoveVertical size={10} className="text-purple-400" /> Fist → Scroll
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <Sparkles size={10} className="text-yellow-400" /> Wave → Hi
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
                 <ThumbsUp size={10} className="text-green-400" /> Up → Yes
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
                 <ThumbsDown size={10} className="text-orange-400" /> Down → No
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-400">
-                <MoveVertical size={10} className="text-purple-400" /> Fist → Scroll
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-400">
-                <Hand size={10} className="text-cyan-400" /> Hold Point → Click
               </div>
             </div>
 
@@ -376,14 +376,24 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <GestureCard
+                  icon={<MousePointerClick size={18} className="text-pink-400" />}
+                  label="Point + 2nd Finger"
+                  desc="Click (recommended)"
+                />
+                <GestureCard
+                  icon={<Hand size={18} className="text-cyan-400" />}
+                  label="Point & Hold"
+                  desc="Click (hold 1.2s)"
+                />
+                <GestureCard
+                  icon={<MoveVertical size={18} className="text-purple-400" />}
+                  label="Fist Pull"
+                  desc="Scroll Page"
+                />
+                <GestureCard
                   icon={<Sparkles size={18} className="text-yellow-400" />}
                   label="Wave"
                   desc="Send 'Hi'"
-                />
-                <GestureCard
-                  icon={<MousePointerClick size={18} className="text-pink-400" />}
-                  label="Point + 2nd Finger"
-                  desc="Click (most reliable)"
                 />
                 <GestureCard
                   icon={<ThumbsUp size={18} className="text-green-400" />}
@@ -394,16 +404,6 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
                   icon={<ThumbsDown size={18} className="text-orange-400" />}
                   label="Thumbs Down"
                   desc="Send 'No'"
-                />
-                <GestureCard
-                  icon={<MoveVertical size={18} className="text-purple-400" />}
-                  label="Fist Pull"
-                  desc="Scroll Page"
-                />
-                <GestureCard
-                  icon={<Hand size={18} className="text-cyan-400" />}
-                  label="Point & Hold"
-                  desc="Click (hold 1.5s)"
                 />
               </div>
 

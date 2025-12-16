@@ -59,13 +59,8 @@ interface CursorState {
     isClicking: boolean; // true during two-finger tap
 }
 
-// Hysteresis thresholds - different values for entering vs exiting states
-// This prevents flickering at the boundary
-// Pinch thresholds increased to avoid accidental triggers (two-finger tap is more reliable)
-const HYSTERESIS = {
-    pinch: { enter: 0.035, exit: 0.07 },  // Tighter threshold - pinch must be more intentional
-    fingerExtend: { enter: -0.02, exit: 0.02 }, // y difference threshold
-};
+// Note: Pinch detection has been removed - two-finger tap is more reliable
+// The fingerExtend threshold is used inline where needed
 
 // Default config values - optimized for reliability
 const DEFAULT_CONFIG: GestureConfig = {
@@ -260,45 +255,17 @@ export default function HandBackground({
         const fingersExtendedCount = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
 
         // -----------------------
-        // 0. PINCH (Double-Pinch to Click) with Hysteresis
+        // 0. PINCH DETECTION (DISABLED - Two-finger tap is more reliable)
         // -----------------------
-        const pinchDistance = Math.sqrt(
-            Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2)
-        );
-
-        // Apply hysteresis: use different thresholds for entering vs exiting pinch state
-        const wasPinching = state.isPinching;
-        let isPinching: boolean;
-        if (wasPinching) {
-            // Already pinching - use looser threshold to exit (must move fingers further apart)
-            isPinching = pinchDistance < HYSTERESIS.pinch.exit;
-        } else {
-            // Not pinching - use tighter threshold to enter (must get fingers closer)
-            isPinching = pinchDistance < HYSTERESIS.pinch.enter;
-        }
-
-        // Detect pinch release (transition from pinching to not pinching)
-        // This triggers an immediate click
-        // Note: Two-finger tap is more reliable - pinch is secondary click method
-        const PINCH_COOLDOWN = 600; // ms cooldown between pinch clicks (longer to avoid accidents)
-        if (wasPinching && !isPinching) {
-            if (now - lastGestureTime.current > PINCH_COOLDOWN) {
-                const midX = (thumbTip.x + indexTip.x) / 2;
-                const midY = (thumbTip.y + indexTip.y) / 2;
-
-                if (onPinchRef.current) {
-                    onPinchRef.current(1 - midX, midY); // Mirror X
-                    lastGestureTime.current = now;
-                    state.isPinching = false;
-                    // Report triggered gesture
-                    if (onGestureStateRef.current) {
-                        onGestureStateRef.current({ gesture: 'PINCH', progress: 1, triggered: true });
-                    }
-                    return 'PINCH';
-                }
-            }
-        }
-        state.isPinching = isPinching;
+        // Pinch click has been disabled because:
+        // 1. It triggers accidentally during natural hand movements
+        // 2. Two-finger tap is more intentional and reliable
+        // 3. Pinch conflicts with pointing gestures
+        // 
+        // The two click methods are now:
+        // 1. Two-finger tap (primary): Point with index → bring middle finger
+        // 2. Dwell click (fallback): Hold pointer still for 1.2s
+        state.isPinching = false; // Keep state but never trigger
 
         // -----------------------
         // 0.5 POINTING & CLICK GESTURES
