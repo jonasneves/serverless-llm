@@ -10,6 +10,10 @@ export interface Model {
   personaEmoji?: string; // Emoji representing the persona
   personaName?: string; // Name of the persona
   personaTrait?: string; // Key trait/perspective of the persona
+
+  // Metadata from backend
+  priority?: number;
+  context_length?: number;
 }
 
 export type Mode = 'compare' | 'council' | 'roundtable' | 'chat' | 'personality';

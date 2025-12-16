@@ -7,6 +7,8 @@ interface ModelsApiModel {
   id: string;
   name?: string;
   type?: string;
+  priority?: number;
+  context_length?: number;
 }
 
 interface ModelsApiResponse {
@@ -51,6 +53,8 @@ export function useModelsManager() {
             color: meta.color,
             type: modelType,
             response: 'Ready to generate...',
+            priority: model.priority,
+            context_length: model.context_length
           };
         });
 

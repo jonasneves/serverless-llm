@@ -263,7 +263,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                 const sortedModels = scopedModels
                     .map(m => {
-                        const basePriority = getModelPriority(m.id, m.type || 'local');
+                        const basePriority = getModelPriority(m.id, m.type || 'local', m.priority);
                         // When scope is 'all', ensure local models always come before API models
                         // by adding 1000 to API model priorities
                         const adjustedPriority = autoModeScope === 'all' && m.type === 'api'

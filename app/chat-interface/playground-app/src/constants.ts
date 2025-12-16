@@ -35,7 +35,10 @@ export const API_MODEL_PRIORITIES: Record<string, number> = {
 export const LOCAL_DEFAULT_PRIORITY = 50;
 export const API_DEFAULT_PRIORITY = 100;
 
-export function getModelPriority(modelId: string, modelType: 'local' | 'api'): number {
+export function getModelPriority(modelId: string, modelType: 'local' | 'api', dynamicPriority?: number): number {
+  if (dynamicPriority !== undefined) {
+    return dynamicPriority;
+  }
   const priorityMap = modelType === 'local' ? LOCAL_MODEL_PRIORITIES : API_MODEL_PRIORITIES;
   const defaultPriority = modelType === 'local' ? LOCAL_DEFAULT_PRIORITY : API_DEFAULT_PRIORITY;
 

@@ -59,6 +59,9 @@ async def list_models():
                      "context_length": int(info.get("limits", {}).get("max_input_tokens", 128000))
                  }
             
+            # Get info to retrieve calculated priority
+            info = get_github_model_info(model_id) or {}
+            
             api_models.append({
                 "id": model_id,
                 "name": profile.get("display_name", model_id),
@@ -66,6 +69,7 @@ async def list_models():
                 "endpoint": None,
                 "default": False,
                 "context_length": profile.get("context_length", 128000),
+                "priority": info.get("priority", 100)
             })
             seen_ids.add(model_id)
     
