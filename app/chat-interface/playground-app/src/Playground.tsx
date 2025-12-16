@@ -1,12 +1,9 @@
-import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
 import { BG_STYLES, MODE_COLORS, LAYOUT } from './constants';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
 import Header from './components/Header';
-import ResponseInspector from './components/ResponseInspector';
-import SettingsModal from './components/SettingsModal';
-import TopicsDrawer from './components/TopicsDrawer';
 import { useModelsManager } from './hooks/useModelsManager';
 import { usePersistedSetting } from './hooks/usePersistedSetting';
 import { useConversationHistory } from './hooks/useConversationHistory';
@@ -17,13 +14,18 @@ import { useCardReorder } from './hooks/useCardReorder';
 import { useInspectorSelection } from './hooks/useInspectorSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
-import DiscussionTranscript from './components/DiscussionTranscript';
-
-import ChatView, { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
-import GestureControl from './components/GestureControl';
 import './playground.css';
+
+const ResponseInspector = lazy(() => import('./components/ResponseInspector'));
+const SettingsModal = lazy(() => import('./components/SettingsModal'));
+const TopicsDrawer = lazy(() => import('./components/TopicsDrawer'));
+const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscript'));
+const GestureControl = lazy(() => import('./components/GestureControl'));
+const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
+
+import type { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
 export default function Playground() {
@@ -914,130 +916,132 @@ export default function Playground() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
-      <GestureControl
-        transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
-        onStopGeneration={() => {
-          if (mode === 'chat' && chatViewRef.current) {
-            chatViewRef.current.stopGeneration();
-            return;
-          }
-          handleStop();
-        }}
-        onSendMessage={(msg) => {
-          if (mode === 'chat' && chatViewRef.current) {
-            chatViewRef.current.sendMessage(msg);
-            return;
-          }
+      <Suspense fallback={null}>
+        <GestureControl
+          transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
+          onStopGeneration={() => {
+            if (mode === 'chat' && chatViewRef.current) {
+              chatViewRef.current.stopGeneration();
+              return;
+            }
+            handleStop();
+          }}
+          onSendMessage={(msg) => {
+            if (mode === 'chat' && chatViewRef.current) {
+              chatViewRef.current.sendMessage(msg);
+              return;
+            }
 
-          if (inputRef.current) {
-            inputRef.current.value = msg;
-            inputRef.current.focus();
-          }
+            if (inputRef.current) {
+              inputRef.current.value = msg;
+              inputRef.current.focus();
+            }
 
-          const activeIds = mode === 'compare'
-            ? selected
-            : mode === 'council' || mode === 'roundtable' || mode === 'personality'
+            const activeIds = mode === 'compare'
               ? selected
-              : [];
+              : mode === 'council' || mode === 'roundtable' || mode === 'personality'
+                ? selected
+                : [];
 
-          if (activeIds.length > 0) {
-            sendMessage(msg, {}, activeIds);
-          }
-        }}
-        onScroll={(deltaY) => {
-          arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
-          ensureRaf();
-        }}
-        onHover={(xOfScreen, yOfScreen) => {
-          const hoverX = xOfScreen * window.innerWidth;
-          const hoverY = yOfScreen * window.innerHeight;
+            if (activeIds.length > 0) {
+              sendMessage(msg, {}, activeIds);
+            }
+          }}
+          onScroll={(deltaY) => {
+            arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
+            ensureRaf();
+          }}
+          onHover={(xOfScreen, yOfScreen) => {
+            const hoverX = xOfScreen * window.innerWidth;
+            const hoverY = yOfScreen * window.innerHeight;
 
-          const el = document.elementFromPoint(hoverX, hoverY) as HTMLElement;
-          if (el) {
-            // Get the current hovered element stored in a data attribute
-            const currentHovered = document.querySelector('[data-gesture-hovered="true"]') as HTMLElement;
-            
-            // Find the interactive element or just use the element itself
-            const interactive = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement || el;
-            
-            if (interactive !== currentHovered) {
-              // Pointer/Mouse leave on previous element
-              if (currentHovered) {
-                currentHovered.removeAttribute('data-gesture-hovered');
-                currentHovered.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false, cancelable: true }));
-                currentHovered.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false, cancelable: true }));
-                currentHovered.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
+            const el = document.elementFromPoint(hoverX, hoverY) as HTMLElement;
+            if (el) {
+              // Get the current hovered element stored in a data attribute
+              const currentHovered = document.querySelector('[data-gesture-hovered="true"]') as HTMLElement;
+
+              // Find the interactive element or just use the element itself
+              const interactive = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement || el;
+
+              if (interactive !== currentHovered) {
+                // Pointer/Mouse leave on previous element
+                if (currentHovered) {
+                  currentHovered.removeAttribute('data-gesture-hovered');
+                  currentHovered.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false, cancelable: true }));
+                  currentHovered.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false, cancelable: true }));
+                  currentHovered.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
+                }
+
+                // Pointer/Mouse enter on new element
+                interactive.setAttribute('data-gesture-hovered', 'true');
+                interactive.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                interactive.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                interactive.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+              } else if (interactive === currentHovered) {
+                // Still hovering same element, dispatch pointermove for continuous tracking
+                interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                interactive.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
               }
-              
-              // Pointer/Mouse enter on new element
-              interactive.setAttribute('data-gesture-hovered', 'true');
-              interactive.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
-              interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
-              interactive.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
-              interactive.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
-            } else if (interactive === currentHovered) {
-              // Still hovering same element, dispatch pointermove for continuous tracking
-              interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
-              interactive.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
             }
-          }
-        }}
-        onPinch={(xOfScreen, yOfScreen) => {
-          const clickX = xOfScreen * window.innerWidth;
-          const clickY = yOfScreen * window.innerHeight;
+          }}
+          onPinch={(xOfScreen, yOfScreen) => {
+            const clickX = xOfScreen * window.innerWidth;
+            const clickY = yOfScreen * window.innerHeight;
 
-          const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
-          if (el) {
-            // Dispatch pointer and mouse events on the target element
-            // This ensures compatibility with both pointer-based (cards) and mouse-based (buttons) handlers
-            const dispatchClickEvents = (target: HTMLElement) => {
-              // Pointer events (for cards and modern UI)
-              target.dispatchEvent(new PointerEvent('pointerdown', { 
-                bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
-                pointerId: 1, pointerType: 'touch', isPrimary: true
-              }));
-              target.dispatchEvent(new PointerEvent('pointerup', { 
-                bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
-                pointerId: 1, pointerType: 'touch', isPrimary: true
-              }));
-              
-              // Mouse events (for traditional buttons and links)
-              target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
-              target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
-              target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
-            };
+            const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
+            if (el) {
+              // Dispatch pointer and mouse events on the target element
+              // This ensures compatibility with both pointer-based (cards) and mouse-based (buttons) handlers
+              const dispatchClickEvents = (target: HTMLElement) => {
+                // Pointer events (for cards and modern UI)
+                target.dispatchEvent(new PointerEvent('pointerdown', {
+                  bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
+                  pointerId: 1, pointerType: 'touch', isPrimary: true
+                }));
+                target.dispatchEvent(new PointerEvent('pointerup', {
+                  bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
+                  pointerId: 1, pointerType: 'touch', isPrimary: true
+                }));
 
-            // Find clickable elements: buttons, links, cards, anything with click handlers
-            const clickable = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement;
-            
-            if (clickable) {
-              dispatchClickEvents(clickable);
-            } else {
-              // If no clickable found, try clicking the element directly (works for cards)
-              dispatchClickEvents(el);
+                // Mouse events (for traditional buttons and links)
+                target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+                target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+                target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+              };
+
+              // Find clickable elements: buttons, links, cards, anything with click handlers
+              const clickable = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement;
+
+              if (clickable) {
+                dispatchClickEvents(clickable);
+              } else {
+                // If no clickable found, try clicking the element directly (works for cards)
+                dispatchClickEvents(el);
+              }
+
+              // Visual feedback ripple
+              const ripple = document.createElement('div');
+              ripple.style.position = 'fixed';
+              ripple.style.left = `${clickX}px`;
+              ripple.style.top = `${clickY}px`;
+              ripple.style.width = '20px';
+              ripple.style.height = '20px';
+              ripple.style.background = 'rgba(236, 72, 153, 0.5)';
+              ripple.style.borderRadius = '50%';
+              ripple.style.transform = 'translate(-50%, -50%)';
+              ripple.style.pointerEvents = 'none';
+              ripple.style.zIndex = '9999';
+              document.body.appendChild(ripple);
+
+              ripple.animate([
+                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
+              ], { duration: 400 }).onfinish = () => ripple.remove();
             }
-
-            // Visual feedback ripple
-            const ripple = document.createElement('div');
-            ripple.style.position = 'fixed';
-            ripple.style.left = `${clickX}px`;
-            ripple.style.top = `${clickY}px`;
-            ripple.style.width = '20px';
-            ripple.style.height = '20px';
-            ripple.style.background = 'rgba(236, 72, 153, 0.5)';
-            ripple.style.borderRadius = '50%';
-            ripple.style.transform = 'translate(-50%, -50%)';
-            ripple.style.pointerEvents = 'none';
-            ripple.style.zIndex = '9999';
-            document.body.appendChild(ripple);
-
-            ripple.animate([
-              { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
-              { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
-            ], { duration: 400 }).onfinish = () => ripple.remove();
-          }
-        }}
-      />
+          }}
+        />
+      </Suspense>
       {/* Header */}
       <Header
         mode={mode}
@@ -1082,27 +1086,29 @@ export default function Playground() {
         {/* Chat View */}
         {mode === 'chat' && (
           <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6" data-no-arena-scroll>
-            <ChatView
-              ref={chatViewRef}
-              models={modelsData}
-              selectedModelId={selected[0] || null}
-              onSelectModel={(id) => setSelected([id])}
-              githubToken={githubToken}
-              onOpenTopics={() => setShowTopics(true)}
-              messages={chatMessages}
-              setMessages={setChatMessages}
-              autoMode={chatAutoMode}
-              setAutoMode={setChatAutoMode}
-              autoModeScope={chatAutoModeScope}
-              setAutoModeScope={setChatAutoModeScope}
-              onModelUsed={(modelId) => {
-                setLastUsedChatModelId(modelId);
-                // Ensure the model is selected (for mode switching)
-                if (!selected.includes(modelId)) {
-                  setSelected([modelId]);
-                }
-              }}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50">Loading chat...</div>}>
+              <ChatView
+                ref={chatViewRef}
+                models={modelsData}
+                selectedModelId={selected[0] || null}
+                onSelectModel={(id) => setSelected([id])}
+                githubToken={githubToken}
+                onOpenTopics={() => setShowTopics(true)}
+                messages={chatMessages}
+                setMessages={setChatMessages}
+                autoMode={chatAutoMode}
+                setAutoMode={setChatAutoMode}
+                autoModeScope={chatAutoModeScope}
+                setAutoModeScope={setChatAutoModeScope}
+                onModelUsed={(modelId) => {
+                  setLastUsedChatModelId(modelId);
+                  // Ensure the model is selected (for mode switching)
+                  if (!selected.includes(modelId)) {
+                    setSelected([modelId]);
+                  }
+                }}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -1201,23 +1207,25 @@ export default function Playground() {
             {/* Right Panel: Transcript (Only for Council/Roundtable) */}
             {mode !== 'compare' && (
               <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
-                <DiscussionTranscript
-                  history={history}
-                  models={modelsData}
-                  mode={mode}
-                  onSelectPrompt={(prompt) => {
-                    if (inputRef.current) {
-                      inputRef.current.value = prompt;
-                      inputRef.current.focus();
-                    }
-                  }}
-                  className="pt-24 pb-6 mask-fade-top"
-                  phaseLabel={phaseLabel}
-                  isGenerating={isGenerating}
-                  isSynthesizing={isSynthesizing}
-                  speakingCount={speaking.size}
-                  totalParticipants={selectedModels.length}
-                />
+                <Suspense fallback={null}>
+                  <DiscussionTranscript
+                    history={history}
+                    models={modelsData}
+                    mode={mode}
+                    onSelectPrompt={(prompt) => {
+                      if (inputRef.current) {
+                        inputRef.current.value = prompt;
+                        inputRef.current.focus();
+                      }
+                    }}
+                    className="pt-24 pb-6 mask-fade-top"
+                    phaseLabel={phaseLabel}
+                    isGenerating={isGenerating}
+                    isSynthesizing={isSynthesizing}
+                    speakingCount={speaking.size}
+                    totalParticipants={selectedModels.length}
+                  />
+                </Suspense>
               </div>
             )}
           </div>
@@ -1230,21 +1238,23 @@ export default function Playground() {
 
       {
         activeInspectorId && inspectorModels.length > 0 && (
-          <ResponseInspector
-            models={inspectorModels}
-            activeId={activeInspectorId}
-            onSelect={setActiveInspectorId}
-            onClose={clearInspectorSelection}
-            speaking={speaking}
-            mode={mode}
-            moderatorId={moderator}
-            councilAggregateRankings={councilAggregateRankings}
-            councilAnonymousReviews={councilAnonymousReviews}
-            showCouncilReviewerNames={showCouncilReviewerNames}
-            discussionTurnsByModel={discussionTurnsByModel}
-            position={inspectorPosition}
-            onTogglePosition={() => setInspectorPosition(prev => prev === 'left' ? 'right' : 'left')}
-          />
+          <Suspense fallback={null}>
+            <ResponseInspector
+              models={inspectorModels}
+              activeId={activeInspectorId}
+              onSelect={setActiveInspectorId}
+              onClose={clearInspectorSelection}
+              speaking={speaking}
+              mode={mode}
+              moderatorId={moderator}
+              councilAggregateRankings={councilAggregateRankings}
+              councilAnonymousReviews={councilAnonymousReviews}
+              showCouncilReviewerNames={showCouncilReviewerNames}
+              discussionTurnsByModel={discussionTurnsByModel}
+              position={inspectorPosition}
+              onTogglePosition={() => setInspectorPosition(prev => prev === 'left' ? 'right' : 'left')}
+            />
+          </Suspense>
         )
       }
       {/* Background Style Cycler (Bottom Left) */}
@@ -1270,20 +1280,24 @@ export default function Playground() {
       </div>
 
 
-      <SettingsModal
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
-        token={githubToken}
-        setToken={setGithubToken}
-        showCouncilReviewerNames={showCouncilReviewerNames}
-        setShowCouncilReviewerNames={setShowCouncilReviewerNames}
-      />
+      <Suspense fallback={null}>
+        <SettingsModal
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+          token={githubToken}
+          setToken={setGithubToken}
+          showCouncilReviewerNames={showCouncilReviewerNames}
+          setShowCouncilReviewerNames={setShowCouncilReviewerNames}
+        />
+      </Suspense>
 
-      <TopicsDrawer
-        open={showTopics}
-        onClose={() => setShowTopics(false)}
-        onSelectPrompt={handleSelectPrompt}
-      />
+      <Suspense fallback={null}>
+        <TopicsDrawer
+          open={showTopics}
+          onClose={() => setShowTopics(false)}
+          onSelectPrompt={handleSelectPrompt}
+        />
+      </Suspense>
 
       {/* Fixed Prompt Input for Compare, Council, Roundtable, and Personality Modes */}
       {

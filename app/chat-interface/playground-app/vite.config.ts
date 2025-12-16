@@ -17,7 +17,25 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('katex')) {
+              return 'math-render';
+            }
+            if (id.includes('highlight.js')) {
+              return 'syntax-highlight';
+            }
+            if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-')) {
+              return 'markdown';
+            }
+            if (id.includes('@mediapipe')) {
+              return 'mediapipe';
+            }
+          }
+        },
       },
     },
   },
