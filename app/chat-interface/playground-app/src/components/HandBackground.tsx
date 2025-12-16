@@ -9,12 +9,21 @@ interface HandBackgroundProps {
     onSendMessage?: (msg: string) => void;
     onScroll?: (deltaY: number) => void;
     onPinch?: (x: number, y: number) => void;
+    onHover?: (x: number, y: number) => void; // Called continuously when pointing to simulate hover
     onGestureState?: (state: {
         gesture: string | null;
         progress: number; // 0-1 progress toward trigger
         triggered: boolean;
     }) => void;
     onError?: (message: string) => void; // Called when camera access fails
+}
+
+// Cursor position state for the floating pointer indicator
+interface CursorState {
+    visible: boolean;
+    x: number;
+    y: number;
+    isClicking: boolean; // true during two-finger tap
 }
 
 // Hysteresis thresholds - different values for entering vs exiting states
@@ -29,6 +38,7 @@ export default function HandBackground({
     onSendMessage,
     onScroll,
     onPinch,
+    onHover,
     onGestureState,
     onError
 }: HandBackgroundProps) {
@@ -37,6 +47,7 @@ export default function HandBackground({
     const onSendMessageRef = useRef(onSendMessage);
     const onScrollRef = useRef(onScroll);
     const onPinchRef = useRef(onPinch);
+    const onHoverRef = useRef(onHover);
     const onGestureStateRef = useRef(onGestureState);
 
     // Update refs on every render
@@ -44,6 +55,7 @@ export default function HandBackground({
     onSendMessageRef.current = onSendMessage;
     onScrollRef.current = onScroll;
     onPinchRef.current = onPinch;
+    onHoverRef.current = onHover;
     onGestureStateRef.current = onGestureState;
     const onErrorRef = useRef(onError);
     onErrorRef.current = onError;
@@ -54,6 +66,13 @@ export default function HandBackground({
     const requestRef = useRef<number>();
     const handLandmarkerRef = useRef<HandLandmarker | null>(null);
     const streamRef = useRef<MediaStream | null>(null); // Store stream for cleanup
+    
+    // Floating cursor refs (updated directly for performance, no re-renders)
+    const cursorRef = useRef<HTMLDivElement>(null);
+    const cursorInnerRef = useRef<HTMLDivElement>(null);
+    const cursorStateRef = useRef<CursorState>({ visible: false, x: 0, y: 0, isClicking: false });
+    // Smoothed cursor position for less jittery movement
+    const smoothedCursorRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
     // Gesture State
     const lastGestureTime = useRef<number>(0);
@@ -81,6 +100,11 @@ export default function HandBackground({
         dwellStartTime: number;
         dwellPosition: { x: number; y: number } | null;
         isPinching: boolean; // Track if currently in pinch state
+        // Two-finger tap: point with index, then bring middle finger to click
+        wasPointingOnly: boolean; // Was pointing with index only in previous frame
+        pointingOnlyStartTime: number; // When started pointing with index only
+        twoFingerFrames: number; // Consecutive frames of two-finger gesture (for debounce)
+        clickLocked: boolean; // Prevents continuous clicking - must release gesture to click again
     }>>(new Map());
 
     const getHandState = (index: number) => {
@@ -97,7 +121,10 @@ export default function HandBackground({
                 waveStartTime: 0,
                 dwellStartTime: 0,
                 dwellPosition: null,
-                isPinching: false
+                isPinching: false,
+                wasPointingOnly: false,
+                pointingOnlyStartTime: 0,
+                twoFingerFrames: 0
             });
         }
         return handStates.current.get(index)!;
@@ -164,6 +191,7 @@ export default function HandBackground({
         const thumbIp = landmarks[3];
         const wrist = landmarks[0];
 
+        // Finger extension detection (original working logic)
         const indexExt = indexTip.y < indexPip.y;
         const middleExt = middleTip.y < middlePip.y;
         const ringExt = ringTip.y < ringPip.y;
@@ -212,15 +240,76 @@ export default function HandBackground({
         state.isPinching = isPinching;
 
         // -----------------------
-        // 0.5 DWELL CLICK (Point and Hold to Click)
+        // 0.5 POINTING & CLICK GESTURES
         // -----------------------
-        const isPointing = indexExt && !middleExt && !ringExt && !pinkyExt;
-        const DWELL_TIME = 1500; // 1.5 seconds to trigger click
-        const DWELL_MOVE_THRESHOLD = 0.05; // Max movement allowed while dwelling
+        // Pointing: index finger extended, other fingers curled
+        const isPointingOnly = indexExt && !middleExt && !ringExt && !pinkyExt;
+        // Two-finger point: index AND middle extended, others curled (for click trigger)
+        const isTwoFingerPoint = indexExt && middleExt && !ringExt && !pinkyExt;
 
-        if (isPointing) {
+        const DWELL_TIME = 1500; // 1.5 seconds to trigger click (fallback)
+        const DWELL_MOVE_THRESHOLD = 0.05; // Max movement allowed while dwelling
+        const TWO_FINGER_TAP_WINDOW = 600; // ms window to add second finger for click (reduced from 800)
+        const TWO_FINGER_TAP_COOLDOWN = 500; // ms cooldown between two-finger taps (increased from 400)
+        const TWO_FINGER_MIN_FRAMES = 3; // Require 3 frames of two-finger gesture to trigger (debounce)
+        const MIN_POINTING_TIME = 150; // Minimum ms of pointing before allowing two-finger tap
+
+        // -----------------------
+        // TWO-FINGER TAP: Point with index, then bring middle finger to click
+        // Requires holding two-finger gesture for a few frames to prevent accidental triggers
+        // -----------------------
+        if (isTwoFingerPoint && state.wasPointingOnly) {
+            // Increment two-finger frame counter
+            state.twoFingerFrames++;
+            
+            // Check timing and debounce requirements
+            const timeSincePointing = now - state.pointingOnlyStartTime;
+            const hasPointedLongEnough = timeSincePointing >= MIN_POINTING_TIME;
+            const withinWindow = timeSincePointing < TWO_FINGER_TAP_WINDOW;
+            const cooldownPassed = (now - lastGestureTime.current) > TWO_FINGER_TAP_COOLDOWN;
+            const heldLongEnough = state.twoFingerFrames >= TWO_FINGER_MIN_FRAMES;
+            
+            if (hasPointedLongEnough && withinWindow && cooldownPassed && heldLongEnough) {
+                // Trigger click at index finger position
+                const clickX = indexTip.x;
+                const clickY = indexTip.y;
+
+                if (onPinchRef.current) {
+                    onPinchRef.current(1 - clickX, clickY); // Mirror X
+                    lastGestureTime.current = now;
+                    // Reset states
+                    state.wasPointingOnly = false;
+                    state.pointingOnlyStartTime = 0;
+                    state.twoFingerFrames = 0;
+                    state.dwellStartTime = 0;
+                    state.dwellPosition = null;
+                    if (onGestureStateRef.current) {
+                        onGestureStateRef.current({ gesture: 'TWO_FINGER_TAP', progress: 1, triggered: true });
+                    }
+                    return 'TWO_FINGER_TAP';
+                }
+            }
+        } else {
+            // Reset two-finger frame counter when not in two-finger gesture
+            state.twoFingerFrames = 0;
+        }
+
+        // Track pointing state for two-finger tap detection
+        if (isPointingOnly) {
+            if (!state.wasPointingOnly) {
+                // Just started pointing
+                state.wasPointingOnly = true;
+                state.pointingOnlyStartTime = now;
+            }
+
             const currentPos = { x: indexTip.x, y: indexTip.y };
 
+            // Simulate hover at the current pointer position
+            if (onHoverRef.current) {
+                onHoverRef.current(1 - currentPos.x, currentPos.y); // Mirror X
+            }
+
+            // Also support dwell click as fallback
             if (state.dwellPosition === null) {
                 // Start dwelling
                 state.dwellStartTime = now;
@@ -246,6 +335,7 @@ export default function HandBackground({
                         // Reset dwell state
                         state.dwellStartTime = 0;
                         state.dwellPosition = null;
+                        state.wasPointingOnly = false;
                         if (onGestureStateRef.current) {
                             onGestureStateRef.current({ gesture: 'DWELL_CLICK', progress: 1, triggered: true });
                         }
@@ -262,11 +352,25 @@ export default function HandBackground({
 
             state.lastIndexTipY = indexTip.y;
             return 'POINTING';
+        } else if (isTwoFingerPoint) {
+            // Keep wasPointingOnly true briefly to allow detection of the transition
+            // It will be reset after the tap is triggered or times out
+            // Continue hover simulation during two-finger point
+            if (onHoverRef.current) {
+                onHoverRef.current(1 - indexTip.x, indexTip.y); // Mirror X
+            }
+            state.lastIndexTipY = indexTip.y;
+            return 'TWO_FINGER_POINT';
         } else {
-            // Not pointing, reset dwell state
+            // Not pointing, reset states
             state.dwellStartTime = 0;
             state.dwellPosition = null;
             state.lastIndexTipY = null;
+            // Only reset wasPointingOnly if we've left the two-finger window
+            if (now - state.pointingOnlyStartTime > TWO_FINGER_TAP_WINDOW) {
+                state.wasPointingOnly = false;
+                state.pointingOnlyStartTime = 0;
+            }
         }
 
         // -----------------------
@@ -274,21 +378,8 @@ export default function HandBackground({
         // -----------------------
         let currentPose = 'NEUTRAL';
 
-        // Calculate hand size (distance from wrist to middle finger tip)
-        // This helps differentiate STOP (close/large) from wave (any distance)
-        const middleTipPos = landmarks[12];
-        const handSize = Math.sqrt(
-            Math.pow(middleTipPos.x - wrist.x, 2) + Math.pow(middleTipPos.y - wrist.y, 2)
-        );
-        const STOP_SIZE_THRESHOLD = 0.35; // Hand must be this large to trigger STOP (close to camera)
-
-        // Check for Open Palm (for both STOP and Wave)
+        // Check for Open Palm (for Wave detection)
         if (fingersExtendedCount >= 4) {
-            // Only set STOP if hand is large enough (close to camera)
-            // Otherwise it's just an open palm for wave detection
-            if (handSize >= STOP_SIZE_THRESHOLD) {
-                currentPose = 'STOP';
-            }
             state.lastOpenTime = now;
 
             // Wave detection: track horizontal movement while palm is open
@@ -439,15 +530,6 @@ export default function HandBackground({
         // Handle Triggers
         if (now - lastGestureTime.current > gestureCooldown) {
             if (persistence.frames >= PERSISTENCE_THRESHOLD) {
-                if (currentPose === 'STOP' && onStopGenerationRef.current) {
-                    onStopGenerationRef.current();
-                    lastGestureTime.current = now;
-                    persistence.frames = 0; // Reset
-                    if (onGestureStateRef.current) {
-                        onGestureStateRef.current({ gesture: 'STOP', progress: 1, triggered: true });
-                    }
-                    return 'STOP';
-                }
                 if (currentPose === 'YES' && onSendMessageRef.current) {
                     onSendMessageRef.current("Yes");
                     lastGestureTime.current = now;
@@ -539,7 +621,7 @@ export default function HandBackground({
         ctx.clearRect(0, 0, width, height);
 
         // Draw
-        if (results.landmarks) {
+        if (results.landmarks && results.landmarks.length > 0) {
             // Iterate through all detected hands
             for (let i = 0; i < results.landmarks.length; i++) {
                 const landmarks = results.landmarks[i];
@@ -549,10 +631,7 @@ export default function HandBackground({
                 let mainColor = '#3b82f6'; // Default Blue
                 let glowColor = '#60a5fa';
 
-                if (gesture === 'STOP') {
-                    mainColor = '#ef4444'; // Red
-                    glowColor = '#fca5a5';
-                } else if (gesture === 'THUMBS_UP') {
+                if (gesture === 'THUMBS_UP') {
                     mainColor = '#22c55e'; // Green
                     glowColor = '#86efac';
                 } else if (gesture === 'THUMBS_DOWN') {
@@ -561,10 +640,10 @@ export default function HandBackground({
                 } else if (gesture === 'FIST') {
                     mainColor = '#a855f7'; // Purple
                     glowColor = '#d8b4fe';
-                } else if (gesture === 'PINCH' || gesture === 'TAP') {
+                } else if (gesture === 'PINCH' || gesture === 'TAP' || gesture === 'TWO_FINGER_TAP') {
                     mainColor = '#ec4899'; // Pink
                     glowColor = '#fbcfe8';
-                } else if (gesture === 'POINTING') {
+                } else if (gesture === 'POINTING' || gesture === 'TWO_FINGER_POINT') {
                     mainColor = '#06b6d4'; // Cyan
                     glowColor = '#67e8f9';
                 }
@@ -619,30 +698,63 @@ export default function HandBackground({
                     if (!isFingertip) ctx.stroke();
                 }
 
-                // Draw Cursor for Pointing
-                if (gesture === 'POINTING' || gesture === 'TAP') {
+                // Update floating cursor position (DOM element, always on top)
+                if (gesture === 'POINTING' || gesture === 'TAP' || gesture === 'TWO_FINGER_POINT' || gesture === 'TWO_FINGER_TAP') {
                     const indexTip = landmarks[8];
-                    const cx = indexTip.x * width;
-                    const cy = indexTip.y * height;
-
-                    // Outer Ring
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
-                    ctx.strokeStyle = gesture === 'TAP' ? '#ec4899' : '#06b6d4';
-                    ctx.lineWidth = 3;
-                    ctx.shadowColor = gesture === 'TAP' ? '#fbcfe8' : '#67e8f9';
-                    ctx.shadowBlur = 10;
-                    ctx.stroke();
-
-                    // Inner Dot
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 4, 0, 2 * Math.PI);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fill();
+                    // Mirror X for cursor position (canvas is already mirrored via CSS)
+                    const targetX = (1 - indexTip.x) * width;
+                    const targetY = indexTip.y * height;
+                    const isTapGesture = gesture === 'TAP' || gesture === 'TWO_FINGER_TAP' || gesture === 'TWO_FINGER_POINT';
+                    
+                    // Smooth cursor movement with lerp (reduces jitter)
+                    const SMOOTHING = 0.4; // 0 = no smoothing, 1 = instant
+                    const smoothed = smoothedCursorRef.current;
+                    if (!cursorStateRef.current.visible) {
+                        // First frame - jump to position
+                        smoothed.x = targetX;
+                        smoothed.y = targetY;
+                    } else {
+                        // Interpolate toward target
+                        smoothed.x += (targetX - smoothed.x) * SMOOTHING;
+                        smoothed.y += (targetY - smoothed.y) * SMOOTHING;
+                    }
+                    
+                    // Update cursor DOM element directly (no React re-render)
+                    if (cursorRef.current) {
+                        cursorRef.current.style.transform = `translate(${smoothed.x}px, ${smoothed.y}px)`;
+                        cursorRef.current.style.opacity = '1';
+                        // Subtle color shift: slate when pointing, soft pink when about to click
+                        cursorRef.current.style.borderColor = isTapGesture 
+                            ? 'rgba(236, 72, 153, 0.8)' 
+                            : 'rgba(148, 163, 184, 0.7)';
+                        cursorRef.current.style.boxShadow = isTapGesture 
+                            ? '0 0 12px rgba(236, 72, 153, 0.4)' 
+                            : '0 0 8px rgba(148, 163, 184, 0.3)';
+                    }
+                    if (cursorInnerRef.current) {
+                        cursorInnerRef.current.style.backgroundColor = isTapGesture 
+                            ? 'rgba(236, 72, 153, 0.9)' 
+                            : 'rgba(255, 255, 255, 0.9)';
+                    }
+                    cursorStateRef.current = { visible: true, x: smoothed.x, y: smoothed.y, isClicking: isTapGesture };
+                } else if (cursorStateRef.current.visible) {
+                    // Hide cursor when not pointing
+                    if (cursorRef.current) {
+                        cursorRef.current.style.opacity = '0';
+                    }
+                    cursorStateRef.current.visible = false;
                 }
 
                 // Reset shadow after drawing each hand
                 ctx.shadowBlur = 0;
+            }
+        } else {
+            // No hands detected - hide cursor
+            if (cursorStateRef.current.visible) {
+                if (cursorRef.current) {
+                    cursorRef.current.style.opacity = '0';
+                }
+                cursorStateRef.current.visible = false;
             }
         }
 
@@ -719,10 +831,43 @@ export default function HandBackground({
     }, []);
 
     return (
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden scale-x-[-1]">
-            {/* Video is hidden, we only show the canvas */}
-            <video ref={videoRef} className="hidden" playsInline muted autoPlay />
-            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-60 mix-blend-screen" />
-        </div>
+        <>
+            {/* Hand skeleton visualization (behind UI) */}
+            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden scale-x-[-1]">
+                {/* Video is hidden, we only show the canvas */}
+                <video ref={videoRef} className="hidden" playsInline muted autoPlay />
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
+            </div>
+            
+            {/* Floating cursor (always on top of everything) */}
+            <div
+                ref={cursorRef}
+                className="fixed pointer-events-none z-[9999]"
+                style={{
+                    top: 0,
+                    left: 0,
+                    width: 28,
+                    height: 28,
+                    marginLeft: -14,
+                    marginTop: -14,
+                    borderRadius: '50%',
+                    border: '2px solid rgba(148, 163, 184, 0.7)', // slate-400 with transparency
+                    opacity: 0,
+                    boxShadow: '0 0 8px rgba(148, 163, 184, 0.3)',
+                    willChange: 'transform, opacity', // GPU acceleration
+                }}
+            >
+                {/* Inner dot */}
+                <div
+                    ref={cursorInnerRef}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                    style={{
+                        width: 6,
+                        height: 6,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    }}
+                />
+            </div>
+        </>
     )
 }

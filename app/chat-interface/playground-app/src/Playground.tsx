@@ -948,34 +948,93 @@ export default function Playground() {
           arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
           ensureRaf();
         }}
+        onHover={(xOfScreen, yOfScreen) => {
+          const hoverX = xOfScreen * window.innerWidth;
+          const hoverY = yOfScreen * window.innerHeight;
+
+          const el = document.elementFromPoint(hoverX, hoverY) as HTMLElement;
+          if (el) {
+            // Get the current hovered element stored in a data attribute
+            const currentHovered = document.querySelector('[data-gesture-hovered="true"]') as HTMLElement;
+            
+            // Find the interactive element or just use the element itself
+            const interactive = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement || el;
+            
+            if (interactive !== currentHovered) {
+              // Pointer/Mouse leave on previous element
+              if (currentHovered) {
+                currentHovered.removeAttribute('data-gesture-hovered');
+                currentHovered.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false, cancelable: true }));
+                currentHovered.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false, cancelable: true }));
+                currentHovered.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
+              }
+              
+              // Pointer/Mouse enter on new element
+              interactive.setAttribute('data-gesture-hovered', 'true');
+              interactive.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
+              interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+              interactive.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
+              interactive.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+            } else if (interactive === currentHovered) {
+              // Still hovering same element, dispatch pointermove for continuous tracking
+              interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+              interactive.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+            }
+          }
+        }}
         onPinch={(xOfScreen, yOfScreen) => {
           const clickX = xOfScreen * window.innerWidth;
           const clickY = yOfScreen * window.innerHeight;
 
           const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
           if (el) {
-            const clickable = el.closest('button') || el.closest('[role="button"]');
+            // Dispatch pointer and mouse events on the target element
+            // This ensures compatibility with both pointer-based (cards) and mouse-based (buttons) handlers
+            const dispatchClickEvents = (target: HTMLElement) => {
+              // Pointer events (for cards and modern UI)
+              target.dispatchEvent(new PointerEvent('pointerdown', { 
+                bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
+                pointerId: 1, pointerType: 'touch', isPrimary: true
+              }));
+              target.dispatchEvent(new PointerEvent('pointerup', { 
+                bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
+                pointerId: 1, pointerType: 'touch', isPrimary: true
+              }));
+              
+              // Mouse events (for traditional buttons and links)
+              target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+              target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+              target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+            };
+
+            // Find clickable elements: buttons, links, cards, anything with click handlers
+            const clickable = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement;
+            
             if (clickable) {
-              (clickable as HTMLElement).click();
-
-              const ripple = document.createElement('div');
-              ripple.style.position = 'fixed';
-              ripple.style.left = `${clickX}px`;
-              ripple.style.top = `${clickY}px`;
-              ripple.style.width = '20px';
-              ripple.style.height = '20px';
-              ripple.style.background = 'rgba(236, 72, 153, 0.5)';
-              ripple.style.borderRadius = '50%';
-              ripple.style.transform = 'translate(-50%, -50%)';
-              ripple.style.pointerEvents = 'none';
-              ripple.style.zIndex = '9999';
-              document.body.appendChild(ripple);
-
-              ripple.animate([
-                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
-                { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
-              ], { duration: 400 }).onfinish = () => ripple.remove();
+              dispatchClickEvents(clickable);
+            } else {
+              // If no clickable found, try clicking the element directly (works for cards)
+              dispatchClickEvents(el);
             }
+
+            // Visual feedback ripple
+            const ripple = document.createElement('div');
+            ripple.style.position = 'fixed';
+            ripple.style.left = `${clickX}px`;
+            ripple.style.top = `${clickY}px`;
+            ripple.style.width = '20px';
+            ripple.style.height = '20px';
+            ripple.style.background = 'rgba(236, 72, 153, 0.5)';
+            ripple.style.borderRadius = '50%';
+            ripple.style.transform = 'translate(-50%, -50%)';
+            ripple.style.pointerEvents = 'none';
+            ripple.style.zIndex = '9999';
+            document.body.appendChild(ripple);
+
+            ripple.animate([
+              { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+              { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
+            ], { duration: 400 }).onfinish = () => ripple.remove();
           }
         }}
       />

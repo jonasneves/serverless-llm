@@ -9,6 +9,7 @@ interface GestureControlProps {
   onSendMessage?: (msg: string) => void;
   onScroll?: (deltaY: number) => void;
   onPinch?: (x: number, y: number) => void;
+  onHover?: (x: number, y: number) => void;
   transcriptPanelOpen?: boolean;
 }
 
@@ -165,7 +166,7 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
                 <Sparkles size={10} className="text-yellow-400" /> Wave → Hi
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
-                <Hand size={10} className="text-red-400" /> Palm+Close → Stop
+                <MousePointerClick size={10} className="text-pink-400" /> Point+2nd → Click
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
                 <ThumbsUp size={10} className="text-green-400" /> Up → Yes
@@ -177,7 +178,7 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
                 <MoveVertical size={10} className="text-purple-400" /> Fist → Scroll
               </div>
               <div className="flex items-center gap-1.5 text-slate-400">
-                <MousePointerClick size={10} className="text-pink-400" /> Hold Point → Click
+                <Hand size={10} className="text-cyan-400" /> Hold Point → Click
               </div>
             </div>
 
@@ -278,9 +279,9 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
                   desc="Send 'Hi'"
                 />
                 <GestureCard
-                  icon={<Hand size={18} className="text-red-400" />}
-                  label="Palm + Close"
-                  desc="Stop (bring hand close)"
+                  icon={<MousePointerClick size={18} className="text-pink-400" />}
+                  label="Point + 2nd Finger"
+                  desc="Click (most reliable)"
                 />
                 <GestureCard
                   icon={<ThumbsUp size={18} className="text-green-400" />}
@@ -298,7 +299,7 @@ export default function GestureControl({ transcriptPanelOpen = false, ...props }
                   desc="Scroll Page"
                 />
                 <GestureCard
-                  icon={<MousePointerClick size={18} className="text-pink-400" />}
+                  icon={<Hand size={18} className="text-cyan-400" />}
                   label="Point & Hold"
                   desc="Click (hold 1.5s)"
                 />
