@@ -688,7 +688,15 @@ export function useSessionController(params: SessionControllerParams) {
                 : model,
             ));
 
-            const historyEntry = `${personaEmoji} ${personaName} (${modelIdToName(modelId)})\n${responseText}`;
+            // Strip the persona header line from response to avoid duplication
+            // The model response starts with "emoji **Name** - trait\n..." but we display that separately
+            const lines = responseText.split('\n');
+            const firstLine = lines[0] || '';
+            const hasPersonaHeader = firstLine.includes('-') && (firstLine.includes('**') || /^[^\w\s]/.test(firstLine));
+            const cleanResponse = hasPersonaHeader ? lines.slice(1).join('\n').trim() : responseText;
+            
+            // Format: "emoji **Name** (ModelName) - trait\n\nresponse"
+            const historyEntry = `${personaEmoji} **${personaName}** (${modelIdToName(modelId)})${personaTrait ? ` - ${personaTrait}` : ''}\n\n${cleanResponse}`;
             appendEventHistory(historyEntry, 'personality_response');
           }
 

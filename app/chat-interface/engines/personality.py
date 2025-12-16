@@ -68,19 +68,21 @@ class PersonalityEngine:
         """
         Extract persona emoji, name and trait from response
 
-        Expected format:
-        🎭 **[Persona Name]** - [Key trait]
-        [Response...]
+        Supported formats:
+        🎭 **Persona Name** - Key trait
+        🎭 Persona Name - Key trait (without bold markers)
+        🎭 **Persona Name** - Key trait
 
         Returns:
-            Dict with persona_emoji, persona_name and persona_trait, or defaults if not found
+            Dict with persona_emoji, persona_name, persona_trait, and header_line_count
         """
         lines = response.strip().split('\n')
         if not lines:
             return {
                 "persona_emoji": "🎭",
                 "persona_name": "Unknown",
-                "persona_trait": "general perspective"
+                "persona_trait": "general perspective",
+                "header_line_count": 0
             }
 
         first_line = lines[0].strip()
@@ -92,14 +94,21 @@ class PersonalityEngine:
             persona_emoji = first_line[0]
             text = first_line[1:].strip()
 
-        # Try to parse **Name** - trait format
-        if '**' in text and '-' in text:
+        # Try to parse Name - trait format (with or without ** bold markers)
+        if '-' in text:
             try:
-                name_part = text.split('**')[1] if len(text.split('**')) > 1 else ""
-                parts = text.split('-')
-                if len(parts) >= 2:
-                    persona_name = name_part.strip() if name_part else parts[0].replace('**', '').strip()
-                    persona_trait = parts[1].strip()
+                # Split on dash to get name and trait
+                dash_idx = text.find(' - ')
+                if dash_idx == -1:
+                    dash_idx = text.find('-')
+                
+                if dash_idx > 0:
+                    name_part = text[:dash_idx].strip()
+                    trait_part = text[dash_idx:].lstrip('-').strip()
+                    
+                    # Remove ** bold markers if present
+                    persona_name = name_part.replace('**', '').strip()
+                    persona_trait = trait_part.replace('**', '').strip()
                     
                     # Reject placeholder brackets - model didn't follow instructions
                     if persona_name.startswith('[') or '[Name]' in persona_name or persona_name == 'Name':
@@ -107,11 +116,17 @@ class PersonalityEngine:
                     if persona_trait.startswith('[') or persona_trait == 'Key trait':
                         persona_trait = "unique perspective"
                     
-                    return {
-                        "persona_emoji": persona_emoji,
-                        "persona_name": persona_name,
-                        "persona_trait": persona_trait
-                    }
+                    # Clean up long traits (some models add extra text)
+                    if len(persona_trait) > 50:
+                        persona_trait = persona_trait[:50].rsplit(' ', 1)[0] + "..."
+                    
+                    if persona_name and len(persona_name) <= 40:  # Valid name
+                        return {
+                            "persona_emoji": persona_emoji,
+                            "persona_name": persona_name,
+                            "persona_trait": persona_trait,
+                            "header_line_count": 1
+                        }
             except Exception:
                 pass
 
@@ -119,7 +134,8 @@ class PersonalityEngine:
         return {
             "persona_emoji": persona_emoji,
             "persona_name": "Unnamed Persona",
-            "persona_trait": "unique perspective"
+            "persona_trait": "unique perspective",
+            "header_line_count": 0
         }
 
     async def run_personality_mode(
