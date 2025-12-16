@@ -47,12 +47,12 @@ CHAIRMAN_QUIP_TEMPLATES = {
         "{model} appears to be writing a dissertation.",
     ],
     "first_done": [
-        "And {model} takes the lead! First one done.",
-        "{model} came in hot! Speed demon of the council.",
-        "Lightning fast! {model} is already finished.",
-        "🏆 First place goes to {model}!",
+        "And {model} kicks things off! First to respond.",
+        "{model} came in hot! Quick on the draw.",
+        "First answer is in from {model}!",
+        "🎤 {model} speaks first!",
         "{model} is the early bird today!",
-        "{model} wastes no time! Impressive.",
+        "{model} wastes no time getting started!",
     ],
     "all_done": [
         "All models have spoken! Let the deliberation begin.",
@@ -96,7 +96,7 @@ class CouncilEngine:
         self.timeout = timeout
         self._quip_cache = {}  # Cache for generated quips
         self._last_quip_time = 0
-        self._quip_cooldown = 4.0  # Seconds between quips
+        self._quip_cooldown = 8.0  # Seconds between quips (increased to reduce spam)
         
         # Initialize unified model client
         from model_client import ModelClient

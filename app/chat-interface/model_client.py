@@ -30,8 +30,20 @@ class ModelClient:
 
     def is_api_model(self, model_id: str) -> bool:
         """Check if a model is an API model (uses GitHub Models API)"""
+        # Check static profiles
         profile = MODEL_PROFILES.get(model_id)
-        return profile is not None and profile.get("model_type") == "api"
+        if profile is not None and profile.get("model_type") == "api":
+            return True
+
+        # Check dynamic service
+        try:
+            from services.github_models_service import get_github_model_info
+            if get_github_model_info(model_id):
+                return True
+        except ImportError:
+            pass
+
+        return False
 
     def _requires_system_conversion(self, model_id: str) -> bool:
         """Check if model doesn't support system role and needs conversion"""
@@ -193,7 +205,7 @@ class ModelClient:
              payload["response_format"] = response_format
 
         client = HTTPClient.get_client()
-        rate_limiter = await get_rate_limiter(url, self.github_token)
+        rate_limiter = await get_rate_limiter(url, self.github_token, model_id=model_id)
         
         async with await rate_limiter.acquire():
             try:
@@ -318,7 +330,7 @@ class ModelClient:
              payload["temperature"] = temperature
 
         client = HTTPClient.get_client()
-        rate_limiter = await get_rate_limiter(url, self.github_token)
+        rate_limiter = await get_rate_limiter(url, self.github_token, model_id=model_id)
         
         async with await rate_limiter.acquire():
             try:

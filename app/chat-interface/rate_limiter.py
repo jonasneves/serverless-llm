@@ -14,10 +14,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RateLimitConfig:
     """Rate limit configuration for a specific endpoint"""
-    requests_per_minute: int = 8  # Reduced from 10 to be more conservative
-    concurrent_requests: int = 1  # Reduced from 2 to prevent bursts
-    requests_per_day: int = 50
-    min_request_interval: float = 8.0  # Minimum seconds between requests (60s / 8 requests = 7.5s)
+    # GitHub Models official limits for High-tier models (GPT-4o, etc.)
+    # Source: https://docs.github.com/en/github-models
+    requests_per_minute: int = 10  # Official: 10 rpm
+    concurrent_requests: int = 2   # Official: 2 concurrent
+    requests_per_day: int = 50     # Official: 50 rpd
+    min_request_interval: float = 6.0  # 60s / 10 requests = 6s between requests
 
 
 class RateLimiter:
@@ -195,21 +197,27 @@ _rate_limiters: Dict[str, RateLimiter] = {}
 _limiters_lock = asyncio.Lock()
 
 
-async def get_rate_limiter(endpoint: str, token: str = "default") -> RateLimiter:
+async def get_rate_limiter(endpoint: str, token: str = "default", model_id: str = None) -> RateLimiter:
     """
-    Get or create a rate limiter for a specific endpoint/token combination
+    Get or create a rate limiter for a specific endpoint/token/model combination
 
     Args:
         endpoint: API endpoint URL
         token: Authentication token (used to separate rate limits per user)
+        model_id: Optional model identifier for per-model rate limiting
 
     Returns:
         RateLimiter instance
     """
-    key = f"{endpoint}:{token[:16]}"  # Use first 16 chars of token for key
+    # Use model_id if provided (for GitHub Models per-model limits)
+    # Otherwise fall back to endpoint-based limiting
+    if model_id:
+        key = f"{model_id}:{token[:16]}"
+    else:
+        key = f"{endpoint}:{token[:16]}"
 
     async with _limiters_lock:
         if key not in _rate_limiters:
-            logger.info(f"Creating new rate limiter for {endpoint}")
+            logger.info(f"Creating new rate limiter for {model_id or endpoint}")
             _rate_limiters[key] = RateLimiter()
         return _rate_limiters[key]

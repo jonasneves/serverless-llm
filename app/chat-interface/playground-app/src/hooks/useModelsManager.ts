@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Model } from '../types';
 import { MODEL_META } from '../constants';
+import { usePersistedSetting } from './usePersistedSetting';
 
 interface ModelsApiModel {
   id: string;
@@ -14,7 +15,18 @@ interface ModelsApiResponse {
 
 export function useModelsManager() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [persistedSelected, setPersistedSelected] = usePersistedSetting<string[] | null>('playground_selected_models', null);
+  const isSelectionInitialized = useRef(persistedSelected !== null);
+
+  const selected = useMemo(() => persistedSelected ?? [], [persistedSelected]);
+
+  const setSelected = useCallback((value: string[] | ((prev: string[]) => string[])) => {
+    setPersistedSelected(prev => {
+      const safePrev = prev ?? [];
+      return typeof value === 'function' ? value(safePrev) : value;
+    });
+  }, [setPersistedSelected]);
+
   const [moderator, setModerator] = useState<string>('');
 
   useEffect(() => {
@@ -43,7 +55,11 @@ export function useModelsManager() {
         });
 
         setModelsData(apiModels);
-        setSelected(apiModels.filter(m => m.type === 'local').map(m => m.id));
+
+        if (!isSelectionInitialized.current) {
+          setPersistedSelected(apiModels.filter(m => m.type === 'local').map(m => m.id));
+          isSelectionInitialized.current = true;
+        }
 
         const apiModeratorCandidate = apiModels.find(m => m.type === 'api');
         const fallbackModerator = apiModels[0]?.id || '';

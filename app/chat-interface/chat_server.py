@@ -467,6 +467,71 @@ async def stream_multiple_models(
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize application state"""
+    try:
+        # Validate environment
+        validate_environment()
+        logger.info("✓ Environment validation passed")
+
+        # Initialize HTTP client
+        HTTPClient.initialize()
+        logger.info("Initializing shared HTTP client")
+
+        # Initialize models
+        await initialize_models()
+        
+        # Fetch GitHub models
+        from services.github_models_service import fetch_github_models
+        await fetch_github_models()
+        
+    except Exception as e:
+        logger.error(f"Startup failed: {e}")
+        # Build might continue even if startup fails, but we should log it
+        
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup application state"""
+    HTTPClient.close()
+    logger.info("Closing shared HTTP client")
+
+
+@app.post("/api/chat/stream")
+async def interact(request: ChatRequest):
+    try:
+        messages = request.messages
+        model_id = request.model
+        temperature = request.temperature
+        max_tokens = request.max_tokens or 4096  # Default to 4k
+        
+        # Log the request details
+        logger.info(f"Received chat request for model: {model_id}")
+        
+        # Check if moderator/orchestrator is needed
+        orchestrator_model = None
+        if hasattr(request, 'orchestrator_model'):
+            orchestrator_model = request.orchestrator_model
+            
+        # Determine orchestrator model type
+        from services.github_models_service import get_github_model_ids
+        api_models = get_github_model_ids()
+        
+        # Fallback if service failed or hasn't run
+        if not api_models:
+            api_models = [
+                'openai/gpt-4.1', 'openai/gpt-4o',
+                'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano',
+                'deepseek/DeepSeek-V3-0324', 'azureml-cohere/Cohere-command-r-plus-08-2024',
+                'azureml-meta/Llama-3.3-70B-Instruct', 'azureml-meta/Llama-4-Scout-17B-16E-Instruct', 'azureml-meta/Llama-3.1-405B-Instruct'
+            ]
+        
+        local_models = list(MODEL_ENDPOINTS.keys())
+
+        selected_orchestrator = orchestrator_model or 'openai/gpt-4o'
+        is_api_model = selected_orchestrator in api_models
+
+
 async def stream_discussion_events(
     query: str,
     max_tokens: int,
@@ -495,8 +560,8 @@ async def stream_discussion_events(
         api_models = [
             'openai/gpt-4.1', 'openai/gpt-4o',
             'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano',
-            'deepseek/deepseek-v3-0324', 'cohere/command-r-plus-08-2024',
-            'meta/llama-3.3-70b-instruct', 'meta/llama-4-scout-17b-16e-instruct', 'meta/llama-3.1-405b-instruct'
+            'deepseek/DeepSeek-V3-0324', 'azureml-cohere/Cohere-command-r-plus-08-2024',
+            'azureml-meta/Llama-3.3-70B-Instruct', 'azureml-meta/Llama-4-Scout-17B-16E-Instruct', 'azureml-meta/Llama-3.1-405B-Instruct'
         ]
         local_models = list(MODEL_ENDPOINTS.keys())
 

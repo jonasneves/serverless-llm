@@ -44,12 +44,17 @@ async def stream_discussion_events(
         from core.config import MODEL_ENDPOINTS
 
         # Determine orchestrator model type
-        api_models = [
-            'openai/gpt-4.1', 'openai/gpt-4o',
-            'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano',
-            'deepseek/deepseek-v3-0324', 'cohere/command-r-plus-08-2024',
-            'meta/llama-3.3-70b-instruct', 'meta/llama-4-scout-17b-16e-instruct', 'meta/llama-3.1-405b-instruct'
-        ]
+        from services.github_models_service import get_github_model_ids
+        api_models = get_github_model_ids()
+        
+        # Fallback if service failed or hasn't run
+        if not api_models:
+            api_models = [
+                'openai/gpt-4.1', 'openai/gpt-4o',
+                'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano',
+                'deepseek/DeepSeek-V3-0324', 'azureml-cohere/Cohere-command-r-plus-08-2024',
+                'azureml-meta/Llama-3.3-70B-Instruct', 'azureml-meta/Llama-4-Scout-17B-16E-Instruct', 'azureml-meta/Llama-3.1-405B-Instruct'
+            ]
 
         selected_orchestrator = orchestrator_model or 'openai/gpt-4o'
         is_api_model = selected_orchestrator in api_models

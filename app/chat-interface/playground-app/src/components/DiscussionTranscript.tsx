@@ -162,51 +162,63 @@ export default function DiscussionTranscript({
         >
             {/* Stage Indicator Banner */}
             {isActive && phaseLabel && (
-                <div
-                    className={`sticky top-0 z-10 mb-4 px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${isSynthesizing
-                        ? 'bg-yellow-500/20 border border-yellow-500/40'
-                        : 'bg-slate-800/80 border border-slate-700/60'
-                        }`}
-                >
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                            {/* Animated indicator */}
-                            <div className={`w-2 h-2 rounded-full ${isSynthesizing ? 'bg-yellow-400' : 'bg-blue-400'} animate-pulse`}></div>
-                            <span className={`text-xs font-semibold uppercase tracking-wider ${isSynthesizing ? 'text-yellow-300' : 'text-slate-300'}`}>
-                                {phaseLabel}
-                            </span>
-                        </div>
-
-                        {/* Progress indicator - only show during response gathering */}
-                        {isGenerating && !isSynthesizing && totalParticipants > 0 && (
+                <div className="sticky top-0 z-10 mb-4">
+                    <div
+                        className={`px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${isSynthesizing
+                            ? 'bg-yellow-500/20 border border-yellow-500/40'
+                            : 'bg-slate-800/80 border border-slate-700/60'
+                            }`}
+                    >
+                        <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
-                                <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-blue-400 transition-all duration-300 rounded-full"
-                                        style={{ width: `${progressPercent}%` }}
-                                    />
-                                </div>
-                                <span className="text-[10px] text-slate-400 tabular-nums">
-                                    {completedCount}/{totalParticipants}
+                                {/* Animated indicator */}
+                                <div className={`w-2 h-2 rounded-full ${isSynthesizing ? 'bg-yellow-400' : 'bg-blue-400'} animate-pulse`}></div>
+                                <span className={`text-xs font-semibold uppercase tracking-wider ${isSynthesizing ? 'text-yellow-300' : 'text-slate-300'}`}>
+                                    {phaseLabel}
                                 </span>
                             </div>
-                        )}
 
-                        {/* Synthesizing spinner */}
-                        {isSynthesizing && (
-                            <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4 text-yellow-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                </svg>
-                                <span className="text-[10px] text-yellow-300">Working...</span>
-                            </div>
-                        )}
+                            {/* Progress indicator - only show during response gathering */}
+                            {isGenerating && !isSynthesizing && totalParticipants > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-blue-400 transition-all duration-300 rounded-full"
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 tabular-nums">
+                                        {completedCount}/{totalParticipants}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Synthesizing spinner */}
+                            {isSynthesizing && (
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-yellow-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span className="text-[10px] text-yellow-300">Working...</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
+                    {/* Gradient fade below banner */}
+                    <div
+                        className="pointer-events-none"
+                        style={{
+                            height: '24px',
+                            marginTop: '-4px',
+                            background: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.6), transparent)',
+                        }}
+                    />
                 </div>
             )}
 
-            <div className="max-w-3xl mx-auto flex flex-col justify-end min-h-full">
+            {/* Add spacer when banner is active to ensure content starts at appropriate level */}
+            <div className={`max-w-3xl mx-auto flex flex-col ${history.length > 0 ? 'justify-start' : 'justify-end'} min-h-full`}>
                 {history.length === 0 && (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500 pb-20">
                         <MessageSquare size={48} className="mb-4 opacity-50" />

@@ -37,19 +37,50 @@ async def list_models():
         for config in MODEL_CONFIG
     ]
 
-    # Build list of API models from MODEL_PROFILES
-    api_models = [
-        {
-            "id": model_id,
-            "name": profile.get("display_name", model_id),
-            "type": "api",
-            "endpoint": None,  # API models use GitHub Models endpoint
-            "default": False,
-            "context_length": profile.get("context_length", 128000),
-        }
-        for model_id, profile in MODEL_PROFILES.items()
-        if profile.get("model_type") == "api"
-    ]
+    # Build list of API models
+    from services.github_models_service import get_github_model_ids, get_github_model_info
+    
+    dynamic_ids = get_github_model_ids()
+    api_models = []
+    seen_ids = set()
+
+    # 1. Add models from MODEL_PROFILES if they are verified (or if we trust them)
+    # Actually, we should trust the dynamic list more.
+    # Let's iterate through the dynamic list and use profile data if available.
+    
+    if dynamic_ids:
+        for model_id in dynamic_ids:
+            profile = MODEL_PROFILES.get(model_id, {})
+            # If not in profile, build valid default
+            if not profile:
+                 info = get_github_model_info(model_id) or {}
+                 profile = {
+                     "display_name": info.get("name", model_id),
+                     "context_length": int(info.get("limits", {}).get("max_input_tokens", 128000))
+                 }
+            
+            api_models.append({
+                "id": model_id,
+                "name": profile.get("display_name", model_id),
+                "type": "api",
+                "endpoint": None,
+                "default": False,
+                "context_length": profile.get("context_length", 128000),
+            })
+            seen_ids.add(model_id)
+    
+    # 2. Add any remaining API models from MODEL_PROFILES that weren't in the dynamic list
+    # (Fallback in case dynamic fetch failed or local dev without internet)
+    for model_id, profile in MODEL_PROFILES.items():
+        if profile.get("model_type") == "api" and model_id not in seen_ids:
+            api_models.append({
+                "id": model_id,
+                "name": profile.get("display_name", model_id),
+                "type": "api",
+                "endpoint": None,
+                "default": False,
+                "context_length": profile.get("context_length", 128000),
+            })
 
     return {
         "models": local_models + api_models,

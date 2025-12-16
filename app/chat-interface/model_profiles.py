@@ -286,7 +286,7 @@ GPT5_NANO_PROFILE = {
 }
 
 COHERE_COMMAND_R_PLUS_PROFILE = {
-    "model_id": "cohere/command-r-plus-08-2024",
+    "model_id": "azureml-cohere/Cohere-command-r-plus-08-2024",
     "display_name": "Cohere Command R+",
     "model_type": "api",
     "creator": "Cohere",
@@ -304,7 +304,7 @@ COHERE_COMMAND_R_PLUS_PROFILE = {
 }
 
 LLAMA_4_SCOUT_PROFILE = {
-    "model_id": "meta/llama-4-scout-17b-16e-instruct",
+    "model_id": "azureml-meta/Llama-4-Scout-17B-16E-Instruct",
     "display_name": "Llama 4 Scout 17B",
     "model_type": "api",
     "creator": "Meta",
@@ -321,7 +321,7 @@ LLAMA_4_SCOUT_PROFILE = {
 }
 
 LLAMA_3_1_405B_PROFILE = {
-    "model_id": "meta/llama-3.1-405b-instruct",
+    "model_id": "azureml-meta/Llama-3.1-405B-Instruct",
     "display_name": "Llama 3.1 405B",
     "model_type": "api",
     "creator": "Meta",
@@ -339,7 +339,7 @@ LLAMA_3_1_405B_PROFILE = {
 }
 
 DEEPSEEK_V3_PROFILE = {
-    "model_id": "deepseek/deepseek-v3-0324",
+    "model_id": "deepseek/DeepSeek-V3-0324",  # GitHub Models uses {publisher}/{model} format
     "display_name": "DeepSeek V3",
     "model_type": "api",
     "creator": "DeepSeek",
@@ -365,7 +365,7 @@ DEEPSEEK_V3_PROFILE = {
 }
 
 LLAMA_33_70B_PROFILE = {
-    "model_id": "meta/llama-3.3-70b-instruct",
+    "model_id": "azureml-meta/Llama-3.3-70B-Instruct",
     "display_name": "Llama 3.3 70B",
     "model_type": "api",
     "creator": "Meta",
@@ -610,11 +610,12 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "openai/gpt-5": GPT5_PROFILE,
     "openai/gpt-5-mini": GPT5_MINI_PROFILE,
     "openai/gpt-5-nano": GPT5_NANO_PROFILE,
-    "deepseek/deepseek-v3-0324": DEEPSEEK_V3_PROFILE,
-    "cohere/command-r-plus-08-2024": COHERE_COMMAND_R_PLUS_PROFILE,
-    "meta/llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
-    "meta/llama-4-scout-17b-16e-instruct": LLAMA_4_SCOUT_PROFILE,
-    "meta/llama-3.1-405b-instruct": LLAMA_3_1_405B_PROFILE,
+    "deepseek/DeepSeek-V3-0324": DEEPSEEK_V3_PROFILE,
+    # GitHub Models uses azureml-{publisher}/ prefix
+    "azureml-cohere/Cohere-command-r-plus-08-2024": COHERE_COMMAND_R_PLUS_PROFILE,
+    "azureml-meta/Llama-3.3-70B-Instruct": LLAMA_33_70B_PROFILE,
+    "azureml-meta/Llama-4-Scout-17B-16E-Instruct": LLAMA_4_SCOUT_PROFILE,
+    "azureml-meta/Llama-3.1-405B-Instruct": LLAMA_3_1_405B_PROFILE,
 }
 
 
