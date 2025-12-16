@@ -746,8 +746,9 @@ export function useSessionController(params: SessionControllerParams) {
         setPhaseLabel('Error');
         return;
       }
-      setSpeaking(new Set(participants));
-      if (moderator) setSpeaking(prev => new Set(prev).add(moderator));
+      // Don't mark all as speaking - roundtable is sequential, we'll mark each model as it starts
+      // Moderator starts in "speaking" state during analysis phase
+      if (moderator) setSpeaking(new Set([moderator]));
 
       const response = await fetchDiscussionStream({
         query: contextualQuery,
@@ -767,10 +768,14 @@ export function useSessionController(params: SessionControllerParams) {
 
         if (eventType === 'analysis_start') {
           setPhaseLabel('Analyzing Query');
+          // Moderator is analyzing
+          if (moderator) setSpeaking(new Set([moderator]));
         }
 
         if (eventType === 'analysis_complete') {
           setPhaseLabel('Orchestrating');
+          // Analysis done, clear moderator speaking until synthesis
+          setSpeaking(new Set());
           let analysisText = 'Analysis complete.';
           if (data.analysis) {
             const analysisObj = data.analysis as any;
@@ -794,6 +799,11 @@ export function useSessionController(params: SessionControllerParams) {
             currentTurn = reportedTurn;
           }
           setPhaseLabel(`Round ${currentTurn + 1}`);
+          // Mark the current speaker as speaking (sequential turns)
+          const modelId = data.model_id as string;
+          if (modelId) {
+            setSpeaking(new Set([modelId]));
+          }
         }
 
         if (eventType === 'turn_chunk' && data.model_id) {
@@ -830,8 +840,12 @@ export function useSessionController(params: SessionControllerParams) {
           });
 
           setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: turnResponse } : model));
-          setSpeaking(new Set());
-          recordResponse(modelId, turnResponse, { label: `Round ${currentTurn + 1}` });
+          // Remove just this model from speaking (next model will be added on its turn_start)
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
           recordResponse(modelId, turnResponse, { label: `Round ${currentTurn + 1}` });
           const speakerName = modelIdToName(modelId);
           appendEventHistory(
@@ -849,8 +863,13 @@ export function useSessionController(params: SessionControllerParams) {
           }));
           const errorText = String((data as any).error ?? 'Error generating response.');
           clearPendingStreamForModel(modelId);
-          setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: errorText } : model));
-          setSpeaking(new Set());
+          setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: errorText, error: errorText } : model));
+          // Remove just this model from speaking (next model will be added on its turn_start)
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
           markModelFailed(modelId);
           recordResponse(modelId, errorText, { replace: true });
           appendEventHistory(

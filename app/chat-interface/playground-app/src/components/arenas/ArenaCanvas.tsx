@@ -151,20 +151,26 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         const isSelected = selectedCardIds.has(model.id);
         const hasError = failedModels.has(model.id);
         const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
+        // Show "waiting" for models in a roundtable session that haven't started their turn yet
+        const isWaiting = !isSpeaking && !isDone && !hasError && isGenerating && mode === 'roundtable';
         const statusState: 'idle' | 'responding' | 'done' | 'waiting' | 'error' = hasError
           ? 'error'
           : isSpeaking
             ? 'responding'
             : isDone
               ? 'done'
-              : 'idle';
+              : isWaiting
+                ? 'waiting'
+                : 'idle';
         const statusLabel = hasError
           ? 'Error'
           : isSpeaking
             ? 'Responding'
             : isDone
               ? 'Done'
-              : 'Ready';
+              : isWaiting
+                ? 'Waiting'
+                : 'Ready';
         const processingColor = '#fbbf24';
         const errorColor = '#ef4444';
         const typeColor = model.type === 'local' ? '#10b981' : '#3b82f6';
