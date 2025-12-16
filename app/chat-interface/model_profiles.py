@@ -610,12 +610,11 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "openai/gpt-5": GPT5_PROFILE,
     "openai/gpt-5-mini": GPT5_MINI_PROFILE,
     "openai/gpt-5-nano": GPT5_NANO_PROFILE,
-    "deepseek/DeepSeek-V3-0324": DEEPSEEK_V3_PROFILE,
-    # GitHub Models uses azureml-{publisher}/ prefix
-    "azureml-cohere/Cohere-command-r-plus-08-2024": COHERE_COMMAND_R_PLUS_PROFILE,
-    "azureml-meta/Llama-3.3-70B-Instruct": LLAMA_33_70B_PROFILE,
-    "azureml-meta/Llama-4-Scout-17B-16E-Instruct": LLAMA_4_SCOUT_PROFILE,
-    "azureml-meta/Llama-3.1-405B-Instruct": LLAMA_3_1_405B_PROFILE,
+    "deepseek/deepseek-v3-0324": DEEPSEEK_V3_PROFILE,
+    "cohere/cohere-command-r-plus-08-2024": COHERE_COMMAND_R_PLUS_PROFILE,
+    "meta/llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
+    "meta/llama-4-scout-17b-16e-instruct": LLAMA_4_SCOUT_PROFILE,
+    "meta/meta-llama-3.1-405b-instruct": LLAMA_3_1_405B_PROFILE,
 }
 
 
