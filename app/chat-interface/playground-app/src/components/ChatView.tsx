@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Zap, ChevronDown, Info, Server, Infinity, Cloud, Sparkles, Key } from 'lucide-react';
+import { Bot, AlertTriangle, User, Zap, ChevronDown, Info, Server, Infinity, Cloud, Sparkles } from 'lucide-react';
 import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import SelectionOverlay from './SelectionOverlay';
@@ -667,8 +667,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             </div>
 
                             {!githubToken && ((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-16 flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800/40 border border-slate-700/40 text-slate-400 text-xs">
-                                    <Key size={11} className="shrink-0 text-slate-500" />
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-16 flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800/40 border border-slate-700/40 text-slate-400 text-xs whitespace-nowrap">
+                                    <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
                                     <span>Add GitHub token in Settings for dedicated quota</span>
                                 </div>
                             )}
