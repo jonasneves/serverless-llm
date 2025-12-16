@@ -56,3 +56,10 @@ class VerbalizedSamplingRequest(BaseModel):
 
 class ConfessionRequest(BaseModel):
     query: str
+
+
+class PersonalityRequest(BaseModel):
+    query: str
+    participants: List[str]  # List of model IDs to participate
+    max_tokens: int = 512  # Max tokens per persona response
+    github_token: Optional[str] = None  # User-provided GitHub token for API models

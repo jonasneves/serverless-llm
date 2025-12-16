@@ -7,9 +7,12 @@ export interface Model {
   type?: 'local' | 'api';
   error?: string;
   statusMessage?: string; // Temporary system messages (rate limiting, etc.) - not part of conversation history
+  personaEmoji?: string; // Emoji representing the persona
+  personaName?: string; // Name of the persona
+  personaTrait?: string; // Key trait/perspective of the persona
 }
 
-export type Mode = 'compare' | 'council' | 'roundtable' | 'chat';
+export type Mode = 'compare' | 'council' | 'roundtable' | 'chat' | 'personality';
 
 export interface Position {
   x: number;
@@ -55,5 +58,6 @@ export type ChatHistoryEntry = {
   | 'council_ranking'
   | 'roundtable_synthesis'
   | 'roundtable_analysis'
-  | 'roundtable_turn';
+  | 'roundtable_turn'
+  | 'personality_response';
 };

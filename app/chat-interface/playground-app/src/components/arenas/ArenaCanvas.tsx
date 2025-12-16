@@ -386,6 +386,30 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
 
             </div>
 
+            {/* Persona Circle for Personality Mode */}
+            {mode === 'personality' && isCircleMode && model.personaEmoji && (
+              <div
+                className="absolute rounded-full flex items-center justify-center pointer-events-none"
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  top: '-8px',
+                  right: '-8px',
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2))',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(8px)',
+                  fontSize: '24px',
+                  zIndex: 100,
+                  transition: 'transform 180ms ease-out',
+                  transform: isSpeaking ? 'scale(1.1)' : 'scale(1)',
+                }}
+                title={model.personaName ? `${model.personaName} - ${model.personaTrait}` : 'Persona'}
+              >
+                {model.personaEmoji}
+              </div>
+            )}
+
             {isCircleMode && hoveredCard === model.id && (
               <div
                 data-card
@@ -408,6 +432,17 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
                   <span className="text-xs font-semibold text-slate-300">{model.name}</span>
                 </div>
+                {mode === 'personality' && model.personaEmoji && model.personaName && (
+                  <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700/50">
+                    <span className="text-base">{model.personaEmoji}</span>
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-blue-400">{model.personaName}</div>
+                      {model.personaTrait && (
+                        <div className="text-[10px] text-slate-500">{model.personaTrait}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
                   {renderPreviewContent({ model, isSpeaking, getTailSnippet })}
                 </p>

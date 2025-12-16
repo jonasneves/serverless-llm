@@ -15,6 +15,11 @@ from orchestrator import GitHubModelsOrchestrator, QueryAnalysis, TurnEvaluation
 from model_profiles import MODEL_PROFILES, rank_models_for_query
 from error_utils import sanitize_error_message
 from rate_limiter import get_rate_limiter
+from prompts import (
+    get_roundtable_lead_system,
+    get_roundtable_participant_system,
+    ROUNDTABLE_SYNTHESIS_SYSTEM
+)
 
 
 @dataclass
@@ -139,7 +144,7 @@ class DiscussionEngine:
         lead_model_name = MODEL_PROFILES.get(lead_model_id, {}).get("display_name", lead_model_id)
 
         if not previous_turns:
-            # Lead model - initial response with domain awareness
+            # Lead model - provide context only (behavioral instructions in system prompt)
             domain_context = ", ".join([
                 f"{domain} ({weight:.0%})"
                 for domain, weight in sorted(
@@ -149,46 +154,14 @@ class DiscussionEngine:
                 )
             ])
 
-            # Determine if query needs detailed step-by-step analysis
-            needs_detailed_analysis = any(
-                domain in analysis.domain_weights and analysis.domain_weights[domain] > 0.3
-                for domain in ['mathematics', 'coding', 'logical_reasoning', 'reasoning']
-            )
-
-            if needs_detailed_analysis:
-                analysis_instruction = """Show your work step by step:
-- Counting tasks: list each item explicitly
-- Math problems: show each calculation
-- Logical reasoning: explain each step"""
-            else:
-                analysis_instruction = "Provide a clear, concise response."
-
-            roundtable_intro = (
-                f"You are seated at a virtual roundtable with other AI models: {participants_list}."
-                if participants_list else
-                "You are seated at a virtual roundtable and will kick off the discussion."
-            )
-
-            reviewer_line = (
-                f"{participants_list} will review and critique your response next."
-                if participants_list else
-                "You will review your own response afterward."
-            )
-
-            return f"""You are {my_name}, participating in a Model Roundtable discussion.
-
-{roundtable_intro} You have been selected to LEAD this discussion and speak first based on your expertise in this topic.
-
-Your strengths: {strengths}
-Your expertise score for this query: {expertise_score:.2f} out of 1.0
-Query domains: {domain_context}
+            return f"""Discussion context:
+- Role: Discussion lead (selected for expertise)
+- Other participants: {participants_list if participants_list else "none (solo response)"}
+- Expertise score: {expertise_score:.2f} out of 1.0
+- Query domains: {domain_context}
 
 User Query:
-{query}
-
-As the discussion leader, provide your analysis and response. {analysis_instruction}
-
-{reviewer_line}"""
+{query}"""
 
         else:
             # Supporting models - respond with full context including evaluations
@@ -213,39 +186,17 @@ As the discussion leader, provide your analysis and response. {analysis_instruct
                     spoken_models.append(turn.model_name)
             spoken_list = ", ".join(spoken_models)
 
-            # Determine if query needs detailed verification
-            needs_verification = any(
-                domain in analysis.domain_weights and analysis.domain_weights[domain] > 0.3
-                for domain in ['mathematics', 'coding', 'logical_reasoning', 'reasoning']
-            )
-
-            if needs_verification:
-                contribution_guide = """CRITICALLY EVALUATE what others have said:
-1. **VERIFY**: Check accuracy of claims and calculations
-2. **CHALLENGE**: If you disagree with conclusions, explain why
-3. **IMPROVE**: Offer corrections or alternative approaches
-4. **CONFIRM**: If you agree, explain why you're confident
-
-Be direct and specific. If counting items, do it yourself step by step."""
-            else:
-                contribution_guide = "Add your perspective. If you agree with previous responses, you can acknowledge them briefly. If you have a different view, share it concisely."
-
-            return f"""You are {my_name}, participating in a Model Roundtable discussion.
-
-You are seated at a virtual roundtable with: {participants_list}. The designated discussion lead is **{lead_model_name}** (selected for highest expertise on this query). So far, {spoken_list} ha{"ve" if len(spoken_models) > 1 else "s"} shared their perspectives.
-
-Your strengths: {strengths}
-Your expertise score for this query: {expertise_score:.2f} out of 1.0
+            return f"""Discussion context:
+- Role: Participant (responding after {spoken_list})
+- Other participants: {participants_list}
+- Discussion lead: {lead_model_name} (selected for expertise)
+- Expertise score: {expertise_score:.2f} out of 1.0
 
 Original User Query:
 {query}
 
 Discussion so far:
-{previous_context}
-
----
-
-{contribution_guide}"""
+{previous_context}"""
 
 
 
@@ -299,9 +250,27 @@ Discussion so far:
         local_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         start_time = asyncio.get_event_loop().time()
 
+        # Determine system prompt based on role and domain
+        is_lead = turn_number == 1
+        needs_verification = any(
+            domain in analysis.domain_weights and analysis.domain_weights[domain] > 0.3
+            for domain in ['mathematics', 'coding', 'logical_reasoning', 'reasoning']
+        )
+
+        model_name = profile["display_name"]
+        strengths = profile.get("strengths", "general reasoning")
+
+        if is_lead:
+            system_prompt = get_roundtable_lead_system(model_name, strengths)
+        else:
+            system_prompt = get_roundtable_participant_system(model_name, strengths, needs_verification)
+
         try:
-            messages = [{"role": "user", "content": prompt}]
-            
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ]
+
             async for event in self.client.stream_model(model_id, messages, max_tokens, temperature):
                 if event["type"] == "chunk":
                     full_response += event["content"]

@@ -144,6 +144,11 @@ export const MODE_EXAMPLE_PROMPTS: Record<Mode, string[]> = {
     "What comes next in this sequence: 2, 4, 8, 16, 31, ? Explain the pattern you identified.",
     "A man walks into a bar and asks for water. The bartender pulls out a gun and points it at him. The man says 'thank you' and leaves. Why?",
   ],
+  personality: [
+    "What's the meaning of life?",
+    "Describe your ideal Saturday.",
+    "What superpower would you choose and why?",
+  ],
   compare: [],
   chat: [],
 };
@@ -228,6 +233,7 @@ export const MODE_COLORS: Record<Mode, string> = {
   council: BASE_BACKGROUND,
   roundtable: BASE_BACKGROUND,
   chat: BASE_BACKGROUND,
+  personality: BASE_BACKGROUND,
 };
 
 // Generation defaults - centralized for easy maintenance

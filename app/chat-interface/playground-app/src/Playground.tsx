@@ -441,8 +441,8 @@ export default function Playground() {
 
     // When leaving Chat mode with a used model, ensure it's included in selection for other modes
     if (mode === 'chat' && lastUsedChatModelId) {
-      // For multi-model modes (compare, council, roundtable), add the chat model to selection
-      if (nextMode === 'compare' || nextMode === 'council' || nextMode === 'roundtable') {
+      // For multi-model modes (compare, council, roundtable, personality), add the chat model to selection
+      if (nextMode === 'compare' || nextMode === 'council' || nextMode === 'roundtable' || nextMode === 'personality') {
         if (!selected.includes(lastUsedChatModelId)) {
           setSelected(prev => [...prev, lastUsedChatModelId]);
         }
@@ -931,7 +931,7 @@ export default function Playground() {
 
           const activeIds = mode === 'compare'
             ? selected
-            : mode === 'council' || mode === 'roundtable'
+            : mode === 'council' || mode === 'roundtable' || mode === 'personality'
               ? selected
               : [];
 
@@ -989,7 +989,7 @@ export default function Playground() {
       <div
         style={{
           paddingLeft: activeInspectorId && mode === 'compare' && inspectorPosition === 'left' ? '28rem' : '1.5rem',
-          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : mode === 'council' || mode === 'roundtable' ? '0' : '1.5rem',
+          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : mode === 'council' || mode === 'roundtable' || mode === 'personality' ? '0' : '1.5rem',
         }}
       >
         {/* Dock Backdrop */}
@@ -1060,7 +1060,7 @@ export default function Playground() {
                   alignItems: mode === 'compare' ? 'flex-start' : 'center',
                   justifyContent: 'center',
                   ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
-                  transform: mode === 'council' || mode === 'roundtable'
+                  transform: mode === 'council' || mode === 'roundtable' || mode === 'personality'
                     ? `translateY(calc(var(--arena-offset-y) - 50px)) scale(${isDraggingOver ? 1.02 : 1})`
                     : `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
                   willChange: 'transform',
@@ -1072,7 +1072,7 @@ export default function Playground() {
                   ...(mode === 'compare' ? {
                     minHeight: '300px', // Minimum height to ensure clickable background
                     paddingBottom: '120px', // Extra space at bottom for right-click menu access
-                  } : mode === 'council' || mode === 'roundtable' ? {
+                  } : mode === 'council' || mode === 'roundtable' || mode === 'personality' ? {
                     height: '100%',
                     minHeight: '100%',
                     overflow: 'hidden', // Prevent scroll in arena for council
@@ -1214,9 +1214,9 @@ export default function Playground() {
         onSelectPrompt={handleSelectPrompt}
       />
 
-      {/* Fixed Prompt Input for Compare, Council, and Roundtable Modes */}
+      {/* Fixed Prompt Input for Compare, Council, Roundtable, and Personality Modes */}
       {
-        (mode === 'compare' || mode === 'council' || mode === 'roundtable') && (
+        (mode === 'compare' || mode === 'council' || mode === 'roundtable' || mode === 'personality') && (
           <PromptInput
             inputRef={inputRef}
             inputFocused={inputFocused}
@@ -1225,7 +1225,7 @@ export default function Playground() {
             onOpenTopics={() => setShowTopics(true)}
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
-            placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
+            placeholder={mode === 'compare' ? undefined : mode === 'personality' ? "Ask the personas..." : "Steer the discussion..."}
           />
         )
       }

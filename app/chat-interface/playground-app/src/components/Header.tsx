@@ -15,7 +15,8 @@ const MODES: { value: Mode; label: string }[] = [
   { value: 'chat', label: 'Chat' },
   { value: 'compare', label: 'Compare' },
   { value: 'council', label: 'Council' },
-  { value: 'roundtable', label: 'Roundtable' }
+  { value: 'roundtable', label: 'Roundtable' },
+  { value: 'personality', label: 'Personality' }
 ];
 
 export default function Header({
@@ -56,6 +57,15 @@ export default function Header({
     setIsMobileMenuOpen(false);
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowLeft' ? -1 : 1;
+      const newIndex = (safeIndex + direction + MODES.length) % MODES.length;
+      handleModeSelect(MODES[newIndex].value);
+    }
+  };
+
   return (
     <div className="fixed top-0 left-0 right-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none">
       {/* Background layer */}
@@ -82,7 +92,13 @@ export default function Header({
           <div className="w-px h-5 bg-slate-700/50 mx-0.5 sm:mx-1"></div>
 
           {/* Mode Toggle Track */}
-          <div className="relative flex p-1 rounded-lg bg-black/20 mode-track">
+          <div
+            className="relative flex p-1 rounded-lg bg-black/20 mode-track"
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+            role="radiogroup"
+            aria-label="Mode selection"
+          >
             {/* Sliding indicator */}
             <div
               className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
@@ -96,6 +112,8 @@ export default function Header({
                 key={m.value}
                 tabIndex={-1}
                 onClick={() => handleModeSelect(m.value)}
+                role="radio"
+                aria-checked={mode === m.value}
                 className={`relative z-10 py-2 sm:py-1.5 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.value
                   ? 'text-white'
                   : 'text-slate-400 hover:text-slate-200'

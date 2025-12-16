@@ -17,6 +17,7 @@ from model_profiles import MODEL_PROFILES, get_display_name
 from error_utils import sanitize_error_message
 from rate_limiter import get_rate_limiter
 from services.streaming import merge_async_generators
+from prompts import COUNCIL_STAGE1_SYSTEM, COUNCIL_STAGE2_SYSTEM, COUNCIL_STAGE3_SYSTEM
 
 # Pre-defined quip templates for faster response (used as fallback)
 CHAIRMAN_QUIP_TEMPLATES = {
@@ -236,7 +237,10 @@ Be playful but not mean. You can reference the topic if it's funny. Just output 
         """
         yield {"type": "stage1_start", "participants": participants}
 
-        messages = [{"role": "user", "content": query}]
+        messages = [
+            {"role": "system", "content": COUNCIL_STAGE1_SYSTEM},
+            {"role": "user", "content": query}
+        ]
         stage1_results = []
         model_responses = {model_id: "" for model_id in participants}
         
@@ -418,7 +422,7 @@ Now provide your evaluation and ranking:"""
         messages = [
             {
                 "role": "system",
-                "content": "You are an anonymous reviewer. Follow instructions exactly. Output only your review and FINAL RANKING."
+                "content": COUNCIL_STAGE2_SYSTEM
             },
             {"role": "user", "content": ranking_prompt},
         ]
@@ -560,7 +564,7 @@ Final answer:"""
         messages = [
             {
                 "role": "system",
-                "content": "You are the council chairman. Return only the final answer, with no extra sections."
+                "content": COUNCIL_STAGE3_SYSTEM
             },
             {"role": "user", "content": chairman_prompt},
         ]

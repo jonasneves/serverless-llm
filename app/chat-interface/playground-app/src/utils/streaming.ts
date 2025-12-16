@@ -59,6 +59,22 @@ export const fetchDiscussionStream = async (payload: DiscussionStreamPayload, si
   });
 };
 
+export interface PersonalityStreamPayload {
+  query: string;
+  participants: string[];
+  max_tokens: number;
+  github_token?: string | null;
+}
+
+export const fetchPersonalityStream = async (payload: PersonalityStreamPayload, signal?: AbortSignal): Promise<Response> => {
+  return fetch('/api/chat/personality/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  });
+};
+
 export const streamSseEvents = async (
   response: Response,
   onEvent: (data: ChatStreamEvent) => void,

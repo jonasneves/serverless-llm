@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction } from 'react';
 import { GENERATION_DEFAULTS } from '../constants';
-import { fetchChatStream, fetchCouncilStream, fetchDiscussionStream, streamSseEvents } from '../utils/streaming';
+import { fetchChatStream, fetchCouncilStream, fetchDiscussionStream, fetchPersonalityStream, streamSseEvents } from '../utils/streaming';
 import { ChatHistoryEntry, Mode, Model } from '../types';
 import { ExecutionTimeData } from '../components/ExecutionTimeDisplay';
 
@@ -598,6 +598,132 @@ export function useSessionController(params: SessionControllerParams) {
             pushHistoryEntries([{ role: 'assistant', content: trimmed, kind: 'council_synthesis' }]);
           }
         }
+        return;
+      }
+
+      if (mode === 'personality') {
+        const participants = sessionModelIds;
+        setSpeaking(new Set(participants));
+
+        const response = await fetchPersonalityStream({
+          query: contextualQuery,
+          participants,
+          max_tokens: 512,
+          github_token: githubToken || null,
+        }, currentController.signal);
+
+        await streamSseEvents(response, (data) => {
+          const eventType = data.event;
+
+          if (eventType === 'personality_start') {
+            setPhaseLabel('Generating Personas');
+          }
+
+          if (eventType === 'model_start' && data.model_id) {
+            const modelId = data.model_id as string;
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.add(modelId);
+              return next;
+            });
+          }
+
+          if (eventType === 'model_chunk' && data.model_id) {
+            const modelId = data.model_id as string;
+            const now = performance.now();
+            if (!firstTokenReceived.has(modelId)) {
+              firstTokenReceived.add(modelId);
+              setExecutionTimes(prev => ({
+                ...prev,
+                [modelId]: { ...prev[modelId], firstTokenTime: now },
+              }));
+            }
+
+            // Update persona info as it streams in
+            const personaInfo = (data as any).persona_info;
+            if (personaInfo) {
+              setModelsData(prev => prev.map(model =>
+                model.id === modelId
+                  ? {
+                    ...model,
+                    personaEmoji: personaInfo.persona_emoji || model.personaEmoji,
+                    personaName: personaInfo.persona_name || model.personaName,
+                    personaTrait: personaInfo.persona_trait || model.personaTrait,
+                  }
+                  : model,
+              ));
+            }
+
+            applyThinkingChunk(modelId, String((data as any).chunk ?? ''));
+          }
+
+          if (eventType === 'model_response' && data.model_id) {
+            const modelId = data.model_id as string;
+            const now = performance.now();
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], endTime: now },
+            }));
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.delete(modelId);
+              return next;
+            });
+
+            const responseText = String((data as any).response ?? '');
+            const personaEmoji = String((data as any).persona_emoji ?? '🎭');
+            const personaName = String((data as any).persona_name ?? 'Persona');
+            const personaTrait = String((data as any).persona_trait ?? '');
+
+            recordResponse(modelId, responseText, { replace: true });
+            setModelsData(prev => prev.map(model =>
+              model.id === modelId
+                ? {
+                  ...model,
+                  response: responseText,
+                  personaEmoji,
+                  personaName,
+                  personaTrait,
+                }
+                : model,
+            ));
+
+            const historyEntry = `${personaEmoji} ${personaName} (${modelIdToName(modelId)})\n${responseText}`;
+            appendEventHistory(historyEntry, 'personality_response');
+          }
+
+          if (eventType === 'model_error' && data.model_id) {
+            const modelId = data.model_id as string;
+            const now = performance.now();
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], endTime: now },
+            }));
+            setSpeaking(prev => {
+              const next = new Set(prev);
+              next.delete(modelId);
+              return next;
+            });
+            const errorText = String((data as any).error ?? 'Error generating persona.');
+            clearPendingStreamForModel(modelId);
+            setModelsData(prev => prev.map(model =>
+              model.id === modelId ? { ...model, response: errorText, error: errorText } : model,
+            ));
+            markModelFailed(modelId);
+          }
+
+          if (eventType === 'personality_complete') {
+            setPhaseLabel(null);
+            setSpeaking(new Set());
+          }
+
+          if (eventType === 'error') {
+            const message = String((data as any).error ?? 'Personality mode error.');
+            setPhaseLabel('Error');
+            setModeratorSynthesis(message);
+          }
+        });
+
         return;
       }
 
