@@ -988,11 +988,7 @@ export default function Playground() {
               return;
             }
 
-            if (inputRef.current) {
-              inputRef.current.value = msg;
-              inputRef.current.focus();
-            }
-
+            // Don't populate input box for gesture-triggered messages - just send directly
             const activeIds = mode === 'compare'
               ? selected
               : mode === 'council' || mode === 'roundtable' || mode === 'personality'

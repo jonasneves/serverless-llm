@@ -77,9 +77,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
     useImperativeHandle(ref, () => ({
         sendMessage: (text: string) => {
-            if (inputRef.current) {
-                inputRef.current.value = text;
-            }
+            // Don't populate input box for programmatic sends (e.g., gesture-triggered)
+            // Just send the message directly
             handleSend(text);
         },
         setInput: (text: string) => {
