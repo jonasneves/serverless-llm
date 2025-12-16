@@ -10,6 +10,7 @@ import json
 import logging
 import httpx
 import hashlib
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
@@ -56,10 +57,76 @@ from core.state import (
 # Import GitHub token utility
 from utils.github_token import get_default_github_token
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan (startup and shutdown)."""
+    # Startup
+    validate_environment()
+    HTTPClient.get_client()
+
+    # Log configured model endpoints
+    model_env_vars = {
+        "QWEN": os.getenv("QWEN_API_URL"),
+        "PHI": os.getenv("PHI_API_URL"),
+        "LLAMA": os.getenv("LLAMA_API_URL"),
+        "MISTRAL": os.getenv("MISTRAL_API_URL"),
+        "GEMMA": os.getenv("GEMMA_API_URL"),
+        "R1QWEN": os.getenv("R1QWEN_API_URL"),
+        "RNJ": os.getenv("RNJ_API_URL"),
+    }
+
+    configured = [k for k, v in model_env_vars.items() if v]
+    missing = [k for k, v in model_env_vars.items() if not v]
+
+    if configured:
+        logger.info(f"✓ Configured model endpoints: {', '.join(configured)}")
+    if missing:
+        logger.info(f"○ Optional endpoints not set: {', '.join(missing)}")
+
+    # Check for GitHub token
+    if get_default_github_token():
+        logger.info("✓ GitHub Models token configured")
+    else:
+        logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
+
+    # Fetch capacity and context length for each model
+    logger.info("Querying model capacities and context lengths...")
+    for model_id, endpoint in MODEL_ENDPOINTS.items():
+        capacity = await fetch_model_capacity(model_id, endpoint)
+        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(capacity)
+        MODEL_CAPACITIES[model_id] = capacity
+
+        # Also fetch context length
+        try:
+            client = HTTPClient.get_client()
+            details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
+            if details_response.status_code == 200:
+                details_data = details_response.json()
+                if "n_ctx" in details_data:
+                    LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
+                    logger.info(f"✓ {model_id}: n_ctx={details_data['n_ctx']}")
+        except Exception as e:
+            logger.warning(f"⚠️  {model_id}: failed to fetch n_ctx ({e})")
+
+    if MODEL_SEMAPHORES:
+        logger.info(f"✓ Initialized {len(MODEL_SEMAPHORES)} models with live configurations")
+
+    # Fetch GitHub models
+    from services.github_models_service import fetch_github_models
+    await fetch_github_models()
+
+    yield
+
+    # Shutdown
+    await HTTPClient.close_client()
+
+
 app = FastAPI(
     title="LLM Chat Interface",
     description="Web chat interface for multiple LLM models",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -113,69 +180,6 @@ def validate_environment():
     
     logger.info("✓ Environment validation passed")
 
-
-
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize resources on startup."""
-    # Validate environment first
-    validate_environment()
-    
-    HTTPClient.get_client()
-    
-    # Log configured model endpoints
-    model_env_vars = {
-        "QWEN": os.getenv("QWEN_API_URL"),
-        "PHI": os.getenv("PHI_API_URL"),
-        "LLAMA": os.getenv("LLAMA_API_URL"),
-        "MISTRAL": os.getenv("MISTRAL_API_URL"),
-        "GEMMA": os.getenv("GEMMA_API_URL"),
-        "R1QWEN": os.getenv("R1QWEN_API_URL"),
-        "RNJ": os.getenv("RNJ_API_URL"),
-    }
-    
-    configured = [k for k, v in model_env_vars.items() if v]
-    missing = [k for k, v in model_env_vars.items() if not v]
-    
-    if configured:
-        logger.info(f"✓ Configured model endpoints: {', '.join(configured)}")
-    if missing:
-        logger.info(f"○ Optional endpoints not set: {', '.join(missing)}")
-    
-    # Check for GitHub token (needed for Discussion/Agents)
-    if get_default_github_token():
-        logger.info("✓ GitHub Models token configured")
-    else:
-        logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
-
-    # Fetch capacity and context length for each model
-    logger.info("Querying model capacities and context lengths...")
-    for model_id, endpoint in MODEL_ENDPOINTS.items():
-        capacity = await fetch_model_capacity(model_id, endpoint)
-        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(capacity)
-        MODEL_CAPACITIES[model_id] = capacity
-
-        # Also fetch context length
-        try:
-            client = HTTPClient.get_client()
-            details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
-            if details_response.status_code == 200:
-                details_data = details_response.json()
-                if "n_ctx" in details_data:
-                    LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
-                    logger.info(f"✓ {model_id}: n_ctx={details_data['n_ctx']}")
-        except Exception as e:
-            logger.warning(f"⚠️  {model_id}: failed to fetch n_ctx ({e})")
-
-    if MODEL_SEMAPHORES:
-        logger.info(f"✓ Initialized {len(MODEL_SEMAPHORES)} models with live configurations")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up resources on shutdown."""
-    await HTTPClient.close_client()
 
 # Mount static files directory
 static_dir = pathlib.Path(__file__).parent / "static"
@@ -457,36 +461,6 @@ async def stream_multiple_models(
 
     # Send final done event
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application state"""
-    try:
-        # Validate environment
-        validate_environment()
-        logger.info("✓ Environment validation passed")
-
-        # Initialize HTTP client by getting it once (optional, but ensures it's ready)
-        HTTPClient.get_client()
-        logger.info("Initializing shared HTTP client")
-
-        # Initialize models
-        await initialize_models()
-        
-        # Fetch GitHub models
-        from services.github_models_service import fetch_github_models
-        await fetch_github_models()
-        
-    except Exception as e:
-        logger.error(f"Startup failed: {e}")
-        # Build might continue even if startup fails, but we should log it
-        
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup application state"""
-    await HTTPClient.close_client()
-    logger.info("Closing shared HTTP client")
 
 
 @app.post("/api/chat/stream")
