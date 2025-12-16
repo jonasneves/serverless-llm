@@ -1226,7 +1226,6 @@ export default function Playground() {
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
-            mode={mode}
           />
         )
       }

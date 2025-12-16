@@ -1,6 +1,5 @@
 import { SUGGESTED_TOPICS } from '../constants';
 import { Square, ArrowUp } from 'lucide-react';
-import { Mode } from '../types';
 
 interface PromptInputProps {
   inputRef: React.RefObject<HTMLInputElement>;
@@ -13,7 +12,6 @@ interface PromptInputProps {
   placeholder?: string;
   isGenerating?: boolean;
   onStop?: () => void;
-  mode?: Mode;
 }
 
 export default function PromptInput({
@@ -27,7 +25,6 @@ export default function PromptInput({
   placeholder,
   isGenerating,
   onStop,
-  mode,
 }: PromptInputProps) {
 
   return (

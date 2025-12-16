@@ -700,7 +700,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 placeholder={autoMode ? "Message (Auto mode - will use auto-selected model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
                 isGenerating={isGenerating}
                 onStop={handleStop}
-                mode="chat"
             />
         </div>
     );
