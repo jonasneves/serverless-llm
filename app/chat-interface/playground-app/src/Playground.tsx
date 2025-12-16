@@ -25,7 +25,6 @@ const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscrip
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
 import ErrorBoundary from './components/ErrorBoundary';
-import LoadingFallback from './components/LoadingFallback';
 
 import type { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
 
@@ -1089,7 +1088,7 @@ export default function Playground() {
         {mode === 'chat' && (
           <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6" data-no-arena-scroll>
             <ErrorBoundary>
-              <Suspense fallback={<LoadingFallback message="Loading chat..." timeout={10000} />}>
+              <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
                 <ChatView
                   ref={chatViewRef}
                   models={modelsData}

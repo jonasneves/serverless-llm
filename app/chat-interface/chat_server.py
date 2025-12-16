@@ -303,9 +303,15 @@ def get_model_endpoint_or_error(model_id: str, *, status_code: int = 400) -> str
 
 @app.get("/")
 async def playground_interface():
-    """Serve React Playground SPA"""
+    """Serve React Playground SPA with no-cache to ensure fresh builds are always served"""
     playground_html = static_dir / "playground" / "index.html"
-    return FileResponse(playground_html)
+    response = FileResponse(playground_html)
+    # Prevent caching of index.html so new deployments are picked up immediately
+    # The JS/CSS chunks have content hashes in filenames, so they can be cached forever
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.get("/status")
 async def status_page(request: Request):
