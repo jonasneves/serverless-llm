@@ -822,14 +822,18 @@ export function useSessionController(params: SessionControllerParams) {
           applyThinkingChunk(modelId, String(data.chunk ?? ''));
         }
 
-        if (eventType === 'turn_complete' && data.model_id) {
-          const modelId = data.model_id as string;
+        if (eventType === 'turn_complete') {
+          // Backend sends turn data nested in 'turn' object
+          const turnData = (data as any).turn;
+          const modelId = turnData?.model_id as string;
+          if (!modelId) return;
+          
           const now = performance.now();
           setExecutionTimes(prev => ({
             ...prev,
             [modelId]: { ...prev[modelId], endTime: now },
           }));
-          const turnResponse = String((data as any).response ?? '');
+          const turnResponse = String(turnData?.response ?? '');
 
           setDiscussionTurnsByModel(prev => {
             const existing = prev[modelId] || [];
