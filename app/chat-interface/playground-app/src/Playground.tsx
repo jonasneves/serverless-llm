@@ -142,6 +142,7 @@ export default function Playground() {
     history,
     historyRef: conversationHistoryRef,
     pushHistoryEntries,
+    clearHistory,
     historyToText,
     buildCarryoverHistory,
   } = useConversationHistory();

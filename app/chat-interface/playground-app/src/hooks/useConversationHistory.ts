@@ -12,6 +12,11 @@ export function useConversationHistory() {
     setHistory(next);
   }, []);
 
+  const clearHistory = useCallback(() => {
+    historyRef.current = [];
+    setHistory([]);
+  }, []);
+
   const historyToText = useCallback((entries: ChatHistoryEntry[]) => {
     return entries
       .map(entry => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`)
@@ -37,6 +42,7 @@ export function useConversationHistory() {
     history,
     historyRef,
     pushHistoryEntries,
+    clearHistory,
     historyToText,
     buildCarryoverHistory,
   };

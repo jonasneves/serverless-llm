@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Model, ChatHistoryEntry, Mode } from '../types';
 import FormattedContent from './FormattedContent';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, RotateCcw } from 'lucide-react';
 import { MODE_EXAMPLE_PROMPTS } from '../constants';
 
 interface DiscussionTranscriptProps {
@@ -9,6 +9,7 @@ interface DiscussionTranscriptProps {
     models: Model[];
     mode?: Mode;
     onSelectPrompt?: (prompt: string) => void;
+    onNewSession?: () => void;
     className?: string; // For layout positioning
     // Stage indicator props
     phaseLabel?: string | null;
@@ -23,6 +24,7 @@ export default function DiscussionTranscript({
     models,
     mode,
     onSelectPrompt,
+    onNewSession,
     className = '',
     phaseLabel,
     isGenerating,
@@ -241,6 +243,20 @@ export default function DiscussionTranscript({
                     </div>
                 )}
                 {history.map(renderEntry)}
+
+                {/* New Round button - shown when session is complete */}
+                {history.length > 0 && !isGenerating && !isSynthesizing && onNewSession && (
+                    <div className="flex justify-center py-8">
+                        <button
+                            onClick={onNewSession}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 hover:border-slate-600 rounded-full transition-all active:scale-[0.97] shadow-lg shadow-black/20"
+                        >
+                            <RotateCcw size={16} />
+                            New Round
+                        </button>
+                    </div>
+                )}
+
                 <div ref={bottomRef} />
             </div>
         </div>
