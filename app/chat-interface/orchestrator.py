@@ -32,6 +32,15 @@ class DomainType(str, Enum):
     COMMON_SENSE = "common_sense"
 
 
+# Map LLM synonym variations to canonical enum values
+DOMAIN_ALIASES = {
+    "logical_reasoning": "reasoning",
+    "logic": "reasoning",
+    "science": "scientific_knowledge",
+    "general_knowledge": "common_sense",
+}
+
+
 class QueryAnalysis(BaseModel):
     """Structured output for initial query analysis"""
     query_domains: List[DomainType] = Field(description="Relevant domains for this query")
@@ -200,6 +209,16 @@ Respond with ONLY the JSON object. Do not include the schema definition, explana
                     data = json.loads(content)
                 else:
                     raise
+
+            # Normalize domain aliases before validation
+            if "query_domains" in data and isinstance(data["query_domains"], list):
+                data["query_domains"] = [
+                    DOMAIN_ALIASES.get(d, d) for d in data["query_domains"]
+                ]
+            if "domain_weights" in data and isinstance(data["domain_weights"], dict):
+                data["domain_weights"] = {
+                    DOMAIN_ALIASES.get(k, k): v for k, v in data["domain_weights"].items()
+                }
 
             # Validate against Pydantic model
             validated_obj = response_format(**data)

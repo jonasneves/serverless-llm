@@ -39,7 +39,18 @@ export default function Playground() {
     allSelectedByType,
     modelIdToName,
   } = useModelsManager();
-  const [mode, setMode] = useState<Mode>('chat');
+  // Mode persists across page refreshes
+  const [mode, setMode] = usePersistedSetting<Mode>(
+    'playground_mode',
+    'chat',
+    {
+      serialize: value => value,
+      deserialize: (stored, fallback) => {
+        const validModes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
+        return validModes.includes(stored as Mode) ? (stored as Mode) : fallback;
+      },
+    },
+  );
   const [linesTransitioning, setLinesTransitioning] = useState(false);
   const lineTransitionTimeoutRef = useRef<number | null>(null);
 
@@ -60,14 +71,8 @@ export default function Playground() {
     deserialize: (stored, fallback) => stored ?? fallback,
   });
 
-  const [inspectorPosition, setInspectorPosition] = usePersistedSetting<'left' | 'right'>(
-    'inspector_position',
-    'right',
-    {
-      serialize: value => value,
-      deserialize: (stored, fallback) => (stored === 'left' || stored === 'right') ? (stored as 'left' | 'right') : fallback,
-    },
-  );
+  // Inspector position - simple state, resets on mode change, not persisted
+  const [inspectorPosition, setInspectorPosition] = useState<'left' | 'right'>('right');
 
   const [showCouncilReviewerNames, setShowCouncilReviewerNames] = usePersistedSetting<boolean>(
     'show_council_reviewer_names',
@@ -1128,13 +1133,14 @@ export default function Playground() {
                   orchestratorMenuRef={orchestratorMenuRef}
                   availableModels={availableModels}
                   setModerator={setModerator}
+                  councilWinnerId={councilAggregateRankings?.[0]?.model_id}
                 />
               </div>
             </div>
 
             {/* Right Panel: Transcript (Only for Council/Roundtable) */}
             {mode !== 'compare' && (
-              <div className="w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
+              <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
                 <DiscussionTranscript
                   history={history}
                   models={modelsData}

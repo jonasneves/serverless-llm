@@ -86,6 +86,26 @@ input[type="checkbox"]:hover:not(:checked) {
   -ms-user-select: text;
 }
 
+/* Enable text selection in side panels (ResponseInspector, DiscussionTranscript) */
+aside,
+aside *,
+.transcript-panel,
+.transcript-panel * {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* Keep certain interactive elements non-selectable */
+aside button,
+aside summary,
+.transcript-panel button,
+.transcript-panel summary {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .markdown-content h1,
 .markdown-content h2,
 .markdown-content h3 {

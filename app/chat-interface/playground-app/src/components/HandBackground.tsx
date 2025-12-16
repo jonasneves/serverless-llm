@@ -14,6 +14,7 @@ interface HandBackgroundProps {
         progress: number; // 0-1 progress toward trigger
         triggered: boolean;
     }) => void;
+    onError?: (message: string) => void; // Called when camera access fails
 }
 
 // Hysteresis thresholds - different values for entering vs exiting states
@@ -28,7 +29,8 @@ export default function HandBackground({
     onSendMessage,
     onScroll,
     onPinch,
-    onGestureState
+    onGestureState,
+    onError
 }: HandBackgroundProps) {
     // Refs for callbacks to avoid stale closures in RAF loop
     const onStopGenerationRef = useRef(onStopGeneration);
@@ -43,6 +45,8 @@ export default function HandBackground({
     onScrollRef.current = onScroll;
     onPinchRef.current = onPinch;
     onGestureStateRef.current = onGestureState;
+    const onErrorRef = useRef(onError);
+    onErrorRef.current = onError;
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -661,6 +665,18 @@ export default function HandBackground({
                     }
                 }).catch(err => {
                     console.error("Error accessing webcam:", err);
+                    // Notify user with appropriate message
+                    let message = "Could not access camera";
+                    if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                        message = "No camera found. Please connect a webcam to use gesture control.";
+                    } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        message = "Camera access denied. Please allow camera access in your browser settings.";
+                    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                        message = "Camera is in use by another application.";
+                    }
+                    if (onErrorRef.current) {
+                        onErrorRef.current(message);
+                    }
                 });
             } else {
                 console.warn("navigator.mediaDevices is undefined. Camera access requires HTTPS or localhost.");

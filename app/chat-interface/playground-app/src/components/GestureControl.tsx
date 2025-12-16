@@ -23,6 +23,7 @@ export default function GestureControl(props: GestureControlProps) {
     triggered: boolean;
   }>({ gesture: null, progress: 0, triggered: false });
   const [flashTrigger, setFlashTrigger] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Load preference from localStorage on mount
   useEffect(() => {
@@ -67,6 +68,14 @@ export default function GestureControl(props: GestureControlProps) {
       setFlashTrigger(true);
       setTimeout(() => setFlashTrigger(false), 300);
     }
+  };
+
+  // Handle camera errors
+  const handleCameraError = (message: string) => {
+    setCameraError(message);
+    setIsActive(false); // Deactivate gesture control
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => setCameraError(null), 5000);
   };
 
   const toggle = () => {
@@ -326,7 +335,23 @@ export default function GestureControl(props: GestureControlProps) {
       )}
 
       {isActive && (
-        <HandBackground {...props} onGestureState={handleGestureState} />
+        <HandBackground {...props} onGestureState={handleGestureState} onError={handleCameraError} />
+      )}
+
+      {/* Camera Error Toast */}
+      {cameraError && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="bg-red-900/90 backdrop-blur-md border border-red-500/50 text-red-100 px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 max-w-md">
+            <Camera size={18} className="text-red-400 shrink-0" />
+            <span className="text-sm">{cameraError}</span>
+            <button
+              onClick={() => setCameraError(null)}
+              className="ml-2 text-red-300 hover:text-white transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

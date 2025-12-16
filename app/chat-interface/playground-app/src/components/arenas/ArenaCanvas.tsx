@@ -60,6 +60,7 @@ interface ArenaCanvasProps {
   orchestratorMenuRef: MutableRefObject<HTMLDivElement | null>;
   availableModels: Model[];
   setModerator: (id: string) => void;
+  councilWinnerId?: string; // ID of the top-ranked model in Council mode
 }
 
 const GRID_CARD_WIDTH = 256;
@@ -80,7 +81,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     cardRefs,
     handlePointerDown,
     dragState,
-    handleModelToggle,
     setContextMenu,
     suppressClickRef,
     getTailSnippet,
@@ -108,6 +108,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     orchestratorMenuRef,
     availableModels,
     setModerator,
+    councilWinnerId,
   } = props;
 
   const isCircleMode = mode !== 'compare';
@@ -314,19 +315,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 transition: 'transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out, width 0.7s cubic-bezier(0.4, 0, 0.2, 1), height 0.7s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleModelToggle(model.id);
-                }}
-                className={`absolute w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all opacity-0 z-50 ${isCircleMode ? '-top-3 -right-3' : '-top-2 -right-2'}`}
-                style={{ opacity: isSelected || isHovered ? 1 : undefined }}
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-
               {!isCircleMode && (
                 <div style={GRID_CONTENT_STYLE}>
                   <div className="flex items-center justify-between mb-3 gap-2">
@@ -386,20 +374,17 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
 
             </div>
 
-            {/* Persona Circle for Personality Mode */}
+            {/* Persona Badge - Bottom Center */}
             {mode === 'personality' && isCircleMode && model.personaEmoji && (
               <div
-                className="absolute rounded-full flex items-center justify-center pointer-events-none"
+                className="absolute left-1/2 -translate-x-1/2 rounded-full flex items-center justify-center"
                 style={{
-                  width: '48px',
-                  height: '48px',
-                  top: '-8px',
-                  right: '-8px',
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2))',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.2)',
-                  backdropFilter: 'blur(8px)',
-                  fontSize: '24px',
+                  width: '28px',
+                  height: '28px',
+                  bottom: '-8px',
+                  background: 'rgba(15, 23, 42, 0.98)',
+                  border: `1.5px solid ${effectiveColor}`,
+                  fontSize: '14px',
                   zIndex: 100,
                   transition: 'transform 180ms ease-out',
                   transform: isSpeaking ? 'scale(1.1)' : 'scale(1)',
@@ -407,6 +392,27 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 title={model.personaName ? `${model.personaName} - ${model.personaTrait}` : 'Persona'}
               >
                 {model.personaEmoji}
+              </div>
+            )}
+
+            {/* Council Winner Badge - Bottom Center */}
+            {mode === 'council' && isCircleMode && councilWinnerId === model.id && !isGenerating && !isSynthesizing && (
+              <div
+                className="absolute left-1/2 -translate-x-1/2 rounded-full flex items-center justify-center"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  bottom: '-8px',
+                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))',
+                  border: '1.5px solid rgba(251, 191, 36, 0.6)',
+                  boxShadow: '0 0 8px rgba(251, 191, 36, 0.3)',
+                  fontSize: '14px',
+                  zIndex: 100,
+                  animation: 'pulse 2s ease-in-out infinite',
+                }}
+                title="Top Ranked Response"
+              >
+                🏆
               </div>
             )}
 

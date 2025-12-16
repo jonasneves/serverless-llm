@@ -16,7 +16,7 @@ const MODES: { value: Mode; label: string }[] = [
   { value: 'compare', label: 'Compare' },
   { value: 'council', label: 'Council' },
   { value: 'roundtable', label: 'Roundtable' },
-  { value: 'personality', label: 'Personality' }
+  { value: 'personality', label: 'Personalities' }
 ];
 
 export default function Header({
@@ -57,15 +57,6 @@ export default function Header({
     setIsMobileMenuOpen(false);
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      event.preventDefault();
-      const direction = event.key === 'ArrowLeft' ? -1 : 1;
-      const newIndex = (safeIndex + direction + MODES.length) % MODES.length;
-      handleModeSelect(MODES[newIndex].value);
-    }
-  };
-
   return (
     <div className="fixed top-0 left-0 right-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none">
       {/* Background layer */}
@@ -94,8 +85,6 @@ export default function Header({
           {/* Mode Toggle Track */}
           <div
             className="relative flex p-1 rounded-lg bg-black/20 mode-track"
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
             role="radiogroup"
             aria-label="Mode selection"
           >
