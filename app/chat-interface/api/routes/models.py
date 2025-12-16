@@ -19,7 +19,7 @@ async def list_models(
     List all available models (local and API)
     """
     from core.config import MODEL_CONFIG, MODEL_ENDPOINTS, DEFAULT_MODEL_ID
-    from model_profiles import MODEL_PROFILES
+    from clients.model_profiles import MODEL_PROFILES
 
     def get_context_length(model_id: str) -> int:
         """Get context length: prefer live value from server, fall back to profile."""
