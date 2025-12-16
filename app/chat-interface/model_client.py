@@ -17,7 +17,7 @@ from model_profiles import MODEL_PROFILES, get_display_name
 from constants import GITHUB_MODELS_API_URL
 from error_utils import sanitize_error_message
 from rate_limiter import get_rate_limiter
-from core.state import UNSUPPORTED_GITHUB_MODELS
+from core.state import UNSUPPORTED_GITHUB_MODELS, record_successful_inference
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +152,9 @@ class ModelClient:
             content = data["choices"][0]["message"]["content"]
             usage = data.get("usage", {})
             
+            # Record successful inference for health tracking
+            record_successful_inference(model_id)
+            
             return {
                 "content": content,
                 "usage": usage,
@@ -268,6 +271,9 @@ class ModelClient:
                     except json.JSONDecodeError:
                         continue
                         
+            # Record successful inference for health tracking
+            record_successful_inference(model_id)
+            
             yield {
                 "type": "done", 
                 "full_content": full_content, 

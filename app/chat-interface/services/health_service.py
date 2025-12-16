@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 from http_client import HTTPClient
 from core.config import MODEL_ENDPOINTS, MODEL_DISPLAY_NAMES
-from core.state import LIVE_CONTEXT_LENGTHS
+from core.state import LIVE_CONTEXT_LENGTHS, is_inference_fresh, get_last_inference_age
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,22 @@ async def check_model_health(model_id: str, endpoint: str) -> Dict[str, Any]:
             except Exception:
                 pass  # Details endpoint is optional, don't fail the health check
 
-            # Additionally test a simple completion to verify model works
+            # Check if model had recent successful inference - skip test if so
+            if is_inference_fresh(model_id):
+                last_age = get_last_inference_age(model_id)
+                age_str = f"{int(last_age)}s ago" if last_age else "unknown"
+                logger.debug(f"Skipping inference test for {model_id} - recent activity {age_str}")
+                return {
+                    "status": "online",
+                    "endpoint": endpoint,
+                    "health": health_data,
+                    "inference_test": "verified_by_recent_activity",
+                    "last_inference_age_seconds": int(last_age) if last_age else None,
+                    "response_time_ms": int((time.time() - start_time) * 1000),
+                    "context_length": LIVE_CONTEXT_LENGTHS.get(model_id)
+                }
+
+            # No recent inference - perform actual test to verify model works
             try:
                 test_response = await client.post(
                     f"{endpoint}/v1/chat/completions",
