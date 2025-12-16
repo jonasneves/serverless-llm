@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="/static/components/cards.css?v={{ cards_css }}">
   <link rel="stylesheet" href="/static/components/forms.css?v={{ forms_css }}">
   <link rel="stylesheet" href="/static/components/badges.css?v={{ badges_css }}">
-  <link rel="stylesheet" href="/static/components/model-selector.css?v={{ model_selector_css }}">
+
   <link rel="stylesheet" href="/static/components/modals.css?v={{ modals_css }}">
   <link rel="stylesheet" href="/static/common.css?v={{ common_css }}">
   <!-- KaTeX for LaTeX rendering -->
@@ -37,7 +37,7 @@
     crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
-  <script defer src="/static/content-formatter.js?v={{ content_formatter_js }}"></script>
+
   <script>
     // Smart dropdown positioning utility
     document.addEventListener('DOMContentLoaded', function () {
@@ -109,40 +109,7 @@
     <div class="header-actions">
       <nav class="modes">
         <a href="/" class="mode-link {% if request.url.path == '/' %}active{% endif %}">
-          Chat
-        </a>
-
-        <!-- Lab (Experimental Modes) Dropdown -->
-        <div class="mode-dropdown">
-          <button
-            class="mode-link dropdown-trigger {% if request.url.path in ['/autogen', '/variations', '/confessions'] %}active{% endif %}">
-            Lab
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              style="margin-left: 4px;">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <div class="dropdown-menu">
-
-            <a href="/variations" class="dropdown-item {% if request.url.path == '/variations' %}active{% endif %}">
-              <div class="dropdown-item-content">
-                <span class="dropdown-item-title">Variations</span>
-                <span class="dropdown-item-desc">Verbalized sampling</span>
-              </div>
-            </a>
-            <a href="/confessions" class="dropdown-item {% if request.url.path == '/confessions' %}active{% endif %}">
-              <div class="dropdown-item-content">
-                <span class="dropdown-item-title">Confessions</span>
-                <span class="dropdown-item-desc">Honesty reports</span>
-              </div>
-            </a>
-          </div>
-        </div>
-
-        <a href="/playground" target="_blank" rel="noopener noreferrer"
-          class="mode-link {% if request.url.path == '/playground' %}active{% endif %}">
-          Arena <span
-            style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;">New</span>
+          Home
         </a>
       </nav>
 

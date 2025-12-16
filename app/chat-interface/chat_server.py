@@ -40,8 +40,7 @@ from model_profiles import MODEL_PROFILES
 
 
 # Verbalized Sampling mode imports
-from verbalized_sampling_engine import VerbalizedSamplingEngine
-from confession_engine import ConfessionEngine
+# Removed
 from error_utils import sanitize_error_message
 from rate_limiter import get_rate_limiter
 
@@ -192,13 +191,12 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(static_dir))
 
 # Include API routers
-from api.routes import chat, models, discussion, council, special, health, personality
+from api.routes import chat, models, discussion, council, health, personality
 
 app.include_router(chat.router)
 app.include_router(models.router)
 app.include_router(discussion.router)
 app.include_router(council.router)
-app.include_router(special.router)
 app.include_router(health.router)
 app.include_router(personality.router)
 
@@ -243,18 +241,10 @@ def get_static_versions() -> dict:
         "cards_css": get_file_version("components/cards.css"),
         "forms_css": get_file_version("components/forms.css"),
         "badges_css": get_file_version("components/badges.css"),
-        "model_selector_css": get_file_version("components/model-selector.css"),
         "modals_css": get_file_version("components/modals.css"),
         "common_css": get_file_version("common.css"),
-        "chat_css": get_file_version("chat.css"),
         "settings_js": get_file_version("settings.js"),
         "content_formatter_js": get_file_version("content-formatter.js"),
-        "chat_js": get_file_version("chat.js"),
-
-        "verbalized_sampling_js": get_file_version("verbalized_sampling.js"),
-        "confessions_js": get_file_version("confessions.js"),
-        "model_loader_js": get_file_version("model-loader.js"),
-        "model_selector_js": get_file_version("model-selector.js"),
     }
 
 # Models ordered by capability (Dec 2025 benchmarks)
@@ -278,8 +268,7 @@ from api.models import (
     ModelStatus,
     CouncilRequest,
     DiscussionRequest,
-    VerbalizedSamplingRequest,
-    ConfessionRequest
+    PersonalityRequest,
 )
 
 
@@ -319,33 +308,6 @@ def get_model_endpoint_or_error(model_id: str, *, status_code: int = 400) -> str
 
 
 @app.get("/")
-async def chat_interface(request: Request):
-    """Serve chat interface with automatic cache busting"""
-    return templates.TemplateResponse(
-        "chat.html",
-        {"request": request, **get_static_versions()}
-    )
-
-
-
-@app.get("/variations")
-async def variations_interface(request: Request):
-    """Serve Verbalized Sampling (Variations) interface with automatic cache busting"""
-    return templates.TemplateResponse(
-        "verbalized_sampling.html",
-        {"request": request, **get_static_versions()}
-    )
-
-
-@app.get("/confessions")
-async def confessions_interface(request: Request):
-    """Serve Confessions mode interface"""
-    return templates.TemplateResponse(
-        "confessions.html",
-        {"request": request, **get_static_versions()}
-    )
-
-@app.get("/playground")
 async def playground_interface():
     """Serve React Playground SPA"""
     playground_html = static_dir / "playground" / "index.html"
@@ -642,71 +604,11 @@ async def stream_council_events(
 
 
 # ===== VERBALIZED SAMPLING MODE =====
-async def stream_verbalized_sampling_events(
-    query: str,
-    model: str,
-    num_responses: int,
-    temperature: float,
-    max_tokens: int
-) -> AsyncGenerator[str, None]:
-    """
-    Stream Verbalized Sampling events
-    
-    Uses the Stanford research technique to unlock LLM diversity by asking for
-    a distribution of responses rather than a single response.
-    """
-    try:
-        # Get model endpoint
-        if model not in MODEL_ENDPOINTS:
-            yield f"data: {json.dumps({'event': 'error', 'error': f'Model {model} not found'}, ensure_ascii=False)}\n\n"
-            return
-        
-        model_endpoint = MODEL_ENDPOINTS[model]
-        model_name = MODEL_DISPLAY_NAMES.get(model, model)
-        
-        # Create engine and stream responses
-        engine = VerbalizedSamplingEngine(model_endpoint, model_name)
-        
-        async for event in engine.generate_diverse_responses(
-            query=query,
-            num_responses=num_responses,
-            temperature=temperature,
-            max_tokens=max_tokens
-        ):
-            # Ensure proper JSON encoding
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-    
-    except Exception as e:
-        logger.error(f"Verbalized Sampling error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+# Removed
 
 
 # ===== CONFESSIONS MODE =====
-async def stream_confession_events(
-    query: str,
-    model: str,
-    temperature: float,
-    max_tokens: int
-) -> AsyncGenerator[str, None]:
-    try:
-        if model not in MODEL_ENDPOINTS:
-            yield f"data: {json.dumps({'event': 'error', 'error': f'Model {model} not found'}, ensure_ascii=False)}\n\n"
-            return
-
-        endpoint = MODEL_ENDPOINTS[model]
-        model_name = MODEL_DISPLAY_NAMES.get(model, model)
-        engine = ConfessionEngine(endpoint, model_name)
-
-        async for event in engine.generate_with_confession(
-            query=query,
-            temperature=temperature,
-            max_tokens=max_tokens
-        ):
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-
-    except Exception as e:
-        logger.error(f"Confessions mode error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+# Removed
 
 
 if __name__ == "__main__":

@@ -50,12 +50,6 @@ class DiscussionRequest(GenerationParams):
     participants: Optional[List[str]] = None  # List of model IDs to participate (default: all local models)
 
 
-class VerbalizedSamplingRequest(BaseModel):
-    query: str
-
-
-class ConfessionRequest(BaseModel):
-    query: str
 
 
 class PersonalityRequest(BaseModel):
