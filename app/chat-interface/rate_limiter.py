@@ -7,6 +7,7 @@ import logging
 from collections import deque
 from typing import Optional, Dict
 from dataclasses import dataclass
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +79,8 @@ class RateLimiter:
 
             now = time.time()
 
-            # Enforce minimum interval between requests
-            if self.last_request_time > 0:
+            # Enforce minimum interval between requests ONLY if we've been rate limited recently
+            if self.consecutive_429s > 0 and self.last_request_time > 0:
                 time_since_last = now - self.last_request_time
                 if time_since_last < self.config.min_request_interval:
                     wait_time = self.config.min_request_interval - time_since_last
@@ -134,15 +135,25 @@ class RateLimiter:
     async def acquire(self):
         """
         Acquire permission to make a request
-
+        
         This should be used with 'async with' pattern:
         async with await rate_limiter.acquire():
             # Make API request here
-
-        Check rate_limiter.last_wait_message after acquiring for user notification
+            
+        This method returns a context manager that:
+        1. Acquires the concurrency semaphore
+        2. Checks rate limits and waits if needed (inside the semaphore lock)
+        3. Yields control to the caller
         """
-        self.last_wait_message = await self._wait_if_needed()
-        return self.semaphore
+        @asynccontextmanager
+        async def _controlled_execution():
+            async with self.semaphore:
+                # Check limits inside the semaphore so pending requests see the updated state 
+                # (e.g. 429s from recent requests) and wait accordingly
+                self.last_wait_message = await self._wait_if_needed()
+                yield
+        
+        return _controlled_execution()
 
     def get_wait_message(self) -> Optional[str]:
         """Get the last wait message (if any) and clear it"""
@@ -209,12 +220,10 @@ async def get_rate_limiter(endpoint: str, token: str = "default", model_id: str 
     Returns:
         RateLimiter instance
     """
-    # Use model_id if provided (for GitHub Models per-model limits)
-    # Otherwise fall back to endpoint-based limiting
-    if model_id:
-        key = f"{model_id}:{token[:16]}"
-    else:
-        key = f"{endpoint}:{token[:16]}"
+    # Use endpoint + token as key to share rate limits across all models using the same token
+    # This ensures we respect the global rate limit (concurrent requests, etc.)
+    # Note: We ignore model_id for the key because the request quota is global per token
+    key = f"{endpoint}:{token[:16]}"
 
     async with _limiters_lock:
         if key not in _rate_limiters:
