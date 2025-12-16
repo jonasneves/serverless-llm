@@ -100,7 +100,6 @@ async def chat_multi(request: MultiChatRequest):
         query_model
     )
     from http_client import HTTPClient
-    from core.state import MODEL_SEMAPHORES
 
     messages = serialize_messages(request.messages)
 

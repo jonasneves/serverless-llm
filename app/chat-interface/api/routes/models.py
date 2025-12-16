@@ -2,26 +2,29 @@
 Model listing and health check API routes
 """
 
-from fastapi import APIRouter
+from typing import Dict
+from fastapi import APIRouter, Depends
 
 from api.models import ModelStatus
+from core.dependencies import get_live_context_lengths
 
 router = APIRouter(prefix="/api/models", tags=["models"])
 
 
 @router.get("")
-async def list_models():
+async def list_models(
+    live_context_lengths: Dict[str, int] = Depends(get_live_context_lengths)
+):
     """
     List all available models (local and API)
     """
     from core.config import MODEL_CONFIG, MODEL_ENDPOINTS, DEFAULT_MODEL_ID
-    from core.state import LIVE_CONTEXT_LENGTHS
     from model_profiles import MODEL_PROFILES
 
     def get_context_length(model_id: str) -> int:
         """Get context length: prefer live value from server, fall back to profile."""
-        if model_id in LIVE_CONTEXT_LENGTHS:
-            return LIVE_CONTEXT_LENGTHS[model_id]
+        if model_id in live_context_lengths:
+            return live_context_lengths[model_id]
         return MODEL_PROFILES.get(model_id, {}).get("context_length", 0)
 
     # Build list of local models from MODEL_CONFIG

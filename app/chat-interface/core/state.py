@@ -27,10 +27,21 @@ LAST_SUCCESSFUL_INFERENCE: Dict[str, float] = {}
 # If inference happened within this window, health check skips the test inference
 INFERENCE_FRESHNESS_WINDOW: float = 300.0  # 5 minutes
 
+# Locks for concurrent access to mutable state
+_INFERENCE_LOCK = asyncio.Lock()
+_UNSUPPORTED_MODELS_LOCK = asyncio.Lock()
 
-def record_successful_inference(model_id: str) -> None:
+
+async def record_successful_inference(model_id: str) -> None:
     """Record that a model just completed a successful inference."""
-    LAST_SUCCESSFUL_INFERENCE[model_id] = time.time()
+    async with _INFERENCE_LOCK:
+        LAST_SUCCESSFUL_INFERENCE[model_id] = time.time()
+
+
+async def mark_model_unsupported(model_id: str) -> None:
+    """Mark a GitHub model as unsupported."""
+    async with _UNSUPPORTED_MODELS_LOCK:
+        UNSUPPORTED_GITHUB_MODELS.add(model_id)
 
 
 def get_last_inference_age(model_id: str) -> float | None:

@@ -17,7 +17,7 @@ from model_profiles import MODEL_PROFILES, get_display_name
 from constants import GITHUB_MODELS_API_URL
 from error_utils import sanitize_error_message
 from rate_limiter import get_rate_limiter
-from core.state import UNSUPPORTED_GITHUB_MODELS, record_successful_inference
+from core.state import UNSUPPORTED_GITHUB_MODELS, record_successful_inference, mark_model_unsupported
 
 logger = logging.getLogger(__name__)
 
@@ -163,10 +163,10 @@ class ModelClient:
                  
             content = data["choices"][0]["message"]["content"]
             usage = data.get("usage", {})
-            
+
             # Record successful inference for health tracking
-            record_successful_inference(model_id)
-            
+            await record_successful_inference(model_id)
+
             return {
                 "content": content,
                 "usage": usage,
@@ -219,7 +219,7 @@ class ModelClient:
                     error_raw = response.text
                     # Check for unknown model
                     if "unknown_model" in error_raw.lower():
-                        self.unsupported_github_models.add(model_id)
+                        await mark_model_unsupported(model_id)
                     raise Exception(sanitize_error_message(error_raw, url))
                     
                 rate_limiter.record_success()
@@ -282,10 +282,10 @@ class ModelClient:
                                 yield {"type": "chunk", "content": content, "model_id": model_id}
                     except json.JSONDecodeError:
                         continue
-                        
+
             # Record successful inference for health tracking
-            record_successful_inference(model_id)
-            
+            await record_successful_inference(model_id)
+
             yield {
                 "type": "done", 
                 "full_content": full_content, 
@@ -346,7 +346,7 @@ class ModelClient:
                         error_raw = await response.aread()
                         decoded_error = error_raw.decode(errors='ignore')
                         if "unknown_model" in decoded_error.lower():
-                             self.unsupported_github_models.add(model_id)
+                            await mark_model_unsupported(model_id)
                         raise Exception(sanitize_error_message(decoded_error, url))
                     
                     rate_limiter.record_success()
