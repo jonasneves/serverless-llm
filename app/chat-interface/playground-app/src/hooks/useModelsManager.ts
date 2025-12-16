@@ -15,8 +15,15 @@ interface ModelsApiResponse {
   models: ModelsApiModel[];
 }
 
+// Retry config for initial model loading (handles cold starts)
+const INITIAL_RETRY_DELAY = 500;   // Start with 500ms
+const MAX_RETRY_DELAY = 4000;      // Cap at 4s
+const MAX_RETRIES = 10;            // Give up after ~30s total
+
 export function useModelsManager() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Multi-model selection (for Compare, Council, Roundtable, Personalities)
   const [persistedSelected, setPersistedSelected] = usePersistedSetting<string[] | null>('playground_selected_models', null);
@@ -39,16 +46,23 @@ export function useModelsManager() {
 
   useEffect(() => {
     let isActive = true;
+    let retryCount = 0;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    async function loadModels() {
+    async function loadModels(): Promise<boolean> {
       try {
         const response = await fetch('/api/models');
         if (!response.ok) {
-          throw new Error(`Failed to fetch models: ${response.status}`);
+          throw new Error(`HTTP ${response.status}`);
         }
 
         const data: ModelsApiResponse = await response.json();
-        if (!isActive) return;
+        if (!isActive) return true;
+
+        // Check if we got actual models (backend might return empty during startup)
+        if (!data.models || data.models.length === 0) {
+          throw new Error('No models available');
+        }
 
         const apiModels = data.models.map((model) => {
           const modelType: 'local' | 'api' = model.type === 'api' ? 'api' : 'local';
@@ -65,6 +79,8 @@ export function useModelsManager() {
         });
 
         setModelsData(apiModels);
+        setIsLoading(false);
+        setLoadError(null);
 
         // Initialize multi-model selection (for Compare, Council, etc.) with local models
         if (!isSelectionInitialized.current) {
@@ -82,14 +98,33 @@ export function useModelsManager() {
         const apiModeratorCandidate = apiModels.find(m => m.type === 'api');
         const fallbackModerator = apiModels[0]?.id || '';
         setModerator(apiModeratorCandidate?.id || fallbackModerator);
+        
+        return true; // Success
       } catch (error) {
-        console.error('Failed to fetch models:', error);
+        console.warn(`Model fetch attempt ${retryCount + 1} failed:`, error);
+        return false; // Failed, should retry
       }
     }
 
-    loadModels();
+    async function loadWithRetry() {
+      const success = await loadModels();
+      
+      if (!success && isActive && retryCount < MAX_RETRIES) {
+        retryCount++;
+        const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(1.5, retryCount - 1), MAX_RETRY_DELAY);
+        setLoadError(`Connecting to backend... (attempt ${retryCount}/${MAX_RETRIES})`);
+        retryTimeout = setTimeout(loadWithRetry, delay);
+      } else if (!success && retryCount >= MAX_RETRIES) {
+        setIsLoading(false);
+        setLoadError('Could not connect to backend. Please refresh the page.');
+      }
+    }
+
+    loadWithRetry();
+    
     return () => {
       isActive = false;
+      if (retryTimeout) clearTimeout(retryTimeout);
     };
   }, []);
 
@@ -135,5 +170,7 @@ export function useModelsManager() {
     totalModelsByType,
     allSelectedByType,
     modelIdToName,
+    isLoading,
+    loadError,
   };
 }

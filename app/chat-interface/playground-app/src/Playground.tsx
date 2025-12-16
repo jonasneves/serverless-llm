@@ -43,6 +43,8 @@ export default function Playground() {
     totalModelsByType,
     allSelectedByType,
     modelIdToName,
+    isLoading: isLoadingModels,
+    loadError: modelsLoadError,
   } = useModelsManager();
   // Mode persists across page refreshes
   const [mode, setMode] = usePersistedSetting<Mode>(
@@ -972,6 +974,25 @@ export default function Playground() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
+      {/* Loading overlay while models are being fetched */}
+      {isLoadingModels && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/95 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="relative">
+              <div className="w-12 h-12 border-2 border-slate-700 border-t-blue-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-b-emerald-500/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-white/80 text-sm font-medium">
+                {modelsLoadError || 'Connecting to models...'}
+              </p>
+              <p className="text-white/40 text-xs">
+                This may take a moment on first load
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <Suspense fallback={null}>
         <GestureControl
           transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
