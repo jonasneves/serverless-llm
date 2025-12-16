@@ -11,10 +11,10 @@ from typing import Dict, List, Any, AsyncGenerator, Optional
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
-from orchestrator import GitHubModelsOrchestrator, QueryAnalysis, TurnEvaluation, SynthesisResult, TokenUsage
-from model_profiles import MODEL_PROFILES, rank_models_for_query
-from error_utils import sanitize_error_message
-from rate_limiter import get_rate_limiter
+from engines.orchestrator import GitHubModelsOrchestrator, QueryAnalysis, TurnEvaluation, SynthesisResult, TokenUsage
+from clients.model_profiles import MODEL_PROFILES, rank_models_for_query
+from middleware.error_utils import sanitize_error_message
+from middleware.rate_limiter import get_rate_limiter
 from prompts import (
     get_roundtable_lead_system,
     get_roundtable_participant_system,
@@ -59,7 +59,7 @@ class DiscussionState:
             self.started_at = datetime.utcnow().isoformat()
 
 
-from model_client import ModelClient
+from clients.model_client import ModelClient
 
 class DiscussionEngine:
     """

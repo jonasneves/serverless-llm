@@ -4,7 +4,7 @@ import httpx
 import logging
 from typing import Dict, Any
 
-from http_client import HTTPClient
+from clients.http_client import HTTPClient
 from core.config import MODEL_ENDPOINTS, MODEL_DISPLAY_NAMES
 from core.state import LIVE_CONTEXT_LENGTHS, is_inference_fresh, get_last_inference_age
 

@@ -33,7 +33,7 @@ async def stream_personality_events(
     - error: Error occurred
     """
     try:
-        from personality_engine import PersonalityEngine
+        from engines.personality import PersonalityEngine
         from utils.github_token import get_default_github_token
         from core.config import MODEL_ENDPOINTS
 

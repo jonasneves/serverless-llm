@@ -7,7 +7,7 @@ import logging
 import json
 from typing import Dict, Any
 import httpx
-from http_client import HTTPClient
+from clients.http_client import HTTPClient
 
 logger = logging.getLogger(__name__)
 

@@ -24,7 +24,7 @@ async def chat(request: ChatRequest):
         serialize_messages,
         build_completion_payload
     )
-    from http_client import HTTPClient
+    from clients.http_client import HTTPClient
 
     endpoint = get_model_endpoint_or_error(request.model)
     full_url = f"{endpoint}/v1/chat/completions"
@@ -99,7 +99,7 @@ async def chat_multi(request: MultiChatRequest):
         serialize_messages,
         query_model
     )
-    from http_client import HTTPClient
+    from clients.http_client import HTTPClient
 
     messages = serialize_messages(request.messages)
 

@@ -13,9 +13,9 @@ import json
 import re
 import random
 from collections import defaultdict
-from model_profiles import MODEL_PROFILES, get_display_name
-from error_utils import sanitize_error_message
-from rate_limiter import get_rate_limiter
+from clients.model_profiles import MODEL_PROFILES, get_display_name
+from middleware.error_utils import sanitize_error_message
+from middleware.rate_limiter import get_rate_limiter
 from services.streaming import merge_async_generators
 from prompts import COUNCIL_STAGE1_SYSTEM, COUNCIL_STAGE2_SYSTEM, COUNCIL_STAGE3_SYSTEM
 
@@ -99,7 +99,7 @@ class CouncilEngine:
         self._quip_cooldown = 8.0  # Seconds between quips (increased to reduce spam)
         
         # Initialize unified model client
-        from model_client import ModelClient
+        from clients.model_client import ModelClient
         self.client = ModelClient(github_token)
 
     def generate_quip(

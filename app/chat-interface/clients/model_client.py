@@ -11,12 +11,12 @@ import os
 from typing import List, Dict, Any, AsyncGenerator, Optional
 import httpx
 
-from http_client import HTTPClient
+from clients.http_client import HTTPClient
+from clients.model_profiles import MODEL_PROFILES, get_display_name
 from core.config import MODEL_ENDPOINTS
-from model_profiles import MODEL_PROFILES, get_display_name
 from constants import GITHUB_MODELS_API_URL
-from error_utils import sanitize_error_message
-from rate_limiter import get_rate_limiter
+from middleware.error_utils import sanitize_error_message
+from middleware.rate_limiter import get_rate_limiter
 from core.state import UNSUPPORTED_GITHUB_MODELS, record_successful_inference, mark_model_unsupported
 
 logger = logging.getLogger(__name__)

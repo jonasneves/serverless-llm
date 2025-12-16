@@ -10,9 +10,9 @@ Flow:
 from typing import List, Dict, Any, AsyncGenerator
 import asyncio
 import json
-from model_profiles import get_display_name
+from clients.model_profiles import get_display_name
 from prompts import PERSONALITY_SIMPLE_SYSTEM
-from model_client import ModelClient
+from clients.model_client import ModelClient
 
 
 class PersonalityEngine:

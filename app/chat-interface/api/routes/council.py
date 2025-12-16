@@ -34,7 +34,7 @@ async def stream_council_events(
     - Stage 3: Chairman synthesizes final answer
     """
     try:
-        from council_engine import CouncilEngine
+        from engines.council import CouncilEngine
 
         # Get GitHub token
         token = github_token or get_default_github_token()

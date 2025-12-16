@@ -39,7 +39,7 @@ async def stream_discussion_events(
     - error: Error occurred
     """
     try:
-        from discussion_engine import DiscussionEngine
+        from engines.discussion import DiscussionEngine
         from utils.github_token import get_default_github_token
         from core.config import MODEL_ENDPOINTS
 
@@ -60,7 +60,7 @@ async def stream_discussion_events(
         is_api_model = selected_orchestrator in api_models
 
         if is_api_model:
-            from orchestrator import GitHubModelsOrchestrator
+            from engines.orchestrator import GitHubModelsOrchestrator
 
             # Use user-provided token if available
             token = github_token or get_default_github_token()
@@ -74,7 +74,7 @@ async def stream_discussion_events(
             )
         else:
             # Local model orchestrator
-            from orchestrator import LocalModelOrchestrator
+            from engines.orchestrator import LocalModelOrchestrator
 
             if selected_orchestrator not in MODEL_ENDPOINTS:
                 yield f"data: {json.dumps({'event': 'error', 'error': f'Unknown orchestrator model: {selected_orchestrator}'})}\n\n"

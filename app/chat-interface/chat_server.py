@@ -20,37 +20,28 @@ import uvicorn
 import pathlib
 from urllib.parse import urlparse
 
-from http_client import HTTPClient
+from clients.http_client import HTTPClient
+from clients.model_client import ModelClient
+from clients.model_profiles import MODEL_PROFILES
 from constants import DEFAULT_LOCAL_ENDPOINTS
 from services.health_service import fetch_model_capacity
 from core.state import MODEL_CAPACITIES, LIVE_CONTEXT_LENGTHS
 from core.config import (
     MODEL_CONFIG,
-
     MODEL_ENDPOINTS,
     MODEL_DISPLAY_NAMES,
     DEFAULT_MODEL_ID,
     get_endpoint
 )
-
-# Discussion mode imports
-from orchestrator import GitHubModelsOrchestrator
-from discussion_engine import DiscussionEngine
-from model_profiles import MODEL_PROFILES
-
-
-
-# Verbalized Sampling mode imports
-# Removed
-from error_utils import sanitize_error_message
-from rate_limiter import get_rate_limiter
-
+from engines.orchestrator import GitHubModelsOrchestrator
+from engines.discussion import DiscussionEngine
+from middleware.error_utils import sanitize_error_message
+from middleware.rate_limiter import get_rate_limiter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from model_client import ModelClient
 model_client = ModelClient()
 
 # Cache of GitHub Models that returned "unknown_model".

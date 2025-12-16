@@ -8,9 +8,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator, Dict, Any, List, Optional
 
-from model_client import ModelClient
+from clients.model_client import ModelClient
 from utils.github_token import get_default_github_token
-from error_utils import create_error_event
+from middleware.error_utils import create_error_event
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ import aiohttp
 from typing import List, Dict, Any, Optional, Type
 from pydantic import BaseModel, Field
 from enum import Enum
-from rate_limiter import get_rate_limiter
+from middleware.rate_limiter import get_rate_limiter
 from constants import GITHUB_MODELS_API_URL
 
 # Configure logging
@@ -138,7 +138,7 @@ class GitHubModelsOrchestrator:
         self.max_tokens = max_tokens
         
         # Initialize unified model client
-        from model_client import ModelClient
+        from clients.model_client import ModelClient
         self.client = ModelClient(self.github_token)
 
         if not self.github_token:
@@ -389,7 +389,7 @@ IMPORTANT: Use actual model IDs from the discussion (e.g., "phi-3-mini", "qwen3-
         Returns:
             Dict with limit, remaining, and reset information
         """
-        from http_client import HTTPClient
+        from clients.http_client import HTTPClient
         import httpx
         
         client = HTTPClient.get_client()
