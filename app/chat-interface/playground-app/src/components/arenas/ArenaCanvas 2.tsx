@@ -105,8 +105,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         const isSelected = selectedCardIds.has(model.id);
         const hasError = failedModels.has(model.id);
         const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
-        const statusState: 'idle' | 'responding' | 'done' | 'waiting' = hasError
-          ? 'waiting'
+        const statusState: 'idle' | 'responding' | 'done' | 'waiting' | 'error' = hasError
+          ? 'error'
           : isSpeaking
             ? 'responding'
             : isDone

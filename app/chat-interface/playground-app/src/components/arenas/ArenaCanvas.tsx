@@ -151,8 +151,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         const isSelected = selectedCardIds.has(model.id);
         const hasError = failedModels.has(model.id);
         const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
-        const statusState: 'idle' | 'responding' | 'done' | 'waiting' = hasError
-          ? 'waiting'
+        const statusState: 'idle' | 'responding' | 'done' | 'waiting' | 'error' = hasError
+          ? 'error'
           : isSpeaking
             ? 'responding'
             : isDone
@@ -377,17 +377,14 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             {/* Persona Badge - Bottom Center */}
             {mode === 'personality' && isCircleMode && model.personaEmoji && (
               <div
-                className="absolute left-1/2 -translate-x-1/2 rounded-full flex items-center justify-center"
+                className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none"
                 style={{
-                  width: '28px',
-                  height: '28px',
-                  bottom: '-8px',
-                  background: 'rgba(15, 23, 42, 0.98)',
-                  border: `1.5px solid ${effectiveColor}`,
-                  fontSize: '14px',
+                  bottom: '-12px',
+                  fontSize: '20px',
                   zIndex: 100,
                   transition: 'transform 180ms ease-out',
-                  transform: isSpeaking ? 'scale(1.1)' : 'scale(1)',
+                  transform: isSpeaking ? 'scale(1.15)' : 'scale(1)',
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 0 8px rgba(0,0,0,0.3))',
                 }}
                 title={model.personaName ? `${model.personaName} - ${model.personaTrait}` : 'Persona'}
               >
@@ -398,16 +395,12 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             {/* Council Winner Badge - Bottom Center */}
             {mode === 'council' && isCircleMode && councilWinnerId === model.id && !isGenerating && !isSynthesizing && (
               <div
-                className="absolute left-1/2 -translate-x-1/2 rounded-full flex items-center justify-center"
+                className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none"
                 style={{
-                  width: '28px',
-                  height: '28px',
-                  bottom: '-8px',
-                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))',
-                  border: '1.5px solid rgba(251, 191, 36, 0.6)',
-                  boxShadow: '0 0 8px rgba(251, 191, 36, 0.3)',
-                  fontSize: '14px',
+                  bottom: '-12px',
+                  fontSize: '20px',
                   zIndex: 100,
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 0 12px rgba(251, 191, 36, 0.4))',
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
                 title="Top Ranked Response"
@@ -499,82 +492,102 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
           onMouseLeave={() => setHoveredCard(null)}
         >
           <div className="relative flex items-center justify-center" style={{ width: `${CIRCLE_CARD_SIZE}px`, height: `${CIRCLE_CARD_SIZE}px` }}>
-            <div
-              className="absolute inset-0 rounded-full animate-pulse"
-              style={{
-                background: `radial-gradient(circle, ${moderatorModel.color}20 0%, transparent 70%)`,
-                transform: 'scale(2.2)',
-                filter: 'blur(18px)'
-              }}
-            />
+            {/* Use yellow only when orchestrator is actively synthesizing (not just waiting) */}
+            {(() => {
+              const isWorking = orchestratorStatus === 'responding';
+              const activeColor = isWorking ? '#fbbf24' : moderatorModel.color;
+              return (
+                <>
+                  <div
+                    className="absolute inset-0 rounded-full animate-pulse"
+                    style={{
+                      background: `radial-gradient(circle, ${activeColor}20 0%, transparent 70%)`,
+                      transform: 'scale(2.2)',
+                      filter: 'blur(18px)'
+                    }}
+                  />
 
-            <div
-              className="relative rounded-full flex items-center justify-center transition-all duration-300"
-              style={{
-                width: `${CIRCLE_CARD_SIZE}px`,
-                height: `${CIRCLE_CARD_SIZE}px`,
-                background: 'rgba(15, 23, 42, 0.9)',
-                backdropFilter: 'blur(16px)',
-                border: `2px solid ${moderatorModel.color}60`,
-                boxShadow: `0 0 36px ${moderatorModel.color}28, inset 0 1px 1px rgba(255,255,255,0.1)`
-              }}
-            >
-              <div
-                className="absolute inset-[-4px] rounded-full"
-                style={{
-                  background: `conic-gradient(from 0deg, transparent, ${moderatorModel.color}60, transparent)`,
-                  animation: 'spin 4s linear infinite'
-                }}
-              />
-              <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.96)' }} />
+                  <div
+                    className="relative rounded-full flex items-center justify-center transition-all duration-300"
+                    style={{
+                      width: `${CIRCLE_CARD_SIZE}px`,
+                      height: `${CIRCLE_CARD_SIZE}px`,
+                      background: isWorking
+                        ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(15, 23, 42, 0.9))'
+                        : 'rgba(15, 23, 42, 0.9)',
+                      backdropFilter: 'blur(16px)',
+                      border: `2px solid ${activeColor}${isWorking ? '99' : '60'}`,
+                      boxShadow: `0 0 36px ${activeColor}${isWorking ? '40' : '28'}, inset 0 1px 1px rgba(255,255,255,0.1)`
+                    }}
+                  >
+                    <div
+                      className="absolute inset-[-4px] rounded-full"
+                      style={{
+                        background: `conic-gradient(from 0deg, transparent, ${activeColor}60, transparent)`,
+                        animation: 'spin 4s linear infinite'
+                      }}
+                    />
+                    <div className="absolute inset-[2px] rounded-full" style={{ background: 'rgba(15, 23, 42, 0.96)' }} />
 
-              <div className="relative text-center z-10 flex flex-col items-center gap-1.5 px-3">
-                <div className="text-[7px] tracking-[0.32em] text-slate-400 uppercase">{orchestratorStatusLabel}</div>
-                <div className="text-[10px] font-semibold text-slate-100 leading-tight">
-                  {moderatorModel.name}
-                </div>
-                <StatusIndicator
-                  state={orchestratorStatus}
-                  color={moderatorModel.color}
-                  size={12}
-                />
-              </div>
-            </div>
+                    <div className="relative text-center z-10 flex flex-col items-center gap-1.5 px-3">
+                      <div className="text-[7px] tracking-[0.32em] text-slate-400 uppercase">{orchestratorStatusLabel}</div>
+                      <div className="text-[10px] font-semibold text-slate-100 leading-tight">
+                        {moderatorModel.name}
+                      </div>
+                      <StatusIndicator
+                        state={orchestratorStatus}
+                        color={activeColor}
+                        size={12}
+                      />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 w-max max-w-[200px]" style={{ top: 'calc(100% + 12px)' }}>
             <span className="text-[10px] text-slate-500">{orchestratorPhaseLabel}</span>
           </div>
 
-          {hoveredCard === 'moderator' && !showOrchestratorMenu && (
-            <div
-              data-card
-              onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-[200] transition-all duration-300"
-              style={{
-                background: 'rgba(15, 23, 42, 0.95)',
-                backdropFilter: 'blur(16px)',
-                border: `1px solid ${moderatorModel.color}40`,
-                boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${moderatorModel.color}20`
-              }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="text-xs text-slate-400 uppercase tracking-wider">Orchestrator</div>
-                <span className="text-xs text-slate-500">·</span>
-                <span className="text-xs font-medium text-slate-300">{moderatorModel.name}</span>
+          {hoveredCard === 'moderator' && !showOrchestratorMenu && (() => {
+            const isWorking = orchestratorStatus === 'responding';
+            const activeColor = isWorking ? '#fbbf24' : moderatorModel.color;
+            return (
+              <div
+                data-card
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4 rounded-xl z-[200] transition-all duration-300"
+                style={{
+                  background: 'rgba(15, 23, 42, 0.95)',
+                  backdropFilter: 'blur(16px)',
+                  border: `1px solid ${activeColor}40`,
+                  boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${activeColor}20`
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="text-xs text-slate-400 uppercase tracking-wider">Orchestrator</div>
+                  <span className="text-xs text-slate-500">·</span>
+                  <span className="text-xs font-medium text-slate-300">{moderatorModel.name}</span>
+                  {isWorking && (
+                    <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                      Working
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  {renderModeratorContent({
+                    moderatorSynthesis,
+                    isSynthesizing,
+                    moderatorId,
+                    speaking,
+                    phaseLabel,
+                    isGenerating,
+                    getTailSnippet,
+                  })}
+                </p>
               </div>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {renderModeratorContent({
-                  moderatorSynthesis,
-                  isSynthesizing,
-                  moderatorId,
-                  speaking,
-                  phaseLabel,
-                  isGenerating,
-                  getTailSnippet,
-                })}
-              </p>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Auto Mode Context Menu - Rendered via Portal */}
           {showOrchestratorMenu && menuPosition && createPortal(

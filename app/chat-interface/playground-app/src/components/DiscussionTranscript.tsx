@@ -10,9 +10,26 @@ interface DiscussionTranscriptProps {
     mode?: Mode;
     onSelectPrompt?: (prompt: string) => void;
     className?: string; // For layout positioning
+    // Stage indicator props
+    phaseLabel?: string | null;
+    isGenerating?: boolean;
+    isSynthesizing?: boolean;
+    speakingCount?: number;
+    totalParticipants?: number;
 }
 
-export default function DiscussionTranscript({ history, models, mode, onSelectPrompt, className = '' }: DiscussionTranscriptProps) {
+export default function DiscussionTranscript({
+    history,
+    models,
+    mode,
+    onSelectPrompt,
+    className = '',
+    phaseLabel,
+    isGenerating,
+    isSynthesizing,
+    speakingCount = 0,
+    totalParticipants = 0,
+}: DiscussionTranscriptProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +47,11 @@ export default function DiscussionTranscript({ history, models, mode, onSelectPr
     const getModelByName = (name: string) => {
         return models.find(m => m.name === name); // Simple match
     };
+
+    // Determine stage display
+    const isActive = isGenerating || isSynthesizing;
+    const completedCount = totalParticipants - speakingCount;
+    const progressPercent = totalParticipants > 0 ? (completedCount / totalParticipants) * 100 : 0;
 
     const renderEntry = (entry: ChatHistoryEntry, index: number) => {
         if (entry.role === 'user') {
@@ -138,6 +160,52 @@ export default function DiscussionTranscript({ history, models, mode, onSelectPr
             className={`flex-1 overflow-y-auto px-4 py-6 scroll-smooth ${className} [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]`}
             data-no-arena-scroll // Prevent arena scroll capture
         >
+            {/* Stage Indicator Banner */}
+            {isActive && phaseLabel && (
+                <div
+                    className={`sticky top-0 z-10 mb-4 px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${isSynthesizing
+                        ? 'bg-yellow-500/20 border border-yellow-500/40'
+                        : 'bg-slate-800/80 border border-slate-700/60'
+                        }`}
+                >
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            {/* Animated indicator */}
+                            <div className={`w-2 h-2 rounded-full ${isSynthesizing ? 'bg-yellow-400' : 'bg-blue-400'} animate-pulse`}></div>
+                            <span className={`text-xs font-semibold uppercase tracking-wider ${isSynthesizing ? 'text-yellow-300' : 'text-slate-300'}`}>
+                                {phaseLabel}
+                            </span>
+                        </div>
+
+                        {/* Progress indicator - only show during response gathering */}
+                        {isGenerating && !isSynthesizing && totalParticipants > 0 && (
+                            <div className="flex items-center gap-2">
+                                <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-blue-400 transition-all duration-300 rounded-full"
+                                        style={{ width: `${progressPercent}%` }}
+                                    />
+                                </div>
+                                <span className="text-[10px] text-slate-400 tabular-nums">
+                                    {completedCount}/{totalParticipants}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Synthesizing spinner */}
+                        {isSynthesizing && (
+                            <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-yellow-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                <span className="text-[10px] text-yellow-300">Working...</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-3xl mx-auto flex flex-col justify-end min-h-full">
                 {history.length === 0 && (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500 pb-20">
@@ -166,3 +234,4 @@ export default function DiscussionTranscript({ history, models, mode, onSelectPr
         </div>
     );
 }
+

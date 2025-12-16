@@ -839,15 +839,14 @@ export default function Playground() {
         ? 'done'
         : 'idle';
 
-  const orchestratorPhaseLabel = phaseLabel
-    ? phaseLabel
-    : isSynthesizing
-      ? 'Synthesizing'
-      : isGenerating
-        ? 'Observing'
-        : moderatorSynthesis
-          ? 'Done'
-          : 'Presiding';
+  // Simplified orchestrator label - detailed phase now shown in transcript panel
+  const orchestratorPhaseLabel = isSynthesizing
+    ? 'Synthesizing...'
+    : isGenerating
+      ? 'Observing'
+      : moderatorSynthesis
+        ? 'Complete'
+        : 'Ready';
 
   const orchestratorTransform = orchestratorEntryOffset
     ? `translate(-50%, -50%) translate(${orchestratorEntryOffset.x}px, ${orchestratorEntryOffset.y}px)`
@@ -1152,6 +1151,11 @@ export default function Playground() {
                     }
                   }}
                   className="pt-24 pb-6 mask-fade-top"
+                  phaseLabel={phaseLabel}
+                  isGenerating={isGenerating}
+                  isSynthesizing={isSynthesizing}
+                  speakingCount={speaking.size}
+                  totalParticipants={selectedModels.length}
                 />
               </div>
             )}
