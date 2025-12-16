@@ -45,6 +45,8 @@ export default function Playground() {
     modelIdToName,
     isLoading: isLoadingModels,
     loadError: modelsLoadError,
+    retryCount: modelsRetryCount,
+    retryNow: retryModelsNow,
   } = useModelsManager();
   // Mode persists across page refreshes
   const [mode, setMode] = usePersistedSetting<Mode>(
@@ -534,6 +536,32 @@ export default function Playground() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
 
+  // Reset session state for a new round (Council, Roundtable, Personality)
+  const handleNewSession = useCallback(() => {
+    // Clear conversation history
+    clearHistory();
+    // Reset generation state
+    setIsGenerating(false);
+    setIsSynthesizing(false);
+    setModeratorSynthesis('');
+    setPhaseLabel(null);
+    // Reset council-specific state
+    setCouncilAggregateRankings(null);
+    setCouncilAnonymousReviews([]);
+    setDiscussionTurnsByModel({});
+    // Reset model responses
+    setModelsData(prev => prev.map(model => ({
+      ...model,
+      response: 'Ready to generate...',
+      thinking: undefined,
+      error: undefined,
+    })));
+    // Clear execution times
+    setExecutionTimes({});
+    // Clear any speaking state
+    setSpeaking(new Set());
+  }, [clearHistory, setModelsData]);
+
   // Orchestrator auto mode state
   type OrchestratorAutoScope = 'all' | 'local' | 'api';
   const [orchestratorAutoMode, setOrchestratorAutoMode] = useState(true);
@@ -978,19 +1006,30 @@ export default function Playground() {
       {/* Loading overlay while models are being fetched */}
       {isLoadingModels && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/95 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex flex-col items-center gap-5 text-center">
             <div className="relative">
               <div className="w-12 h-12 border-2 border-slate-700 border-t-blue-500 rounded-full animate-spin" />
               <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-b-emerald-500/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <p className="text-white/80 text-sm font-medium">
                 {modelsLoadError || 'Connecting to models...'}
               </p>
-              <p className="text-white/40 text-xs">
-                This may take a moment on first load
-              </p>
+              {modelsRetryCount > 0 && (
+                <p className="text-white/40 text-xs tabular-nums">
+                  Attempt {modelsRetryCount} of 8
+                </p>
+              )}
             </div>
+            <button
+              onClick={retryModelsNow}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg transition-all active:scale-95"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh Now
+            </button>
           </div>
         </div>
       )}
@@ -1288,6 +1327,7 @@ export default function Playground() {
                         inputRef.current.focus();
                       }
                     }}
+                    onNewSession={handleNewSession}
                     className="pt-24 pb-6 mask-fade-top"
                     phaseLabel={phaseLabel}
                     isGenerating={isGenerating}

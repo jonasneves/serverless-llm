@@ -16,14 +16,15 @@ interface ModelsApiResponse {
 }
 
 // Retry config for initial model loading (handles cold starts)
-const INITIAL_RETRY_DELAY = 500;   // Start with 500ms
-const MAX_RETRY_DELAY = 4000;      // Cap at 4s
-const MAX_RETRIES = 10;            // Give up after ~30s total
+const INITIAL_RETRY_DELAY = 800;   // Start with 800ms
+const MAX_RETRY_DELAY = 3000;      // Cap at 3s
+const MAX_RETRIES = 8;             // Give up after ~20s total
 
 export function useModelsManager() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Multi-model selection (for Compare, Council, Roundtable, Personalities)
   const [persistedSelected, setPersistedSelected] = usePersistedSetting<string[] | null>('playground_selected_models', null);
@@ -43,90 +44,122 @@ export function useModelsManager() {
   }, [setPersistedSelected]);
 
   const [moderator, setModerator] = useState<string>('');
+  
+  // Ref to track active fetch and prevent race conditions
+  const fetchIdRef = useRef(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    let isActive = true;
-    let retryCount = 0;
-    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    async function loadModels(): Promise<boolean> {
-      try {
-        const response = await fetch('/api/models');
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data: ModelsApiResponse = await response.json();
-        if (!isActive) return true;
-
-        // Check if we got actual models (backend might return empty during startup)
-        if (!data.models || data.models.length === 0) {
-          throw new Error('No models available');
-        }
-
-        const apiModels = data.models.map((model) => {
-          const modelType: 'local' | 'api' = model.type === 'api' ? 'api' : 'local';
-          const meta = MODEL_META[modelType];
-          return {
-            id: model.id,
-            name: meta.name || model.name || model.id,
-            color: meta.color,
-            type: modelType,
-            response: 'Ready to generate...',
-            priority: model.priority,
-            context_length: model.context_length
-          };
-        });
-
-        setModelsData(apiModels);
-        setIsLoading(false);
-        setLoadError(null);
-
-        // Initialize multi-model selection (for Compare, Council, etc.) with local models
-        if (!isSelectionInitialized.current) {
-          setPersistedSelected(apiModels.filter(m => m.type === 'local').map(m => m.id));
-          isSelectionInitialized.current = true;
-        }
-
-        // Initialize chat model with first local model
-        if (!isChatModelInitialized.current) {
-          const firstLocalModel = apiModels.find(m => m.type === 'local');
-          setChatModelId(firstLocalModel?.id || apiModels[0]?.id || null);
-          isChatModelInitialized.current = true;
-        }
-
-        const apiModeratorCandidate = apiModels.find(m => m.type === 'api');
-        const fallbackModerator = apiModels[0]?.id || '';
-        setModerator(apiModeratorCandidate?.id || fallbackModerator);
-        
-        return true; // Success
-      } catch (error) {
-        console.warn(`Model fetch attempt ${retryCount + 1} failed:`, error);
-        return false; // Failed, should retry
-      }
+  const loadModels = useCallback(async (fetchId: number, currentRetry: number, isManualRetry = false): Promise<void> => {
+    // Clear any pending retry
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
     }
 
-    async function loadWithRetry() {
-      const success = await loadModels();
+    setIsLoading(true);
+    if (isManualRetry) {
+      setLoadError('Refreshing...');
+      setRetryCount(0);
+    }
+
+    try {
+      const response = await fetch('/api/models');
       
-      if (!success && isActive && retryCount < MAX_RETRIES) {
-        retryCount++;
-        const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(1.5, retryCount - 1), MAX_RETRY_DELAY);
-        setLoadError(`Connecting to backend... (attempt ${retryCount}/${MAX_RETRIES})`);
-        retryTimeout = setTimeout(loadWithRetry, delay);
-      } else if (!success && retryCount >= MAX_RETRIES) {
+      // Check if this fetch is still relevant
+      if (fetchId !== fetchIdRef.current) return;
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data: ModelsApiResponse = await response.json();
+      
+      // Check again after parsing
+      if (fetchId !== fetchIdRef.current) return;
+
+      // Check if we got actual models (backend might return empty during startup)
+      if (!data.models || data.models.length === 0) {
+        throw new Error('No models available yet');
+      }
+
+      const apiModels = data.models.map((model) => {
+        const modelType: 'local' | 'api' = model.type === 'api' ? 'api' : 'local';
+        const meta = MODEL_META[modelType];
+        return {
+          id: model.id,
+          name: meta.name || model.name || model.id,
+          color: meta.color,
+          type: modelType,
+          response: 'Ready to generate...',
+          priority: model.priority,
+          context_length: model.context_length
+        };
+      });
+
+      // Success! Update state
+      setModelsData(apiModels);
+      setIsLoading(false);
+      setLoadError(null);
+      setRetryCount(0);
+
+      // Initialize multi-model selection (for Compare, Council, etc.) with local models
+      if (!isSelectionInitialized.current) {
+        setPersistedSelected(apiModels.filter(m => m.type === 'local').map(m => m.id));
+        isSelectionInitialized.current = true;
+      }
+
+      // Initialize chat model with first local model
+      if (!isChatModelInitialized.current) {
+        const firstLocalModel = apiModels.find(m => m.type === 'local');
+        setChatModelId(firstLocalModel?.id || apiModels[0]?.id || null);
+        isChatModelInitialized.current = true;
+      }
+
+      const apiModeratorCandidate = apiModels.find(m => m.type === 'api');
+      const fallbackModerator = apiModels[0]?.id || '';
+      setModerator(apiModeratorCandidate?.id || fallbackModerator);
+      
+    } catch (error) {
+      // Check if this fetch is still relevant
+      if (fetchId !== fetchIdRef.current) return;
+      
+      console.warn(`Model fetch attempt ${currentRetry + 1} failed:`, error);
+      
+      const nextRetry = currentRetry + 1;
+      setRetryCount(nextRetry);
+      
+      if (nextRetry < MAX_RETRIES) {
+        const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(1.4, currentRetry), MAX_RETRY_DELAY);
+        setLoadError(`Connecting to backend...`);
+        retryTimeoutRef.current = setTimeout(() => {
+          loadModels(fetchId, nextRetry);
+        }, delay);
+      } else {
         setIsLoading(false);
-        setLoadError('Could not connect to backend. Please refresh the page.');
+        setLoadError('Could not connect to backend');
       }
     }
+  }, [setPersistedSelected, setChatModelId]);
 
-    loadWithRetry();
+  // Manual retry function
+  const retryNow = useCallback(() => {
+    fetchIdRef.current += 1;
+    loadModels(fetchIdRef.current, 0, true);
+  }, [loadModels]);
+
+  // Initial load on mount
+  useEffect(() => {
+    fetchIdRef.current += 1;
+    loadModels(fetchIdRef.current, 0);
     
     return () => {
-      isActive = false;
-      if (retryTimeout) clearTimeout(retryTimeout);
+      // Invalidate any in-flight fetches
+      fetchIdRef.current += 1;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
     };
-  }, []);
+  }, [loadModels]);
 
   const availableModels = useMemo(
     () => modelsData.filter(m => !selected.includes(m.id)),
@@ -172,5 +205,7 @@ export function useModelsManager() {
     modelIdToName,
     isLoading,
     loadError,
+    retryCount,
+    retryNow,
   };
 }
