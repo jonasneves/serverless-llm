@@ -24,6 +24,8 @@ const TopicsDrawer = lazy(() => import('./components/TopicsDrawer'));
 const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscript'));
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
+import ErrorBoundary from './components/ErrorBoundary';
+import LoadingFallback from './components/LoadingFallback';
 
 import type { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
 
@@ -1086,29 +1088,31 @@ export default function Playground() {
         {/* Chat View */}
         {mode === 'chat' && (
           <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6" data-no-arena-scroll>
-            <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50">Loading chat...</div>}>
-              <ChatView
-                ref={chatViewRef}
-                models={modelsData}
-                selectedModelId={selected[0] || null}
-                onSelectModel={(id) => setSelected([id])}
-                githubToken={githubToken}
-                onOpenTopics={() => setShowTopics(true)}
-                messages={chatMessages}
-                setMessages={setChatMessages}
-                autoMode={chatAutoMode}
-                setAutoMode={setChatAutoMode}
-                autoModeScope={chatAutoModeScope}
-                setAutoModeScope={setChatAutoModeScope}
-                onModelUsed={(modelId) => {
-                  setLastUsedChatModelId(modelId);
-                  // Ensure the model is selected (for mode switching)
-                  if (!selected.includes(modelId)) {
-                    setSelected([modelId]);
-                  }
-                }}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback message="Loading chat..." timeout={10000} />}>
+                <ChatView
+                  ref={chatViewRef}
+                  models={modelsData}
+                  selectedModelId={selected[0] || null}
+                  onSelectModel={(id) => setSelected([id])}
+                  githubToken={githubToken}
+                  onOpenTopics={() => setShowTopics(true)}
+                  messages={chatMessages}
+                  setMessages={setChatMessages}
+                  autoMode={chatAutoMode}
+                  setAutoMode={setChatAutoMode}
+                  autoModeScope={chatAutoModeScope}
+                  setAutoModeScope={setChatAutoModeScope}
+                  onModelUsed={(modelId) => {
+                    setLastUsedChatModelId(modelId);
+                    // Ensure the model is selected (for mode switching)
+                    if (!selected.includes(modelId)) {
+                      setSelected([modelId]);
+                    }
+                  }}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         )}
 
