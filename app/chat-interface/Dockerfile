@@ -56,6 +56,9 @@ COPY --chown=appuser:appuser utils ./utils
 COPY --chown=appuser:appuser api ./api
 COPY --chown=appuser:appuser services ./services
 COPY --chown=appuser:appuser prompts ./prompts
+COPY --chown=appuser:appuser clients ./clients
+COPY --chown=appuser:appuser middleware ./middleware
+COPY --chown=appuser:appuser engines ./engines
 # Copy static files (excluding playground, which will be copied from builder)
 COPY --chown=appuser:appuser static ./static
 # Copy pre-built playground from playground-builder stage (overwrites any existing playground)
