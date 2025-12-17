@@ -85,6 +85,54 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const modelSelectorRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
+    // Smooth scroll animation refs (for gesture scrolling)
+    const scrollTargetRef = useRef(0);
+    const scrollRafRef = useRef<number | null>(null);
+    const userScrolledAwayRef = useRef(false);
+    const lastGestureDeltaRef = useRef(0);
+
+    // Smooth scroll animation step
+    const scrollStep = () => {
+        if (!scrollRef.current) {
+            scrollRafRef.current = null;
+            return;
+        }
+        const current = scrollRef.current.scrollTop;
+        const target = scrollTargetRef.current;
+        const diff = target - current;
+
+        if (Math.abs(diff) < 0.5) {
+            scrollRef.current.scrollTop = target;
+            scrollRafRef.current = null;
+            return;
+        }
+
+        // Ease toward target (faster than arena for snappier feel)
+        const next = current + diff * 0.5;
+        scrollRef.current.scrollTop = next;
+        scrollRafRef.current = requestAnimationFrame(scrollStep);
+    };
+
+    const ensureScrollRaf = () => {
+        if (scrollRafRef.current == null) {
+            scrollRafRef.current = requestAnimationFrame(scrollStep);
+        }
+    };
+
+    // Clamp scroll target to valid bounds
+    const clampScrollTarget = (value: number) => {
+        if (!scrollRef.current) return value;
+        const maxScroll = scrollRef.current.scrollHeight - scrollRef.current.clientHeight;
+        return Math.max(0, Math.min(maxScroll, value));
+    };
+
+    // Check if user is near bottom (for auto-scroll behavior)
+    const isNearBottom = () => {
+        if (!scrollRef.current) return true;
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+        return scrollHeight - scrollTop - clientHeight < 100;
+    };
+
     useImperativeHandle(ref, () => ({
         sendMessage: (text: string, fromGesture?: boolean) => {
             // Don't populate input box for programmatic sends (e.g., gesture-triggered)
@@ -102,7 +150,24 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         },
         scroll: (deltaY: number) => {
             if (scrollRef.current) {
-                scrollRef.current.scrollTop += deltaY;
+                // Smooth out noisy input - dampen small deltas
+                const smoothedDelta = deltaY * 0.7 + lastGestureDeltaRef.current * 0.3;
+                lastGestureDeltaRef.current = smoothedDelta;
+                
+                // Deadzone to prevent jitter from tiny movements
+                if (Math.abs(smoothedDelta) < 5) return;
+                
+                // Mark that user is manually scrolling (unlocks from auto-follow)
+                userScrolledAwayRef.current = true;
+                
+                // Initialize target from current position if not animating
+                if (scrollRafRef.current == null) {
+                    scrollTargetRef.current = scrollRef.current.scrollTop;
+                }
+                // Negate deltaY: gesture delta is inverted for scrollTop behavior
+                // Hand moving down = positive delta from gesture = should scroll UP (decrease scrollTop)
+                scrollTargetRef.current = clampScrollTarget(scrollTargetRef.current - smoothedDelta);
+                ensureScrollRaf();
             }
         }
     }));
@@ -114,12 +179,28 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         setSelectedIndices: setSelectedMessages,
     });
 
-    // Auto-scroll
+    // Auto-scroll to bottom when new content arrives (unless user scrolled away)
     useEffect(() => {
-        if (scrollRef.current) {
+        if (scrollRef.current && !userScrolledAwayRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, currentResponse, isGenerating]);
+
+    // Re-enable auto-scroll when user scrolls back to bottom
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        
+        const handleScroll = () => {
+            // If user scrolled back near bottom, re-enable auto-follow
+            if (isNearBottom()) {
+                userScrolledAwayRef.current = false;
+            }
+        };
+        
+        el.addEventListener('scroll', handleScroll, { passive: true });
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Auto-focus input on keydown
     useEffect(() => {

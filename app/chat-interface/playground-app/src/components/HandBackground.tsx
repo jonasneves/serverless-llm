@@ -201,6 +201,7 @@ export default function HandBackground({
     const handStates = useRef<Map<number, {
         isScrolling: boolean;
         lastScrollY: number | null;
+        scrollVelocity: number;
         lastOpenTime: number;
         waveXPositions: number[];
         waveDirectionChanges: number;
@@ -279,6 +280,7 @@ export default function HandBackground({
             handStates.current.set(index, {
                 isScrolling: false,
                 lastScrollY: null,
+                scrollVelocity: 0,
                 lastOpenTime: 0,
                 waveXPositions: [],
                 waveDirectionChanges: 0,
@@ -478,17 +480,28 @@ export default function HandBackground({
             if (!state.isScrolling) {
                 state.isScrolling = true;
                 state.lastScrollY = currentY;
+                state.scrollVelocity = 0;
             } else if (state.lastScrollY !== null) {
-                const delta = (currentY - state.lastScrollY);
-                if (Math.abs(delta) > 0.004 && onScrollRef.current) {
-                    onScrollRef.current(delta * 1500);
+                const rawDelta = currentY - state.lastScrollY;
+                
+                // Accumulate velocity with smoothing to reduce jitter
+                const velocity = (state.scrollVelocity || 0) * 0.6 + rawDelta * 0.4;
+                state.scrollVelocity = velocity;
+                
+                // Only trigger scroll if velocity is significant and consistent direction
+                if (Math.abs(velocity) > 0.006 && onScrollRef.current) {
+                    onScrollRef.current(velocity * 1800);
+                    state.lastScrollY = currentY; // Only update reference when scrolling
+                } else if (Math.abs(rawDelta) > 0.02) {
+                    // Large jump - reset reference to prevent accumulation
+                    state.lastScrollY = currentY;
                 }
-                state.lastScrollY = currentY;
             }
             return 'FIST';
         } else {
             state.isScrolling = false;
             state.lastScrollY = null;
+            state.scrollVelocity = 0;
         }
 
         // Handle wave detection for Open_Palm
