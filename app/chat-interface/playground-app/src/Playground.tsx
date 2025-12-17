@@ -517,17 +517,9 @@ function PlaygroundInner() {
 
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
-    
-    // Abort any ongoing generation to prevent stuck state
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    // Reset generation state to ensure clean state for new mode
-    setIsGenerating(false);
-    setIsSynthesizing(false);
-    
     triggerLineTransition();
     // Chat mode uses separate selection (chatModelId) - no cross-mode selection sync needed
+    // Don't abort ongoing generation - let it complete in the background
     setMode(nextMode);
   }, [mode, triggerLineTransition]);
 
