@@ -54,18 +54,19 @@ interface HandBackgroundProps {
     onPinch?: (x: number, y: number) => void;
     onHover?: (x: number, y: number) => void;
     onModeChange?: (direction: 'prev' | 'next') => void;
+    onGestureModeToggle?: () => void; // Toggle between Navigation and ASL modes
     onGestureState?: (state: {
         gesture: string | null;
         progress: number;
         triggered: boolean;
     }) => void;
-    onASLResult?: (result: ASLResult) => void; // New: ASL recognition result
+    onASLResult?: (result: ASLResult) => void;
     onError?: (message: string) => void;
     config?: GestureConfig;
     onDebugInfo?: (info: DebugInfo) => void;
     onLandmarkData?: (data: LandmarkData) => void;
     onPerformance?: (metrics: PerformanceMetrics) => void;
-    mode?: GestureMode; // New: gesture mode
+    mode?: GestureMode;
 }
 
 // Cursor position state for the floating pointer indicator
@@ -104,6 +105,7 @@ export default function HandBackground({
     onPinch,
     onHover,
     onModeChange,
+    onGestureModeToggle,
     onGestureState,
     onASLResult,
     onError,
@@ -120,6 +122,7 @@ export default function HandBackground({
     const onPinchRef = useRef(onPinch);
     const onHoverRef = useRef(onHover);
     const onModeChangeRef = useRef(onModeChange);
+    const onGestureModeToggleRef = useRef(onGestureModeToggle);
     const onGestureStateRef = useRef(onGestureState);
     const onASLResultRef = useRef(onASLResult);
     const onDebugInfoRef = useRef(onDebugInfo);
@@ -135,6 +138,7 @@ export default function HandBackground({
     onPinchRef.current = onPinch;
     onHoverRef.current = onHover;
     onModeChangeRef.current = onModeChange;
+    onGestureModeToggleRef.current = onGestureModeToggle;
     onGestureStateRef.current = onGestureState;
     onASLResultRef.current = onASLResult;
     onDebugInfoRef.current = onDebugInfo;
@@ -195,6 +199,48 @@ export default function HandBackground({
     const lastASLLetter = useRef<string | null>(null);
     const aslLetterConfirmFrames = useRef<number>(0);
     const ASL_CONFIRM_THRESHOLD = 10; // Frames to confirm a letter
+
+    // Shaka gesture state for mode toggle (works in both modes)
+    const shakaFrames = useRef<number>(0);
+    const SHAKA_CONFIRM_THRESHOLD = 20; // Frames to confirm Shaka
+    const lastShakaTriggerTime = useRef<number>(0);
+    const SHAKA_COOLDOWN = 2000; // 2 second cooldown between mode toggles
+
+    // Detect Shaka gesture (🤙): thumb and pinky extended, other fingers curled
+    const detectShaka = useCallback((landmarks: Array<{ x: number; y: number; z: number }>) => {
+        if (!landmarks || landmarks.length < 21) return false;
+
+        // Landmark indices:
+        // Thumb: 1-4, Index: 5-8, Middle: 9-12, Ring: 13-16, Pinky: 17-20
+        // Tips: 4, 8, 12, 16, 20
+        // MCPs (base): 1, 5, 9, 13, 17
+
+        const thumbTip = landmarks[4];
+        const thumbMcp = landmarks[2];
+        const indexTip = landmarks[8];
+        const indexPip = landmarks[6];
+        const middleTip = landmarks[12];
+        const middlePip = landmarks[10];
+        const ringTip = landmarks[16];
+        const ringPip = landmarks[14];
+        const pinkyTip = landmarks[20];
+        const pinkyMcp = landmarks[17];
+        const wrist = landmarks[0];
+
+        // Check thumb is extended (tip is away from wrist horizontally)
+        const thumbExtended = Math.abs(thumbTip.x - wrist.x) > Math.abs(thumbMcp.x - wrist.x) + 0.05;
+
+        // Check pinky is extended (tip is lower than MCP - remember y increases downward in screen coords)
+        // Actually we need to check if pinky is straight - tip should be above pip in hand space
+        const pinkyExtended = pinkyTip.y < pinkyMcp.y - 0.03;
+
+        // Check other fingers are curled (tips are below PIPs)
+        const indexCurled = indexTip.y > indexPip.y - 0.02;
+        const middleCurled = middleTip.y > middlePip.y - 0.02;
+        const ringCurled = ringTip.y > ringPip.y - 0.02;
+
+        return thumbExtended && pinkyExtended && indexCurled && middleCurled && ringCurled;
+    }, []);
 
     const getHandState = useCallback((index: number) => {
         if (!handStates.current.has(index)) {
@@ -682,6 +728,44 @@ export default function HandBackground({
                         handedness: handedness ?? null
                     });
                 }
+            }
+        }
+
+        // Check for Shaka gesture in both modes (mode toggle)
+        if (landmarks[0] && onGestureModeToggleRef.current) {
+            const isShaka = detectShaka(landmarks[0]);
+            const now = performance.now();
+
+            if (isShaka) {
+                shakaFrames.current++;
+
+                // Show progress
+                if (onGestureStateRef.current && shakaFrames.current < SHAKA_CONFIRM_THRESHOLD) {
+                    const progress = Math.min(1, shakaFrames.current / SHAKA_CONFIRM_THRESHOLD);
+                    onGestureStateRef.current({
+                        gesture: '🤙 Switch Mode',
+                        progress,
+                        triggered: false
+                    });
+                }
+
+                // Trigger mode toggle
+                if (shakaFrames.current >= SHAKA_CONFIRM_THRESHOLD &&
+                    (now - lastShakaTriggerTime.current > SHAKA_COOLDOWN)) {
+                    onGestureModeToggleRef.current();
+                    lastShakaTriggerTime.current = now;
+                    shakaFrames.current = 0;
+
+                    if (onGestureStateRef.current) {
+                        onGestureStateRef.current({
+                            gesture: '🤙 Mode Switched!',
+                            progress: 1,
+                            triggered: true
+                        });
+                    }
+                }
+            } else {
+                shakaFrames.current = 0;
             }
         }
 

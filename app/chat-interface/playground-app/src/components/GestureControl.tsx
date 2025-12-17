@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Hand, X, Camera, ThumbsUp, ThumbsDown, MoveVertical, MousePointerClick, Sparkles, HelpCircle, Check, Type, Navigation, Bug } from 'lucide-react';
+import { Hand, X, Camera, HelpCircle, Check, Type, Navigation, Bug } from 'lucide-react';
 import HandBackground, { GestureMode } from './HandBackground';
 import GestureDebugPanel, { GestureConfig, DEFAULT_GESTURE_CONFIG } from './GestureDebugPanel';
 
@@ -317,6 +317,17 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
       >
         {/* Main button with status indicator */}
         <div className="relative flex items-center gap-1">
+          {/* Red X close button - appears when active, now on the LEFT */}
+          {isActive && (
+            <button
+              onClick={() => setIsActive(false)}
+              className="w-6 h-6 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95"
+              title="Disable Gesture Control"
+            >
+              <X size={12} />
+            </button>
+          )}
+
           <button
             ref={buttonRef}
             onClick={() => {
@@ -343,24 +354,13 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                 } animate-pulse`} />
             )}
           </button>
-
-          {/* Red X close button - appears when active */}
-          {isActive && (
-            <button
-              onClick={() => setIsActive(false)}
-              className="w-6 h-6 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95"
-              title="Disable Gesture Control"
-            >
-              <X size={12} />
-            </button>
-          )}
         </div>
 
         {/* Dropdown Panel - appears below the button, aligned to the right */}
         {isActive && showPanel && (
           <div
             data-gesture-panel
-            className="absolute top-full right-0 mt-3 w-64 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200"
+            className="absolute top-full right-0 mt-10 w-64 z-[100] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200"
           >
             {/* Header */}
             <div className="px-3 py-2.5 border-b border-slate-700/50 flex items-center justify-between">
@@ -412,32 +412,32 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
               {gestureMode === 'navigation' ? (
                 <div className="grid grid-cols-2 gap-1 text-[10px]">
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    <MousePointerClick size={10} className="text-cyan-400" /> Point → Hover
+                    ☝️ Point → Hover
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    <Hand size={10} className="text-pink-400" /> Hold → Click
+                    🖐️ Hold → Click
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    <MoveVertical size={10} className="text-purple-400" /> Fist → Scroll
+                    ✊ Fist → Scroll
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    <Sparkles size={10} className="text-yellow-400" /> Wave → Hi
+                    👋 Wave → Hi
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    <ThumbsUp size={10} className="text-green-400" /> Up → Yes
+                    👍 Up → Yes
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    <ThumbsDown size={10} className="text-orange-400" /> Down → No
+                    👎 Down → No
                   </div>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-1 text-[10px]">
                     <div className="flex items-center gap-1.5 text-slate-400">
-                      <ThumbsUp size={10} className="text-emerald-400" /> 👍 Send
+                      <span className="text-emerald-400">👍</span> Send
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-400">
-                      <Hand size={10} className="text-red-400" /> 🖐️ Clear
+                      <span className="text-red-400">🖐️</span> Clear
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-400">
                       <span className="text-blue-400 text-[8px]">✋→</span> Space
@@ -509,15 +509,16 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
       {/* Portal for fixed-position elements when rendered inside header */}
       {createPortal(
         <>
-          {/* ASL Buffer Display - floating below the dropdown panel when in ASL mode */}
+          {/* ASL Buffer Display - floating to the LEFT of the hand gesture button when in ASL mode */}
           {isActive && gestureMode === 'asl' && (
             <div
-              className="fixed z-30 pointer-events-auto"
+              className="fixed z-50 pointer-events-auto"
               style={inHeader && buttonRect
                 ? {
-                  // Right-align with the button, positioned below the dropdown panel
-                  right: Math.max(8, window.innerWidth - buttonRect.right - 8),
-                  top: buttonRect.bottom + 100 // Clear the dropdown panel (~80px)
+                  // Position to the LEFT of the close button + hand button, vertically centered
+                  // Close button is w-6 (24px) + gap-1 (4px) = 28px extra offset
+                  right: window.innerWidth - buttonRect.left + 40, // Account for close button + gap
+                  top: buttonRect.top + (buttonRect.height / 2) - 30 // Vertically center approx
                 }
                 : { ...handOffsetStyle, top: 'calc(4rem)' }
               }
@@ -626,161 +627,109 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
 
           {/* Intro Modal */}
           {showModal && (
-            <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-16 overflow-y-auto">
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
               <div
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
                 onClick={() => setShowModal(false)}
               />
 
-              <div className="relative bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md max-h-[85vh] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto">
-                <div className="p-5 border-b border-slate-800 flex justify-between items-center shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-                      <Camera size={20} />
+              <div className="relative bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm sm:max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] sm:max-h-[85vh]">
+                {/* Header */}
+                <div className="p-4 sm:p-5 border-b border-slate-800 flex justify-between items-center shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500/20 to-emerald-500/20 rounded-lg">
+                      <Hand size={18} className="text-slate-300 sm:w-5 sm:h-5" />
                     </div>
-                    <h2 className="text-lg font-semibold text-slate-100">Hand Control</h2>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-semibold text-slate-100">Gesture Control</h2>
+                      <p className="text-[10px] sm:text-xs text-slate-500">Camera-based hand tracking</p>
+                    </div>
                   </div>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="text-slate-500 hover:text-slate-300 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors"
                   >
-                    <X size={20} />
+                    <X size={18} />
                   </button>
                 </div>
 
-                <div className="p-5 overflow-y-auto flex-1">
-                  <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-                    Control the playground using hand gestures via your webcam.
-                    <span className="block mt-1 text-xs text-slate-500">Processing happens locally in your browser.</span>
+                {/* Scrollable Content */}
+                <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+                  <p className="text-xs sm:text-sm text-slate-400 mb-4 leading-relaxed">
+                    Control the app using hand gestures. Choose a mode to get started:
                   </p>
 
-                  {/* Mode Selection */}
-                  <div className="mb-4">
-                    <div className="text-xs text-slate-500 mb-2">Choose mode:</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setGestureMode('navigation')}
-                        className={`p-3 rounded-lg border transition-all ${gestureMode === 'navigation'
-                          ? 'bg-blue-500/10 border-blue-500/50 text-blue-400'
-                          : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
-                          }`}
-                      >
-                        <Navigation size={20} className="mx-auto mb-1" />
-                        <div className="text-xs font-medium">Navigation</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">Point, click, scroll</div>
-                      </button>
-                      <button
-                        onClick={() => setGestureMode('asl')}
-                        className={`p-3 rounded-lg border transition-all ${gestureMode === 'asl'
-                          ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
-                          : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
-                          }`}
-                      >
-                        <Type size={20} className="mx-auto mb-1" />
-                        <div className="text-xs font-medium">ASL Alphabet</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">Fingerspelling A-Z</div>
-                      </button>
-                    </div>
+                  {/* Mode Selection - clicking directly enables camera */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    {/* Navigation Mode */}
+                    <button
+                      onClick={() => {
+                        setGestureMode('navigation');
+                        startCamera();
+                      }}
+                      className="group p-4 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left"
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+                          <Navigation size={20} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-slate-200">Navigate</div>
+                          <div className="text-[10px] text-slate-500">Point, click, scroll</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-500">
+                        <div className="flex items-center gap-1">☝️ Hover</div>
+                        <div className="flex items-center gap-1">✊ Scroll</div>
+                        <div className="flex items-center gap-1">👍 Yes</div>
+                        <div className="flex items-center gap-1">👎 No</div>
+                      </div>
+                    </button>
+
+                    {/* ASL Mode */}
+                    <button
+                      onClick={() => {
+                        setGestureMode('asl');
+                        startCamera();
+                      }}
+                      className="group p-4 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-left"
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
+                          <Type size={20} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-slate-200">ASL Alphabet</div>
+                          <div className="text-[10px] text-slate-500">Fingerspelling A-Z</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-9 gap-0.5">
+                        {'ABCDEFGHI'.split('').map(letter => (
+                          <span
+                            key={letter}
+                            className="text-center py-0.5 rounded bg-slate-700/30 text-slate-500 text-[8px] font-mono"
+                          >
+                            {letter}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
                   </div>
 
-                  {/* Mode-specific gestures */}
-                  {gestureMode === 'navigation' ? (
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                      <GestureCard
-                        icon={<MousePointerClick size={18} className="text-pink-400" />}
-                        label="Point"
-                        desc="Hover cursor"
-                      />
-                      <GestureCard
-                        icon={<Hand size={18} className="text-cyan-400" />}
-                        label="Point & Hold"
-                        desc="Click (hold 1.2s)"
-                      />
-                      <GestureCard
-                        icon={<MoveVertical size={18} className="text-purple-400" />}
-                        label="Fist Pull"
-                        desc="Scroll Page"
-                      />
-                      <GestureCard
-                        icon={<Sparkles size={18} className="text-yellow-400" />}
-                        label="Wave"
-                        desc="Send 'Hi'"
-                      />
-                      <GestureCard
-                        icon={<ThumbsUp size={18} className="text-green-400" />}
-                        label="Thumbs Up"
-                        desc="Send 'Yes'"
-                      />
-                      <GestureCard
-                        icon={<ThumbsDown size={18} className="text-orange-400" />}
-                        label="Thumbs Down"
-                        desc="Send 'No'"
-                      />
-                      <GestureCard
-                        icon={<span className="text-lg">✌️</span>}
-                        label="Victory"
-                        desc="Prev Mode"
-                      />
-                      <GestureCard
-                        icon={<span className="text-lg">🤟</span>}
-                        label="I Love You"
-                        desc="Next Mode"
-                      />
-                    </div>
-                  ) : (
-                    <div className="mb-6">
-                      <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Type size={16} className="text-emerald-400" />
-                          <span className="text-sm text-emerald-400 font-medium">ASL Fingerspelling</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mb-3">
-                          Use American Sign Language fingerspelling to type.
-                          Hold each sign steady for about half a second to confirm.
-                        </p>
-
-                        {/* Control gestures */}
-                        <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-                          <div className="flex items-center gap-2 p-2 rounded bg-slate-800/30">
-                            <ThumbsUp size={14} className="text-emerald-400" />
-                            <span className="text-slate-300">Thumbs up = Send</span>
-                          </div>
-                          <div className="flex items-center gap-2 p-2 rounded bg-slate-800/30">
-                            <Hand size={14} className="text-red-400" />
-                            <span className="text-slate-300">Open palm = Clear</span>
-                          </div>
-                          <div className="flex items-center gap-2 p-2 rounded bg-slate-800/30">
-                            <span className="text-blue-400">✋→</span>
-                            <span className="text-slate-300">Flat sideways = Space</span>
-                          </div>
-                          <div className="flex items-center gap-2 p-2 rounded bg-slate-800/30">
-                            <span className="text-orange-400">🤏</span>
-                            <span className="text-slate-300">Pinch = Backspace</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-9 gap-1">
-                          {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
-                            <span
-                              key={letter}
-                              className="text-center py-1 rounded bg-slate-800/50 text-slate-400 text-xs font-mono"
-                            >
-                              {letter}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-2 italic">
-                          Note: J and Z are dynamic gestures (require motion) and are approximated.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  {/* Privacy note */}
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
+                    <Camera size={14} className="text-slate-500 mt-0.5 shrink-0" />
+                    <p className="text-[10px] sm:text-xs text-slate-500 leading-relaxed">
+                      All processing happens <span className="text-slate-400">locally in your browser</span>.
+                      No video is sent to any server.
+                    </p>
+                  </div>
                 </div>
 
-                {/* Sticky Footer - always visible */}
-                <div className="p-5 border-t border-slate-800 shrink-0 bg-slate-900">
+                {/* Footer */}
+                <div className="p-4 sm:p-5 border-t border-slate-800 shrink-0 bg-slate-900/50">
                   {/* Remember choice checkbox */}
-                  <label className="flex items-center gap-2 mb-4 cursor-pointer group">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <div
                       className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${rememberChoice
                         ? 'bg-blue-600 border-blue-500'
@@ -790,28 +739,10 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                     >
                       {rememberChoice && <Check size={12} className="text-white" />}
                     </div>
-                    <span className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors select-none">
+                    <span className="text-[10px] sm:text-xs text-slate-400 group-hover:text-slate-300 transition-colors select-none">
                       Don't show this guide again
                     </span>
                   </label>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={startCamera}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors shadow-lg ${gestureMode === 'asl'
-                        ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20'
-                        : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20'
-                        }`}
-                    >
-                      Enable Camera
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -873,12 +804,3 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
   );
 }
 
-function GestureCard({ icon, label, desc }: { icon: React.ReactNode, label: string, desc: string }) {
-  return (
-    <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 flex flex-col items-center text-center gap-1.5 hover:bg-slate-800 transition-colors">
-      <div className="mb-0.5">{icon}</div>
-      <span className="text-xs font-semibold text-slate-200 uppercase tracking-wide">{label}</span>
-      <span className="text-[10px] text-slate-500">{desc}</span>
-    </div>
-  );
-}
