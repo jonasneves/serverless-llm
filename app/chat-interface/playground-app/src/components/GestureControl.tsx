@@ -42,6 +42,10 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   const panelRef = useRef<HTMLDivElement>(null);
+  const panelFloatingRef = useRef<HTMLDivElement>(null);
+  const aslBoxRef = useRef<HTMLDivElement>(null);
+  const [panelBounds, setPanelBounds] = useState<{ width: number; height: number }>({ width: 256, height: 320 });
+  const [aslBounds, setAslBounds] = useState<{ width: number; height: number }>({ width: 220, height: 180 });
 
   // Gesture mode state
   const [gestureMode, setGestureMode] = useState<GestureMode>(() => {
@@ -299,6 +303,40 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
     };
   }, [isActive, showPanel, inHeader]);
 
+  // Measure dropdown panel size for collision avoidance
+  useEffect(() => {
+    if (!showPanel) return;
+    const measure = () => {
+      if (panelFloatingRef.current) {
+        const rect = panelFloatingRef.current.getBoundingClientRect();
+        setPanelBounds({ width: rect.width, height: rect.height });
+      }
+    };
+    const id = requestAnimationFrame(measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener('resize', measure);
+    };
+  }, [showPanel]);
+
+  // Measure ASL buffer size for collision avoidance
+  useEffect(() => {
+    if (!(isActive && gestureMode === 'asl')) return;
+    const measure = () => {
+      if (aslBoxRef.current) {
+        const rect = aslBoxRef.current.getBoundingClientRect();
+        setAslBounds({ width: rect.width, height: rect.height });
+      }
+    };
+    const id = requestAnimationFrame(measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener('resize', measure);
+    };
+  }, [isActive, gestureMode]);
+
   // Wrapper classes differ based on mode
   const containerClass = inHeader
     ? 'relative z-50 pointer-events-auto' // Inline in header
@@ -358,6 +396,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
         {/* Dropdown Panel - appears beside the button and clamps to viewport */}
         {isActive && showPanel && (
           <div
+            ref={panelFloatingRef}
             data-gesture-panel
             className="fixed z-[100] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-200"
             style={(() => {
@@ -529,21 +568,19 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
           {/* ASL Buffer Display - floating to the LEFT of the hand gesture button when in ASL mode */}
           {isActive && gestureMode === 'asl' && (
             <div
+              ref={aslBoxRef}
               className="fixed z-50 pointer-events-auto"
               style={inHeader && buttonRect
                 ? (() => {
                   const bufferWidth = 220;
-                  const gap = 12;
+                  const gap = 16; // add breathing room from controls
                   const left = Math.min(buttonRect.right + gap, window.innerWidth - bufferWidth - gap);
-                  const panelHeight = 320; // approximate dropdown height for spacing
-                  const bufferHeight = 180; // approximate ASL buffer height
+                  const panelHeight = panelBounds.height || 320;
+                  const bufferHeight = aslBounds.height || 180;
                   const targetTop = showPanel
                     ? buttonRect.top + panelHeight + gap
-                    : buttonRect.top + (buttonRect.height / 2) - 30;
-                  const top = Math.max(
-                    gap,
-                    Math.min(targetTop, window.innerHeight - bufferHeight - gap)
-                  );
+                    : buttonRect.top + (buttonRect.height / 2) - bufferHeight / 2;
+                  const top = Math.max(gap, Math.min(targetTop, window.innerHeight - bufferHeight - gap));
                   return {
                     left,
                     top
