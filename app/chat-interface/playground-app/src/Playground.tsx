@@ -1288,8 +1288,8 @@ function PlaygroundInner() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="fixed inset-0 pt-20 pb-6 z-10 flex">
-            <div className={`flex-1 ${gestureCtx.isActive ? 'pr-0' : 'px-2 sm:px-6'}`}>
+          <div className="flex h-screen w-full relative">
+            <div className={`flex-1 relative ${gestureCtx.isActive ? '' : 'px-2 sm:px-6'} pt-20 pb-6`}>
               <ErrorBoundary>
                 <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
                   <ChatView
@@ -1307,6 +1307,7 @@ function PlaygroundInner() {
                     setAutoModeScope={setChatAutoModeScope}
                     onModelUsed={setChatModelId}
                     onGestureOptionsChange={setGestureOptionsContent}
+                    gesturePanelOpen={gestureCtx.isActive}
                   />
                 </Suspense>
               </ErrorBoundary>

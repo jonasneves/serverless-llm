@@ -104,46 +104,41 @@ export default function GestureOptions({ content, onSelect }: GestureOptionsProp
 
   return (
     <div className="w-full">
-      <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-        <div className="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wide">
-          Point to select
-        </div>
-        <div className="flex flex-col gap-3">
-          {options.map((option) => {
-            const progress = dwellProgress[option.id] || 0;
-            const isHovered = hoveredId === option.id;
+      <div className="flex flex-col gap-4">
+        {options.map((option) => {
+          const progress = dwellProgress[option.id] || 0;
+          const isHovered = hoveredId === option.id;
 
-            return (
-              <button
-                key={option.id}
-                onClick={() => onSelect(option.value)}
-                onMouseEnter={() => handleMouseEnter(option.id)}
-                onMouseLeave={handleMouseLeave}
-                data-gesture-option={option.id}
-                className="relative overflow-hidden"
-              >
-                <div className={`
-                  relative px-6 py-4 rounded-lg font-medium text-sm
-                  border transition-all duration-200
-                  text-left
-                  ${isHovered
-                    ? 'bg-blue-500/20 border-blue-500/50 text-white scale-[1.02]'
-                    : 'bg-slate-900/50 border-slate-700/50 text-slate-300 hover:bg-slate-900/70 hover:border-slate-600/50'
-                  }
-                `}>
-                  {/* Progress indicator */}
-                  {isHovered && progress > 0 && (
-                    <div
-                      className="absolute bottom-0 left-0 h-0.5 bg-blue-400 transition-all duration-75"
-                      style={{ width: `${progress}%` }}
-                    />
-                  )}
-                  <span className="relative z-10">{option.label}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={option.id}
+              onClick={() => onSelect(option.value)}
+              onMouseEnter={() => handleMouseEnter(option.id)}
+              onMouseLeave={handleMouseLeave}
+              data-gesture-option={option.id}
+              className="relative overflow-hidden group"
+            >
+              <div className={`
+                relative px-6 py-5 rounded-2xl font-medium text-base
+                border transition-all duration-200
+                text-left min-h-[72px] flex items-center
+                ${isHovered
+                  ? 'bg-blue-500/20 border-blue-500/50 text-white scale-[1.02] shadow-lg shadow-blue-500/10'
+                  : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800/80 hover:border-slate-700/80'
+                }
+              `}>
+                {/* Progress indicator */}
+                {isHovered && progress > 0 && (
+                  <div
+                    className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 to-blue-500 transition-all duration-75 rounded-full"
+                    style={{ width: `${progress}%` }}
+                  />
+                )}
+                <span className="relative z-10">{option.label}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
