@@ -68,6 +68,9 @@ interface HandBackgroundProps {
     onPerformance?: (metrics: PerformanceMetrics) => void;
     mode?: GestureMode;
     appContext?: 'chat' | 'compare' | 'council' | 'roundtable' | 'personality';
+    // Restrict message gestures (thumbs up/down, etc.) to only work within this area
+    // Values are normalized 0-1 representing screen position
+    gestureActiveArea?: { minX: number; maxX: number; minY: number; maxY: number };
 }
 
 // Cursor position state for the floating pointer indicator
@@ -115,7 +118,8 @@ export default function HandBackground({
     onLandmarkData,
     onPerformance,
     mode = 'navigation',
-    appContext = 'chat'
+    appContext = 'chat',
+    gestureActiveArea
 }: HandBackgroundProps) {
     // Refs for callbacks
     const onStopGenerationRef = useRef(onStopGeneration);
@@ -133,6 +137,7 @@ export default function HandBackground({
     const configRef = useRef(config);
     const modeRef = useRef(mode);
     const appContextRef = useRef(appContext);
+    const gestureActiveAreaRef = useRef(gestureActiveArea);
 
     // Update refs on every render
     onStopGenerationRef.current = onStopGeneration;
@@ -150,6 +155,7 @@ export default function HandBackground({
     configRef.current = config;
     modeRef.current = mode;
     appContextRef.current = appContext;
+    gestureActiveAreaRef.current = gestureActiveArea;
     const onErrorRef = useRef(onError);
     onErrorRef.current = onError;
 
@@ -253,6 +259,19 @@ export default function HandBackground({
             default:
                 return true; // Default behavior
         }
+    }, []);
+
+    // Function to check if hand position is within the active gesture area
+    const isInActiveArea = useCallback((handX: number, handY: number) => {
+        const area = gestureActiveAreaRef.current;
+        if (!area) return true; // No restriction, allow everywhere
+        
+        // handX and handY are normalized 0-1, but handX from camera is mirrored
+        // so we use (1 - handX) to get actual screen position
+        const screenX = 1 - handX;
+        
+        return screenX >= area.minX && screenX <= area.maxX &&
+               handY >= area.minY && handY <= area.maxY;
     }, []);
 
     const getHandState = useCallback((index: number) => {
@@ -501,8 +520,10 @@ export default function HandBackground({
                         // Don't send if input is focused
                         const activeElement = document.activeElement;
                         const isInputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
-
-                        if (onSendMessageRef.current && !isInputFocused) {
+                        
+                        // Check if hand is in active gesture area (transcript panel)
+                        const wristY = landmarks[0].y;
+                        if (onSendMessageRef.current && !isInputFocused && isInActiveArea(currentX, wristY)) {
                             onSendMessageRef.current("Hi");
                             lastGestureTime.current = now;
                             state.waveDirectionChanges = 0;
@@ -531,8 +552,10 @@ export default function HandBackground({
                 // Don't send if input is focused
                 const activeElement = document.activeElement;
                 const isInputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
-
-                if (onSendMessageRef.current && !isInputFocused) {
+                
+                // Check if hand is in active gesture area (transcript panel)
+                const wrist = landmarks[0];
+                if (onSendMessageRef.current && !isInputFocused && isInActiveArea(wrist.x, wrist.y)) {
                     onSendMessageRef.current(gestureConfig.message);
                     lastGestureTime.current = now;
                     persistence.frames = 0;

@@ -517,6 +517,15 @@ function PlaygroundInner() {
 
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
+    
+    // Abort any ongoing generation to prevent stuck state
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    // Reset generation state to ensure clean state for new mode
+    setIsGenerating(false);
+    setIsSynthesizing(false);
+    
     triggerLineTransition();
     // Chat mode uses separate selection (chatModelId) - no cross-mode selection sync needed
     setMode(nextMode);
@@ -1030,6 +1039,9 @@ function PlaygroundInner() {
             mode={gestureCtx.gestureMode}
             appContext={gestureCtx.appContext}
             onGestureModeToggle={() => gestureCtx.setGestureMode(gestureCtx.gestureMode === 'navigation' ? 'asl' : 'navigation')}
+            // Restrict message gestures (thumbs up/down, wave, etc.) to the transcript panel area
+            // Panel is 400px (xl: 480px) on the right side - approximate as rightmost 30% of screen
+            gestureActiveArea={{ minX: 0.70, maxX: 1.0, minY: 0, maxY: 1.0 }}
             // Feedback callbacks - write to context for GestureControl UI
             onGestureState={gestureCtx.setGestureState}
             onASLResult={gestureCtx.setASLResult}
