@@ -498,7 +498,11 @@ export default function HandBackground({
                     state.lastWaveDirection = newDirection;
 
                     if (state.waveDirectionChanges >= 3 && (now - lastGestureTime.current > gestureCooldown)) {
-                        if (onSendMessageRef.current) {
+                        // Don't send if input is focused
+                        const activeElement = document.activeElement;
+                        const isInputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
+
+                        if (onSendMessageRef.current && !isInputFocused) {
                             onSendMessageRef.current("Hi");
                             lastGestureTime.current = now;
                             state.waveDirectionChanges = 0;
@@ -524,7 +528,11 @@ export default function HandBackground({
             const adaptiveThreshold = getAdaptivePersistenceThreshold(gestureName);
             if (persistence.frames >= adaptiveThreshold &&
                 (now - lastGestureTime.current > gestureCooldown)) {
-                if (onSendMessageRef.current) {
+                // Don't send if input is focused
+                const activeElement = document.activeElement;
+                const isInputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
+
+                if (onSendMessageRef.current && !isInputFocused) {
                     onSendMessageRef.current(gestureConfig.message);
                     lastGestureTime.current = now;
                     persistence.frames = 0;

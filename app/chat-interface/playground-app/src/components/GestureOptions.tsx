@@ -103,55 +103,48 @@ export default function GestureOptions({ content, onSelect }: GestureOptionsProp
   if (options.length === 0) return null;
 
   return (
-    <div className="mt-6 flex flex-wrap gap-4">
-      {options.map((option) => {
-        const progress = dwellProgress[option.id] || 0;
-        const isHovered = hoveredId === option.id;
+    <div className="w-full">
+      <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+        <div className="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wide">
+          Point to select
+        </div>
+        <div className="flex flex-col gap-3">
+          {options.map((option) => {
+            const progress = dwellProgress[option.id] || 0;
+            const isHovered = hoveredId === option.id;
 
-        return (
-          <button
-            key={option.id}
-            onClick={() => onSelect(option.value)}
-            onMouseEnter={() => handleMouseEnter(option.id)}
-            onMouseLeave={handleMouseLeave}
-            data-gesture-option={option.id}
-            className="relative group"
-          >
-            {/* Background glow */}
-            <div
-              className={`absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-400/20 to-purple-400/20 blur-xl transition-opacity duration-300 ${
-                isHovered ? 'opacity-100' : 'opacity-0'
-              }`}
-            />
-
-            {/* Main button */}
-            <div className={`
-              relative px-8 py-5 rounded-2xl font-semibold text-lg
-              backdrop-blur-xl border-2 transition-all duration-300
-              min-w-[160px] text-center overflow-hidden
-              ${isHovered
-                ? 'bg-gradient-to-br from-blue-500/30 via-purple-500/25 to-pink-500/20 border-blue-400/70 text-white shadow-2xl shadow-blue-500/30 scale-105 -translate-y-1'
-                : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20'
-              }
-            `}>
-              {/* Progress indicator */}
-              {isHovered && progress > 0 && (
-                <div
-                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 transition-all duration-75 rounded-full"
-                  style={{ width: `${progress}%` }}
-                />
-              )}
-
-              {/* Shimmer effect on hover */}
-              {isHovered && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
-              )}
-
-              <span className="relative z-10">{option.label}</span>
-            </div>
-          </button>
-        );
-      })}
+            return (
+              <button
+                key={option.id}
+                onClick={() => onSelect(option.value)}
+                onMouseEnter={() => handleMouseEnter(option.id)}
+                onMouseLeave={handleMouseLeave}
+                data-gesture-option={option.id}
+                className="relative overflow-hidden"
+              >
+                <div className={`
+                  relative px-6 py-4 rounded-lg font-medium text-sm
+                  border transition-all duration-200
+                  text-left
+                  ${isHovered
+                    ? 'bg-blue-500/20 border-blue-500/50 text-white scale-[1.02]'
+                    : 'bg-slate-900/50 border-slate-700/50 text-slate-300 hover:bg-slate-900/70 hover:border-slate-600/50'
+                  }
+                `}>
+                  {/* Progress indicator */}
+                  {isHovered && progress > 0 && (
+                    <div
+                      className="absolute bottom-0 left-0 h-0.5 bg-blue-400 transition-all duration-75"
+                      style={{ width: `${progress}%` }}
+                    />
+                  )}
+                  <span className="relative z-10">{option.label}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

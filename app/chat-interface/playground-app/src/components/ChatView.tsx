@@ -6,7 +6,7 @@ import { Bot, AlertTriangle, User, Zap, ChevronDown, Info, Server, Infinity, Clo
 import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import SelectionOverlay from './SelectionOverlay';
-import GestureOptions, { extractTextWithoutJSON } from './GestureOptions';
+import { extractTextWithoutJSON } from './GestureOptions';
 
 
 export interface ChatViewHandle {
@@ -39,7 +39,7 @@ interface ChatViewProps {
     autoModeScope: ChatAutoModeScope;
     setAutoModeScope: (value: ChatAutoModeScope) => void;
     onModelUsed?: (modelId: string) => void;
-
+    onGestureOptionsChange?: (content: string | null) => void;
 }
 
 // ChatMessage interface moved above ChatViewProps for export
@@ -57,6 +57,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     autoModeScope,
     setAutoModeScope,
     onModelUsed,
+    onGestureOptionsChange,
 }, ref) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentResponse, setCurrentResponse] = useState('');
@@ -165,6 +166,17 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Track gesture options from latest assistant message
+    useEffect(() => {
+        if (onGestureOptionsChange) {
+            // Find the last assistant message with JSON options
+            const lastAssistantMsg = [...messages].reverse().find(m =>
+                m.role === 'assistant' && m.content.includes('```json')
+            );
+            onGestureOptionsChange(lastAssistantMsg?.content || null);
+        }
+    }, [messages, onGestureOptionsChange]);
 
     const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string }> => {
         try {
@@ -739,12 +751,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 <div className="prose prose-invert prose-sm max-w-none">
                                     <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
                                 </div>
-                                {msg.role !== 'user' && msg.content.includes('```json') && (
-                                    <GestureOptions
-                                        content={msg.content}
-                                        onSelect={(value) => handleSend(value, true)}
-                                    />
-                                )}
                             </div>
                         </div>
                     ))}
