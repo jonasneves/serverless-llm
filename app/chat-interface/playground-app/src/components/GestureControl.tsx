@@ -573,7 +573,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
               style={inHeader && buttonRect
                 ? (() => {
                   const bufferWidth = 220;
-                  const gap = 16; // add breathing room from controls
+                  const gap = 12; // modest breathing room
                   const left = Math.min(buttonRect.right + gap, window.innerWidth - bufferWidth - gap);
                   const panelHeight = panelBounds.height || 320;
                   const bufferHeight = aslBounds.height || 180;
