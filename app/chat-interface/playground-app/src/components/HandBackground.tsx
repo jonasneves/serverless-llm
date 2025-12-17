@@ -165,6 +165,7 @@ export default function HandBackground({
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const dotsCanvasRef = useRef<HTMLCanvasElement>(null);
     const [loaded, setLoaded] = useState(false);
     const requestRef = useRef<number>();
 
@@ -798,8 +799,17 @@ export default function HandBackground({
             }
         }
 
-        // Clear main canvas (for both connections and landmarks)
+        // Get the dots canvas context
+        const dotsCanvas = dotsCanvasRef.current;
+        const dotsCtx = dotsCanvas?.getContext('2d');
+
+        // Clear main canvas (for connections)
         ctx.clearRect(0, 0, width, height);
+
+        // Clear dots canvas if it exists
+        if (dotsCtx) {
+            dotsCtx.clearRect(0, 0, width, height);
+        }
 
         // Draw hands
         if (landmarks.length > 0) {
@@ -845,7 +855,7 @@ export default function HandBackground({
                     }
                 }
 
-                // Draw connections on main canvas
+                // Draw connections on main canvas (background layer)
                 const connections = [
                     [0, 1], [1, 2], [2, 3], [3, 4], // thumb
                     [0, 5], [5, 6], [6, 7], [7, 8], // index
@@ -876,35 +886,37 @@ export default function HandBackground({
                     ctx.stroke();
                 }
 
-                // Draw landmarks on same canvas (no separate dots layer)
-                for (let j = 0; j < hand.length; j++) {
-                    const point = hand[j];
-                    const x = point.x * width;
-                    const y = point.y * height;
+                // Draw landmarks on dots canvas (foreground layer)
+                if (dotsCtx) {
+                    for (let j = 0; j < hand.length; j++) {
+                        const point = hand[j];
+                        const x = point.x * width;
+                        const y = point.y * height;
 
-                    const isFingertip = [4, 8, 12, 16, 20].includes(j);
-                    const radius = isFingertip ? (gesture ? 5 : 4) : (gesture ? 3 : 2); // Bigger when gesture detected
+                        const isFingertip = [4, 8, 12, 16, 20].includes(j);
+                        const radius = isFingertip ? (gesture ? 5 : 4) : (gesture ? 3 : 2); // Bigger when gesture detected
 
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                        dotsCtx.beginPath();
+                        dotsCtx.arc(x, y, radius, 0, 2 * Math.PI);
 
-                    if (isFingertip) {
-                        ctx.fillStyle = '#ffffff';
-                        ctx.shadowColor = glowColor;
-                        ctx.shadowBlur = gesture ? 20 : 15; // Enhanced shadow when gesture detected
-                    } else {
-                        ctx.fillStyle = '#1e293b';
-                        ctx.strokeStyle = glowColor;
-                        ctx.lineWidth = 1.5;
-                        ctx.shadowColor = mainColor;
-                        ctx.shadowBlur = gesture ? 8 : 5; // Enhanced shadow when gesture detected
+                        if (isFingertip) {
+                            dotsCtx.fillStyle = '#ffffff';
+                            dotsCtx.shadowColor = glowColor;
+                            dotsCtx.shadowBlur = gesture ? 20 : 15; // Enhanced shadow when gesture detected
+                        } else {
+                            dotsCtx.fillStyle = '#1e293b';
+                            dotsCtx.strokeStyle = glowColor;
+                            dotsCtx.lineWidth = 1.5;
+                            dotsCtx.shadowColor = mainColor;
+                            dotsCtx.shadowBlur = gesture ? 8 : 5; // Enhanced shadow when gesture detected
+                        }
+
+                        dotsCtx.fill();
+                        if (!isFingertip) dotsCtx.stroke();
                     }
 
-                    ctx.fill();
-                    if (!isFingertip) ctx.stroke();
+                    dotsCtx.shadowBlur = 0;
                 }
-
-                ctx.shadowBlur = 0;
             }
         } else {
             // No hands detected
@@ -937,6 +949,11 @@ export default function HandBackground({
                             if (canvasRef.current) {
                                 canvasRef.current.width = width;
                                 canvasRef.current.height = height;
+                            }
+
+                            if (dotsCanvasRef.current) {
+                                dotsCanvasRef.current.width = width;
+                                dotsCanvasRef.current.height = height;
                             }
 
                             if (requestRef.current) cancelAnimationFrame(requestRef.current);
@@ -995,18 +1012,31 @@ export default function HandBackground({
                 handLandmarkerRef.current.close();
                 handLandmarkerRef.current = null;
             }
+
+            // Clean up canvas references
+            if (dotsCanvasRef.current) {
+                dotsCanvasRef.current.width = 0;
+                dotsCanvasRef.current.height = 0;
+            }
         };
     }, []);
 
     return (
         <>
-            {/* Hand skeleton visualization - z-0 with isolation to create stacking context */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]" style={{ zIndex: 0, isolation: 'isolate' }}>
+            {/* Hand skeleton visualization - keep at z-1 to stay above background but below content
+                Using low z-index since hand renders outside main app via createPortal
+                z-index layers: 0 (background), 1 (hand), 20-40 (content), 50+ (UI overlays) */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]" style={{ zIndex: 1 }}>
                 <video ref={videoRef} className="hidden" playsInline muted autoPlay />
-                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-90 mix-blend-screen" />
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
             </div>
 
-            {/* Floating cursor (navigation mode only) - always on top */}
+            {/* Active dots visualization - positioned high enough to be clickable */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]" style={{ zIndex: 9999 }}>
+                <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full" />
+            </div>
+
+            {/* Floating cursor (navigation mode only) */}
             {mode === 'navigation' && (
                 <div
                     ref={cursorRef}
