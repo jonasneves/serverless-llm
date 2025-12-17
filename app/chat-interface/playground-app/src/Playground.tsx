@@ -1235,7 +1235,7 @@ export default function Playground() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6">
+          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6 z-10">
             <ErrorBoundary>
               <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
                 <ChatView
@@ -1270,7 +1270,7 @@ export default function Playground() {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`relative w-full h-full z-0 transition-all duration-300`}
+                className={`relative w-full h-full z-10 transition-all duration-300`}
                 style={{
                   position: 'relative',
                   display: 'flex',

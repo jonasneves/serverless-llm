@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
     FilesetResolver,
     HandLandmarker,
@@ -1021,18 +1022,65 @@ export default function HandBackground({
         };
     }, []);
 
+    /**
+     * Creates a portal container for the hand visualization layer.
+     * 
+     * IMPORTANT: This container is prepended INSIDE the main Playground container
+     * (not document.body) to share the same stacking context as other UI elements.
+     * 
+     * The container has z-index: 1 which places it:
+     * - ABOVE the background (z-index: 0 / auto)
+     * - BELOW all UI elements (z-index: 10+)
+     * 
+     * This allows the hand skeleton to appear with a glass-like effect 
+     * (opacity-50 + mix-blend-screen) behind cards, chat, header, etc.
+     */
+    const getContainer = useCallback(() => {
+        let el = document.getElementById('hand-layer');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'hand-layer';
+            el.style.cssText = 'position:absolute;inset:0;z-index:1;pointer-events:none;';
+            // Find the main playground container and prepend
+            const root = document.querySelector('[class*="fixed inset-0 overflow-hidden text-white"]');
+            if (root) {
+                root.prepend(el);
+            } else {
+                document.body.prepend(el);
+            }
+        }
+        return el;
+    }, []);
+
     return (
         <>
-            {/* Hand skeleton visualization - keep at z-1 to stay above background but below content
-                Using low z-index since hand renders outside main app via createPortal
-                z-index layers: 0 (background), 1 (hand), 20-40 (content), 50+ (UI overlays) */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]" style={{ zIndex: 1 }}>
-                <video ref={videoRef} className="hidden" playsInline muted autoPlay />
-                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-            </div>
+            {/* 
+             * Hand Skeleton Visualization Layer
+             * ==================================
+             * This is portaled into a container at z-index:1 INSIDE the main Playground container.
+             * 
+             * STACKING ORDER (why this works):
+             * - Hand skeleton container: z-index: 1 (behind UI for glass effect)
+             * - Chat/Cards containers: z-index: 10
+             * - Transcript panel: z-index: 40
+             * - Header: z-index: 50
+             * - ModelDock: z-index: 60
+             * - Input box: z-index: 100
+             * - Active dots (index finger): z-index: 9998 (on top for hover/click visibility)
+             * - Cursor: z-index: 9999 (always on top)
+             * 
+             * The opacity-50 and mix-blend-screen create the glass-like effect when behind UI.
+             */}
+            {createPortal(
+                <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]">
+                    <video ref={videoRef} className="hidden" playsInline muted autoPlay />
+                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
+                </div>,
+                getContainer()
+            )}
 
-            {/* Active dots visualization - positioned high enough to be clickable */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]" style={{ zIndex: 9999 }}>
+            {/* Active dots (index finger) - ON TOP of UI for hover/click visibility */}
+            <div className="fixed inset-0 z-[9998] pointer-events-none overflow-hidden scale-x-[-1]">
                 <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full" />
             </div>
 

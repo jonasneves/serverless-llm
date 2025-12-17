@@ -573,6 +573,23 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
         )}
       </div>
 
+
+      {/* Hand Background - rendered outside portal so z-index stacking works correctly */}
+      {isActive && !mouseSimulation && (
+        <HandBackground
+          {...props}
+          onGestureState={handleGestureState}
+          onASLResult={handleASLResult}
+          onError={handleCameraError}
+          config={gestureConfig}
+          onDebugInfo={handleDebugInfo}
+          onLandmarkData={setLandmarkData}
+          onPerformance={setPerformanceMetrics}
+          mode={gestureMode}
+          appContext={props.appContext}
+          onGestureModeToggle={() => setGestureMode(prev => prev === 'navigation' ? 'asl' : 'navigation')}
+        />
+      )}
       {/* Portal for fixed-position elements when rendered inside header */}
       {createPortal(
         <>
@@ -832,21 +849,6 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
             </div>
           )}
 
-          {isActive && !mouseSimulation && (
-            <HandBackground
-              {...props}
-              onGestureState={handleGestureState}
-              onASLResult={handleASLResult}
-              onError={handleCameraError}
-              config={gestureConfig}
-              onDebugInfo={handleDebugInfo}
-              onLandmarkData={setLandmarkData}
-              onPerformance={setPerformanceMetrics}
-              mode={gestureMode}
-              appContext={props.appContext}
-              onGestureModeToggle={() => setGestureMode(prev => prev === 'navigation' ? 'asl' : 'navigation')}
-            />
-          )}
 
           {/* Debug Panel */}
           <GestureDebugPanel
