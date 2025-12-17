@@ -285,7 +285,6 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!inHeader || !buttonRef.current) return;
     const updateRect = () => {
       if (buttonRef.current) {
         setButtonRect(buttonRef.current.getBoundingClientRect());
@@ -298,7 +297,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
       window.removeEventListener('resize', updateRect);
       window.removeEventListener('scroll', updateRect, true);
     };
-  }, [inHeader, isActive, showPanel]);
+  }, [isActive, showPanel, inHeader]);
 
   // Wrapper classes differ based on mode
   const containerClass = inHeader
@@ -316,18 +315,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
         style={containerStyle}
       >
         {/* Main button with status indicator */}
-        <div className="relative flex items-center gap-1">
-          {/* Red X close button - appears when active, now on the LEFT */}
-          {isActive && (
-            <button
-              onClick={() => setIsActive(false)}
-              className="w-6 h-6 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95"
-              title="Disable Gesture Control"
-            >
-              <X size={12} />
-            </button>
-          )}
-
+        <div className="relative flex flex-col items-center gap-1">
           <button
             ref={buttonRef}
             onClick={() => {
@@ -338,7 +326,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                 toggleActive();
               }
             }}
-            className={`relative min-w-[40px] min-h-[40px] w-10 h-10 rounded-lg flex items-center justify-center border transition-all duration-200 active:scale-95 ${isActive
+            className={`relative min-w-[42px] min-h-[42px] w-[42px] h-[42px] rounded-full flex items-center justify-center border transition-all duration-200 active:scale-95 ${isActive
               ? gestureMode === 'asl'
                 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30'
                 : 'bg-blue-500/20 border-blue-500/50 text-blue-400 hover:bg-blue-500/30'
@@ -354,13 +342,36 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                 } animate-pulse`} />
             )}
           </button>
+
+          {/* Close button anchored under the main button */}
+          {isActive && (
+            <button
+              onClick={() => setIsActive(false)}
+              className="mt-1 w-7 h-7 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95"
+              title="Disable Gesture Control"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
-        {/* Dropdown Panel - appears below the button, aligned to the right */}
+        {/* Dropdown Panel - appears beside the button and clamps to viewport */}
         {isActive && showPanel && (
           <div
             data-gesture-panel
-            className="absolute top-full right-0 mt-10 w-64 z-[100] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200"
+            className="fixed z-[100] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-200"
+            style={(() => {
+              const width = 256; // matches w-64
+              const margin = 12;
+              if (buttonRect) {
+                const left = Math.min(buttonRect.right + margin, window.innerWidth - width - margin);
+                const targetTop = buttonRect.top + buttonRect.height / 2 - 150; // center-ish
+                const top = Math.max(margin, Math.min(targetTop, window.innerHeight - 320));
+                return { left, top, width };
+              }
+              // Fallback to relative placement when rect unknown
+              return { width, left: margin, top: 80 };
+            })()}
           >
             {/* Header */}
             <div className="px-3 py-2.5 border-b border-slate-700/50 flex items-center justify-between">
@@ -520,14 +531,25 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
             <div
               className="fixed z-50 pointer-events-auto"
               style={inHeader && buttonRect
-                ? {
-                  // Position to the LEFT of the close button + hand button, vertically centered
-                  // Close button is w-6 (24px) + gap-1 (4px) = 28px extra offset
-                  right: window.innerWidth - buttonRect.left + 40, // Account for close button + gap
-                  top: buttonRect.top + (buttonRect.height / 2) - 30 // Vertically center approx
-                }
-                : { ...handOffsetStyle, top: 'calc(4rem)' }
-              }
+                ? (() => {
+                  const bufferWidth = 220;
+                  const gap = 12;
+                  const left = Math.min(buttonRect.right + gap, window.innerWidth - bufferWidth - gap);
+                  const panelHeight = 320; // approximate dropdown height for spacing
+                  const bufferHeight = 180; // approximate ASL buffer height
+                  const targetTop = showPanel
+                    ? buttonRect.top + panelHeight + gap
+                    : buttonRect.top + (buttonRect.height / 2) - 30;
+                  const top = Math.max(
+                    gap,
+                    Math.min(targetTop, window.innerHeight - bufferHeight - gap)
+                  );
+                  return {
+                    left,
+                    top
+                  };
+                })()
+                : { ...handOffsetStyle, top: 'calc(4rem)' }}
             >
               <div className="bg-slate-900/95 backdrop-blur-md border border-emerald-500/30 rounded-lg shadow-xl p-2 min-w-[180px]">
                 <div className="flex items-center justify-between mb-1.5">

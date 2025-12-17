@@ -68,9 +68,9 @@ export default function Header({
       {/* Background layer */}
       <div className="absolute inset-0 pointer-events-auto" style={{ height: '100%', zIndex: -1 }} />
 
-      {/* Left: Background Cycler */}
+      {/* Left: Gesture */}
       <div className="flex items-center gap-2 w-auto pointer-events-auto z-20">
-        {bgCyclerSlot}
+        {gestureButtonSlot}
       </div>
 
       {/* Center: Desktop Unified Title & Mode Toggle */}
@@ -170,15 +170,15 @@ export default function Header({
         </div>
       </div>
 
-      {/* Right: Gesture + Settings */}
+      {/* Right: Background Cycler + Settings */}
       <div className="flex items-center gap-2 w-auto justify-end pointer-events-auto z-20">
-        {/* Gesture button - same position on mobile and desktop */}
+        {/* Background switcher */}
         <div>
-          {gestureButtonSlot}
+          {bgCyclerSlot}
         </div>
         <button
           onClick={onOpenSettings}
-          className="min-w-[40px] min-h-[40px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
+          className="min-w-[42px] min-h-[42px] w-[42px] h-[42px] rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
           title="Settings"
         >
           <svg className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
