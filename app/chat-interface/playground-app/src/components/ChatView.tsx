@@ -40,7 +40,6 @@ interface ChatViewProps {
     setAutoModeScope: (value: ChatAutoModeScope) => void;
     onModelUsed?: (modelId: string) => void;
     onGestureOptionsChange?: (content: string | null) => void;
-    gesturePanelOpen?: boolean;
 }
 
 // ChatMessage interface moved above ChatViewProps for export
@@ -59,7 +58,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     setAutoModeScope,
     onModelUsed,
     onGestureOptionsChange,
-    gesturePanelOpen = false,
 }, ref) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentResponse, setCurrentResponse] = useState('');
@@ -803,7 +801,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 </div>
             </div>
 
-            {/* Input Area */}
+            {/* Input Area - always positioned to account for right panel */}
             <PromptInput
                 inputRef={inputRef}
                 inputFocused={inputFocused}
@@ -813,8 +811,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 placeholder={autoMode ? "Message (Auto mode - will use auto-selected model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
                 isGenerating={isGenerating}
                 onStop={handleStop}
-                className={gesturePanelOpen ? "fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300" : undefined}
-                style={gesturePanelOpen ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' } : undefined}
+                className="fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
+                style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
             />
         </div>
     );

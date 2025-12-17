@@ -1071,7 +1071,7 @@ function PlaygroundInner() {
           </div>
         </div>
       )}
-      {/* Header */}
+      {/* Header - centered within the dotted background area */}
       <Header
         mode={mode}
         setMode={handleModeChange}
@@ -1080,6 +1080,7 @@ function PlaygroundInner() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
+        hasRightPanel={true}
         gestureButtonSlot={
           <Suspense fallback={null}>
             <GestureControl
@@ -1261,7 +1262,7 @@ function PlaygroundInner() {
       <div
         style={{
           paddingLeft: activeInspectorId && mode === 'compare' && inspectorPosition === 'left' ? '28rem' : '1.5rem',
-          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : mode === 'council' || mode === 'roundtable' || mode === 'personality' ? '0' : '1.5rem',
+          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : '0',
         }}
       >
         {/* Dock Backdrop */}
@@ -1307,12 +1308,12 @@ function PlaygroundInner() {
                     setAutoModeScope={setChatAutoModeScope}
                     onModelUsed={setChatModelId}
                     onGestureOptionsChange={setGestureOptionsContent}
-                    gesturePanelOpen={gestureCtx.isActive}
                   />
                 </Suspense>
               </ErrorBoundary>
             </div>
-            {gestureCtx.isActive && (
+            {/* Right Panel: Gesture Panel or Chat History Panel */}
+            {gestureCtx.isActive ? (
               <Suspense fallback={null}>
                 <GesturePanel
                   content={gestureOptionsContent}
@@ -1321,6 +1322,21 @@ function PlaygroundInner() {
                   }}
                 />
               </Suspense>
+            ) : (
+              <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
+                <Suspense fallback={null}>
+                  <DiscussionTranscript
+                    history={[]}
+                    models={modelsData}
+                    mode={mode}
+                    onSelectPrompt={(prompt) => {
+                      chatViewRef.current?.setInput(prompt);
+                    }}
+                    onNewSession={() => setChatMessages([])}
+                    className="pt-24 pb-6 mask-fade-top"
+                  />
+                </Suspense>
+              </div>
             )}
           </div>
         )}
@@ -1417,31 +1433,29 @@ function PlaygroundInner() {
               </div>
             </div>
 
-            {/* Right Panel: Transcript (Only for Council/Roundtable) */}
-            {mode !== 'compare' && (
-              <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
-                <Suspense fallback={null}>
-                  <DiscussionTranscript
-                    history={history}
-                    models={modelsData}
-                    mode={mode}
-                    onSelectPrompt={(prompt) => {
-                      if (inputRef.current) {
-                        inputRef.current.value = prompt;
-                        inputRef.current.focus();
-                      }
-                    }}
-                    onNewSession={handleNewSession}
-                    className="pt-24 pb-6 mask-fade-top"
-                    phaseLabel={phaseLabel}
-                    isGenerating={isGenerating}
-                    isSynthesizing={isSynthesizing}
-                    speakingCount={speaking.size}
-                    totalParticipants={selectedModels.length}
-                  />
-                </Suspense>
-              </div>
-            )}
+            {/* Right Panel: Transcript (All non-chat modes) */}
+            <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
+              <Suspense fallback={null}>
+                <DiscussionTranscript
+                  history={history}
+                  models={modelsData}
+                  mode={mode}
+                  onSelectPrompt={(prompt) => {
+                    if (inputRef.current) {
+                      inputRef.current.value = prompt;
+                      inputRef.current.focus();
+                    }
+                  }}
+                  onNewSession={handleNewSession}
+                  className="pt-24 pb-6 mask-fade-top"
+                  phaseLabel={phaseLabel}
+                  isGenerating={isGenerating}
+                  isSynthesizing={isSynthesizing}
+                  speakingCount={speaking.size}
+                  totalParticipants={selectedModels.length}
+                />
+              </Suspense>
+            </div>
           </div>
         )}
 
@@ -1532,12 +1546,8 @@ function PlaygroundInner() {
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : mode === 'personality' ? "Ask the personas..." : "Steer the discussion..."}
-            className={mode !== 'compare'
-              ? "fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
-              : undefined}
-            style={mode !== 'compare'
-              ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }
-              : undefined}
+            className="fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
+            style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           />
         )
       }
