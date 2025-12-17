@@ -1,0 +1,162 @@
+import { useState, useEffect, useRef } from 'react';
+
+interface GestureOption {
+  id: string;
+  label: string;
+  action: 'message' | 'confirm' | 'choice';
+  value: string;
+}
+
+interface GestureOptionsProps {
+  content: string;
+  onSelect: (value: string) => void;
+}
+
+const DWELL_TIME = 1800; // 1.8 seconds to select
+
+export default function GestureOptions({ content, onSelect }: GestureOptionsProps) {
+  const [options, setOptions] = useState<GestureOption[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [dwellProgress, setDwellProgress] = useState<Record<string, number>>({});
+  const dwellStartRef = useRef<number>(0);
+  const animationFrameRef = useRef<number>(0);
+
+  useEffect(() => {
+    // Parse JSON from content
+    const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+    if (jsonMatch) {
+      try {
+        const data = JSON.parse(jsonMatch[1]);
+        if (data.options && Array.isArray(data.options)) {
+          setOptions(data.options);
+        }
+      } catch (e) {
+        console.error('Failed to parse gesture options:', e);
+      }
+    }
+  }, [content]);
+
+  useEffect(() => {
+    // Listen for gesture hover events
+    const handleGestureHover = (e: CustomEvent) => {
+      const target = e.detail?.target;
+      if (target && target.hasAttribute('data-gesture-option')) {
+        const optionId = target.getAttribute('data-gesture-option');
+        if (optionId && optionId !== hoveredId) {
+          setHoveredId(optionId);
+          startDwellTimer(optionId);
+        }
+      } else if (hoveredId) {
+        setHoveredId(null);
+        stopDwellTimer();
+      }
+    };
+
+    window.addEventListener('gesture-hover' as any, handleGestureHover);
+    return () => {
+      window.removeEventListener('gesture-hover' as any, handleGestureHover);
+      stopDwellTimer();
+    };
+  }, [hoveredId]);
+
+  const startDwellTimer = (optionId: string) => {
+    stopDwellTimer();
+    dwellStartRef.current = Date.now();
+
+    const updateProgress = () => {
+      const elapsed = Date.now() - dwellStartRef.current;
+      const progress = Math.min((elapsed / DWELL_TIME) * 100, 100);
+
+      setDwellProgress(prev => ({ ...prev, [optionId]: progress }));
+
+      if (progress >= 100) {
+        const option = options.find(opt => opt.id === optionId);
+        if (option) {
+          onSelect(option.value);
+          stopDwellTimer();
+        }
+      } else {
+        animationFrameRef.current = requestAnimationFrame(updateProgress);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(updateProgress);
+  };
+
+  const stopDwellTimer = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    setDwellProgress({});
+  };
+
+  const handleMouseEnter = (optionId: string) => {
+    setHoveredId(optionId);
+    startDwellTimer(optionId);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredId(null);
+    stopDwellTimer();
+  };
+
+  if (options.length === 0) return null;
+
+  return (
+    <div className="mt-6 flex flex-wrap gap-4">
+      {options.map((option) => {
+        const progress = dwellProgress[option.id] || 0;
+        const isHovered = hoveredId === option.id;
+
+        return (
+          <button
+            key={option.id}
+            onClick={() => onSelect(option.value)}
+            onMouseEnter={() => handleMouseEnter(option.id)}
+            onMouseLeave={handleMouseLeave}
+            data-gesture-option={option.id}
+            className="relative group"
+          >
+            {/* Background glow */}
+            <div
+              className={`absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-400/20 to-purple-400/20 blur-xl transition-opacity duration-300 ${
+                isHovered ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+
+            {/* Main button */}
+            <div className={`
+              relative px-8 py-5 rounded-2xl font-semibold text-lg
+              backdrop-blur-xl border-2 transition-all duration-300
+              min-w-[160px] text-center overflow-hidden
+              ${isHovered
+                ? 'bg-gradient-to-br from-blue-500/30 via-purple-500/25 to-pink-500/20 border-blue-400/70 text-white shadow-2xl shadow-blue-500/30 scale-105 -translate-y-1'
+                : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20'
+              }
+            `}>
+              {/* Progress indicator */}
+              {isHovered && progress > 0 && (
+                <div
+                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 transition-all duration-75 rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+              )}
+
+              {/* Shimmer effect on hover */}
+              {isHovered && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+              )}
+
+              <span className="relative z-10">{option.label}</span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Helper function to extract text without JSON blocks
+export function extractTextWithoutJSON(content: string): string {
+  return content.replace(/```json[\s\S]*?```/g, '').trim();
+}

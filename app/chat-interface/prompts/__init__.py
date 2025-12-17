@@ -9,7 +9,9 @@ All prompts follow Claude/Anthropic's style:
 
 from .base_prompts import (
     CONCISE_REASONING_PRINCIPLES,
-    VERIFICATION_GUIDELINES
+    VERIFICATION_GUIDELINES,
+    GESTURE_MODE_CONTEXT_LOCAL,
+    GESTURE_MODE_CONTEXT_API
 )
 
 from .council_prompts import (
@@ -35,6 +37,8 @@ __all__ = [
     # Base
     'CONCISE_REASONING_PRINCIPLES',
     'VERIFICATION_GUIDELINES',
+    'GESTURE_MODE_CONTEXT_LOCAL',
+    'GESTURE_MODE_CONTEXT_API',
     # Council
     'COUNCIL_STAGE1_SYSTEM',
     'COUNCIL_STAGE2_SYSTEM',

@@ -19,41 +19,78 @@ const gestures: Gesture[] = [
   {
     id: 'pointing_up',
     name: 'Pointing Up',
-    description: 'Extend your index finger up while keeping other fingers curled',
+    description: 'Point at UI elements to hover and interact with mode switcher',
     tips: [
       'Keep other fingers curled in a fist position',
       'Keep your thumb tucked in',
-      'The tip of your index finger should point straight up'
+      'Point at mode buttons to switch modes',
+      'Use for navigation - not for sending messages'
     ]
   },
   {
     id: 'thumbs_up',
     name: 'Thumbs Up',
-    description: 'Extend your thumb up while keeping other fingers curled',
+    description: 'Send 👍 emoji message (yes/approve/like)',
     tips: [
       'Make a fist with all fingers except your thumb',
       'Keep your index, middle, ring, and pinky fingers curled',
-      'Point your thumb straight up'
+      'Point your thumb straight up',
+      'Sends 👍 emoji to chat'
     ]
   },
   {
-    id: 'fist',
-    name: 'Closed Fist',
-    description: 'Curl all your fingers in towards your palm',
+    id: 'thumbs_down',
+    name: 'Thumbs Down',
+    description: 'Send 👎 emoji message (no/disapprove/dislike)',
     tips: [
-      'Bend all fingers at the knuckles',
-      'Press fingertips against the palm',
-      'Keep thumb across the front of your fist'
+      'Make a fist with all fingers except your thumb',
+      'Keep your index, middle, ring, and pinky fingers curled',
+      'Point your thumb straight down',
+      'Sends 👎 emoji to chat'
     ]
   },
   {
     id: 'open_palm',
     name: 'Open Palm',
-    description: 'Extend all fingers straight out with palm facing forward',
+    description: 'Send 👋 message (hi/hello/greeting)',
     tips: [
       'Keep all fingers extended straight',
       'Keep your palm facing forward',
-      'Keep fingers together but not touching'
+      'Keep fingers together but not touching',
+      'Sends 👋 to chat'
+    ]
+  },
+  {
+    id: 'victory',
+    name: 'Victory/Peace Sign',
+    description: 'Send "ok" message (okay/continue/proceed)',
+    tips: [
+      'Extend your index and middle fingers in a V shape',
+      'Keep ring and pinky fingers curled down',
+      'Keep your palm facing forward',
+      'Sends "ok" to chat'
+    ]
+  },
+  {
+    id: 'iloveyou',
+    name: 'I Love You',
+    description: 'Send "thanks" message (thank you/appreciate)',
+    tips: [
+      'Extend your thumb, index, and pinky fingers',
+      'Keep middle and ring fingers curled down',
+      'This is the ASL sign for "I Love You"',
+      'Sends "thanks" to chat'
+    ]
+  },
+  {
+    id: 'fist',
+    name: 'Closed Fist',
+    description: 'Send "stop" message (stop/wait/hold)',
+    tips: [
+      'Bend all fingers at the knuckles',
+      'Press fingertips against the palm',
+      'Keep thumb across the front of your fist',
+      'Sends "stop" to chat'
     ]
   }
 ];

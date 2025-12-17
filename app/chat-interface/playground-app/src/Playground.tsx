@@ -1092,7 +1092,7 @@ function PlaygroundInner() {
               }}
               onSendMessage={(msg) => {
                 if (mode === 'chat' && chatViewRef.current) {
-                  chatViewRef.current.sendMessage(msg);
+                  chatViewRef.current.sendMessage(msg, true); // fromGesture = true
                   return;
                 }
 

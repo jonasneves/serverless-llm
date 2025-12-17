@@ -92,8 +92,10 @@ const DEFAULT_CONFIG: GestureConfig = {
 const NAVIGATION_GESTURE_MAP: Record<string, { action: string; message?: string; direction?: 'prev' | 'next' }> = {
     'Thumb_Up': { action: 'message', message: '👍' },
     'Thumb_Down': { action: 'message', message: '👎' },
-    'Closed_Fist': { action: 'scroll' },
-    'Open_Palm': { action: 'wave' },
+    'Open_Palm': { action: 'message', message: '👋' },
+    'Victory': { action: 'message', message: 'ok' },
+    'ILoveYou': { action: 'message', message: 'thanks' },
+    'Closed_Fist': { action: 'message', message: 'stop' },
     'Pointing_Up': { action: 'point' },
 };
 
