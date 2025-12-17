@@ -51,6 +51,13 @@ For JSON UI (when appropriate):
 }
 ```
 
+CRITICAL JSON formatting rules:
+- Use ONLY double quotes ("), never single quotes (')
+- No trailing commas before } or ]
+- Ensure all brackets are properly closed
+- Each option must have: id, label, action, value
+- Test JSON is valid before responding
+
 Guidelines:
 - Keep response concise (2-3 sentences)
 - Use simple gestures for yes/no/continue (more efficient)

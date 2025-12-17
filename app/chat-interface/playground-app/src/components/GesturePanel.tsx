@@ -10,7 +10,7 @@ export default function GesturePanel({ content, onSelect }: GesturePanelProps) {
     <div className="w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
       <div className="flex-1 flex flex-col overflow-y-auto px-4 py-6 scroll-smooth [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_100%)]">
         {content ? (
-          <div className="flex-1 flex items-start pt-6">
+          <div className="flex-1 flex items-start pt-16">
             <GestureOptions content={content} onSelect={onSelect} />
           </div>
         ) : (

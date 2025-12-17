@@ -23,15 +23,35 @@ export default function GestureOptions({ content, onSelect }: GestureOptionsProp
 
   useEffect(() => {
     // Parse JSON from content
-    const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
     if (jsonMatch) {
       try {
-        const data = JSON.parse(jsonMatch[1]);
+        let jsonStr = jsonMatch[1];
+
+        // Try to repair common JSON issues
+        jsonStr = jsonStr
+          .replace(/[\\']/g, '"') // Replace single quotes and escaped quotes with double quotes
+          .replace(/,\s*}/g, '}') // Remove trailing commas before }
+          .replace(/,\s*]/g, ']') // Remove trailing commas before ]
+          .replace(/}\s*[\\]+\s*$/g, '}') // Remove trailing backslashes
+          .replace(/"\s*"\s*$/g, '') // Remove extra quotes at end
+          .trim();
+
+        const data = JSON.parse(jsonStr);
         if (data.options && Array.isArray(data.options)) {
-          setOptions(data.options);
+          // Validate each option has required fields
+          const validOptions = data.options.filter((opt: any) =>
+            opt.id && opt.label && opt.value
+          );
+          if (validOptions.length > 0) {
+            setOptions(validOptions);
+          } else {
+            console.warn('No valid gesture options found in JSON');
+          }
         }
       } catch (e) {
         console.error('Failed to parse gesture options:', e);
+        console.error('JSON content:', jsonMatch[1]);
       }
     }
   }, [content]);
@@ -103,8 +123,8 @@ export default function GestureOptions({ content, onSelect }: GestureOptionsProp
   if (options.length === 0) return null;
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col gap-4">
+    <div className="w-full px-4">
+      <div className="flex flex-col gap-3 items-center">
         {options.map((option) => {
           const progress = dwellProgress[option.id] || 0;
           const isHovered = hoveredId === option.id;
@@ -116,26 +136,24 @@ export default function GestureOptions({ content, onSelect }: GestureOptionsProp
               onMouseEnter={() => handleMouseEnter(option.id)}
               onMouseLeave={handleMouseLeave}
               data-gesture-option={option.id}
-              className="relative overflow-hidden group"
-            >
-              <div className={`
-                relative px-6 py-5 rounded-2xl font-medium text-base
-                border transition-all duration-200
-                text-left min-h-[72px] flex items-center
+              className={`
+                relative overflow-hidden rounded-xl font-medium text-sm
+                border transition-all duration-200 w-[85%] max-w-[340px]
+                text-left min-h-[44px] flex items-center px-5 py-3
                 ${isHovered
-                  ? 'bg-blue-500/20 border-blue-500/50 text-white scale-[1.02] shadow-lg shadow-blue-500/10'
+                  ? 'bg-blue-500/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10'
                   : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800/80 hover:border-slate-700/80'
                 }
-              `}>
-                {/* Progress indicator */}
-                {isHovered && progress > 0 && (
-                  <div
-                    className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 to-blue-500 transition-all duration-75 rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
-                )}
-                <span className="relative z-10">{option.label}</span>
-              </div>
+              `}
+            >
+              {/* Progress indicator */}
+              {isHovered && progress > 0 && (
+                <div
+                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 to-blue-500 transition-all duration-75"
+                  style={{ width: `${progress}%` }}
+                />
+              )}
+              <span className="relative z-10">{option.label}</span>
             </button>
           );
         })}
