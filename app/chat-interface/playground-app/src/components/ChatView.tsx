@@ -425,14 +425,14 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     };
 
     return (
-        <div ref={containerRef} className="flex flex-col h-full relative">
+        <div ref={containerRef} className="flex flex-col h-full relative isolate z-[10]">
             {/* Blue Selection Rectangle */}
             <SelectionOverlay rect={selectionRect} />
 
             {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
+                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative z-[10] [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
                 data-no-arena-scroll
                 onClick={(e) => {
                     // Clear selection if clicking directly on the messages area (not on a message)
