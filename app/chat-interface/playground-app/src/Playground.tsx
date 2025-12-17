@@ -1234,7 +1234,7 @@ export default function Playground() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6" data-no-arena-scroll>
+          <div className="fixed inset-0 pt-20 pb-6 px-2 sm:px-6">
             <ErrorBoundary>
               <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
                 <ChatView

@@ -70,7 +70,7 @@ export function useSelectionBox({
   useEffect(() => {
     const handleMouseDown = (event: MouseEvent) => {
       if (event.button !== 0) return;
-      if (!rootContainerRef.current || !visualizationAreaRef.current) return;
+      if (!rootContainerRef.current) return;
 
       const target = event.target as HTMLElement | null;
       if (!target) return;
@@ -119,7 +119,7 @@ export function useSelectionBox({
   ]);
 
   useEffect(() => {
-    if (!dragSelection || !rootContainerRef.current || !visualizationAreaRef.current) return;
+    if (!dragSelection || !rootContainerRef.current) return;
 
     const handleSelectStart = (event: Event) => event.preventDefault();
     document.addEventListener('selectstart', handleSelectStart);
