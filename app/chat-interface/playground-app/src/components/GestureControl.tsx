@@ -429,6 +429,9 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
                     👎 Down → No
                   </div>
+                  <div className="col-span-2 flex items-center gap-1.5 text-slate-400 py-0.5 bg-slate-800/30 rounded px-1.5 mt-0.5">
+                    🤙 Shaka → Switch Mode
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -444,6 +447,9 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-400">
                       <span className="text-orange-400 text-[8px]">🤏</span> Backspace
+                    </div>
+                    <div className="col-span-2 flex items-center gap-1.5 text-slate-400 bg-slate-800/30 rounded px-1.5 mt-0.5">
+                      <span className="text-blue-400">🤙</span> Switch Mode
                     </div>
                   </div>
                   <div className="grid grid-cols-9 gap-0.5">
@@ -717,6 +723,14 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                   </div>
 
                   {/* Privacy note */}
+                  {/* Pro Tip - floating above privacy note */}
+                  <div className="mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-2">
+                    <span className="text-lg">🤙</span>
+                    <span className="text-[10px] sm:text-xs text-blue-400 font-medium">
+                      Tip: Shaka gesture switches modes anytime!
+                    </span>
+                  </div>
+
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
                     <Camera size={14} className="text-slate-500 mt-0.5 shrink-0" />
                     <p className="text-[10px] sm:text-xs text-slate-500 leading-relaxed">
@@ -759,6 +773,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
               onLandmarkData={setLandmarkData}
               onPerformance={setPerformanceMetrics}
               mode={gestureMode}
+              onGestureModeToggle={() => setGestureMode(prev => prev === 'navigation' ? 'asl' : 'navigation')}
             />
           )}
 
