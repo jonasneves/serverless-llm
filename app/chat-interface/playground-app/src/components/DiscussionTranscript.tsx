@@ -227,13 +227,13 @@ export default function DiscussionTranscript({
                         <p className="text-lg mb-8 opacity-50">Start a discussion to see the transcript.</p>
 
                         {examplePrompts.length > 0 && onSelectPrompt && (
-                            <div className="flex flex-col gap-3 w-full max-w-md">
+                            <div className="flex flex-col gap-3 w-full items-center">
                                 <p className="text-sm text-slate-400 text-center mb-2">Try an example:</p>
                                 {examplePrompts.map((example, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => onSelectPrompt(example)}
-                                        className="text-sm text-slate-300 hover:text-blue-400 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/40 hover:border-blue-400/40 rounded-lg px-4 py-3 transition-all active:scale-[0.98] text-left"
+                                        className="w-[85%] max-w-[340px] text-sm text-slate-300 hover:text-blue-400 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/40 hover:border-blue-400/40 rounded-xl px-5 py-3 transition-all active:scale-[0.98] text-left"
                                     >
                                         {example}
                                     </button>
