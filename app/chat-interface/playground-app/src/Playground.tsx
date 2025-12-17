@@ -148,6 +148,8 @@ function PlaygroundInner() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatAutoMode, setChatAutoMode] = useState(true);
   const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('local');
+  const [chatCurrentResponse, setChatCurrentResponse] = useState('');
+  const [chatIsGenerating, setChatIsGenerating] = useState(false);
   const [gestureOptionsContent, setGestureOptionsContent] = useState<string | null>(null);
   const {
     history,
@@ -519,7 +521,9 @@ function PlaygroundInner() {
     if (nextMode === mode) return;
     triggerLineTransition();
     // Chat mode uses separate selection (chatModelId) - no cross-mode selection sync needed
-    // Don't abort ongoing generation - let it complete in the background
+    // Reset generating state to prevent blocking new messages in the new mode
+    // The background generation will complete but won't block the UI
+    setIsGenerating(false);
     setMode(nextMode);
   }, [mode, triggerLineTransition]);
 
@@ -1115,6 +1119,12 @@ function PlaygroundInner() {
                 }
               }}
               onScroll={(deltaY) => {
+                // Chat mode uses its own scroll container
+                if (mode === 'chat' && chatViewRef.current) {
+                  chatViewRef.current.scroll(deltaY);
+                  return;
+                }
+                // Other modes use arena scrolling
                 arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
                 ensureRaf();
               }}
@@ -1310,6 +1320,10 @@ function PlaygroundInner() {
                     setAutoMode={setChatAutoMode}
                     autoModeScope={chatAutoModeScope}
                     setAutoModeScope={setChatAutoModeScope}
+                    currentResponse={chatCurrentResponse}
+                    setCurrentResponse={setChatCurrentResponse}
+                    isGenerating={chatIsGenerating}
+                    setIsGenerating={setChatIsGenerating}
                     onModelUsed={setChatModelId}
                     onGestureOptionsChange={setGestureOptionsContent}
                   />

@@ -13,6 +13,7 @@ export interface ChatViewHandle {
     sendMessage: (text: string, fromGesture?: boolean) => void;
     setInput: (text: string) => void;
     stopGeneration: () => void;
+    scroll: (deltaY: number) => void;
 }
 
 export type ChatAutoModeScope = 'local' | 'api';
@@ -38,6 +39,11 @@ interface ChatViewProps {
     setAutoMode: (value: boolean) => void;
     autoModeScope: ChatAutoModeScope;
     setAutoModeScope: (value: ChatAutoModeScope) => void;
+    // Generation state - persisted across mode switches
+    currentResponse: string;
+    setCurrentResponse: React.Dispatch<React.SetStateAction<string>>;
+    isGenerating: boolean;
+    setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
     onModelUsed?: (modelId: string) => void;
     onGestureOptionsChange?: (content: string | null) => void;
 }
@@ -56,11 +62,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     setAutoMode,
     autoModeScope,
     setAutoModeScope,
+    currentResponse,
+    setCurrentResponse,
+    isGenerating,
+    setIsGenerating,
     onModelUsed,
     onGestureOptionsChange,
 }, ref) => {
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [currentResponse, setCurrentResponse] = useState('');
     const [inputFocused, setInputFocused] = useState(false);
     const [showAutoDropdown, setShowAutoDropdown] = useState(false);
     const [showModelSelector, setShowModelSelector] = useState(false);
@@ -91,6 +99,11 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         },
         stopGeneration: () => {
             handleStop();
+        },
+        scroll: (deltaY: number) => {
+            if (scrollRef.current) {
+                scrollRef.current.scrollTop += deltaY;
+            }
         }
     }));
 
