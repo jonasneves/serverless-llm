@@ -6,6 +6,7 @@ Inspired by Claude Code's concise, reasoning-focused style
 
 # Core principles for all modes
 CONCISE_REASONING_PRINCIPLES = """Guidelines for your response:
+- Respond in concise English
 - Focus on facts and problem-solving with direct, objective information
 - Show your reasoning step-by-step, but keep each step concise
 - Avoid unnecessary superlatives, praise, or emotional validation
