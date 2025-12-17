@@ -356,11 +356,11 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
           )}
         </div>
 
-        {/* Dropdown Panel - appears below the button */}
+        {/* Dropdown Panel - appears below the button, aligned to the right */}
         {isActive && showPanel && (
           <div
             data-gesture-panel
-            className="absolute top-full left-0 mt-3 w-64 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200"
+            className="absolute top-full right-0 mt-3 w-64 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200"
           >
             {/* Header */}
             <div className="px-3 py-2.5 border-b border-slate-700/50 flex items-center justify-between">
