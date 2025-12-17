@@ -1033,128 +1033,6 @@ export default function Playground() {
           </div>
         </div>
       )}
-      <Suspense fallback={null}>
-        <GestureControl
-          transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
-          onStopGeneration={() => {
-            if (mode === 'chat' && chatViewRef.current) {
-              chatViewRef.current.stopGeneration();
-              return;
-            }
-            handleStop();
-          }}
-          onSendMessage={(msg) => {
-            if (mode === 'chat' && chatViewRef.current) {
-              chatViewRef.current.sendMessage(msg);
-              return;
-            }
-
-            // Don't populate input box for gesture-triggered messages - just send directly
-            const activeIds = mode === 'compare'
-              ? selected
-              : mode === 'council' || mode === 'roundtable' || mode === 'personality'
-                ? selected
-                : [];
-
-            if (activeIds.length > 0) {
-              sendMessage(msg, {}, activeIds);
-            }
-          }}
-          onScroll={(deltaY) => {
-            arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
-            ensureRaf();
-          }}
-          onHover={(xOfScreen, yOfScreen) => {
-            const hoverX = xOfScreen * window.innerWidth;
-            const hoverY = yOfScreen * window.innerHeight;
-
-            const el = document.elementFromPoint(hoverX, hoverY) as HTMLElement;
-            if (el) {
-              // Get the current hovered element stored in a data attribute
-              const currentHovered = document.querySelector('[data-gesture-hovered="true"]') as HTMLElement;
-
-              // Find the interactive element or just use the element itself
-              const interactive = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement || el;
-
-              if (interactive !== currentHovered) {
-                // Pointer/Mouse leave on previous element
-                if (currentHovered) {
-                  currentHovered.removeAttribute('data-gesture-hovered');
-                  currentHovered.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false, cancelable: true }));
-                  currentHovered.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false, cancelable: true }));
-                  currentHovered.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
-                }
-
-                // Pointer/Mouse enter on new element
-                interactive.setAttribute('data-gesture-hovered', 'true');
-                interactive.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
-                interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
-                interactive.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
-                interactive.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
-              } else if (interactive === currentHovered) {
-                // Still hovering same element, dispatch pointermove for continuous tracking
-                interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
-                interactive.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
-              }
-            }
-          }}
-          onPinch={(xOfScreen, yOfScreen) => {
-            const clickX = xOfScreen * window.innerWidth;
-            const clickY = yOfScreen * window.innerHeight;
-
-            const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
-            if (el) {
-              // Dispatch pointer and mouse events on the target element
-              // This ensures compatibility with both pointer-based (cards) and mouse-based (buttons) handlers
-              const dispatchClickEvents = (target: HTMLElement) => {
-                // Pointer events (for cards and modern UI)
-                target.dispatchEvent(new PointerEvent('pointerdown', {
-                  bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
-                  pointerId: 1, pointerType: 'touch', isPrimary: true
-                }));
-                target.dispatchEvent(new PointerEvent('pointerup', {
-                  bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
-                  pointerId: 1, pointerType: 'touch', isPrimary: true
-                }));
-
-                // Mouse events (for traditional buttons and links)
-                target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
-                target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
-                target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
-              };
-
-              // Find clickable elements: buttons, links, cards, anything with click handlers
-              const clickable = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement;
-
-              if (clickable) {
-                dispatchClickEvents(clickable);
-              } else {
-                // If no clickable found, try clicking the element directly (works for cards)
-                dispatchClickEvents(el);
-              }
-
-              // Visual feedback ripple
-              const ripple = document.createElement('div');
-              ripple.style.position = 'fixed';
-              ripple.style.left = `${clickX}px`;
-              ripple.style.top = `${clickY}px`;
-              ripple.style.width = '20px';
-              ripple.style.height = '20px';
-              ripple.style.background = 'rgba(236, 72, 153, 0.5)';
-              ripple.style.borderRadius = '50%';
-              ripple.style.transform = 'translate(-50%, -50%)';
-              ripple.style.pointerEvents = 'none';
-              ripple.style.zIndex = '9999';
-              document.body.appendChild(ripple);
-
-              ripple.animate([
-                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
-                { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
-              ], { duration: 400 }).onfinish = () => ripple.remove();
-            }
-          }}
-        />
-      </Suspense>
       {/* Header */}
       <Header
         mode={mode}
@@ -1165,6 +1043,142 @@ export default function Playground() {
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
         transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
+        gestureButtonSlot={
+          <Suspense fallback={null}>
+            <GestureControl
+              inHeader={true}
+              transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
+              onStopGeneration={() => {
+                if (mode === 'chat' && chatViewRef.current) {
+                  chatViewRef.current.stopGeneration();
+                  return;
+                }
+                handleStop();
+              }}
+              onSendMessage={(msg) => {
+                if (mode === 'chat' && chatViewRef.current) {
+                  chatViewRef.current.sendMessage(msg);
+                  return;
+                }
+
+                // Don't populate input box for gesture-triggered messages - just send directly
+                const activeIds = mode === 'compare'
+                  ? selected
+                  : mode === 'council' || mode === 'roundtable' || mode === 'personality'
+                    ? selected
+                    : [];
+
+                if (activeIds.length > 0) {
+                  sendMessage(msg, {}, activeIds);
+                }
+              }}
+              onScroll={(deltaY) => {
+                arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
+                ensureRaf();
+              }}
+              onHover={(xOfScreen, yOfScreen) => {
+                const hoverX = xOfScreen * window.innerWidth;
+                const hoverY = yOfScreen * window.innerHeight;
+
+                const el = document.elementFromPoint(hoverX, hoverY) as HTMLElement;
+                if (el) {
+                  // Get the current hovered element stored in a data attribute
+                  const currentHovered = document.querySelector('[data-gesture-hovered="true"]') as HTMLElement;
+
+                  // Find the interactive element or just use the element itself
+                  const interactive = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement || el;
+
+                  if (interactive !== currentHovered) {
+                    // Pointer/Mouse leave on previous element
+                    if (currentHovered) {
+                      currentHovered.removeAttribute('data-gesture-hovered');
+                      currentHovered.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false, cancelable: true }));
+                      currentHovered.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false, cancelable: true }));
+                      currentHovered.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
+                    }
+
+                    // Pointer/Mouse enter on new element
+                    interactive.setAttribute('data-gesture-hovered', 'true');
+                    interactive.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                    interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                    interactive.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                    interactive.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                  } else if (interactive === currentHovered) {
+                    // Still hovering same element, dispatch pointermove for continuous tracking
+                    interactive.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                    interactive.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: hoverX, clientY: hoverY }));
+                  }
+                }
+              }}
+              onPinch={(xOfScreen, yOfScreen) => {
+                const clickX = xOfScreen * window.innerWidth;
+                const clickY = yOfScreen * window.innerHeight;
+
+                const el = document.elementFromPoint(clickX, clickY) as HTMLElement;
+                if (el) {
+                  // Dispatch pointer and mouse events on the target element
+                  // This ensures compatibility with both pointer-based (cards) and mouse-based (buttons) handlers
+                  const dispatchClickEvents = (target: HTMLElement) => {
+                    // Pointer events (for cards and modern UI)
+                    target.dispatchEvent(new PointerEvent('pointerdown', {
+                      bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
+                      pointerId: 1, pointerType: 'touch', isPrimary: true
+                    }));
+                    target.dispatchEvent(new PointerEvent('pointerup', {
+                      bubbles: true, cancelable: true, clientX: clickX, clientY: clickY,
+                      pointerId: 1, pointerType: 'touch', isPrimary: true
+                    }));
+
+                    // Mouse events (for traditional buttons and links)
+                    target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+                    target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+                    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: clickX, clientY: clickY }));
+                  };
+
+                  // Find clickable elements: buttons, links, cards, anything with click handlers
+                  const clickable = el.closest('button, a, [role="button"], [data-clickable], .cursor-pointer, [onclick]') as HTMLElement;
+
+                  if (clickable) {
+                    dispatchClickEvents(clickable);
+                  } else {
+                    // If no clickable found, try clicking the element directly (works for cards)
+                    dispatchClickEvents(el);
+                  }
+
+                  // Visual feedback ripple
+                  const ripple = document.createElement('div');
+                  ripple.style.position = 'fixed';
+                  ripple.style.left = `${clickX}px`;
+                  ripple.style.top = `${clickY}px`;
+                  ripple.style.width = '20px';
+                  ripple.style.height = '20px';
+                  ripple.style.background = 'rgba(236, 72, 153, 0.5)';
+                  ripple.style.borderRadius = '50%';
+                  ripple.style.transform = 'translate(-50%, -50%)';
+                  ripple.style.pointerEvents = 'none';
+                  ripple.style.zIndex = '9999';
+                  document.body.appendChild(ripple);
+
+                  ripple.animate([
+                    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                    { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 }
+                  ], { duration: 400 }).onfinish = () => ripple.remove();
+                }
+              }}
+              onModeChange={(direction) => {
+                const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
+                const currentIndex = modes.indexOf(mode);
+                let nextIndex: number;
+                if (direction === 'next') {
+                  nextIndex = (currentIndex + 1) % modes.length;
+                } else {
+                  nextIndex = (currentIndex - 1 + modes.length) % modes.length;
+                }
+                handleModeChange(modes[nextIndex]);
+              }}
+            />
+          </Suspense>
+        }
       />
 
       {/* Content Wrapper with Sidebar Offset */}
@@ -1449,11 +1463,11 @@ export default function Playground() {
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : mode === 'personality' ? "Ask the personas..." : "Steer the discussion..."}
-            className={mode !== 'compare' 
-              ? "fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300" 
+            className={mode !== 'compare'
+              ? "fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
               : undefined}
-            style={mode !== 'compare' 
-              ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' } 
+            style={mode !== 'compare'
+              ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }
               : undefined}
           />
         )

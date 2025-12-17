@@ -10,6 +10,7 @@ interface HeaderProps {
   setShowDock: (show: boolean) => void;
   onOpenSettings: () => void;
   transcriptPanelOpen?: boolean;
+  gestureButtonSlot?: React.ReactNode;
 }
 
 const MODES: { value: Mode; label: string }[] = [
@@ -28,7 +29,8 @@ export default function Header({
   showDock,
   setShowDock,
   onOpenSettings,
-  transcriptPanelOpen = false
+  transcriptPanelOpen = false,
+  gestureButtonSlot
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -69,50 +71,57 @@ export default function Header({
 
       {/* Center: Desktop Unified Title & Mode Toggle */}
       <div className="hidden md:block absolute left-1/2 -translate-x-1/2 pointer-events-auto z-20">
-        <div className="flex items-center p-1.5 rounded-xl border border-slate-700/40 header-shell">
-          {/* Menu Icon */}
-          <button
-            onClick={() => setShowDock(!showDock)}
-            className="px-2 sm:px-3 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-            title="Toggle Model Dock"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+        <div className="relative">
+          <div className="flex items-center p-1.5 rounded-xl border border-slate-700/40 header-shell">
+            {/* Menu Icon */}
+            <button
+              onClick={() => setShowDock(!showDock)}
+              className="px-2 sm:px-3 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+              title="Toggle Model Dock"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
 
-          {/* Divider */}
-          <div className="w-px h-5 bg-slate-700/50 mx-0.5 sm:mx-1"></div>
+            {/* Divider */}
+            <div className="w-px h-5 bg-slate-700/50 mx-0.5 sm:mx-1"></div>
 
-          {/* Mode Toggle Track */}
-          <div
-            className="relative flex p-1 rounded-lg bg-black/20 mode-track"
-            role="radiogroup"
-            aria-label="Mode selection"
-          >
-            {/* Sliding indicator */}
+            {/* Mode Toggle Track */}
             <div
-              className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
-              style={{
-                width: `calc((100% - 8px) / ${MODES.length})`,
-                left: `calc(4px + (100% - 8px) * ${safeIndex} / ${MODES.length})`
-              }}
-            />
-            {MODES.map(m => (
-              <button
-                key={m.value}
-                tabIndex={-1}
-                onClick={() => handleModeSelect(m.value)}
-                role="radio"
-                aria-checked={mode === m.value}
-                className={`relative z-10 py-2 sm:py-1.5 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.value
-                  ? 'text-white'
-                  : 'text-slate-400 hover:text-slate-200'
-                  }`}
-              >
-                {m.label}
-              </button>
-            ))}
+              className="relative flex p-1 rounded-lg bg-black/20 mode-track"
+              role="radiogroup"
+              aria-label="Mode selection"
+            >
+              {/* Sliding indicator */}
+              <div
+                className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
+                style={{
+                  width: `calc((100% - 8px) / ${MODES.length})`,
+                  left: `calc(4px + (100% - 8px) * ${safeIndex} / ${MODES.length})`
+                }}
+              />
+              {MODES.map(m => (
+                <button
+                  key={m.value}
+                  tabIndex={-1}
+                  onClick={() => handleModeSelect(m.value)}
+                  role="radio"
+                  aria-checked={mode === m.value}
+                  className={`relative z-10 py-2 sm:py-1.5 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.value
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Gesture Button - positioned absolutely to the right, doesn't affect centering */}
+          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4">
+            {gestureButtonSlot}
           </div>
         </div>
       </div>

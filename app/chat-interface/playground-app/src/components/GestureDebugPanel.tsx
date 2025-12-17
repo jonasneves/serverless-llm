@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Bug, Mouse, X, Settings, Activity, List, Ruler, Play, Pause } from 'lucide-react';
 
 // Gesture configuration that can be adjusted in real-time
@@ -65,8 +65,6 @@ interface GestureDebugPanelProps {
   mouseSimulation: boolean;
   onMouseSimulationToggle: () => void;
   transcriptPanelOpen?: boolean; // For positioning
-  // Hover handlers to attach to the hand button
-  onHoverHandlers?: (handlers: { onMouseEnter: () => void; onMouseLeave: () => void }) => void;
   // Debug info from hand detection
   debugInfo?: {
     indexExtended: boolean;
@@ -86,8 +84,6 @@ interface GestureDebugPanelProps {
   onPauseToggle?: () => void;
 }
 
-const HOVER_ACTIVATE_TIME = 5000; // 5 seconds to activate debug mode
-
 export default function GestureDebugPanel({
   enabled,
   onToggle,
@@ -97,7 +93,6 @@ export default function GestureDebugPanel({
   mouseSimulation,
   onMouseSimulationToggle,
   transcriptPanelOpen = false,
-  onHoverHandlers,
   debugInfo,
   landmarkData,
   performance,
@@ -107,12 +102,10 @@ export default function GestureDebugPanel({
   const [activeTab, setActiveTab] = useState<DebugTab>('state');
   const [gestureHistory, setGestureHistory] = useState<Array<{ gesture: string; time: number; details?: string }>>([]);
   const [selectedLandmarks, setSelectedLandmarks] = useState<[number, number] | null>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hoverStartRef = useRef<number | null>(null);
 
-  // Position classes (above the gesture icon button)
+  // Position classes - now positioned at the top right, below the gesture controls
   const rightOffset = transcriptPanelOpen 
-    ? 'right-[412px] sm:right-[417px] xl:right-[492px]' 
+    ? 'right-[412px] xl:right-[492px]' 
     : 'right-3 sm:right-5';
 
   // Track gesture triggers in history with more details
@@ -145,54 +138,7 @@ export default function GestureDebugPanel({
     );
   }, [landmarkData]);
 
-  // Hover activation handlers (to be attached to the hand button)
-  const handleHoverStart = useCallback(() => {
-    if (enabled) return; // Already enabled, no need for hover activation
-    hoverStartRef.current = Date.now();
-    
-    // Check progress every 100ms
-    hoverTimerRef.current = setInterval(() => {
-      if (hoverStartRef.current) {
-        const elapsed = Date.now() - hoverStartRef.current;
-        
-        if (elapsed >= HOVER_ACTIVATE_TIME) {
-          // Activate debug mode
-          onToggle();
-          handleHoverEnd();
-        }
-      }
-    }, 100);
-  }, [enabled, onToggle]);
-
-  const handleHoverEnd = useCallback(() => {
-    if (hoverTimerRef.current) {
-      clearInterval(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-    hoverStartRef.current = null;
-  }, []);
-
-  // Pass hover handlers to parent so they can attach to the hand button
-  useEffect(() => {
-    if (onHoverHandlers) {
-      onHoverHandlers({
-        onMouseEnter: handleHoverStart,
-        onMouseLeave: handleHoverEnd,
-      });
-    }
-  }, [onHoverHandlers, handleHoverStart, handleHoverEnd]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimerRef.current) {
-        clearInterval(hoverTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Export hover handlers so parent can attach them to the hand button
-  // When not enabled, render nothing - the hover zone is on the hand button itself
+  // When not enabled, render nothing
   if (!enabled) {
     return null;
   }
@@ -200,7 +146,7 @@ export default function GestureDebugPanel({
   return (
     <div 
       data-debug-panel
-      className={`fixed bottom-[11.5rem] sm:bottom-[3.75rem] ${rightOffset} z-50 w-80 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-xl overflow-hidden max-h-[70vh] flex flex-col`}
+      className={`fixed top-28 sm:top-24 ${rightOffset} z-50 w-80 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-xl overflow-hidden max-h-[70vh] flex flex-col`}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-slate-700/50 shrink-0">
