@@ -1067,24 +1067,25 @@ export default function HandBackground({
              * - ModelDock: z-index: 60
              * - Input box: z-index: 100
              * - Active dots (index finger): z-index: 9998 (on top for hover/click visibility)
-             * - Cursor: z-index: 9999 (always on top)
+             * - Cursor: z-index: 9999 (always on top for click/hover indication)
              * 
              * The opacity-50 and mix-blend-screen create the glass-like effect when behind UI.
              */}
             {createPortal(
-                <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]">
-                    <video ref={videoRef} className="hidden" playsInline muted autoPlay />
-                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
-                </div>,
+                <>
+                    <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]">
+                        <video ref={videoRef} className="hidden" playsInline muted autoPlay />
+                        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
+                    </div>
+                    {/* Dots visualization (all landmarks) - also behind UI */}
+                    <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]">
+                        <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
+                    </div>
+                </>,
                 getContainer()
             )}
 
-            {/* Active dots (index finger) - ON TOP of UI for hover/click visibility */}
-            <div className="fixed inset-0 z-[9998] pointer-events-none overflow-hidden scale-x-[-1]">
-                <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full" />
-            </div>
-
-            {/* Floating cursor (navigation mode only) */}
+            {/* Floating cursor (navigation mode only) - ON TOP for click/hover */}
             {mode === 'navigation' && (
                 <div
                     ref={cursorRef}
