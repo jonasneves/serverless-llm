@@ -171,8 +171,12 @@ export default function Header({
         </div>
       </div>
 
-      {/* Right: Settings */}
-      <div className="flex items-center gap-2 w-10 sm:w-auto justify-end pointer-events-auto z-20">
+      {/* Right: Gesture (mobile only) + Settings */}
+      <div className="flex items-center gap-2 w-auto justify-end pointer-events-auto z-20">
+        {/* Gesture button on mobile - hidden on desktop as it's in the centered bar */}
+        <div className="md:hidden">
+          {gestureButtonSlot}
+        </div>
         <button
           onClick={onOpenSettings}
           className="min-w-[40px] min-h-[40px] w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
