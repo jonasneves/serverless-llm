@@ -1078,12 +1078,10 @@ function PlaygroundInner() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
-        transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
         gestureButtonSlot={
           <Suspense fallback={null}>
             <GestureControl
               inHeader={true}
-              transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
               appContext={mode}
               onStopGeneration={() => {
                 if (mode === 'chat' && chatViewRef.current) {

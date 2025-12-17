@@ -9,7 +9,6 @@ interface HeaderProps {
   showDock: boolean;
   setShowDock: (show: boolean) => void;
   onOpenSettings: () => void;
-  transcriptPanelOpen?: boolean;
   gestureButtonSlot?: React.ReactNode;
   bgCyclerSlot?: React.ReactNode;
 }
@@ -30,7 +29,6 @@ export default function Header({
   showDock,
   setShowDock,
   onOpenSettings,
-  transcriptPanelOpen = false,
   gestureButtonSlot,
   bgCyclerSlot
 }: HeaderProps) {
@@ -64,7 +62,7 @@ export default function Header({
   };
 
   return (
-    <div className={`fixed top-0 left-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none transition-all duration-300 ${transcriptPanelOpen ? 'right-[400px] xl:right-[480px]' : 'right-0'}`}>
+    <div className="fixed top-0 left-0 right-0 flex items-center justify-between mb-2 px-3 sm:px-6 pt-4 sm:pt-6 z-50 pointer-events-none">
       {/* Background layer */}
       <div className="absolute inset-0 pointer-events-auto" style={{ height: '100%', zIndex: -1 }} />
 

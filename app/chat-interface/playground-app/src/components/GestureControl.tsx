@@ -20,14 +20,13 @@ interface GestureControlProps {
   onPinch?: (x: number, y: number) => void;
   onHover?: (x: number, y: number) => void;
   onModeChange?: (direction: 'prev' | 'next') => void;
-  transcriptPanelOpen?: boolean;
   /** When true, renders inline (for embedding in Header) instead of fixed position */
   inHeader?: boolean;
   /** Current app context to customize gesture behavior */
   appContext?: AppContext;
 }
 
-export default function GestureControl({ transcriptPanelOpen = false, inHeader = false, ...props }: GestureControlProps) {
+export default function GestureControl({ inHeader = false, ...props }: GestureControlProps) {
   // Use shared context for state that HandBackground needs
   const gesture = useGesture();
   
@@ -292,9 +291,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
 
   // Position near the header menu ([≡]) in the center header track
   // Only used when NOT embedded in header (legacy mode)
-  const handOffsetStyle = transcriptPanelOpen
-    ? { left: 'calc(50% - 190px)' }
-    : { left: 'calc(50% - 180px)' };
+  const handOffsetStyle = { left: 'calc(50% - 180px)' };
 
   // Get button position for floating elements when inHeader mode
   const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
@@ -854,7 +851,6 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                 setIsActive(true);
               }
             }}
-            transcriptPanelOpen={transcriptPanelOpen}
             debugInfo={debugInfo}
             landmarkData={landmarkData}
             performance={performanceMetrics}

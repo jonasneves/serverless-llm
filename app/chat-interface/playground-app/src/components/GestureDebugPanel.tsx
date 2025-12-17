@@ -64,7 +64,6 @@ interface GestureDebugPanelProps {
   onConfigChange: (config: GestureConfig) => void;
   mouseSimulation: boolean;
   onMouseSimulationToggle: () => void;
-  transcriptPanelOpen?: boolean; // For positioning
   // Debug info from hand detection
   debugInfo?: {
     indexExtended: boolean;
@@ -92,7 +91,6 @@ export default function GestureDebugPanel({
   onConfigChange,
   mouseSimulation,
   onMouseSimulationToggle,
-  transcriptPanelOpen = false,
   debugInfo,
   landmarkData,
   performance,
@@ -104,9 +102,7 @@ export default function GestureDebugPanel({
   const [selectedLandmarks, setSelectedLandmarks] = useState<[number, number] | null>(null);
 
   // Position classes - now positioned at the top right, below the gesture controls
-  const rightOffset = transcriptPanelOpen 
-    ? 'right-[412px] xl:right-[492px]' 
-    : 'right-3 sm:right-5';
+  const rightOffset = 'right-3 sm:right-5';
 
   // Track gesture triggers in history with more details
   useEffect(() => {
