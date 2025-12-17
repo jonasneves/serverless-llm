@@ -96,6 +96,7 @@ export default function Header({
               className="relative flex p-1 rounded-lg bg-black/20 mode-track"
               role="radiogroup"
               aria-label="Mode selection"
+              data-gesture-mode-track="true"
             >
               {/* Sliding indicator */}
               <div

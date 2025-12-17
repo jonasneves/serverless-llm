@@ -90,8 +90,8 @@ const DEFAULT_CONFIG: GestureConfig = {
 
 // MediaPipe GestureRecognizer built-in gestures
 const NAVIGATION_GESTURE_MAP: Record<string, { action: string; message?: string; direction?: 'prev' | 'next' }> = {
-    'Thumb_Up': { action: 'message', message: 'Yes' },
-    'Thumb_Down': { action: 'message', message: 'No' },
+    'Thumb_Up': { action: 'message', message: '👍' },
+    'Thumb_Down': { action: 'message', message: '👎' },
     'Closed_Fist': { action: 'scroll' },
     'Open_Palm': { action: 'wave' },
     'Pointing_Up': { action: 'point' },

@@ -1119,6 +1119,23 @@ function PlaygroundInner() {
 
                 const el = document.elementFromPoint(hoverX, hoverY) as HTMLElement;
                 if (el) {
+                  // Check if hovering over mode track
+                  const modeTrack = el.closest('[data-gesture-mode-track]') as HTMLElement;
+                  if (modeTrack) {
+                    // Calculate which mode based on horizontal position
+                    const rect = modeTrack.getBoundingClientRect();
+                    const relativeX = hoverX - rect.left;
+                    const trackWidth = rect.width;
+                    const modeIndex = Math.floor((relativeX / trackWidth) * 5); // 5 modes
+                    const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
+                    const targetMode = modes[Math.max(0, Math.min(4, modeIndex))];
+
+                    if (targetMode && targetMode !== mode) {
+                      handleModeChange(targetMode);
+                    }
+                    return;
+                  }
+
                   // Get the current hovered element stored in a data attribute
                   const currentHovered = document.querySelector('[data-gesture-hovered="true"]') as HTMLElement;
 
