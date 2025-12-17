@@ -327,7 +327,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                 toggleActive();
               }
             }}
-            className={`relative w-11 h-11 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center border transition-all duration-200 active:scale-95 ${isActive
+            className={`relative min-w-[40px] min-h-[40px] w-10 h-10 rounded-lg flex items-center justify-center border transition-all duration-200 active:scale-95 ${isActive
               ? gestureMode === 'asl'
                 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30'
                 : 'bg-blue-500/20 border-blue-500/50 text-blue-400 hover:bg-blue-500/30'
@@ -335,7 +335,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
               }`}
             title={isActive ? "Open Gesture Control Panel" : "Enable Gesture Control"}
           >
-            <Hand size={20} className="sm:w-5 sm:h-5" />
+            <Hand size={18} />
 
             {/* Active pulse indicator */}
             {isActive && (
@@ -348,10 +348,10 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
           {isActive && (
             <button
               onClick={() => setIsActive(false)}
-              className="w-7 h-7 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95"
+              className="w-6 h-6 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95"
               title="Disable Gesture Control"
             >
-              <X size={14} />
+              <X size={12} />
             </button>
           )}
         </div>

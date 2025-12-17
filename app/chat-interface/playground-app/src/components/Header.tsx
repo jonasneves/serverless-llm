@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   transcriptPanelOpen?: boolean;
   gestureButtonSlot?: React.ReactNode;
+  bgCyclerSlot?: React.ReactNode;
 }
 
 const MODES: { value: Mode; label: string }[] = [
@@ -30,7 +31,8 @@ export default function Header({
   setShowDock,
   onOpenSettings,
   transcriptPanelOpen = false,
-  gestureButtonSlot
+  gestureButtonSlot,
+  bgCyclerSlot
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -66,8 +68,10 @@ export default function Header({
       {/* Background layer */}
       <div className="absolute inset-0 pointer-events-auto" style={{ height: '100%', zIndex: -1 }} />
 
-      {/* Left: Empty spacer for balance */}
-      <div className="flex items-center gap-3 w-10 sm:w-auto pointer-events-auto z-20" />
+      {/* Left: Background Cycler */}
+      <div className="flex items-center gap-2 w-auto pointer-events-auto z-20">
+        {bgCyclerSlot}
+      </div>
 
       {/* Center: Desktop Unified Title & Mode Toggle */}
       <div className="hidden md:block absolute left-1/2 -translate-x-1/2 pointer-events-auto z-20">
@@ -118,11 +122,6 @@ export default function Header({
               ))}
             </div>
           </div>
-
-          {/* Gesture Button - positioned absolutely to the right, doesn't affect centering */}
-          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4">
-            {gestureButtonSlot}
-          </div>
         </div>
       </div>
 
@@ -171,10 +170,10 @@ export default function Header({
         </div>
       </div>
 
-      {/* Right: Gesture (mobile only) + Settings */}
+      {/* Right: Gesture + Settings */}
       <div className="flex items-center gap-2 w-auto justify-end pointer-events-auto z-20">
-        {/* Gesture button on mobile - hidden on desktop as it's in the centered bar */}
-        <div className="md:hidden">
+        {/* Gesture button - same position on mobile and desktop */}
+        <div>
           {gestureButtonSlot}
         </div>
         <button

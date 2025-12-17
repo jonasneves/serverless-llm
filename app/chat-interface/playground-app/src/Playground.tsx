@@ -1179,6 +1179,28 @@ export default function Playground() {
             />
           </Suspense>
         }
+        bgCyclerSlot={
+          <div className="flex items-center rounded-lg bg-slate-800/50 backdrop-blur-md border border-slate-700/50 shadow-lg">
+            <button
+              onClick={() => cycleBgStyle('prev')}
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none border-r border-slate-700/50"
+              title="Previous background"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => cycleBgStyle('next')}
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
+              title="Next background"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        }
       />
 
       {/* Content Wrapper with Sidebar Offset */}
@@ -1381,27 +1403,6 @@ export default function Playground() {
           </Suspense>
         )
       }
-      {/* Background Style Cycler (Bottom Left) */}
-      <div className="fixed bottom-36 left-3 sm:left-6 sm:bottom-6 z-50 flex items-center rounded-lg bg-slate-800/50 backdrop-blur-md border border-slate-700/50 shadow-lg">
-        <button
-          onClick={() => cycleBgStyle('prev')}
-          className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none border-r border-slate-700/50"
-          title="Previous background"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <button
-          onClick={() => cycleBgStyle('next')}
-          className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
-          title="Next background"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
 
       {/* API Limit Toast Notification */}
       {apiLimitToast && (
