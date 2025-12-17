@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import {
     FilesetResolver,
     HandLandmarker,
@@ -1023,67 +1022,34 @@ export default function HandBackground({
     }, []);
 
     /**
-     * Creates a portal container for the hand visualization layer.
+     * HandBackground is now rendered directly at Playground level (not via portal).
+     * This gives correct stacking context automatically:
+     * - Hand layer renders before other UI elements in the DOM
+     * - Z-index values work correctly relative to siblings
      * 
-     * IMPORTANT: This container is prepended INSIDE the main Playground container
-     * (not document.body) to share the same stacking context as other UI elements.
-     * 
-     * The container has z-index: 1 which places it:
-     * - ABOVE the background (z-index: 0 / auto)
-     * - BELOW all UI elements (z-index: 10+)
-     * 
-     * This allows the hand skeleton to appear with a glass-like effect 
-     * (opacity-50 + mix-blend-screen) behind cards, chat, header, etc.
+     * STACKING ORDER:
+     * - Hand skeleton/dots: z-index 1 (behind UI, glass effect)
+     * - UI elements: z-index 10+ (cards, chat, header, etc.)
+     * - Cursor: z-index 9999 (always on top for click/hover)
      */
-    const getContainer = useCallback(() => {
-        let el = document.getElementById('hand-layer');
-        if (!el) {
-            el = document.createElement('div');
-            el.id = 'hand-layer';
-            el.style.cssText = 'position:absolute;inset:0;z-index:1;pointer-events:none;';
-            // Find the main playground container and prepend
-            const root = document.querySelector('[class*="fixed inset-0 overflow-hidden text-white"]');
-            if (root) {
-                root.prepend(el);
-            } else {
-                document.body.prepend(el);
-            }
-        }
-        return el;
-    }, []);
 
     return (
         <>
             {/* 
              * Hand Skeleton Visualization Layer
              * ==================================
-             * This is portaled into a container at z-index:1 INSIDE the main Playground container.
-             * 
-             * STACKING ORDER (why this works):
-             * - Hand skeleton container: z-index: 1 (behind UI for glass effect)
-             * - Chat/Cards containers: z-index: 10
-             * - Transcript panel: z-index: 40
-             * - Header: z-index: 50
-             * - ModelDock: z-index: 60
-             * - Input box: z-index: 100
-             * - Active dots (index finger): z-index: 9998 (on top for hover/click visibility)
-             * - Cursor: z-index: 9999 (always on top for click/hover indication)
-             * 
+             * Rendered directly (no portal) at z-index:1 inside Playground container.
              * The opacity-50 and mix-blend-screen create the glass-like effect when behind UI.
              */}
-            {createPortal(
-                <>
-                    <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]">
-                        <video ref={videoRef} className="hidden" playsInline muted autoPlay />
-                        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
-                    </div>
-                    {/* Dots visualization (all landmarks) - also behind UI */}
-                    <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]">
-                        <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
-                    </div>
-                </>,
-                getContainer()
-            )}
+            <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden scale-x-[-1]">
+                <video ref={videoRef} className="hidden" playsInline muted autoPlay />
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
+            </div>
+            
+            {/* Dots visualization (all landmarks) - also behind UI */}
+            <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden scale-x-[-1]">
+                <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
+            </div>
 
             {/* Floating cursor (navigation mode only) - ON TOP for click/hover */}
             {mode === 'navigation' && (

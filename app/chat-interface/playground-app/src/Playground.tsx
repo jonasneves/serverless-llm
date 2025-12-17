@@ -16,6 +16,7 @@ import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
+import { GestureProvider, useGesture } from './context/GestureContext';
 import './playground.css';
 
 const ResponseInspector = lazy(() => import('./components/ResponseInspector'));
@@ -23,13 +24,19 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const TopicsDrawer = lazy(() => import('./components/TopicsDrawer'));
 const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscript'));
 const GestureControl = lazy(() => import('./components/GestureControl'));
+const HandBackground = lazy(() => import('./components/HandBackground'));
 const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
 import ErrorBoundary from './components/ErrorBoundary';
 
 import type { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
-export default function Playground() {
+
+// Inner component that uses GestureContext
+function PlaygroundInner() {
+  // Access gesture context for HandBackground rendering
+  const gestureCtx = useGesture();
+  
   const {
     modelsData,
     setModelsData,
@@ -1003,6 +1010,35 @@ export default function Playground() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
+      {/* 
+       * HandBackground rendered at Playground level for correct z-index stacking.
+       * This is controlled by GestureControl (in Header) via GestureContext.
+       * Renders BEHIND UI elements with glass-like effect.
+       */}
+      {gestureCtx.isActive && !gestureCtx.mouseSimulation && (
+        <Suspense fallback={null}>
+          <HandBackground
+            onStopGeneration={gestureCtx.callbacks.current.onStopGeneration}
+            onSendMessage={gestureCtx.callbacks.current.onSendMessage}
+            onScroll={gestureCtx.callbacks.current.onScroll}
+            onPinch={gestureCtx.callbacks.current.onPinch}
+            onHover={gestureCtx.callbacks.current.onHover}
+            onModeChange={gestureCtx.callbacks.current.onModeChange}
+            config={gestureCtx.gestureConfig}
+            mode={gestureCtx.gestureMode}
+            appContext={gestureCtx.appContext}
+            onGestureModeToggle={() => gestureCtx.setGestureMode(gestureCtx.gestureMode === 'navigation' ? 'asl' : 'navigation')}
+            // Feedback callbacks - write to context for GestureControl UI
+            onGestureState={gestureCtx.setGestureState}
+            onASLResult={gestureCtx.setASLResult}
+            onError={gestureCtx.setCameraError}
+            onDebugInfo={gestureCtx.setDebugInfo}
+            onLandmarkData={gestureCtx.setLandmarkData}
+            onPerformance={gestureCtx.setPerformanceMetrics}
+          />
+        </Suspense>
+      )}
+
       {/* Loading overlay while models are being fetched */}
       {isLoadingModels && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/95 backdrop-blur-sm">
@@ -1564,5 +1600,14 @@ export default function Playground() {
       }
 
     </div >
+  );
+}
+
+// Wrapper component that provides GestureContext
+export default function Playground() {
+  return (
+    <GestureProvider>
+      <PlaygroundInner />
+    </GestureProvider>
   );
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Hand, X, Camera, HelpCircle, Check, Type, Navigation, Bug, BookOpen } from 'lucide-react';
-import HandBackground, { GestureMode } from './HandBackground';
-import GestureDebugPanel, { GestureConfig, DEFAULT_GESTURE_CONFIG } from './GestureDebugPanel';
+import { GestureMode } from './HandBackground';
+import GestureDebugPanel, { GestureConfig } from './GestureDebugPanel';
 import GestureTrainingModal from './GestureTrainingModal';
+import { useGesture } from '../context/GestureContext';
 
 const STORAGE_KEY = 'gesture-control-skip-intro';
 const DEBUG_CONFIG_KEY = 'gesture-debug-config';
@@ -26,26 +27,35 @@ interface GestureControlProps {
   appContext?: AppContext;
 }
 
-// ASL recognition result type
-interface ASLResult {
-  letter: string | null;
-  confidence: number;
-  allGestures: Array<{ name: string; score: number }>;
-}
-
 export default function GestureControl({ transcriptPanelOpen = false, inHeader = false, ...props }: GestureControlProps) {
-  const [isActive, setIsActive] = useState(false);
+  // Use shared context for state that HandBackground needs
+  const gesture = useGesture();
+  
+  // Sync context with props
+  useEffect(() => {
+    gesture.setCallbacks({
+      onStopGeneration: props.onStopGeneration,
+      onSendMessage: props.onSendMessage,
+      onScroll: props.onScroll,
+      onPinch: props.onPinch,
+      onHover: props.onHover,
+      onModeChange: props.onModeChange,
+    });
+  }, [props.onStopGeneration, props.onSendMessage, props.onScroll, props.onPinch, props.onHover, props.onModeChange, gesture.setCallbacks]);
+  
+  // Sync app context
+  useEffect(() => {
+    if (props.appContext) {
+      gesture.setAppContext(props.appContext);
+    }
+  }, [props.appContext, gesture.setAppContext]);
+  
+  // Local UI state (not shared)
   const [showModal, setShowModal] = useState(false);
   const [skipIntro, setSkipIntro] = useState(false);
   const [showPanel, setShowPanel] = useState(false);
   const [rememberChoice, setRememberChoice] = useState(false);
-  const [gestureState, setGestureState] = useState<{
-    gesture: string | null;
-    progress: number;
-    triggered: boolean;
-  }>({ gesture: null, progress: 0, triggered: false });
   const [flashTrigger, setFlashTrigger] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const panelFloatingRef = useRef<HTMLDivElement>(null);
@@ -53,51 +63,50 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
   const [panelBounds, setPanelBounds] = useState<{ width: number; height: number }>({ width: 256, height: 320 });
   const [aslBounds, setAslBounds] = useState<{ width: number; height: number }>({ width: 220, height: 180 });
 
-  // Gesture mode state
-  const [gestureMode, setGestureMode] = useState<GestureMode>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(MODE_STORAGE_KEY);
-      if (saved === 'asl' || saved === 'navigation') {
-        return saved as GestureMode;
-      }
-    }
-    return 'navigation';
-  });
+  // Use context for state shared with HandBackground (rendered in Playground)
+  // Note: setters for feedback state are used by HandBackground and mouse simulation
+  const { 
+    isActive, setIsActive, 
+    gestureMode, setGestureMode, 
+    gestureConfig, setGestureConfig, 
+    mouseSimulation, setMouseSimulation,
+    // Feedback state from HandBackground (read in GestureControl, setGestureState also used by mouse sim)
+    gestureState, setGestureState,
+    aslResult,
+    debugInfo,
+    landmarkData,
+    performanceMetrics,
+    cameraError, setCameraError,
+  } = gesture;
 
-  // ASL mode state
-  const [aslResult, setASLResult] = useState<ASLResult | null>(null);
+  // ASL buffer (local to GestureControl)
   const [aslBuffer, setASLBuffer] = useState<string>('');
 
   // Debug panel state
   const [debugEnabled, setDebugEnabled] = useState(false);
-  const [mouseSimulation, setMouseSimulation] = useState(false);
   const [showTrainingModal, setShowTrainingModal] = useState(false);
-  const [gestureConfig, setGestureConfig] = useState<GestureConfig>(() => {
+  
+  // Load gesture mode from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(MODE_STORAGE_KEY);
+      if (saved === 'asl' || saved === 'navigation') {
+        setGestureMode(saved as GestureMode);
+      }
+    }
+  }, [setGestureMode]);
+  
+  // Load gesture config from localStorage on mount
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(DEBUG_CONFIG_KEY);
       if (saved) {
-        try { return JSON.parse(saved); } catch { }
+        try { 
+          setGestureConfig(JSON.parse(saved)); 
+        } catch { }
       }
     }
-    return DEFAULT_GESTURE_CONFIG;
-  });
-  const [debugInfo, setDebugInfo] = useState<{
-    indexExtended: boolean;
-    middleExtended: boolean;
-    ringExtended: boolean;
-    pinkyExtended: boolean;
-    wasPointingOnly: boolean;
-    twoFingerFrames: number;
-    clickLocked: boolean;
-  } | undefined>(undefined);
-  const [landmarkData, setLandmarkData] = useState<{
-    landmarks: Array<{ x: number; y: number; z: number }> | null;
-    handedness: 'Left' | 'Right' | null;
-  } | undefined>(undefined);
-  const [performanceMetrics, setPerformanceMetrics] = useState<{
-    fps: number;
-    detectionTime: number;
-  } | undefined>(undefined);
+  }, [setGestureConfig]);
 
   // Load preference from localStorage on mount
   useEffect(() => {
@@ -137,17 +146,16 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
     };
   }, [showPanel]);
 
-  // Handle gesture state updates
-  const handleGestureState = useCallback((state: { gesture: string | null; progress: number; triggered: boolean }) => {
-    setGestureState(state);
-    if (state.triggered) {
+  // Respond to gesture state changes from HandBackground (via context)
+  useEffect(() => {
+    if (gestureState.triggered) {
       setFlashTrigger(true);
       setTimeout(() => setFlashTrigger(false), 300);
 
-      if (gestureMode === 'asl' && state.gesture) {
+      if (gestureMode === 'asl' && gestureState.gesture) {
         // Handle control gestures (SEND, CLEAR, SPACE, BACKSPACE)
-        if (state.gesture.startsWith('ACTION:')) {
-          const action = state.gesture.replace('ACTION: ', '');
+        if (gestureState.gesture.startsWith('ACTION:')) {
+          const action = gestureState.gesture.replace('ACTION: ', '');
           switch (action) {
             case 'SEND':
               if (aslBuffer && props.onSendMessage) {
@@ -167,18 +175,13 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
           }
         }
         // Handle letter gestures
-        else if (state.gesture.startsWith('ASL:')) {
-          const letter = state.gesture.replace('ASL: ', '');
+        else if (gestureState.gesture.startsWith('ASL:')) {
+          const letter = gestureState.gesture.replace('ASL: ', '');
           setASLBuffer(prev => prev + letter);
         }
       }
     }
-  }, [gestureMode, aslBuffer, props.onSendMessage]);
-
-  // Handle ASL result updates
-  const handleASLResult = useCallback((result: ASLResult) => {
-    setASLResult(result);
-  }, []);
+  }, [gestureState, gestureMode, aslBuffer, props.onSendMessage]);
 
   // Clear ASL buffer
   const clearASLBuffer = useCallback(() => {
@@ -193,12 +196,14 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
     }
   }, [aslBuffer, props.onSendMessage]);
 
-  // Handle camera errors
-  const handleCameraError = (message: string) => {
-    setCameraError(message);
-    setIsActive(false);
-    setTimeout(() => setCameraError(null), 5000);
-  };
+  // Handle camera error - clear error after timeout
+  useEffect(() => {
+    if (cameraError) {
+      setIsActive(false);
+      const timer = setTimeout(() => setCameraError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [cameraError, setIsActive, setCameraError]);
 
   const toggleActive = () => {
     if (isActive) {
@@ -232,7 +237,12 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
   const handleConfigChange = useCallback((newConfig: GestureConfig) => {
     setGestureConfig(newConfig);
     localStorage.setItem(DEBUG_CONFIG_KEY, JSON.stringify(newConfig));
-  }, []);
+  }, [setGestureConfig]);
+  
+  // Save gesture mode to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem(MODE_STORAGE_KEY, gestureMode);
+  }, [gestureMode]);
 
   // Mouse simulation
   useEffect(() => {
@@ -279,11 +289,6 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [mouseSimulation, props.onHover, props.onPinch]);
-
-  // Handle debug info updates from HandBackground
-  const handleDebugInfo = useCallback((info: typeof debugInfo) => {
-    setDebugInfo(info);
-  }, []);
 
   // Position near the header menu ([≡]) in the center header track
   // Only used when NOT embedded in header (legacy mode)
@@ -573,23 +578,8 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
         )}
       </div>
 
+      {/* HandBackground is now rendered at Playground level via GestureContext */}
 
-      {/* Hand Background - rendered outside portal so z-index stacking works correctly */}
-      {isActive && !mouseSimulation && (
-        <HandBackground
-          {...props}
-          onGestureState={handleGestureState}
-          onASLResult={handleASLResult}
-          onError={handleCameraError}
-          config={gestureConfig}
-          onDebugInfo={handleDebugInfo}
-          onLandmarkData={setLandmarkData}
-          onPerformance={setPerformanceMetrics}
-          mode={gestureMode}
-          appContext={props.appContext}
-          onGestureModeToggle={() => setGestureMode(prev => prev === 'navigation' ? 'asl' : 'navigation')}
-        />
-      )}
       {/* Portal for fixed-position elements when rendered inside header */}
       {createPortal(
         <>
