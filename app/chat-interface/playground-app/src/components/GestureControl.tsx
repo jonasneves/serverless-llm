@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Hand, X, Camera, HelpCircle, Check, Type, Navigation, Bug } from 'lucide-react';
+import { Hand, X, Camera, HelpCircle, Check, Type, Navigation, Bug, BookOpen } from 'lucide-react';
 import HandBackground, { GestureMode } from './HandBackground';
 import GestureDebugPanel, { GestureConfig, DEFAULT_GESTURE_CONFIG } from './GestureDebugPanel';
+import GestureTrainingModal from './GestureTrainingModal';
 
 const STORAGE_KEY = 'gesture-control-skip-intro';
 const DEBUG_CONFIG_KEY = 'gesture-debug-config';
 const MODE_STORAGE_KEY = 'gesture-mode';
+
+// Context for which mode the gestures should work with
+export type AppContext = 'chat' | 'compare' | 'council' | 'roundtable' | 'personality';
 
 interface GestureControlProps {
   onStopGeneration?: () => void;
@@ -18,6 +22,8 @@ interface GestureControlProps {
   transcriptPanelOpen?: boolean;
   /** When true, renders inline (for embedding in Header) instead of fixed position */
   inHeader?: boolean;
+  /** Current app context to customize gesture behavior */
+  appContext?: AppContext;
 }
 
 // ASL recognition result type
@@ -65,6 +71,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
   // Debug panel state
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [mouseSimulation, setMouseSimulation] = useState(false);
+  const [showTrainingModal, setShowTrainingModal] = useState(false);
   const [gestureConfig, setGestureConfig] = useState<GestureConfig>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(DEBUG_CONFIG_KEY);
@@ -353,7 +360,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
         style={containerStyle}
       >
         {/* Main button with status indicator */}
-        <div className="relative flex flex-col items-center gap-1">
+        <div className="relative">
           <button
             ref={buttonRef}
             onClick={() => {
@@ -366,26 +373,20 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
             }}
             className={`relative min-w-[42px] min-h-[42px] w-[42px] h-[42px] rounded-full flex items-center justify-center border transition-all duration-200 active:scale-95 ${isActive
               ? gestureMode === 'asl'
-                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30'
-                : 'bg-blue-500/20 border-blue-500/50 text-blue-400 hover:bg-blue-500/30'
+                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30 animate-pulse'
+                : 'bg-blue-500/20 border-blue-500/50 text-blue-400 hover:bg-blue-500/30 animate-pulse'
               : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
               }`}
             title={isActive ? "Open Gesture Control Panel" : "Enable Gesture Control"}
           >
             <Hand size={18} />
-
-            {/* Active pulse indicator */}
-            {isActive && (
-              <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${gestureMode === 'asl' ? 'bg-emerald-400' : 'bg-blue-400'
-                } animate-pulse`} />
-            )}
           </button>
 
-          {/* Close button anchored under the main button */}
+          {/* Close button positioned absolutely to prevent layout shift */}
           {isActive && (
             <button
               onClick={() => setIsActive(false)}
-              className="mt-1 w-7 h-7 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95"
+              className="absolute top-full mt-1 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all active:scale-95 pointer-events-auto"
               title="Disable Gesture Control"
             >
               <X size={14} />
@@ -479,10 +480,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                   <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
                     👎 Down → No
                   </div>
-                  <div className="col-span-2 flex items-center gap-1.5 text-slate-400 py-0.5 bg-slate-800/30 rounded px-1.5 mt-0.5">
-                    🤙 Shaka → Switch Mode
-                  </div>
-                </div>
+</div>
               ) : (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-1 text-[10px]">
@@ -497,9 +495,6 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-400">
                       <span className="text-orange-400 text-[8px]">🤏</span> Backspace
-                    </div>
-                    <div className="col-span-2 flex items-center gap-1.5 text-slate-400 bg-slate-800/30 rounded px-1.5 mt-0.5">
-                      <span className="text-blue-400">🤙</span> Switch Mode
                     </div>
                   </div>
                   <div className="grid grid-cols-9 gap-0.5">
@@ -535,6 +530,22 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${debugEnabled ? 'bg-amber-500/20' : 'bg-slate-700/50'
                   }`}>
                   {debugEnabled ? 'ON' : 'OFF'}
+                </span>
+              </button>
+            </div>
+
+            {/* Training Toggle */}
+            <div className="px-3 py-2 border-b border-slate-700/50">
+              <button
+                onClick={() => setShowTrainingModal(true)}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen size={12} />
+                  <span className="text-xs font-medium">Gesture Training</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/50">
+                  Learn
                 </span>
               </button>
             </div>
@@ -832,6 +843,7 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
               onLandmarkData={setLandmarkData}
               onPerformance={setPerformanceMetrics}
               mode={gestureMode}
+              appContext={props.appContext}
               onGestureModeToggle={() => setGestureMode(prev => prev === 'navigation' ? 'asl' : 'navigation')}
             />
           )}
@@ -874,6 +886,12 @@ export default function GestureControl({ transcriptPanelOpen = false, inHeader =
         </>,
         document.body
       )}
+
+      {/* Gesture Training Modal */}
+      <GestureTrainingModal
+        open={showTrainingModal}
+        onClose={() => setShowTrainingModal(false)}
+      />
     </>
   );
 }

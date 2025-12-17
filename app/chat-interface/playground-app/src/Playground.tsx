@@ -1048,6 +1048,7 @@ export default function Playground() {
             <GestureControl
               inHeader={true}
               transcriptPanelOpen={mode === 'council' || mode === 'roundtable' || mode === 'personality'}
+              appContext={mode}
               onStopGeneration={() => {
                 if (mode === 'chat' && chatViewRef.current) {
                   chatViewRef.current.stopGeneration();

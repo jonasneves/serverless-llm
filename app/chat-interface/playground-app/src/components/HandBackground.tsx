@@ -67,6 +67,7 @@ interface HandBackgroundProps {
     onLandmarkData?: (data: LandmarkData) => void;
     onPerformance?: (metrics: PerformanceMetrics) => void;
     mode?: GestureMode;
+    appContext?: 'chat' | 'compare' | 'council' | 'roundtable' | 'personality';
 }
 
 // Cursor position state for the floating pointer indicator
@@ -91,8 +92,6 @@ const DEFAULT_CONFIG: GestureConfig = {
 const NAVIGATION_GESTURE_MAP: Record<string, { action: string; message?: string; direction?: 'prev' | 'next' }> = {
     'Thumb_Up': { action: 'message', message: 'Yes' },
     'Thumb_Down': { action: 'message', message: 'No' },
-    'ILoveYou': { action: 'mode_next', direction: 'next' }, // 🤟 = next mode
-    'Victory': { action: 'mode_prev', direction: 'prev' },   // ✌️ = prev mode
     'Closed_Fist': { action: 'scroll' },
     'Open_Palm': { action: 'wave' },
     'Pointing_Up': { action: 'point' },
@@ -113,7 +112,8 @@ export default function HandBackground({
     onDebugInfo,
     onLandmarkData,
     onPerformance,
-    mode = 'navigation'
+    mode = 'navigation',
+    appContext = 'chat'
 }: HandBackgroundProps) {
     // Refs for callbacks
     const onStopGenerationRef = useRef(onStopGeneration);
@@ -130,6 +130,7 @@ export default function HandBackground({
     const onPerformanceRef = useRef(onPerformance);
     const configRef = useRef(config);
     const modeRef = useRef(mode);
+    const appContextRef = useRef(appContext);
 
     // Update refs on every render
     onStopGenerationRef.current = onStopGeneration;
@@ -146,14 +147,25 @@ export default function HandBackground({
     onPerformanceRef.current = onPerformance;
     configRef.current = config;
     modeRef.current = mode;
+    appContextRef.current = appContext;
     const onErrorRef = useRef(onError);
     onErrorRef.current = onError;
 
-    // Performance tracking
+    // Performance tracking and adaptive frame rate
     const fpsRef = useRef({ frames: 0, lastTime: performance.now(), fps: 0 });
+    // Adaptive frame rate control
+    const adaptiveFrameRateRef = useRef({
+        baseInterval: 16, // ~60fps (1000ms/60 = 16.67ms)
+        currentInterval: 16, // Current interval in ms
+        lastFrameTime: 0,
+        gestureActivityCount: 0, // Count of recent gesture activity
+        activityThreshold: 500, // ms to consider gesture activity recent
+        lastActivityTime: 0
+    });
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const dotsCanvasRef = useRef<HTMLCanvasElement>(null);
     const [loaded, setLoaded] = useState(false);
     const requestRef = useRef<number>();
 
@@ -198,48 +210,47 @@ export default function HandBackground({
     const aslBuffer = useRef<string[]>([]);
     const lastASLLetter = useRef<string | null>(null);
     const aslLetterConfirmFrames = useRef<number>(0);
-    const ASL_CONFIRM_THRESHOLD = 10; // Frames to confirm a letter
+    const lastASLGestureTime = useRef<number>(0); // For cooldown mechanism
+    const COOLDOWN_MS = 800; // Cooldown time in ms to prevent repeated letters
+    const ASL_CONFIRM_THRESHOLD = 12; // Increased frames to confirm a letter (was 10)
 
-    // Shaka gesture state for mode toggle (works in both modes)
-    const shakaFrames = useRef<number>(0);
-    const SHAKA_CONFIRM_THRESHOLD = 20; // Frames to confirm Shaka
-    const lastShakaTriggerTime = useRef<number>(0);
-    const SHAKA_COOLDOWN = 2000; // 2 second cooldown between mode toggles
+    // Adaptive persistence thresholds based on gesture complexity
+    const getAdaptivePersistenceThreshold = useCallback((gestureName: string) => {
+        // Complex gestures need more persistence (higher threshold)
+        const complexGestures = ['Victory', 'ILoveYou', 'Fist', 'Open_Palm'];
+        const simpleGestures = ['Thumb_Up', 'Thumb_Down', 'Pointing_Up'];
 
-    // Detect Shaka gesture (🤙): thumb and pinky extended, other fingers curled
-    const detectShaka = useCallback((landmarks: Array<{ x: number; y: number; z: number }>) => {
-        if (!landmarks || landmarks.length < 21) return false;
+        if (complexGestures.includes(gestureName)) {
+            return 15; // Higher threshold for complex gestures
+        } else if (simpleGestures.includes(gestureName)) {
+            return 5;  // Lower threshold for simple gestures
+        }
+        return PERSISTENCE_THRESHOLD; // Default threshold
+    }, []);
 
-        // Landmark indices:
-        // Thumb: 1-4, Index: 5-8, Middle: 9-12, Ring: 13-16, Pinky: 17-20
-        // Tips: 4, 8, 12, 16, 20
-        // MCPs (base): 1, 5, 9, 13, 17
+    
+    // Function to determine if a gesture should be processed based on app context
+    const shouldProcessGesture = useCallback((gestureName: string, context: string) => {
+        // ASL control gestures (like SEND, CLEAR, etc.) should work in all contexts
+        if (['PREV_MODE', 'NEXT_MODE'].includes(gestureName)) {
+            return true;
+        }
 
-        const thumbTip = landmarks[4];
-        const thumbMcp = landmarks[2];
-        const indexTip = landmarks[8];
-        const indexPip = landmarks[6];
-        const middleTip = landmarks[12];
-        const middlePip = landmarks[10];
-        const ringTip = landmarks[16];
-        const ringPip = landmarks[14];
-        const pinkyTip = landmarks[20];
-        const pinkyMcp = landmarks[17];
-        const wrist = landmarks[0];
-
-        // Check thumb is extended (tip is away from wrist horizontally)
-        const thumbExtended = Math.abs(thumbTip.x - wrist.x) > Math.abs(thumbMcp.x - wrist.x) + 0.05;
-
-        // Check pinky is extended (tip is lower than MCP - remember y increases downward in screen coords)
-        // Actually we need to check if pinky is straight - tip should be above pip in hand space
-        const pinkyExtended = pinkyTip.y < pinkyMcp.y - 0.03;
-
-        // Check other fingers are curled (tips are below PIPs)
-        const indexCurled = indexTip.y > indexPip.y - 0.02;
-        const middleCurled = middleTip.y > middlePip.y - 0.02;
-        const ringCurled = ringTip.y > ringPip.y - 0.02;
-
-        return thumbExtended && pinkyExtended && indexCurled && middleCurled && ringCurled;
+        switch (context) {
+            case 'chat':
+                // In chat mode, allow all navigation and ASL gestures
+                return true;
+            case 'compare':
+                // In compare mode, focus on navigation gestures, limit ASL
+                return !gestureName.startsWith('ASL');
+            case 'council':
+            case 'roundtable':
+            case 'personality':
+                // In discussion modes, allow navigation and key control gestures
+                return true;  // Allow all for now, can be refined based on specific needs
+            default:
+                return true; // Default behavior
+        }
     }, []);
 
     const getHandState = useCallback((index: number) => {
@@ -332,6 +343,7 @@ export default function HandBackground({
     ) => {
         const state = getHandState(handIndex);
         const persistence = getPersistence(handIndex);
+        const currentContext = appContextRef.current;
 
         if (!result.gestures || result.gestures.length === 0) {
             // No gestures detected
@@ -350,6 +362,12 @@ export default function HandBackground({
         if (!gesture || !landmarks) return null;
 
         const gestureName = gesture.categoryName;
+
+        // Check if this gesture should be processed in the current context
+        if (!shouldProcessGesture(gestureName, currentContext)) {
+            return null;
+        }
+
         const gestureConfig = NAVIGATION_GESTURE_MAP[gestureName];
 
         // Handle pointing and clicking
@@ -501,7 +519,8 @@ export default function HandBackground({
                 persistence.frames = 1;
             }
 
-            if (persistence.frames >= PERSISTENCE_THRESHOLD &&
+            const adaptiveThreshold = getAdaptivePersistenceThreshold(gestureName);
+            if (persistence.frames >= adaptiveThreshold &&
                 (now - lastGestureTime.current > gestureCooldown)) {
                 if (onSendMessageRef.current) {
                     onSendMessageRef.current(gestureConfig.message);
@@ -515,48 +534,19 @@ export default function HandBackground({
             }
 
             if (onGestureStateRef.current) {
-                const progress = Math.min(1, persistence.frames / PERSISTENCE_THRESHOLD);
+                const progress = Math.min(1, persistence.frames / adaptiveThreshold);
                 onGestureStateRef.current({ gesture: gestureName, progress, triggered: false });
             }
         }
 
-        // Handle mode switching gestures (Victory = prev, ILoveYou = next)
-        if ((gestureConfig?.action === 'mode_prev' || gestureConfig?.action === 'mode_next') && gestureConfig.direction) {
-            if (persistence.candidate === gestureName) {
-                persistence.frames++;
-            } else {
-                persistence.candidate = gestureName;
-                persistence.frames = 1;
-            }
-
-            if (persistence.frames >= PERSISTENCE_THRESHOLD &&
-                (now - lastGestureTime.current > gestureCooldown)) {
-                if (onModeChangeRef.current) {
-                    onModeChangeRef.current(gestureConfig.direction);
-                    lastGestureTime.current = now;
-                    persistence.frames = 0;
-                    if (onGestureStateRef.current) {
-                        const label = gestureConfig.direction === 'next' ? 'Next Mode →' : '← Prev Mode';
-                        onGestureStateRef.current({ gesture: label, progress: 1, triggered: true });
-                    }
-                    return gestureName;
-                }
-            }
-
-            if (onGestureStateRef.current) {
-                const progress = Math.min(1, persistence.frames / PERSISTENCE_THRESHOLD);
-                const label = gestureConfig.direction === 'next' ? '🤟 Next Mode' : '✌️ Prev Mode';
-                onGestureStateRef.current({ gesture: label, progress, triggered: false });
-            }
-        }
-
+        
         return gestureName;
-    }, [getHandState, getPersistence]);
+    }, [getHandState, getPersistence, shouldProcessGesture]);
 
     // Process ASL gestures using fingerpose
     const processASLGestures = useCallback((
         landmarks: Array<{ x: number; y: number; z: number }>,
-        _now: number
+        now: number
     ) => {
         if (!aslEstimatorRef.current || !landmarks) return null;
 
@@ -571,12 +561,35 @@ export default function HandBackground({
             const sorted = result.gestures.sort((a, b) => b.score - a.score);
             const topGesture = sorted[0];
 
-            // Confirm letter with persistence
-            if (topGesture.name === lastASLLetter.current) {
-                aslLetterConfirmFrames.current++;
-            } else {
-                lastASLLetter.current = topGesture.name;
-                aslLetterConfirmFrames.current = 1;
+            // Check if this gesture should be processed in the current context
+            const currentContext = appContextRef.current;
+            if (!shouldProcessGesture(topGesture.name, currentContext)) {
+                // Still update visual state to show the gesture was detected but not processed
+                if (onGestureStateRef.current) {
+                    onGestureStateRef.current({
+                        gesture: isControlGesture(topGesture.name) ? `ACTION: ${topGesture.name}` : `ASL: ${topGesture.name}`,
+                        progress: 0,
+                        triggered: false
+                    });
+                }
+                return null;
+            }
+
+            // Check cooldown period to prevent repeated letters
+            const isOnCooldown = lastASLGestureTime.current !== 0 &&
+                                (now - lastASLGestureTime.current) < COOLDOWN_MS &&
+                                !isControlGesture(topGesture.name) &&
+                                topGesture.name === lastASLLetter.current;
+
+            // Update confirmation frames only if not on cooldown
+            if (!isOnCooldown) {
+                if (topGesture.name === lastASLLetter.current) {
+                    aslLetterConfirmFrames.current++;
+                } else {
+                    // Reset and start tracking new gesture
+                    lastASLLetter.current = topGesture.name;
+                    aslLetterConfirmFrames.current = 1;
+                }
             }
 
             const aslResult: ASLResult = {
@@ -594,9 +607,11 @@ export default function HandBackground({
             // Handle letters vs control gestures differently
             if (onGestureStateRef.current) {
                 const progress = Math.min(1, aslLetterConfirmFrames.current / ASL_CONFIRM_THRESHOLD);
-                const triggered = aslLetterConfirmFrames.current >= ASL_CONFIRM_THRESHOLD;
+                const triggered = aslLetterConfirmFrames.current >= ASL_CONFIRM_THRESHOLD && !isOnCooldown;
 
                 if (triggered) {
+                    // Update the last gesture time to implement cooldown
+                    lastASLGestureTime.current = now;
                     aslLetterConfirmFrames.current = 0;
 
                     if (isControlGesture(topGesture.name)) {
@@ -637,7 +652,7 @@ export default function HandBackground({
         }
 
         return null;
-    }, []);
+    }, [shouldProcessGesture]);
 
     const draw = useCallback(() => {
         const video = videoRef.current;
@@ -678,10 +693,21 @@ export default function HandBackground({
             return;
         }
 
-        const startTimeMs = performance.now();
+        const now = performance.now();
+        const adaptiveState = adaptiveFrameRateRef.current;
+
+        // Adaptive frame rate: skip frames if we're within the current interval
+        if (now - adaptiveState.lastFrameTime < adaptiveState.currentInterval) {
+            requestRef.current = requestAnimationFrame(draw);
+            return;
+        }
+        adaptiveState.lastFrameTime = now;
+
+        const startTimeMs = now;
 
         let landmarks: Array<Array<{ x: number; y: number; z: number }>> = [];
         let gesture: string | null = null;
+        let gestureDetected = false;
 
         if (currentMode === 'navigation' && gestureRecognizerRef.current) {
             // Use GestureRecognizer for navigation
@@ -695,7 +721,11 @@ export default function HandBackground({
 
             // Process gestures for each hand
             for (let i = 0; i < (result.landmarks?.length || 0); i++) {
-                gesture = processNavigationGestures(result, startTimeMs, i);
+                const processedGesture = processNavigationGestures(result, startTimeMs, i);
+                if (processedGesture) {
+                    gesture = processedGesture;
+                    gestureDetected = true;
+                }
             }
 
             // Emit landmark data for debug
@@ -717,7 +747,11 @@ export default function HandBackground({
 
                 // Process ASL for first hand
                 if (landmarks[0]) {
-                    gesture = processASLGestures(landmarks[0], startTimeMs);
+                    const processedGesture = processASLGestures(landmarks[0], startTimeMs);
+                    if (processedGesture) {
+                        gesture = processedGesture;
+                        gestureDetected = true;
+                    }
                 }
 
                 // Emit landmark data for debug
@@ -731,41 +765,23 @@ export default function HandBackground({
             }
         }
 
-        // Check for Shaka gesture in both modes (mode toggle)
-        if (landmarks[0] && onGestureModeToggleRef.current) {
-            const isShaka = detectShaka(landmarks[0]);
-            const now = performance.now();
-
-            if (isShaka) {
-                shakaFrames.current++;
-
-                // Show progress
-                if (onGestureStateRef.current && shakaFrames.current < SHAKA_CONFIRM_THRESHOLD) {
-                    const progress = Math.min(1, shakaFrames.current / SHAKA_CONFIRM_THRESHOLD);
-                    onGestureStateRef.current({
-                        gesture: '🤙 Switch Mode',
-                        progress,
-                        triggered: false
-                    });
-                }
-
-                // Trigger mode toggle
-                if (shakaFrames.current >= SHAKA_CONFIRM_THRESHOLD &&
-                    (now - lastShakaTriggerTime.current > SHAKA_COOLDOWN)) {
-                    onGestureModeToggleRef.current();
-                    lastShakaTriggerTime.current = now;
-                    shakaFrames.current = 0;
-
-                    if (onGestureStateRef.current) {
-                        onGestureStateRef.current({
-                            gesture: '🤙 Mode Switched!',
-                            progress: 1,
-                            triggered: true
-                        });
-                    }
-                }
+        
+        // Adaptive frame rate: adjust based on gesture activity
+        const activityNow = performance.now();
+        if (gestureDetected) {
+            // When gesture is detected, maintain higher frame rate for responsiveness
+            adaptiveState.currentInterval = Math.max(10, adaptiveState.baseInterval * 0.7); // ~100fps
+            adaptiveState.lastActivityTime = activityNow;
+            adaptiveState.gestureActivityCount++;
+        } else {
+            // When no gesture activity, gradually reduce frame rate to save resources
+            const timeSinceLastActivity = activityNow - adaptiveState.lastActivityTime;
+            if (timeSinceLastActivity > 1000) { // No activity for 1 second
+                // Gradually increase interval (reduce frame rate)
+                adaptiveState.currentInterval = Math.min(50, adaptiveState.currentInterval * 1.05); // Max ~20fps
             } else {
-                shakaFrames.current = 0;
+                // Maintain moderate frame rate when hands are visible but no gesture detected
+                adaptiveState.currentInterval = Math.min(33, adaptiveState.baseInterval * 2); // ~30fps
             }
         }
 
@@ -783,36 +799,63 @@ export default function HandBackground({
             }
         }
 
-        // Clear canvas
+        // Get the dots canvas context
+        const dotsCanvas = dotsCanvasRef.current;
+        const dotsCtx = dotsCanvas?.getContext('2d');
+
+        // Clear main canvas (for connections)
         ctx.clearRect(0, 0, width, height);
+
+        // Clear dots canvas if it exists
+        if (dotsCtx) {
+            dotsCtx.clearRect(0, 0, width, height);
+        }
 
         // Draw hands
         if (landmarks.length > 0) {
             for (const hand of landmarks) {
-                // Dynamic color based on mode and gesture
+                // Dynamic color based on mode and gesture with enhanced feedback
                 let mainColor = currentMode === 'asl' ? '#10b981' : '#3b82f6'; // Green for ASL, Blue for nav
                 let glowColor = currentMode === 'asl' ? '#6ee7b7' : '#60a5fa';
 
+                // Enhanced color coding based on gesture recognition state
                 if (gesture) {
                     if (currentMode === 'asl') {
-                        mainColor = '#10b981';
-                        glowColor = '#6ee7b7';
-                    } else if (gesture === 'Thumb_Up' || gesture === 'THUMBS_UP') {
-                        mainColor = '#22c55e';
-                        glowColor = '#86efac';
-                    } else if (gesture === 'Thumb_Down' || gesture === 'THUMBS_DOWN') {
-                        mainColor = '#f97316';
-                        glowColor = '#fdba74';
-                    } else if (gesture === 'Closed_Fist' || gesture === 'FIST') {
-                        mainColor = '#a855f7';
-                        glowColor = '#d8b4fe';
-                    } else if (gesture === 'Pointing_Up' || gesture === 'POINTING') {
-                        mainColor = '#06b6d4';
-                        glowColor = '#67e8f9';
+                        // In ASL mode, differentiate between letters and control gestures
+                        if (gesture.startsWith('ASL:')) {
+                            mainColor = '#10b981'; // Green for valid letters
+                            glowColor = '#6ee7b7';
+                        } else if (gesture.startsWith('ACTION:')) {
+                            mainColor = '#8b5cf6'; // Purple for control actions
+                            glowColor = '#c4b5fd';
+                        } else {
+                            mainColor = '#10b981';
+                            glowColor = '#6ee7b7';
+                        }
+                    } else { // Navigation mode
+                        if (gesture === 'Pointing_Up' || gesture === 'POINTING') {
+                            mainColor = '#06b6d4'; // Cyan for pointing
+                            glowColor = '#67e8f9';
+                        } else if (gesture === 'Thumb_Up' || gesture === 'THUMBS_UP') {
+                            mainColor = '#22c55e'; // Green for positive
+                            glowColor = '#86efac';
+                        } else if (gesture === 'Thumb_Down' || gesture === 'THUMBS_DOWN') {
+                            mainColor = '#f97316'; // Orange for negative
+                            glowColor = '#fdba74';
+                        } else if (gesture === 'Closed_Fist' || gesture === 'FIST') {
+                            mainColor = '#a855f7'; // Purple for scroll
+                            glowColor = '#d8b4fe';
+                        } else if (gesture === 'Open_Palm' || gesture === 'WAVE') {
+                            mainColor = '#f59e0b'; // Amber for wave
+                            glowColor = '#fcd34d';
+                        } else {
+                            mainColor = '#3b82f6'; // Default blue
+                            glowColor = '#60a5fa';
+                        }
                     }
                 }
 
-                // Draw connections
+                // Draw connections on main canvas (background layer)
                 const connections = [
                     [0, 1], [1, 2], [2, 3], [3, 4], // thumb
                     [0, 5], [5, 6], [6, 7], [7, 8], // index
@@ -837,41 +880,43 @@ export default function HandBackground({
                     ctx.moveTo(startPoint.x * width, startPoint.y * height);
                     ctx.lineTo(endPoint.x * width, endPoint.y * height);
                     ctx.strokeStyle = gradient;
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = gesture ? 3 : 2; // Thicker lines when gesture detected
                     ctx.shadowColor = mainColor;
-                    ctx.shadowBlur = 8;
+                    ctx.shadowBlur = gesture ? 10 : 8; // Enhanced glow when gesture detected
                     ctx.stroke();
                 }
 
-                // Draw landmarks
-                for (let j = 0; j < hand.length; j++) {
-                    const point = hand[j];
-                    const x = point.x * width;
-                    const y = point.y * height;
+                // Draw landmarks on dots canvas (foreground layer)
+                if (dotsCtx) {
+                    for (let j = 0; j < hand.length; j++) {
+                        const point = hand[j];
+                        const x = point.x * width;
+                        const y = point.y * height;
 
-                    const isFingertip = [4, 8, 12, 16, 20].includes(j);
-                    const radius = isFingertip ? 4 : 2;
+                        const isFingertip = [4, 8, 12, 16, 20].includes(j);
+                        const radius = isFingertip ? (gesture ? 5 : 4) : (gesture ? 3 : 2); // Bigger when gesture detected
 
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                        dotsCtx.beginPath();
+                        dotsCtx.arc(x, y, radius, 0, 2 * Math.PI);
 
-                    if (isFingertip) {
-                        ctx.fillStyle = '#ffffff';
-                        ctx.shadowColor = glowColor;
-                        ctx.shadowBlur = 15;
-                    } else {
-                        ctx.fillStyle = '#1e293b';
-                        ctx.strokeStyle = glowColor;
-                        ctx.lineWidth = 1.5;
-                        ctx.shadowColor = mainColor;
-                        ctx.shadowBlur = 5;
+                        if (isFingertip) {
+                            dotsCtx.fillStyle = '#ffffff';
+                            dotsCtx.shadowColor = glowColor;
+                            dotsCtx.shadowBlur = gesture ? 20 : 15; // Enhanced shadow when gesture detected
+                        } else {
+                            dotsCtx.fillStyle = '#1e293b';
+                            dotsCtx.strokeStyle = glowColor;
+                            dotsCtx.lineWidth = 1.5;
+                            dotsCtx.shadowColor = mainColor;
+                            dotsCtx.shadowBlur = gesture ? 8 : 5; // Enhanced shadow when gesture detected
+                        }
+
+                        dotsCtx.fill();
+                        if (!isFingertip) dotsCtx.stroke();
                     }
 
-                    ctx.fill();
-                    if (!isFingertip) ctx.stroke();
+                    dotsCtx.shadowBlur = 0;
                 }
-
-                ctx.shadowBlur = 0;
             }
         } else {
             // No hands detected
@@ -897,6 +942,20 @@ export default function HandBackground({
                         videoRef.current.srcObject = stream;
                         videoRef.current.play();
                         videoRef.current.addEventListener('loadeddata', () => {
+                            // Ensure canvases are properly sized when video loads
+                            const width = window.innerWidth;
+                            const height = window.innerHeight;
+
+                            if (canvasRef.current) {
+                                canvasRef.current.width = width;
+                                canvasRef.current.height = height;
+                            }
+
+                            if (dotsCanvasRef.current) {
+                                dotsCanvasRef.current.width = width;
+                                dotsCanvasRef.current.height = height;
+                            }
+
                             if (requestRef.current) cancelAnimationFrame(requestRef.current);
                             requestRef.current = requestAnimationFrame(draw);
                         });
@@ -953,15 +1012,28 @@ export default function HandBackground({
                 handLandmarkerRef.current.close();
                 handLandmarkerRef.current = null;
             }
+
+            // Clean up canvas references
+            if (dotsCanvasRef.current) {
+                dotsCanvasRef.current.width = 0;
+                dotsCanvasRef.current.height = 0;
+            }
         };
     }, []);
 
     return (
         <>
-            {/* Hand skeleton visualization */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden scale-x-[-1]">
+            {/* Hand skeleton visualization - keep at z-1 to stay above background but below content
+                Using low z-index since hand renders outside main app via createPortal
+                z-index layers: 0 (background), 1 (hand), 20-40 (content), 50+ (UI overlays) */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]" style={{ zIndex: 1 }}>
                 <video ref={videoRef} className="hidden" playsInline muted autoPlay />
-                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+            </div>
+
+            {/* Active dots visualization - positioned high enough to be clickable */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden scale-x-[-1]" style={{ zIndex: 9999 }}>
+                <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full" />
             </div>
 
             {/* Floating cursor (navigation mode only) */}
