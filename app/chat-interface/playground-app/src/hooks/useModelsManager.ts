@@ -108,10 +108,10 @@ export function useModelsManager() {
         isSelectionInitialized.current = true;
       }
 
-      // Initialize chat model with first local model
+      // Initialize chat model with first API model, fallback to local
       if (!isChatModelInitialized.current) {
-        const firstLocalModel = apiModels.find(m => m.type === 'local');
-        setChatModelId(firstLocalModel?.id || apiModels[0]?.id || null);
+        const firstApiModel = apiModels.find(m => m.type === 'api');
+        setChatModelId(firstApiModel?.id || apiModels[0]?.id || null);
         isChatModelInitialized.current = true;
       }
 

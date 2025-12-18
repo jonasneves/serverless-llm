@@ -383,34 +383,42 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 : baseMessages;
 
             if (autoMode) {
-                // Filter models based on scope
-                const scopedModels = models.filter(m => {
+                // Filter models based on scope, with fallback to other type
+                const primaryModels = models.filter(m => {
                     if (autoModeScope === 'local') return m.type === 'local';
                     if (autoModeScope === 'api') return m.type === 'api';
                     return true;
                 });
 
-                const sortedModels = scopedModels
+                const fallbackModels = models.filter(m => {
+                    if (autoModeScope === 'local') return m.type === 'api';
+                    if (autoModeScope === 'api') return m.type === 'local';
+                    return false;
+                });
+
+                const sortModels = (modelList: typeof models) => modelList
                     .map(m => ({
                         ...m,
                         priority: getModelPriority(m.id, m.type || 'local', m.priority)
                     }))
                     .sort((a, b) => {
-                        // Sort by priority first
                         if (a.priority !== b.priority) {
                             return a.priority - b.priority;
                         }
-                        // If priorities are equal, sort by type (local before api)
                         if (a.type !== b.type) {
                             return a.type === 'local' ? -1 : 1;
                         }
-                        // Finally sort by id for consistency
                         return a.id.localeCompare(b.id);
                     });
 
-                let lastError: string | null = null;
+                const sortedPrimary = sortModels(primaryModels);
+                const sortedFallback = sortModels(fallbackModels);
 
-                for (const model of sortedModels) {
+                let lastError: string | null = null;
+                let triedFallback = false;
+
+                // Try primary models first
+                for (const model of sortedPrimary) {
                     setCurrentAutoModel(model.id);
                     setCurrentResponse('');
 
@@ -425,7 +433,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         }]);
                         setCurrentResponse('');
                         setCurrentAutoModel(null);
-                        // Notify parent about the model used (for mode switching)
                         onModelUsed?.(model.id);
                         return;
                     }
@@ -433,9 +440,39 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     lastError = result.content;
                 }
 
+                // If all primary models failed, try fallback models
+                if (sortedFallback.length > 0) {
+                    triedFallback = true;
+                    for (const model of sortedFallback) {
+                        setCurrentAutoModel(model.id);
+                        setCurrentResponse('');
+
+                        const result = await tryModelStream(model.id, apiMessages);
+
+                        if (result.success) {
+                            setMessages(prev => [...prev, {
+                                role: 'assistant',
+                                content: result.content,
+                                modelName: model.name,
+                                modelId: model.id
+                            }]);
+                            setCurrentResponse('');
+                            setCurrentAutoModel(null);
+                            onModelUsed?.(model.id);
+                            return;
+                        }
+
+                        lastError = result.content;
+                    }
+                }
+
+                const errorMsg = triedFallback
+                    ? `All models failed to respond. Last error: ${lastError}`
+                    : `All ${autoModeScope} models failed to respond. Last error: ${lastError}`;
+
                 setMessages(prev => [...prev, {
                     role: 'assistant',
-                    content: `All ${autoModeScope} models failed to respond. Last error: ${lastError}`,
+                    content: errorMsg,
                     error: true
                 }]);
                 setCurrentAutoModel(null);
