@@ -20,6 +20,7 @@ interface WorkflowInfo {
 interface DeploymentsPanelProps {
     githubToken: string;
     chatApiBaseUrl: string;
+    modelsBaseDomain: string;
 }
 
 const REPO_OWNER = 'jonasneves';
@@ -43,7 +44,7 @@ function getHostLabel(url: string): string {
     }
 }
 
-const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl }) => {
+const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain }) => {
     const [workflows, setWorkflows] = useState<Map<string, WorkflowInfo>>(new Map());
     const [runs, setRuns] = useState<Map<string, WorkflowRun | null>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -120,7 +121,16 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         setBackendBusy(true);
         setBackendLogTail(null);
         setBackendNativeError(null);
-        const resp = await nativeRequest({ action: 'start', mode: 'dev-remote' });
+
+        const isLocalChat = chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1');
+        if (!isLocalChat) {
+            setBackendNativeError('Backend start only works with local chat API (localhost:8080)');
+            setBackendBusy(false);
+            return;
+        }
+
+        const mode = modelsBaseDomain ? 'dev-remote' : 'dev-interface-local';
+        const resp = await nativeRequest({ action: 'start', mode });
         if (!resp?.ok && resp?.logTail) setBackendLogTail(resp.logTail);
         if (!resp?.ok && resp?.error) setBackendNativeError(resp.error);
         await refreshBackendStatus();

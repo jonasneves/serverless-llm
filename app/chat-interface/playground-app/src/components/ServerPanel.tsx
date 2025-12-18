@@ -340,7 +340,7 @@ const ServerPanel: React.FC = () => {
           </div>
 
           {activeTab === 'deployments' ? (
-            <DeploymentsPanel githubToken={config.githubToken} chatApiBaseUrl={config.chatApiBaseUrl} />
+            <DeploymentsPanel githubToken={config.githubToken} chatApiBaseUrl={config.chatApiBaseUrl} modelsBaseDomain={config.modelsBaseDomain} />
           ) : (
             <>
               {/* Connection Status Summary */}
