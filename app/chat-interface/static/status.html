@@ -5,24 +5,22 @@
 
 {% block extra_css %}
 <style>
-    /* Status-specific styles - Playground Theme */
+    /* Status-specific styles */
     .status-dashboard {
         margin: 0 auto;
         max-width: 1400px;
         width: 100%;
-        padding: 0 var(--space-4);
+        padding: var(--space-6) var(--space-4);
         display: flex;
         flex-direction: column;
-        gap: 24px;
-        padding-bottom: 48px;
-        position: relative;
-        z-index: 1;
+        gap: var(--space-6);
+        padding-bottom: var(--space-12);
     }
 
     .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: var(--space-6);
     }
 
     @media (min-width: 1024px) {
@@ -32,35 +30,14 @@
         }
     }
 
-    /* Background Pattern (Playground Style) */
-    .status-dashboard::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: -1;
-        background-color: var(--bg-primary);
-        background-image:
-            radial-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-            radial-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px);
-        background-size: 50px 50px, 50px 50px;
-        background-position: 0 0, 25px 25px;
-        pointer-events: none;
-    }
-
-    /* Cards - Glassmorphism */
+    /* Cards - Clean solid backgrounds */
     .overall-status,
     .services-section,
     .capacity-section {
-        background: rgba(30, 41, 59, 0.7);
-        /* slate-800 translucent */
-        border-radius: var(--radius-xl);
-        border: 1px solid rgba(148, 163, 184, 0.1);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        background: var(--bg-secondary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
     }
 
     /* Overall Status Card */
@@ -80,48 +57,43 @@
         top: 0;
         bottom: 0;
         width: 4px;
+        border-radius: var(--radius-lg) 0 0 var(--radius-lg);
     }
 
     .overall-status.healthy::before {
         background: var(--success-color);
-        box-shadow: 0 0 15px var(--success-color);
     }
 
     .overall-status.degraded::before {
         background: var(--warning-color);
-        box-shadow: 0 0 15px var(--warning-color);
     }
 
     .overall-status.unhealthy::before {
         background: var(--danger-color);
-        box-shadow: 0 0 15px var(--danger-color);
     }
 
     .overall-status.loading::before {
         background: var(--info-color);
-        box-shadow: 0 0 15px var(--info-color);
     }
 
     .status-icon {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         flex-shrink: 0;
+        border: 2px solid var(--bg-secondary);
     }
 
     .status-icon.healthy {
         background: var(--success-color);
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
     }
 
     .status-icon.degraded {
         background: var(--warning-color);
-        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
     }
 
     .status-icon.unhealthy {
         background: var(--danger-color);
-        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
     }
 
     .status-icon.loading {
@@ -145,9 +117,9 @@
     .services-header,
     .capacity-header {
         padding: 16px 20px;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-        background: rgba(15, 23, 42, 0.3);
-        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     }
 
     .services-header h3,
@@ -172,19 +144,19 @@
         font-size: 12px;
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        background: rgba(15, 23, 42, 0.4);
-        padding: 2px 8px;
-        border-radius: 4px;
+        background: var(--bg-primary);
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-color);
     }
 
     /* Items */
     .service-item,
     .capacity-item {
         padding: 16px 20px;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
-        /* Center mostly, might need overrides */
         gap: 16px;
         transition: background var(--transition-base);
     }
@@ -198,25 +170,25 @@
     .service-item:last-child,
     .capacity-item:last-child {
         border-bottom: none;
-        border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     }
 
     .service-item:hover,
     .capacity-item:hover {
-        background: rgba(255, 255, 255, 0.03);
+        background: var(--bg-tertiary);
     }
 
     /* Service Specifics */
     .service-indicator {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         flex-shrink: 0;
+        border: 2px solid var(--bg-secondary);
     }
 
     .service-indicator.online {
         background: var(--success-color);
-        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
     }
 
     .service-indicator.degraded {
@@ -269,38 +241,38 @@
     }
 
     .status-label {
-        padding: 4px 10px;
-        border-radius: 20px;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         text-align: center;
-        min-width: 70px;
+        min-width: 80px;
     }
 
     .status-label.online {
-        background: rgba(16, 185, 129, 0.15);
+        background: var(--success-bg);
         color: var(--success-color);
-        border: 1px solid rgba(16, 185, 129, 0.2);
+        border: 1px solid var(--success-color);
     }
 
     .status-label.degraded {
-        background: rgba(245, 158, 11, 0.15);
+        background: var(--warning-bg);
         color: var(--warning-color);
-        border: 1px solid rgba(245, 158, 11, 0.2);
+        border: 1px solid var(--warning-color);
     }
 
     .status-label.offline {
-        background: rgba(239, 68, 68, 0.15);
+        background: var(--danger-bg);
         color: var(--danger-color);
-        border: 1px solid rgba(239, 68, 68, 0.2);
+        border: 1px solid var(--danger-color);
     }
 
     .status-label.loading {
-        background: rgba(59, 130, 246, 0.15);
+        background: var(--info-bg);
         color: var(--info-color);
-        border: 1px solid rgba(59, 130, 246, 0.2);
+        border: 1px solid var(--info-color);
     }
 
     /* Capacity Specifics */
@@ -324,11 +296,12 @@
     }
 
     .utilization-bar {
-        height: 6px;
-        background: rgba(148, 163, 184, 0.1);
-        border-radius: 3px;
+        height: 8px;
+        background: var(--bg-primary);
+        border-radius: var(--radius-xs);
         overflow: hidden;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
+        border: 1px solid var(--border-color);
     }
 
     .utilization-fill {
@@ -365,27 +338,26 @@
 
     .instance-bar {
         flex: 1;
-        height: 4px;
-        background: rgba(148, 163, 184, 0.1);
-        border-radius: 2px;
+        height: 6px;
+        background: var(--bg-primary);
+        border-radius: var(--radius-xs);
+        border: 1px solid var(--border-color);
     }
 
     .instance-fill {
         height: 100%;
-        background: var(--text-tertiary);
-        /* Default gray for detailed stats */
-        opacity: 0.6;
+        background: var(--text-secondary);
     }
 
     .footer {
-        margin-top: 40px;
+        margin-top: var(--space-8);
         text-align: center;
     }
 
     .last-updated {
-        font-size: 12px;
+        font-size: var(--text-sm);
         color: var(--text-tertiary);
-        opacity: 0.7;
+        font-family: var(--font-mono);
     }
 
     @keyframes pulse {
@@ -485,12 +457,7 @@
 
             // Filter to only local models (exclude API models) and sort by ID for consistency
             const localModels = data.models
-                .filter(m => !m.id.includes('gpt') &&
-                    !m.id.includes('deepseek-v3') &&
-                    !m.id.includes('cohere') &&
-                    !m.id.includes('llama-3.3') &&
-                    !m.id.includes('llama-4') &&
-                    !m.id.includes('llama-3.1'))
+                .filter(m => m.type === 'local')
                 .sort((a, b) => a.id.localeCompare(b.id));
 
             overallStatus.className = 'overall-status loading';

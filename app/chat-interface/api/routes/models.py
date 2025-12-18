@@ -103,7 +103,7 @@ async def model_status(model_id: str, detailed: bool = False):
     """
     from chat_server import get_model_endpoint_or_error
     from services.health_service import check_model_health
-    from http_client import HTTPClient
+    from clients.http_client import HTTPClient
 
     endpoint = get_model_endpoint_or_error(model_id, status_code=404)
 
