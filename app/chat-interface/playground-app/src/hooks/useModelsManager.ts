@@ -25,7 +25,7 @@ export function useModelsManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  
+
   // Multi-model selection (for Compare, Council, Roundtable, Personalities)
   const [persistedSelected, setPersistedSelected] = usePersistedSetting<string[] | null>('playground_selected_models', null);
   const isSelectionInitialized = useRef(persistedSelected !== null);
@@ -44,7 +44,7 @@ export function useModelsManager() {
   }, [setPersistedSelected]);
 
   const [moderator, setModerator] = useState<string>('');
-  
+
   // Ref to track active fetch and prevent race conditions
   const fetchIdRef = useRef(0);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,26 +62,8 @@ export function useModelsManager() {
       setRetryCount(0);
     }
 
-    try {
-      const response = await fetch('/api/models');
-      
-      // Check if this fetch is still relevant
-      if (fetchId !== fetchIdRef.current) return;
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data: ModelsApiResponse = await response.json();
-      
-      // Check again after parsing
-      if (fetchId !== fetchIdRef.current) return;
-
-      // Check if we got actual models (backend might return empty during startup)
-      if (!data.models || data.models.length === 0) {
-        throw new Error('No models available yet');
-      }
-
+    // Helper to process models response
+    const processModels = (data: ModelsApiResponse) => {
       const apiModels = data.models.map((model) => {
         const modelType: 'local' | 'api' = model.type === 'api' ? 'api' : 'local';
         const meta = MODEL_META[modelType];
@@ -118,16 +100,58 @@ export function useModelsManager() {
       const apiModeratorCandidate = apiModels.find(m => m.type === 'api');
       const fallbackModerator = apiModels[0]?.id || '';
       setModerator(apiModeratorCandidate?.id || fallbackModerator);
-      
-    } catch (error) {
+    };
+
+    try {
+      // Try backend API first
+      const response = await fetch('/api/models');
+
       // Check if this fetch is still relevant
       if (fetchId !== fetchIdRef.current) return;
-      
-      console.warn(`Model fetch attempt ${currentRetry + 1} failed:`, error);
-      
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data: ModelsApiResponse = await response.json();
+
+      // Check again after parsing
+      if (fetchId !== fetchIdRef.current) return;
+
+      // Check if we got actual models (backend might return empty during startup)
+      if (!data.models || data.models.length === 0) {
+        throw new Error('No models available yet');
+      }
+
+      processModels(data);
+
+    } catch (backendError) {
+      // Check if this fetch is still relevant
+      if (fetchId !== fetchIdRef.current) return;
+
+      console.warn(`Backend fetch failed:`, backendError);
+
+      // Try static models.json (for extension mode)
+      try {
+        console.log('Trying static models.json...');
+        const staticResponse = await fetch('/models.json');
+
+        if (staticResponse.ok) {
+          const staticData = await staticResponse.json();
+          if (staticData.models && staticData.models.length > 0) {
+            console.log(`Loaded ${staticData.models.length} models from static file`);
+            processModels(staticData);
+            return;
+          }
+        }
+      } catch (staticError) {
+        console.warn('Static models.json not available:', staticError);
+      }
+
+      // Both failed - retry or give up
       const nextRetry = currentRetry + 1;
       setRetryCount(nextRetry);
-      
+
       if (nextRetry < MAX_RETRIES) {
         const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(1.4, currentRetry), MAX_RETRY_DELAY);
         setLoadError(`Connecting to backend...`);
@@ -136,7 +160,7 @@ export function useModelsManager() {
         }, delay);
       } else {
         setIsLoading(false);
-        setLoadError('Could not connect to backend');
+        setLoadError('Could not load models');
       }
     }
   }, [setPersistedSelected, setChatModelId]);
@@ -151,7 +175,7 @@ export function useModelsManager() {
   useEffect(() => {
     fetchIdRef.current += 1;
     loadModels(fetchIdRef.current, 0);
-    
+
     return () => {
       // Invalidate any in-flight fetches
       fetchIdRef.current += 1;

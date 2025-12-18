@@ -104,6 +104,22 @@ build-playground:
 		npm run build && \
 		echo "✓ Playground built successfully to static/playground/"
 
+build-extension:
+	@echo "Building Chrome extension..."
+	@cd app/chat-interface/playground-app && \
+		if [ ! -d node_modules ]; then \
+			echo "Installing npm dependencies..."; \
+			npm install; \
+		fi && \
+		npm run build:extension && \
+		echo "✓ Extension built to dist-extension/" && \
+		echo "" && \
+		echo "To load in Chrome:" && \
+		echo "  1. Open chrome://extensions/" && \
+		echo "  2. Enable 'Developer mode'" && \
+		echo "  3. Click 'Load unpacked'" && \
+		echo "  4. Select: app/chat-interface/playground-app/dist-extension"
+
 build-qwen:
 	docker-compose --profile qwen build qwen
 

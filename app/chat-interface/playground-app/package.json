@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:local": "tsc && vite build --base=/ --outDir dist",
+    "fetch-models": "node scripts/fetch-models.mjs",
+    "fetch-mediapipe": "node scripts/fetch-mediapipe.mjs",
+    "build:extension": "npm run fetch-models && npm run fetch-mediapipe && tsc && vite build --config vite.config.extension.ts",
     "preview": "npm run build:local && vite preview --outDir dist",
     "type-check": "tsc --noEmit"
   },
@@ -27,6 +30,7 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
+    "@types/chrome": "^0.1.32",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

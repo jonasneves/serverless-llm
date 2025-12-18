@@ -7,6 +7,7 @@ import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
 import { extractTextWithoutJSON } from './GestureOptions';
+import { fetchChatStream, streamSseEvents } from '../utils/streaming';
 
 
 export interface ChatViewHandle {
@@ -151,14 +152,14 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     useEffect(() => {
         const el = scrollRef.current;
         if (!el) return;
-        
+
         const handleScroll = () => {
             // If user scrolled back near bottom, re-enable auto-follow
             if (isNearBottom()) {
                 userScrolledAwayRef.current = false;
             }
         };
-        
+
         el.addEventListener('scroll', handleScroll, { passive: true });
         return () => el.removeEventListener('scroll', handleScroll);
     }, []);
@@ -235,86 +236,44 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
     const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string; isRateLimit?: boolean }> => {
         try {
-            const response = await fetch('/api/chat/stream', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    models: [modelId],
-                    messages: apiMessages,
-                    max_tokens: 2048,
-                    temperature: 0.7,
-                    github_token: githubToken || null
-                }),
-                signal: abortControllerRef.current?.signal
-            });
+            const stream = await fetchChatStream({
+                models: [modelId],
+                messages: apiMessages.map(m => ({ role: m.role, content: m.content })),
+                max_tokens: 2048,
+                temperature: 0.7,
+                github_token: githubToken || null,
+            }, abortControllerRef.current?.signal);
 
-            if (!response.ok) {
-                const isRateLimit = response.status === 429;
-                if (isRateLimit) {
-                    recordRateLimit(modelId);
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            if (!response.body) {
-                throw new Error('No response body');
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
             let responseContent = '';
 
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value);
-                buffer += chunk;
-                const lines = buffer.split('\n\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const jsonStr = line.slice(6);
-                        if (jsonStr === '[DONE]') continue;
-
-                        try {
-                            const data = JSON.parse(jsonStr);
-                            if (data.event === 'token' && data.content) {
-                                responseContent += data.content;
-                                setCurrentResponse(prev => prev + data.content);
-                            } else if (data.error) {
-                                const errorMsg = data.content || '';
-                                const isRateLimit = errorMsg.includes('429') ||
-                                    errorMsg.toLowerCase().includes('rate limit') ||
-                                    errorMsg.toLowerCase().includes('too many requests');
-                                if (isRateLimit) {
-                                    recordRateLimit(modelId);
-                                }
-                                const error = new Error(errorMsg);
-                                (error as any).isRateLimit = isRateLimit;
-                                throw error;
-                            }
-                        } catch (e) {
-                            if (e instanceof Error && e.message !== jsonStr) {
-                                throw e;
-                            }
-                        }
-                    }
+            await streamSseEvents(stream, (event) => {
+                // Check for abort
+                if (abortControllerRef.current?.signal.aborted) {
+                    throw new DOMException('Aborted', 'AbortError');
                 }
-            }
 
-            // Success - record as last successful model and clear any rate limit record
+                if ((event.event === 'token' || event.content) && event.content) {
+                    responseContent += event.content;
+                    setCurrentResponse(prev => prev + event.content);
+                } else if (event.event === 'error' || event.error) {
+                    const errorMsg = String(event.error || 'Stream failed');
+                    const isRateLimit = errorMsg.includes('429') ||
+                        errorMsg.toLowerCase().includes('rate limit') ||
+                        errorMsg.toLowerCase().includes('too many requests');
+                    if (isRateLimit) {
+                        recordRateLimit(modelId);
+                    }
+                    throw new Error(errorMsg);
+                }
+            });
+
             recordSuccess(modelId);
             return { success: true, content: responseContent };
         } catch (error: any) {
             if (error.name === 'AbortError') {
                 throw error;
             }
-            const isRateLimit = error.isRateLimit || error.message?.includes('429') ||
+            const isRateLimit = error.message?.includes('429') ||
                 error.message?.toLowerCase().includes('rate limit');
             if (isRateLimit) {
                 recordRateLimit(modelId);
@@ -548,35 +507,35 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                                             {showAutoDropdown && (
                                                 <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                                {(['local', 'api'] as ChatAutoModeScope[]).map(scope => (
-                                                    <button
-                                                        key={scope}
-                                                        onClick={() => {
-                                                            setAutoModeScope(scope);
-                                                            setShowAutoDropdown(false);
-                                                        }}
-                                                        className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${autoModeScope === scope
-                                                            ? 'bg-yellow-500/20 text-yellow-300'
-                                                            : 'text-slate-300 hover:bg-slate-700/50'
-                                                            }`}
-                                                    >
-                                                        {autoScopeLabels[scope]}
-                                                        {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
-                                                        {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
-                                                    </button>
-                                                ))}
-                                                <div className="border-t border-slate-700">
-                                                    <button
-                                                        onClick={() => {
-                                                            setAutoMode(false);
-                                                            setShowAutoDropdown(false);
-                                                        }}
-                                                        className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
-                                                    >
-                                                        Manual Mode
-                                                    </button>
+                                                    {(['local', 'api'] as ChatAutoModeScope[]).map(scope => (
+                                                        <button
+                                                            key={scope}
+                                                            onClick={() => {
+                                                                setAutoModeScope(scope);
+                                                                setShowAutoDropdown(false);
+                                                            }}
+                                                            className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${autoModeScope === scope
+                                                                ? 'bg-yellow-500/20 text-yellow-300'
+                                                                : 'text-slate-300 hover:bg-slate-700/50'
+                                                                }`}
+                                                        >
+                                                            {autoScopeLabels[scope]}
+                                                            {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
+                                                            {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
+                                                        </button>
+                                                    ))}
+                                                    <div className="border-t border-slate-700">
+                                                        <button
+                                                            onClick={() => {
+                                                                setAutoMode(false);
+                                                                setShowAutoDropdown(false);
+                                                            }}
+                                                            className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
+                                                        >
+                                                            Manual Mode
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
                                             )}
                                         </div>
 
@@ -641,111 +600,111 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                                             {showModelSelector && !isGenerating && (
                                                 <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                                {models.length === 0 ? (
-                                                    <div className="px-3 py-4 text-xs text-slate-500 text-center">
-                                                        No models available
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        {models.filter(m => m.type === 'local').length > 0 && (
-                                                            <div>
-                                                                <button
-                                                                    onClick={() => setExpandedLocalModels(!expandedLocalModels)}
-                                                                    className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors"
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                                        <span>Local Models</span>
-                                                                    </div>
-                                                                    <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
-                                                                </button>
-                                                                {expandedLocalModels && (
-                                                                    <div>
-                                                                        {models.filter(m => m.type === 'local').map(model => (
-                                                                            <button
-                                                                                key={model.id}
-                                                                                onClick={() => {
-                                                                                    onSelectModel(model.id);
-                                                                                    setShowModelSelector(false);
-                                                                                }}
-                                                                                className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
-                                                                                    ? 'bg-emerald-500/20 text-slate-200'
-                                                                                    : 'text-slate-300 hover:bg-slate-700/50'
-                                                                                    }`}
-                                                                            >
-                                                                                <div className="flex items-center justify-between">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="w-2 h-2 rounded-full bg-emerald-500/40" />
-                                                                                        <span>{model.name}</span>
-                                                                                    </div>
-                                                                                    {selectedModelId === model.id && (
-                                                                                        <span className="text-emerald-400">✓</span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {models.filter(m => m.type === 'api').length > 0 && (
-                                                            <div>
-                                                                <button
-                                                                    onClick={() => setExpandedApiModels(!expandedApiModels)}
-                                                                    className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors border-t border-slate-700/50"
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                                        <span>API Models</span>
-                                                                    </div>
-                                                                    <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
-                                                                </button>
-                                                                {expandedApiModels && (
-                                                                    <div>
-                                                                        {models.filter(m => m.type === 'api').map(model => (
-                                                                            <button
-                                                                                key={model.id}
-                                                                                onClick={() => {
-                                                                                    onSelectModel(model.id);
-                                                                                    setShowModelSelector(false);
-                                                                                }}
-                                                                                className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
-                                                                                    ? 'bg-blue-500/20 text-slate-200'
-                                                                                    : 'text-slate-300 hover:bg-slate-700/50'
-                                                                                    }`}
-                                                                            >
-                                                                                <div className="flex items-center justify-between">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500/40" />
-                                                                                        <span>{model.name}</span>
-                                                                                    </div>
-                                                                                    {selectedModelId === model.id && (
-                                                                                        <span className="text-blue-400">✓</span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        <div className="border-t border-slate-700">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setAutoMode(true);
-                                                                    setShowModelSelector(false);
-                                                                }}
-                                                                className="w-full px-3 py-2 text-left text-xs font-medium text-yellow-400 hover:bg-slate-700/50 transition-colors flex items-center gap-2"
-                                                            >
-                                                                <Zap size={12} />
-                                                                <span>Enable Auto Mode</span>
-                                                            </button>
+                                                    {models.length === 0 ? (
+                                                        <div className="px-3 py-4 text-xs text-slate-500 text-center">
+                                                            No models available
                                                         </div>
-                                                    </>
-                                                )}
-                                            </div>
+                                                    ) : (
+                                                        <>
+                                                            {models.filter(m => m.type === 'local').length > 0 && (
+                                                                <div>
+                                                                    <button
+                                                                        onClick={() => setExpandedLocalModels(!expandedLocalModels)}
+                                                                        className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors"
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                            <span>Local Models</span>
+                                                                        </div>
+                                                                        <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
+                                                                    </button>
+                                                                    {expandedLocalModels && (
+                                                                        <div>
+                                                                            {models.filter(m => m.type === 'local').map(model => (
+                                                                                <button
+                                                                                    key={model.id}
+                                                                                    onClick={() => {
+                                                                                        onSelectModel(model.id);
+                                                                                        setShowModelSelector(false);
+                                                                                    }}
+                                                                                    className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                                        ? 'bg-emerald-500/20 text-slate-200'
+                                                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                                                        }`}
+                                                                                >
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <div className="w-2 h-2 rounded-full bg-emerald-500/40" />
+                                                                                            <span>{model.name}</span>
+                                                                                        </div>
+                                                                                        {selectedModelId === model.id && (
+                                                                                            <span className="text-emerald-400">✓</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {models.filter(m => m.type === 'api').length > 0 && (
+                                                                <div>
+                                                                    <button
+                                                                        onClick={() => setExpandedApiModels(!expandedApiModels)}
+                                                                        className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors border-t border-slate-700/50"
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                                                            <span>API Models</span>
+                                                                        </div>
+                                                                        <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
+                                                                    </button>
+                                                                    {expandedApiModels && (
+                                                                        <div>
+                                                                            {models.filter(m => m.type === 'api').map(model => (
+                                                                                <button
+                                                                                    key={model.id}
+                                                                                    onClick={() => {
+                                                                                        onSelectModel(model.id);
+                                                                                        setShowModelSelector(false);
+                                                                                    }}
+                                                                                    className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                                        ? 'bg-blue-500/20 text-slate-200'
+                                                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                                                        }`}
+                                                                                >
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <div className="w-2 h-2 rounded-full bg-blue-500/40" />
+                                                                                            <span>{model.name}</span>
+                                                                                        </div>
+                                                                                        {selectedModelId === model.id && (
+                                                                                            <span className="text-blue-400">✓</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            <div className="border-t border-slate-700">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setAutoMode(true);
+                                                                        setShowModelSelector(false);
+                                                                    }}
+                                                                    className="w-full px-3 py-2 text-left text-xs font-medium text-yellow-400 hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                                                                >
+                                                                    <Zap size={12} />
+                                                                    <span>Enable Auto Mode</span>
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
 

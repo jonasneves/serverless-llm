@@ -237,7 +237,7 @@ export default function HandBackground({
         return PERSISTENCE_THRESHOLD; // Default threshold
     }, []);
 
-    
+
     // Function to determine if a gesture should be processed based on app context
     const shouldProcessGesture = useCallback((gestureName: string, context: string) => {
         // ASL control gestures (like SEND, CLEAR, etc.) should work in all contexts
@@ -266,13 +266,13 @@ export default function HandBackground({
     const isInActiveArea = useCallback((handX: number, handY: number) => {
         const area = gestureActiveAreaRef.current;
         if (!area) return true; // No restriction, allow everywhere
-        
+
         // handX and handY are normalized 0-1, but handX from camera is mirrored
         // so we use (1 - handX) to get actual screen position
         const screenX = 1 - handX;
-        
+
         return screenX >= area.minX && screenX <= area.maxX &&
-               handY >= area.minY && handY <= area.maxY;
+            handY >= area.minY && handY <= area.maxY;
     }, []);
 
     const getHandState = useCallback((index: number) => {
@@ -311,14 +311,27 @@ export default function HandBackground({
 
         const init = async () => {
             try {
-                const vision = await FilesetResolver.forVisionTasks(
-                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-                );
+                // Detect extension context - use local files to avoid CSP issues
+                const isExtension = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
+
+                const wasmPath = isExtension
+                    ? '/mediapipe'  // Local files in extension
+                    : 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm';
+
+                const gestureModelPath = isExtension
+                    ? '/mediapipe/gesture_recognizer.task'
+                    : 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
+
+                const handLandmarkerPath = isExtension
+                    ? '/mediapipe/hand_landmarker.task'
+                    : 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+
+                const vision = await FilesetResolver.forVisionTasks(wasmPath);
 
                 // Initialize GestureRecognizer for navigation mode (Google's pre-trained model)
                 gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
                     baseOptions: {
-                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task`,
+                        modelAssetPath: gestureModelPath,
                         delegate: "GPU"
                     },
                     runningMode: "VIDEO",
@@ -329,7 +342,7 @@ export default function HandBackground({
                 // Also initialize HandLandmarker for ASL mode (fingerpose needs landmarks)
                 handLandmarker = await HandLandmarker.createFromOptions(vision, {
                     baseOptions: {
-                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+                        modelAssetPath: handLandmarkerPath,
                         delegate: "GPU"
                     },
                     runningMode: "VIDEO",
@@ -483,11 +496,11 @@ export default function HandBackground({
                 state.scrollVelocity = 0;
             } else if (state.lastScrollY !== null) {
                 const rawDelta = currentY - state.lastScrollY;
-                
+
                 // Accumulate velocity with smoothing to reduce jitter
                 const velocity = (state.scrollVelocity || 0) * 0.6 + rawDelta * 0.4;
                 state.scrollVelocity = velocity;
-                
+
                 // Only trigger scroll if velocity is significant and consistent direction
                 if (Math.abs(velocity) > 0.006 && onScrollRef.current) {
                     onScrollRef.current(velocity * 1800);
@@ -533,7 +546,7 @@ export default function HandBackground({
                         // Don't send if input is focused
                         const activeElement = document.activeElement;
                         const isInputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
-                        
+
                         // Check if hand is in active gesture area (transcript panel)
                         const wristY = landmarks[0].y;
                         if (onSendMessageRef.current && !isInputFocused && isInActiveArea(currentX, wristY)) {
@@ -565,7 +578,7 @@ export default function HandBackground({
                 // Don't send if input is focused
                 const activeElement = document.activeElement;
                 const isInputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
-                
+
                 // Check if hand is in active gesture area (transcript panel)
                 const wrist = landmarks[0];
                 if (onSendMessageRef.current && !isInputFocused && isInActiveArea(wrist.x, wrist.y)) {
@@ -585,7 +598,7 @@ export default function HandBackground({
             }
         }
 
-        
+
         return gestureName;
     }, [getHandState, getPersistence, shouldProcessGesture]);
 
@@ -623,9 +636,9 @@ export default function HandBackground({
 
             // Check cooldown period to prevent repeated letters
             const isOnCooldown = lastASLGestureTime.current !== 0 &&
-                                (now - lastASLGestureTime.current) < COOLDOWN_MS &&
-                                !isControlGesture(topGesture.name) &&
-                                topGesture.name === lastASLLetter.current;
+                (now - lastASLGestureTime.current) < COOLDOWN_MS &&
+                !isControlGesture(topGesture.name) &&
+                topGesture.name === lastASLLetter.current;
 
             // Update confirmation frames only if not on cooldown
             if (!isOnCooldown) {
@@ -811,7 +824,7 @@ export default function HandBackground({
             }
         }
 
-        
+
         // Adaptive frame rate: adjust based on gesture activity
         const activityNow = performance.now();
         if (gestureDetected) {
@@ -1091,7 +1104,7 @@ export default function HandBackground({
                 <video ref={videoRef} className="hidden" playsInline muted autoPlay />
                 <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
             </div>
-            
+
             {/* Dots visualization (all landmarks) - also behind UI */}
             <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden scale-x-[-1]">
                 <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />

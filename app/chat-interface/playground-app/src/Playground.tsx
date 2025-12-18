@@ -6,6 +6,7 @@ import PromptInput from './components/PromptInput';
 import Header from './components/Header';
 import { useModelsManager } from './hooks/useModelsManager';
 import { usePersistedSetting } from './hooks/usePersistedSetting';
+import { useExtensionConfig } from './hooks/useExtensionConfig';
 import { useConversationHistory } from './hooks/useConversationHistory';
 import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
@@ -37,7 +38,11 @@ const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="b
 function PlaygroundInner() {
   // Access gesture context for HandBackground rendering
   const gestureCtx = useGesture();
-  
+
+  // Load extension configuration (endpoints, github token) from chrome.storage
+  // This configures the apiClient with user's saved settings on startup
+  const { config: _extensionConfig, isLoaded: _extensionConfigLoaded } = useExtensionConfig();
+
   const {
     modelsData,
     setModelsData,
