@@ -73,11 +73,17 @@ Backend Server (localhost:8080)
 
 ### Server Endpoints
 Side panel allows configuring:
-- **Chat Port**: FastAPI server port (default: 8080)
-- **Base Domain**: Remote model domain for Cloudflare tunnels
+- **Chat API Base URL**: Where the chat backend lives (default: `http://localhost:8080`)
+- **Models Base Domain**: Remote model domain for subdomain routing (leave empty for localhost model ports)
 - **GitHub Token**: Optional token for Discussion/Agents modes
 
 Settings persist in `chrome.storage.local`.
+
+### Profiles
+Side panel includes presets for common setups:
+- **Remote (hosted)**: `https://chat.neevs.io` + `https://[service].neevs.io`
+- **Local chat + remote models**: `http://localhost:8080` + `https://[service].neevs.io`
+- **Local (chat + models)**: `http://localhost:8080` + localhost model ports
 
 ### Environment Variables
 Backend still uses `.env` file. Side panel config supplements runtime settings.

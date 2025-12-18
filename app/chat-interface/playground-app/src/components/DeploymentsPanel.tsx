@@ -19,11 +19,11 @@ interface WorkflowInfo {
 
 interface DeploymentsPanelProps {
     githubToken: string;
+    chatApiBaseUrl: string;
 }
 
 const REPO_OWNER = 'jonasneves';
 const REPO_NAME = 'serverless-llm';
-const CHAT_BACKEND_URL = 'https://chat.neevs.io';
 
 // Key workflows to monitor
 const KEY_WORKFLOWS = [
@@ -31,7 +31,19 @@ const KEY_WORKFLOWS = [
     { name: 'Build Images', path: 'build-push-images.yml' },
 ];
 
-const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken }) => {
+function normalizeBaseUrl(url: string): string {
+    return url.trim().replace(/\/+$/, '');
+}
+
+function getHostLabel(url: string): string {
+    try {
+        return new URL(url).host;
+    } catch {
+        return url;
+    }
+}
+
+const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl }) => {
     const [workflows, setWorkflows] = useState<Map<string, WorkflowInfo>>(new Map());
     const [runs, setRuns] = useState<Map<string, WorkflowRun | null>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -49,7 +61,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken }) => {
         setBackendHealth('checking');
         try {
             // Use /health endpoint (not /api/health)
-            const response = await fetch(`${CHAT_BACKEND_URL}/health`, {
+            const baseUrl = normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080';
+            const response = await fetch(`${baseUrl}/health`, {
                 method: 'GET',
                 mode: 'cors',
                 credentials: 'omit',
@@ -60,7 +73,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken }) => {
             console.log('Health check failed:', err);
             setBackendHealth('down');
         }
-    }, []);
+    }, [chatApiBaseUrl]);
 
     const fetchWorkflows = useCallback(async () => {
         if (!githubToken) {
@@ -263,7 +276,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken }) => {
                         {backendHealth === 'checking' && <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />}
                         <span className="text-sm text-slate-300">Backend</span>
                     </div>
-                    <span className="text-xs text-slate-500">chat.neevs.io</span>
+                    <span className="text-xs text-slate-500">{getHostLabel(normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080')}</span>
                 </div>
             </div>
 
