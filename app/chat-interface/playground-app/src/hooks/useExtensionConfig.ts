@@ -26,7 +26,7 @@ export interface EnvConfig {
 
 const DEFAULT_CONFIG: EnvConfig = {
   githubToken: '',
-  baseDomain: 'chat.neevs.io',  // Default to hosted backend
+  baseDomain: 'neevs.io',  // Base domain - services are subdomains (chat.neevs.io, etc)
   useHttps: true,
 };
 
@@ -45,8 +45,9 @@ function buildApiBaseUrl(config: EnvConfig): string {
   if (!config.baseDomain) {
     return 'http://localhost:8080';
   }
-  // For chat backend, remove service prefix (it's just the base domain)
-  return `${config.useHttps ? 'https' : 'http'}://${config.baseDomain}`;
+
+  // Chat backend is at chat.{baseDomain}
+  return `${config.useHttps ? 'https' : 'http'}://chat.${config.baseDomain}`;
 }
 
 export function useExtensionConfig() {
