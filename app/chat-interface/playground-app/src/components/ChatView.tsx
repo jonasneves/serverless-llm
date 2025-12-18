@@ -3,8 +3,8 @@ import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
 import { Bot, AlertTriangle, User, Zap, ChevronDown, Info, Server, Infinity, Cloud, Sparkles } from 'lucide-react';
-import { getModelPriority } from '../constants';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
+import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
 import { extractTextWithoutJSON } from './GestureOptions';
 
@@ -85,10 +85,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const modelSelectorRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-    // Model failure tracking for smart retry logic
-    const rateLimitedModels = useRef<Map<string, number>>(new Map());
-    const lastSuccessfulModel = useRef<string | null>(null);
-    const RATE_LIMIT_COOLDOWN = 60000; // 60 seconds
+    // Smart model selection hook
+    const { sortModels, recordRateLimit, recordSuccess } = useSmartModelSelection();
 
     // Smooth scroll animation refs (for gesture scrolling)
     const scrollTargetRef = useRef(0);
@@ -297,7 +295,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             if (!response.ok) {
                 const isRateLimit = response.status === 429;
                 if (isRateLimit) {
-                    rateLimitedModels.current.set(modelId, Date.now());
+                    recordRateLimit(modelId);
                 }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -336,7 +334,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     errorMsg.toLowerCase().includes('rate limit') ||
                                     errorMsg.toLowerCase().includes('too many requests');
                                 if (isRateLimit) {
-                                    rateLimitedModels.current.set(modelId, Date.now());
+                                    recordRateLimit(modelId);
                                 }
                                 const error = new Error(errorMsg);
                                 (error as any).isRateLimit = isRateLimit;
@@ -352,8 +350,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             }
 
             // Success - record as last successful model and clear any rate limit record
-            lastSuccessfulModel.current = modelId;
-            rateLimitedModels.current.delete(modelId);
+            recordSuccess(modelId);
             return { success: true, content: responseContent };
         } catch (error: any) {
             if (error.name === 'AbortError') {
@@ -362,7 +359,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             const isRateLimit = error.isRateLimit || error.message?.includes('429') ||
                 error.message?.toLowerCase().includes('rate limit');
             if (isRateLimit) {
-                rateLimitedModels.current.set(modelId, Date.now());
+                recordRateLimit(modelId);
             }
             return { success: false, content: error.message, isRateLimit };
         }
@@ -421,52 +418,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     if (autoModeScope === 'api') return m.type === 'local';
                     return false;
                 });
-
-                // Helper to check if a model is recently rate-limited
-                const isRecentlyRateLimited = (modelId: string) => {
-                    const timestamp = rateLimitedModels.current.get(modelId);
-                    if (!timestamp) return false;
-                    return Date.now() - timestamp < RATE_LIMIT_COOLDOWN;
-                };
-
-                // Smart sorting: prioritize last successful, then non-rate-limited, then by priority
-                const sortModels = (modelList: typeof models) => {
-                    const withPriority = modelList.map(m => ({
-                        ...m,
-                        priority: getModelPriority(m.id, m.type || 'local', m.priority),
-                        isRateLimited: isRecentlyRateLimited(m.id),
-                        isLastSuccessful: m.id === lastSuccessfulModel.current
-                    }));
-
-                    // Split into non-rate-limited and rate-limited
-                    const available = withPriority.filter(m => !m.isRateLimited);
-                    const rateLimited = withPriority.filter(m => m.isRateLimited);
-
-                    // Sort available models: last successful first, then by priority
-                    const sortedAvailable = available.sort((a, b) => {
-                        if (a.isLastSuccessful !== b.isLastSuccessful) {
-                            return a.isLastSuccessful ? -1 : 1;
-                        }
-                        if (a.priority !== b.priority) {
-                            return a.priority - b.priority;
-                        }
-                        if (a.type !== b.type) {
-                            return a.type === 'local' ? -1 : 1;
-                        }
-                        return a.id.localeCompare(b.id);
-                    });
-
-                    // Sort rate-limited models by priority (used as last resort)
-                    const sortedRateLimited = rateLimited.sort((a, b) => {
-                        if (a.priority !== b.priority) {
-                            return a.priority - b.priority;
-                        }
-                        return a.id.localeCompare(b.id);
-                    });
-
-                    // Return available models first, then rate-limited as fallback
-                    return [...sortedAvailable, ...sortedRateLimited];
-                };
 
                 const sortedPrimary = sortModels(primaryModels);
                 const sortedFallback = sortModels(fallbackModels);
