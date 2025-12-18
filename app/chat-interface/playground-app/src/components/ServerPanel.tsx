@@ -43,6 +43,7 @@ const ServerPanel: React.FC = () => {
   const [backendBusy, setBackendBusy] = useState(false);
   const [recentActivity, setRecentActivity] = useState<Array<{ action: string; time: Date; status: 'success' | 'error' | 'pending' }>>([]);
   const [activeDeployments, setActiveDeployments] = useState(0);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   // Build services list from config
   const buildServicesList = useCallback((cfg: EnvConfig): ServiceHealth[] => {
@@ -152,6 +153,7 @@ const ServerPanel: React.FC = () => {
     chrome.storage.local.get(['envConfig'], (result: { envConfig?: EnvConfig }) => {
       const loadedConfig = normalizeEnvConfig(result.envConfig || DEFAULT_CONFIG);
       setConfig(loadedConfig);
+      setConfigLoaded(true);
 
       const servicesList = buildServicesList(loadedConfig);
       setServices(servicesList);
