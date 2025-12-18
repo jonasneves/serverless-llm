@@ -14,3 +14,7 @@ dist/
 
 # OS
 .DS_Store
+
+# Native host install artifacts
+native-host/*.bak
+native-host/serverless_llm_native_host.sh

@@ -9,23 +9,18 @@ chrome.sidePanel
 const NATIVE_HOST_NAME = 'io.neevs.serverless_llm';
 
 function sendNativeMessage(payload) {
-  console.log('[sendNativeMessage] Starting with payload:', payload);
   return new Promise((resolve) => {
     if (chrome.runtime.sendNativeMessage) {
-      console.log('[sendNativeMessage] Using sendNativeMessage API');
       chrome.runtime.sendNativeMessage(NATIVE_HOST_NAME, payload, (response) => {
         const err = chrome.runtime.lastError?.message;
-        console.log('[sendNativeMessage] Response:', response, 'Error:', err);
         if (err) resolve({ ok: false, error: err });
         else resolve(response);
       });
       return;
     }
 
-    console.log('[sendNativeMessage] Falling back to connectNative');
     try {
       const port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
-      console.log('[sendNativeMessage] Connected to native host');
       let settled = false;
       let receivedMessage = false;
       let disconnectTimer = null;
@@ -67,20 +62,11 @@ function sendNativeMessage(payload) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  console.log('[background] Received message:', message);
-  if (!message || typeof message !== 'object') {
-    console.log('[background] Invalid message, ignoring');
-    return;
-  }
-  if (message.type !== 'native_backend') {
-    console.log('[background] Not a native_backend message, ignoring');
-    return;
-  }
+  if (!message || typeof message !== 'object') return;
+  if (message.type !== 'native_backend') return;
 
-  console.log('[background] Calling native host with payload:', message.payload);
   (async () => {
     const response = await sendNativeMessage(message.payload || {});
-    console.log('[background] Native host response:', response);
     sendResponse(response);
   })();
 

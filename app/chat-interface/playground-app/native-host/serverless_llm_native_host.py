@@ -13,15 +13,6 @@ from typing import Any, Dict, Optional, Tuple
 
 
 HOST_NAME = "io.neevs.serverless_llm"
-LOG_FILE = Path.home() / ".native-host-debug.log"
-
-
-def _log(msg: str) -> None:
-    try:
-        with open(LOG_FILE, "a") as f:
-            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {msg}\n")
-    except Exception:
-        pass
 
 
 def _read_message() -> Optional[Dict[str, Any]]:
@@ -196,71 +187,40 @@ def _stop(state_path: Path) -> dict:
 
 
 def main() -> None:
-    _log("Native host started")
     try:
         repo_root = _find_repo_root()
         state_path, log_path = _state_paths(repo_root)
-        _log(f"Repo root: {repo_root}")
     except Exception as e:
-        _log(f"Error finding repo root: {e}")
         _write_message({"ok": False, "error": str(e)})
         return
 
-    try:
-        message = _read_message()
-        _log(f"Received message: {message}")
-    except Exception as e:
-        _log(f"Error reading message: {e}")
-        return
-
+    message = _read_message()
     if message is None:
-        _log("Message is None, exiting")
         return
 
     action = message.get("action")
-    _log(f"Action: {action}")
-
-    try:
-        if action == "start":
-            mode = message.get("mode") or "dev-remote"
-            if mode not in ("dev-remote", "dev-interface-local"):
-                _write_message({"ok": False, "error": f"Unknown mode: {mode}"})
-                return
-            response = _start_backend(repo_root, state_path, log_path, mode)
-            _log(f"Start response: {response}")
-            _write_message(response)
+    if action == "start":
+        mode = message.get("mode") or "dev-remote"
+        if mode not in ("dev-remote", "dev-interface-local"):
+            _write_message({"ok": False, "error": f"Unknown mode: {mode}"})
             return
+        _write_message(_start_backend(repo_root, state_path, log_path, mode))
+        return
 
-        if action == "stop":
-            response = _stop(state_path)
-            _log(f"Stop response: {response}")
-            _write_message(response)
-            return
+    if action == "stop":
+        _write_message(_stop(state_path))
+        return
 
-        if action == "status":
-            response = _status(repo_root, state_path, message.get("chatApiBaseUrl"))
-            _log(f"Status response: {response}")
-            _write_message(response)
-            return
+    if action == "status":
+        _write_message(_status(repo_root, state_path, message.get("chatApiBaseUrl")))
+        return
 
-        if action == "logs":
-            response = {"ok": True, "logTail": _tail_file(log_path, max_lines=120)}
-            _log(f"Logs response length: {len(str(response))}")
-            _write_message(response)
-            return
+    if action == "logs":
+        _write_message({"ok": True, "logTail": _tail_file(log_path, max_lines=120)})
+        return
 
-        _log(f"Unknown action: {action}")
-        _write_message({"ok": False, "error": f"Unknown action: {action}"})
-    except Exception as e:
-        _log(f"Error handling action {action}: {e}")
-        _write_message({"ok": False, "error": str(e)})
+    _write_message({"ok": False, "error": f"Unknown action: {action}"})
 
 
 if __name__ == "__main__":
-    try:
-        main()
-        _log("Native host completed successfully")
-    except Exception as e:
-        _log(f"Fatal error: {e}")
-        import traceback
-        _log(traceback.format_exc())
+    main()

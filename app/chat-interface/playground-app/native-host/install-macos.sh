@@ -36,12 +36,8 @@ pick_python() {
 
 PYTHON_BIN="$(pick_python)"
 
-cat > "$WRAPPER" <<EOF
-#!/usr/bin/env bash
-exec "$PYTHON_BIN" "$PY" "\$@"
-EOF
-
-chmod +x "$WRAPPER"
+sed -i.bak "1s|.*|#!$PYTHON_BIN|" "$PY"
+chmod +x "$PY"
 
 pick_dest_dir() {
   local base="$HOME/Library/Application Support"
@@ -86,7 +82,7 @@ cat > "$MANIFEST_PATH" <<EOF
 {
   "name": "io.neevs.serverless_llm",
   "description": "Serverless LLM native host (start/stop local backend)",
-  "path": "$WRAPPER",
+  "path": "$PY",
   "type": "stdio",
   "allowed_origins": ["chrome-extension://$EXT_ID/"]
 }
