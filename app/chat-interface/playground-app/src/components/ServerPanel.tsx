@@ -513,7 +513,7 @@ const ServerPanel: React.FC = () => {
         </div>
 
         {/* GitHub Token Warning */}
-        {!config.githubToken && (
+        {configLoaded && !config.githubToken && (
           <div className="p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg flex items-center gap-2 text-amber-300">
             <AlertCircle className="w-4 h-4" />
             <span className="text-xs">
