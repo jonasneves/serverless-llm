@@ -48,12 +48,16 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken }) => {
     const checkBackendHealth = useCallback(async () => {
         setBackendHealth('checking');
         try {
+            // Use HEAD request - lighter, and try with cors mode
             const response = await fetch(`${CHAT_BACKEND_URL}/api/health`, {
                 method: 'GET',
+                mode: 'cors',
+                credentials: 'omit',
                 signal: AbortSignal.timeout(5000),
             });
             setBackendHealth(response.ok ? 'ok' : 'down');
-        } catch {
+        } catch (err) {
+            console.log('Health check failed:', err);
             setBackendHealth('down');
         }
     }, []);

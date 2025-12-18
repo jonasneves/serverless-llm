@@ -25,6 +25,7 @@
   "host_permissions": [
     "http://localhost:*/*",
     "https://models.github.ai/*",
+    "https://api.github.com/*",
     "https://*.neevs.io/*"
   ],
   "content_security_policy": {
