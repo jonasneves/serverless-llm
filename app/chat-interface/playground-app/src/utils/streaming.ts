@@ -113,7 +113,7 @@ export const fetchCouncilStream = async (
   payload: CouncilStreamPayload,
   signal?: AbortSignal
 ): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/council/stream', payload, signal);
+  return streamFromBackend('/api/chat/council/stream', payload, signal);
 };
 
 export interface DiscussionStreamPayload {
@@ -130,7 +130,7 @@ export const fetchDiscussionStream = async (
   payload: DiscussionStreamPayload,
   signal?: AbortSignal
 ): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/discussion/stream', payload, signal);
+  return streamFromBackend('/api/chat/discussion/stream', payload, signal);
 };
 
 export interface PersonalityStreamPayload {
@@ -144,7 +144,7 @@ export const fetchPersonalityStream = async (
   payload: PersonalityStreamPayload,
   signal?: AbortSignal
 ): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/personality/stream', payload, signal);
+  return streamFromBackend('/api/chat/personality/stream', payload, signal);
 };
 
 export const streamSseEvents = async (
