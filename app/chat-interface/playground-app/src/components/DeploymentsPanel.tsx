@@ -282,7 +282,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken }) => {
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    {getStatusIcon(run)}
+                                    {getStatusIcon(run ?? null)}
                                     <span className="text-sm font-medium text-slate-200">{kw.name}</span>
                                 </div>
                                 {run && (
@@ -306,8 +306,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken }) => {
                                     onClick={() => triggerWorkflow(kw.name)}
                                     disabled={isTriggering || loading}
                                     className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${isTriggering
-                                            ? 'bg-slate-700 text-slate-400'
-                                            : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30'
+                                        ? 'bg-slate-700 text-slate-400'
+                                        : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30'
                                         }`}
                                 >
                                     {isTriggering ? (

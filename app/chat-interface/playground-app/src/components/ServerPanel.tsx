@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Server, Globe, Eye, EyeOff } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Server, Globe, Eye, EyeOff, Rocket } from 'lucide-react';
 import { SERVICES, buildEndpoint, EnvConfig } from '../hooks/useExtensionConfig';
+import DeploymentsPanel from './DeploymentsPanel';
 
 interface ServiceHealth {
   key: string;
@@ -14,6 +15,8 @@ const DEFAULT_CONFIG: EnvConfig = {
   baseDomain: '',
   useHttps: true,
 };
+
+type Tab = 'services' | 'deployments';
 
 /**
  * Build all endpoints from base domain
@@ -32,6 +35,7 @@ const ServerPanel: React.FC = () => {
   const [showConfig, setShowConfig] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
+  const [activeTab, setActiveTab] = useState<Tab>('deployments');
 
   // Build services list from config
   const buildServicesList = useCallback((cfg: EnvConfig): ServiceHealth[] => {
@@ -70,11 +74,17 @@ const ServerPanel: React.FC = () => {
       const servicesList = buildServicesList(loadedConfig);
       setServices(servicesList);
 
-      // Initial health check
-      setTimeout(() => checkHealth(servicesList), 500);
+      // Initial health check only if on services tab
+      if (activeTab === 'services') {
+        setTimeout(() => checkHealth(servicesList), 500);
+      }
     });
+  }, [buildServicesList, checkHealth]);
 
-    // Set up periodic health checks
+  // Set up periodic health checks only when on services tab
+  useEffect(() => {
+    if (activeTab !== 'services') return;
+
     const interval = setInterval(() => {
       setServices(current => {
         if (current.length > 0) {
@@ -85,7 +95,7 @@ const ServerPanel: React.FC = () => {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [buildServicesList, checkHealth]);
+  }, [activeTab, checkHealth]);
 
   const saveConfig = () => {
     // Build the full endpoints object for the main app
@@ -107,7 +117,9 @@ const ServerPanel: React.FC = () => {
     chrome.storage.local.set({ envConfig: configToSave }, () => {
       const servicesList = buildServicesList(config);
       setServices(servicesList);
-      checkHealth(servicesList);
+      if (activeTab === 'services') {
+        checkHealth(servicesList);
+      }
     });
   };
 
@@ -126,7 +138,7 @@ const ServerPanel: React.FC = () => {
 
   return (
     <div className="p-4 bg-slate-900 text-white min-h-screen font-sans">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold flex items-center gap-2">
           <Server className="w-5 h-5" />
           Server Controls
@@ -162,7 +174,17 @@ const ServerPanel: React.FC = () => {
                 {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">Required for API models & orchestration</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Required for API models & deployments.{' '}
+              <a
+                href="https://github.com/settings/personal-access-tokens/new?description=Serverless+LLM+Extension&scopes=user_models:read,actions:read,actions:write"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                Create token →
+              </a>
+            </p>
           </div>
 
           {/* Base Domain */}
@@ -224,57 +246,90 @@ const ServerPanel: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Connection Status Summary */}
-          <div className="mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">
-                  {isUsingRemote ? config.baseDomain : 'localhost'}
-                </span>
-              </div>
-              <div className="text-xs text-slate-500">
-                {healthyCount}/{services.length} online
-              </div>
-            </div>
+          {/* Tabs */}
+          <div className="flex border-b border-slate-700 mb-4">
+            <button
+              onClick={() => setActiveTab('deployments')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 transition-colors ${activeTab === 'deployments'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-white'
+                }`}
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              Deploy
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('services');
+                checkHealth(services);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 transition-colors ${activeTab === 'services'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-white'
+                }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              Services
+            </button>
           </div>
 
-          {/* Service Health */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                Service Health
-              </h2>
-              <button
-                onClick={() => checkHealth(services)}
-                className="text-xs text-slate-400 hover:text-white transition-colors"
-              >
-                Refresh
-              </button>
-            </div>
-            <div className="space-y-2">
-              {services.map((service) => (
-                <div
-                  key={service.key}
-                  className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded"
-                >
+          {activeTab === 'deployments' ? (
+            <DeploymentsPanel githubToken={config.githubToken} />
+          ) : (
+            <>
+              {/* Connection Status Summary */}
+              <div className="mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(service.status)}
-                    <span className="text-sm">{service.name}</span>
+                    <Globe className="w-4 h-4 text-slate-400" />
+                    <span className="text-sm text-slate-300">
+                      {isUsingRemote ? config.baseDomain : 'localhost'}
+                    </span>
                   </div>
-                  <span className="text-xs text-slate-500 truncate max-w-[120px]" title={service.endpoint}>
-                    {service.endpoint.replace('https://', '').replace('http://', '')}
-                  </span>
+                  <div className="text-xs text-slate-500">
+                    {healthyCount}/{services.length} online
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 text-xs text-slate-500">
-              Last check: {lastCheck.toLocaleTimeString()}
-            </div>
-          </div>
+              </div>
 
-          <div className="space-y-2">
+              {/* Service Health */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    Service Health
+                  </h2>
+                  <button
+                    onClick={() => checkHealth(services)}
+                    className="text-xs text-slate-400 hover:text-white transition-colors"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {services.map((service) => (
+                    <div
+                      key={service.key}
+                      className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded"
+                    >
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(service.status)}
+                        <span className="text-sm">{service.name}</span>
+                      </div>
+                      <span className="text-xs text-slate-500 truncate max-w-[120px]" title={service.endpoint}>
+                        {service.endpoint.replace('https://', '').replace('http://', '')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 text-xs text-slate-500">
+                  Last check: {lastCheck.toLocaleTimeString()}
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="space-y-2 pt-4 border-t border-slate-700/50">
             <button
               onClick={openFullApp}
               className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-medium transition-colors"
