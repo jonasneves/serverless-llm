@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Rocket, RefreshCw, CheckCircle, XCircle, Clock, Play, ExternalLink, AlertCircle } from 'lucide-react';
+import { Rocket, RefreshCw, CheckCircle, XCircle, Clock, Play, ExternalLink, AlertCircle, WifiOff } from 'lucide-react';
 
 interface WorkflowRun {
     id: number;
@@ -21,6 +21,8 @@ interface DeploymentsPanelProps {
     githubToken: string;
     chatApiBaseUrl: string;
     modelsBaseDomain: string;
+    showOnlyBackend?: boolean;
+    onBackendStatusChange?: (status: { process: 'running' | 'stopped' | 'unknown'; mode: string | null }) => void;
 }
 
 const REPO_OWNER = 'jonasneves';
@@ -44,7 +46,7 @@ function getHostLabel(url: string): string {
     }
 }
 
-const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain }) => {
+const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, showOnlyBackend = false, onBackendStatusChange }) => {
     const [workflows, setWorkflows] = useState<Map<string, WorkflowInfo>>(new Map());
     const [runs, setRuns] = useState<Map<string, WorkflowRun | null>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -56,6 +58,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [backendBusy, setBackendBusy] = useState(false);
     const [backendLogTail, setBackendLogTail] = useState<string | null>(null);
     const [backendNativeError, setBackendNativeError] = useState<string | null>(null);
+    const [backendMode, setBackendMode] = useState<string | null>(null);
     const refreshInFlight = useRef(false);
     const workflowsRef = useRef<Map<string, WorkflowInfo>>(new Map());
 
@@ -107,15 +110,21 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         const normalized = normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080';
         const resp = await nativeRequest({ action: 'status', chatApiBaseUrl: normalized });
         if (resp?.ok) {
-            setBackendProcess(resp.status === 'running' ? 'running' : 'stopped');
+            const process = resp.status === 'running' ? 'running' : 'stopped';
+            const mode = resp.mode ?? null;
+            setBackendProcess(process);
             setBackendPid(resp.pid ?? null);
+            setBackendMode(mode);
             setBackendNativeError(null);
+            onBackendStatusChange?.({ process, mode });
             return;
         }
         setBackendNativeError(resp?.error || null);
         setBackendProcess('unknown');
         setBackendPid(null);
-    }, [chatApiBaseUrl]);
+        setBackendMode(null);
+        onBackendStatusChange?.({ process: 'unknown', mode: null });
+    }, [chatApiBaseUrl, onBackendStatusChange]);
 
     const startBackend = async () => {
         setBackendBusy(true);
@@ -338,22 +347,6 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
     return (
         <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                    <Rocket className="w-4 h-4" />
-                    Deployments
-                </h2>
-                <button
-                    onClick={refresh}
-                    disabled={loading}
-                    className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1"
-                >
-                    <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
-            </div>
-
             {/* Backend Health */}
             <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
                 <div className="flex items-center justify-between gap-2">
@@ -368,7 +361,14 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
                 <div className="mt-2 flex items-center justify-between">
                     <div className="text-xs text-slate-500">
-                        {backendProcess === 'running' && backendPid ? `Process: running (pid ${backendPid})` : `Process: ${backendProcess}`}
+                        {backendProcess === 'running' && backendPid ? (
+                            <span>
+                                Process: running (pid {backendPid})
+                                {backendMode && <span className="text-slate-600"> | {backendMode}</span>}
+                            </span>
+                        ) : (
+                            `Process: ${backendProcess}`
+                        )}
                     </div>
                     <div className="flex items-center gap-2">
                         <button
@@ -381,10 +381,19 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         {backendProcess !== 'running' ? (
                             <button
                                 onClick={startBackend}
-                                disabled={backendBusy}
-                                className="px-2 py-1 text-xs rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
+                                disabled={backendBusy || !(chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1'))}
+                                className={`px-2 py-1 text-xs rounded transition-colors ${
+                                    chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
+                                        ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30'
+                                        : 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
+                                }`}
+                                title={
+                                    chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
+                                        ? modelsBaseDomain ? 'Start with remote models' : 'Start with local models'
+                                        : 'Backend start only available for localhost'
+                                }
                             >
-                                Start
+                                {modelsBaseDomain ? 'Start (remote)' : 'Start (local)'}
                             </button>
                         ) : (
                             <button
@@ -409,15 +418,41 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         Native host: {backendNativeError}
                     </div>
                 )}
+
+                {showOnlyBackend && backendProcess === 'stopped' && !backendBusy && (
+                    <div className="mt-3 p-4 text-center bg-slate-900/50 rounded border border-slate-700/30">
+                        <WifiOff className="w-8 h-8 mx-auto mb-2 text-slate-600" />
+                        <p className="text-sm text-slate-400 mb-1">Backend is stopped</p>
+                        <p className="text-xs text-slate-500">Click Start to launch the local chat server</p>
+                    </div>
+                )}
             </div>
 
-            {error && (
+            {!showOnlyBackend && error && (
                 <div className="p-3 rounded-lg bg-red-900/20 border border-red-700/50 text-red-400 text-xs">
                     {error}
                 </div>
             )}
 
-            {/* Workflows */}
+            {!showOnlyBackend && (
+                <>
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                            <Rocket className="w-4 h-4" />
+                            Deployments
+                        </h2>
+                        <button
+                            onClick={refresh}
+                            disabled={loading}
+                            className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1"
+                        >
+                            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                    </div>
+
+                    {/* Workflows */}
             <div className="space-y-2">
                 {KEY_WORKFLOWS.map(kw => {
                     const run = runs.get(kw.name);
@@ -491,6 +526,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                     </button>
                 </div>
             </div>
+                </>
+            )}
         </div>
     );
 };
