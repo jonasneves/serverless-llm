@@ -9,7 +9,7 @@
     "build:local": "tsc && vite build --base=/ --outDir dist",
     "fetch-models": "node scripts/fetch-models.mjs",
     "fetch-mediapipe": "node scripts/fetch-mediapipe.mjs",
-    "build:extension": "npm run fetch-models && npm run fetch-mediapipe && node node_modules/typescript/lib/tsc.js -p tsconfig.json --pretty false && node node_modules/vite/bin/vite.js build --config vite.config.extension.ts",
+    "build:extension": "npm run fetch-models && npm run fetch-mediapipe && tsc && vite build --config vite.config.extension.ts",
     "preview": "npm run build:local && vite preview --outDir dist",
     "type-check": "tsc --noEmit"
   },

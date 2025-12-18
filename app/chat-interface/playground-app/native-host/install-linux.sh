@@ -15,6 +15,33 @@ BROWSER="${2:-}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../" && pwd)"
 HOST_DIR="$ROOT_DIR/app/chat-interface/playground-app/native-host"
 PY="$HOST_DIR/serverless_llm_native_host.py"
+WRAPPER="$HOST_DIR/serverless_llm_native_host.sh"
+
+pick_python() {
+  if [[ -x "$ROOT_DIR/venv/bin/python" ]]; then
+    echo "$ROOT_DIR/venv/bin/python"
+    return
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    command -v python3
+    return
+  fi
+  if command -v python >/dev/null 2>&1; then
+    command -v python
+    return
+  fi
+  echo "Python not found. Install Python 3.11 (or run: make install)." >&2
+  exit 1
+}
+
+PYTHON_BIN="$(pick_python)"
+
+cat > "$WRAPPER" <<EOF
+#!/usr/bin/env bash
+exec "$PYTHON_BIN" "$PY" "\$@"
+EOF
+
+chmod +x "$WRAPPER"
 
 pick_dest_dir() {
   case "$BROWSER" in
@@ -45,13 +72,11 @@ cat > "$MANIFEST_PATH" <<EOF
 {
   "name": "io.neevs.serverless_llm",
   "description": "Serverless LLM native host (start/stop local backend)",
-  "path": "$PY",
+  "path": "$WRAPPER",
   "type": "stdio",
   "allowed_origins": ["chrome-extension://$EXT_ID/"]
 }
 EOF
-
-chmod +x "$PY"
 
 echo "✓ Installed native host manifest:"
 echo "  $MANIFEST_PATH"

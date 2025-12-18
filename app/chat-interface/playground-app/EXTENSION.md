@@ -28,6 +28,10 @@ The extension connects to your local FastAPI server at `http://localhost:8080`.
 4. Navigate to: `app/chat-interface/playground-app/dist-extension`
 5. Click "Select"
 
+Optional: enable auto-start for the local backend (Native Messaging)
+- Copy the extension ID shown on its card in `chrome://extensions/`
+- Follow "Auto-start local backend (Native Messaging)" below
+
 ### 4. Use the Extension
 
 Click the extension icon in Chrome toolbar to open the full-page chat interface in a new tab.
@@ -112,6 +116,7 @@ Chrome extensions can’t run Python/FastAPI directly, but they can call a local
 Notes:
 - Backend logs go to `serverless-llm/.native-host/backend.log`.
 - The helper currently starts `make dev-remote` (expects `venv/` and `.env`).
+- If you see `Native host has exited`, re-run the install script (it creates a wrapper pointing at your local Python, since browsers often don’t inherit your shell `PATH`).
 
 ### Debug
 - **Main app**: Right-click extension page → Inspect

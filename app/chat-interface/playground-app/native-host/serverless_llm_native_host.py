@@ -9,12 +9,22 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 
 HOST_NAME = "io.neevs.serverless_llm"
+LOG_FILE = Path.home() / ".native-host-debug.log"
 
 
-def _read_message() -> dict | None:
+def _log(msg: str) -> None:
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {msg}\n")
+    except Exception:
+        pass
+
+
+def _read_message() -> Optional[Dict[str, Any]]:
     raw_length = sys.stdin.buffer.read(4)
     if not raw_length:
         return None
@@ -27,7 +37,7 @@ def _read_message() -> dict | None:
     return json.loads(data.decode("utf-8"))
 
 
-def _write_message(message: dict) -> None:
+def _write_message(message: Dict[str, Any]) -> None:
     encoded = json.dumps(message).encode("utf-8")
     sys.stdout.buffer.write(struct.pack("<I", len(encoded)))
     sys.stdout.buffer.write(encoded)
@@ -42,7 +52,7 @@ def _find_repo_root() -> Path:
     raise RuntimeError("Could not locate repo root (expected Makefile and app/chat-interface/chat_server.py)")
 
 
-def _state_paths(repo_root: Path) -> tuple[Path, Path]:
+def _state_paths(repo_root: Path) -> Tuple[Path, Path]:
     state_dir = repo_root / ".native-host"
     state_dir.mkdir(exist_ok=True)
     return state_dir / "state.json", state_dir / "backend.log"
@@ -65,7 +75,7 @@ def _read_state(state_path: Path) -> dict:
         return {}
 
 
-def _write_state(state_path: Path, state: dict) -> None:
+def _write_state(state_path: Path, state: Dict[str, Any]) -> None:
     state_path.write_text(json.dumps(state, indent=2), "utf-8")
 
 
@@ -147,7 +157,7 @@ def _start_backend(repo_root: Path, state_path: Path, log_path: Path, mode: str)
     return {"ok": True, "status": "running", "pid": proc.pid}
 
 
-def _status(repo_root: Path, state_path: Path, chat_base_url: str | None) -> dict:
+def _status(repo_root: Path, state_path: Path, chat_base_url: Optional[str]) -> dict:
     state = _read_state(state_path)
     pid = state.get("pid")
     alive = isinstance(pid, int) and _is_pid_alive(pid)
@@ -186,41 +196,71 @@ def _stop(state_path: Path) -> dict:
 
 
 def main() -> None:
+    _log("Native host started")
     try:
         repo_root = _find_repo_root()
         state_path, log_path = _state_paths(repo_root)
+        _log(f"Repo root: {repo_root}")
     except Exception as e:
+        _log(f"Error finding repo root: {e}")
         _write_message({"ok": False, "error": str(e)})
         return
 
-    message = _read_message()
+    try:
+        message = _read_message()
+        _log(f"Received message: {message}")
+    except Exception as e:
+        _log(f"Error reading message: {e}")
+        return
+
     if message is None:
+        _log("Message is None, exiting")
         return
 
     action = message.get("action")
-    if action == "start":
-        mode = message.get("mode") or "dev-remote"
-        if mode not in ("dev-remote", "dev-interface-local"):
-            _write_message({"ok": False, "error": f"Unknown mode: {mode}"})
+    _log(f"Action: {action}")
+
+    try:
+        if action == "start":
+            mode = message.get("mode") or "dev-remote"
+            if mode not in ("dev-remote", "dev-interface-local"):
+                _write_message({"ok": False, "error": f"Unknown mode: {mode}"})
+                return
+            response = _start_backend(repo_root, state_path, log_path, mode)
+            _log(f"Start response: {response}")
+            _write_message(response)
             return
-        _write_message(_start_backend(repo_root, state_path, log_path, mode))
-        return
 
-    if action == "stop":
-        _write_message(_stop(state_path))
-        return
+        if action == "stop":
+            response = _stop(state_path)
+            _log(f"Stop response: {response}")
+            _write_message(response)
+            return
 
-    if action == "status":
-        _write_message(_status(repo_root, state_path, message.get("chatApiBaseUrl")))
-        return
+        if action == "status":
+            response = _status(repo_root, state_path, message.get("chatApiBaseUrl"))
+            _log(f"Status response: {response}")
+            _write_message(response)
+            return
 
-    if action == "logs":
-        _write_message({"ok": True, "logTail": _tail_file(log_path, max_lines=120)})
-        return
+        if action == "logs":
+            response = {"ok": True, "logTail": _tail_file(log_path, max_lines=120)}
+            _log(f"Logs response length: {len(str(response))}")
+            _write_message(response)
+            return
 
-    _write_message({"ok": False, "error": f"Unknown action: {action}"})
+        _log(f"Unknown action: {action}")
+        _write_message({"ok": False, "error": f"Unknown action: {action}"})
+    except Exception as e:
+        _log(f"Error handling action {action}: {e}")
+        _write_message({"ok": False, "error": str(e)})
 
 
 if __name__ == "__main__":
-    main()
-
+    try:
+        main()
+        _log("Native host completed successfully")
+    except Exception as e:
+        _log(f"Fatal error: {e}")
+        import traceback
+        _log(traceback.format_exc())
