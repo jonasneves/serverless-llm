@@ -98,6 +98,21 @@ make build-extension
 
 Then click "Reload" on extension card in `chrome://extensions/`.
 
+### Auto-start local backend (Native Messaging)
+Chrome extensions can’t run Python/FastAPI directly, but they can call a local “native host” helper to start/stop it.
+
+1. Load the extension (unpacked) and copy its ID from `chrome://extensions/`.
+2. Install the native host manifest:
+   - macOS (Chrome): `app/chat-interface/playground-app/native-host/install-macos.sh <extension-id> chrome`
+   - macOS (Arc): `app/chat-interface/playground-app/native-host/install-macos.sh <extension-id> arc`
+   - macOS (Brave): `app/chat-interface/playground-app/native-host/install-macos.sh <extension-id> brave`
+   - Linux: `app/chat-interface/playground-app/native-host/install-linux.sh <extension-id>`
+3. Reload the extension, open the side panel → `Deploy` tab → use `Start/Stop`.
+
+Notes:
+- Backend logs go to `serverless-llm/.native-host/backend.log`.
+- The helper currently starts `make dev-remote` (expects `venv/` and `.env`).
+
 ### Debug
 - **Main app**: Right-click extension page → Inspect
 - **Side panel**: Right-click side panel → Inspect

@@ -20,7 +20,8 @@
   },
   "permissions": [
     "sidePanel",
-    "storage"
+    "storage",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "http://localhost:*/*",

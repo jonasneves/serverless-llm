@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Rocket, RefreshCw, CheckCircle, XCircle, Clock, Play, ExternalLink, AlertCircle } from 'lucide-react';
 
 interface WorkflowRun {
@@ -50,6 +50,13 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [error, setError] = useState<string | null>(null);
     const [triggering, setTriggering] = useState<string | null>(null);
     const [backendHealth, setBackendHealth] = useState<'ok' | 'down' | 'checking'>('checking');
+    const [backendProcess, setBackendProcess] = useState<'running' | 'stopped' | 'unknown'>('unknown');
+    const [backendPid, setBackendPid] = useState<number | null>(null);
+    const [backendBusy, setBackendBusy] = useState(false);
+    const [backendLogTail, setBackendLogTail] = useState<string | null>(null);
+    const [backendNativeError, setBackendNativeError] = useState<string | null>(null);
+    const refreshInFlight = useRef(false);
+    const workflowsRef = useRef<Map<string, WorkflowInfo>>(new Map());
 
     const headers = {
         'Authorization': `Bearer ${githubToken}`,
@@ -75,6 +82,68 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         }
     }, [chatApiBaseUrl]);
 
+    const isNativeAvailable = () =>
+        typeof chrome !== 'undefined' && !!chrome.runtime?.sendMessage;
+
+    const nativeRequest = async (payload: any) => {
+        if (!isNativeAvailable()) {
+            return { ok: false, error: 'Native messaging unavailable' };
+        }
+        return await new Promise<any>((resolve) => {
+            try {
+                chrome.runtime.sendMessage({ type: 'native_backend', payload }, (response) => {
+                    const err = chrome.runtime.lastError?.message;
+                    if (err) resolve({ ok: false, error: err });
+                    else resolve(response);
+                });
+            } catch (e: any) {
+                resolve({ ok: false, error: e?.message || String(e) });
+            }
+        });
+    };
+
+    const refreshBackendStatus = useCallback(async () => {
+        const normalized = normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080';
+        const resp = await nativeRequest({ action: 'status', chatApiBaseUrl: normalized });
+        if (resp?.ok) {
+            setBackendProcess(resp.status === 'running' ? 'running' : 'stopped');
+            setBackendPid(resp.pid ?? null);
+            setBackendNativeError(null);
+            return;
+        }
+        setBackendNativeError(resp?.error || null);
+        setBackendProcess('unknown');
+        setBackendPid(null);
+    }, [chatApiBaseUrl]);
+
+    const startBackend = async () => {
+        setBackendBusy(true);
+        setBackendLogTail(null);
+        setBackendNativeError(null);
+        const resp = await nativeRequest({ action: 'start', mode: 'dev-remote' });
+        if (!resp?.ok && resp?.logTail) setBackendLogTail(resp.logTail);
+        if (!resp?.ok && resp?.error) setBackendNativeError(resp.error);
+        await refreshBackendStatus();
+        await checkBackendHealth();
+        setBackendBusy(false);
+    };
+
+    const stopBackend = async () => {
+        setBackendBusy(true);
+        setBackendLogTail(null);
+        setBackendNativeError(null);
+        await nativeRequest({ action: 'stop' });
+        await refreshBackendStatus();
+        await checkBackendHealth();
+        setBackendBusy(false);
+    };
+
+    const fetchBackendLogs = async () => {
+        const resp = await nativeRequest({ action: 'logs' });
+        if (resp?.ok) setBackendLogTail(resp.logTail || null);
+        if (!resp?.ok && resp?.error) setBackendNativeError(resp.error);
+    };
+
     const fetchWorkflows = useCallback(async () => {
         if (!githubToken) {
             setError('GitHub token required');
@@ -85,7 +154,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         try {
             const response = await fetch(
                 `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows`,
-                { headers }
+                { headers, signal: AbortSignal.timeout(8000) }
             );
 
             if (!response.ok) {
@@ -106,6 +175,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 }
             }
 
+            workflowsRef.current = workflowMap;
             setWorkflows(workflowMap);
             return workflowMap;
         } catch (err: any) {
@@ -115,7 +185,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     }, [githubToken]);
 
     const fetchLatestRuns = useCallback(async (workflowMap?: Map<string, WorkflowInfo>) => {
-        const wf = workflowMap || workflows;
+        const wf = workflowMap || workflowsRef.current;
         if (wf.size === 0) return;
 
         const runsMap = new Map<string, WorkflowRun | null>();
@@ -125,7 +195,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 try {
                     const response = await fetch(
                         `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${workflow.id}/runs?per_page=1`,
-                        { headers }
+                        { headers, signal: AbortSignal.timeout(8000) }
                     );
 
                     if (response.ok) {
@@ -153,10 +223,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
         setRuns(runsMap);
         setLoading(false);
-    }, [workflows, githubToken]);
+    }, [githubToken]);
 
     const triggerWorkflow = async (name: string) => {
-        const workflow = workflows.get(name);
+        const workflow = workflowsRef.current.get(name) || workflows.get(name);
         if (!workflow || !githubToken) return;
 
         setTriggering(name);
@@ -178,6 +248,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             },
                         }),
                     }),
+                    signal: AbortSignal.timeout(8000),
                 }
             );
 
@@ -197,21 +268,27 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     };
 
     const refresh = useCallback(async () => {
+        if (refreshInFlight.current) return;
+        refreshInFlight.current = true;
         setLoading(true);
         setError(null);
-        const wf = await fetchWorkflows();
-        if (wf) {
-            await fetchLatestRuns(wf);
+        try {
+            const wf = await fetchWorkflows();
+            if (wf) {
+                await fetchLatestRuns(wf);
+            }
+            await Promise.all([checkBackendHealth(), refreshBackendStatus()]);
+        } finally {
+            refreshInFlight.current = false;
+            setLoading(false);
         }
-        await checkBackendHealth();
-        setLoading(false);
-    }, [fetchWorkflows, fetchLatestRuns, checkBackendHealth]);
+    }, [fetchWorkflows, fetchLatestRuns, checkBackendHealth, refreshBackendStatus]);
 
     useEffect(() => {
         refresh();
         const interval = setInterval(refresh, 30000);
         return () => clearInterval(interval);
-    }, [githubToken]);
+    }, [githubToken, chatApiBaseUrl]);
 
     const getStatusIcon = (run: WorkflowRun | null) => {
         if (!run) return <Clock className="w-4 h-4 text-gray-400" />;
@@ -269,15 +346,59 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
             {/* Backend Health */}
             <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                         {backendHealth === 'ok' && <CheckCircle className="w-4 h-4 text-green-500" />}
                         {backendHealth === 'down' && <XCircle className="w-4 h-4 text-red-500" />}
                         {backendHealth === 'checking' && <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />}
                         <span className="text-sm text-slate-300">Backend</span>
                     </div>
-                    <span className="text-xs text-slate-500">{getHostLabel(normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080')}</span>
+                    <span className="text-xs text-slate-500 truncate">{getHostLabel(normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080')}</span>
                 </div>
+
+                <div className="mt-2 flex items-center justify-between">
+                    <div className="text-xs text-slate-500">
+                        {backendProcess === 'running' && backendPid ? `Process: running (pid ${backendPid})` : `Process: ${backendProcess}`}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={fetchBackendLogs}
+                            className="text-xs text-slate-400 hover:text-white transition-colors"
+                            disabled={backendBusy}
+                        >
+                            Logs
+                        </button>
+                        {backendProcess !== 'running' ? (
+                            <button
+                                onClick={startBackend}
+                                disabled={backendBusy}
+                                className="px-2 py-1 text-xs rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
+                            >
+                                Start
+                            </button>
+                        ) : (
+                            <button
+                                onClick={stopBackend}
+                                disabled={backendBusy}
+                                className="px-2 py-1 text-xs rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
+                            >
+                                Stop
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {backendLogTail && (
+                    <pre className="mt-2 max-h-40 overflow-auto text-[10px] leading-snug bg-slate-950/40 border border-slate-700/40 rounded p-2 text-slate-300 whitespace-pre-wrap">
+                        {backendLogTail}
+                    </pre>
+                )}
+
+                {backendNativeError && (
+                    <div className="mt-2 text-[11px] text-amber-300/90">
+                        Native host: {backendNativeError}
+                    </div>
+                )}
             </div>
 
             {error && (
