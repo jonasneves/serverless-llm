@@ -156,14 +156,14 @@ const ServerPanel: React.FC = () => {
         <div className="space-y-4 mb-6">
           {/* GitHub Token */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">GitHub Models Token</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">GitHub Token</label>
             <div className="relative">
               <input
                 type={showToken ? 'text' : 'password'}
                 value={config.githubToken}
                 onChange={(e) => setConfig({ ...config, githubToken: e.target.value })}
                 className="w-full px-3 py-2 pr-10 bg-slate-800 border border-slate-700 rounded text-sm focus:outline-none focus:border-blue-500"
-                placeholder="ghp_..."
+                placeholder="github_pat_..."
               />
               <button
                 type="button"
@@ -177,7 +177,7 @@ const ServerPanel: React.FC = () => {
             <p className="text-xs text-slate-500 mt-1">
               Required for API models & deployments.{' '}
               <a
-                href="https://github.com/settings/personal-access-tokens/new?description=Serverless+LLM+Extension&scopes=user_models:read,actions:read,actions:write"
+                href="https://github.com/settings/tokens/new?description=Serverless+LLM+Extension&scopes=repo,workflow&default_expires_at=none"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 underline"
