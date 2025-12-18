@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Server, Globe, Eye, EyeOff, Rocket, Database, ArrowRight, MessageSquare, HelpCircle, Cloud, WifiOff, Link2, ChevronDown, ExternalLink, Play, Square, RotateCw, Zap } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Globe, Eye, EyeOff, Rocket, Database, ArrowRight, MessageSquare, HelpCircle, Cloud, WifiOff, ChevronDown, ExternalLink, Play, Square, RotateCw, Zap } from 'lucide-react';
 import { SERVICES, buildEndpoint, EnvConfig, ProfileId, normalizeEnvConfig } from '../hooks/useExtensionConfig';
 import DeploymentsPanel from './DeploymentsPanel';
 
@@ -312,41 +312,30 @@ const ServerPanel: React.FC = () => {
   }, [showChatMenu]);
 
   return (
-    <div className={`p-4 min-h-screen font-sans transition-colors ${
-      config.profile === 'remote_all' ? 'bg-slate-900' :
-      config.profile === 'local_chat_remote_models' ? 'bg-slate-900' :
-      'bg-slate-900'
-    }`}>
-      {/* Enhanced Header */}
-      <div className="mb-4 space-y-3">
-        {/* Top Bar with Title and Primary Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${
-              config.profile === 'remote_all' ? 'bg-blue-600/20' :
-              config.profile === 'local_chat_remote_models' ? 'bg-emerald-600/20' :
-              'bg-amber-600/20'
-            }`}>
-              {config.profile === 'remote_all' ? <Cloud className="w-5 h-5 text-blue-400" /> :
-               config.profile === 'local_chat_remote_models' ? <Link2 className="w-5 h-5 text-emerald-400" /> :
-               <Server className="w-5 h-5 text-amber-400" />}
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold flex items-center gap-2 text-white">
-                {getProfileDisplayName(config.profile)}
-                <span title="Ctrl+P to cycle profiles, Ctrl+O to open chat">
-                  <HelpCircle className="w-3.5 h-3.5 text-slate-400 cursor-help" />
+    <div className="p-3 min-h-screen font-sans bg-slate-950 text-slate-100">
+      {/* Compact Header */}
+      <div className="mb-3 space-y-2">
+        {/* Top Bar with Primary Actions */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className={`w-1.5 h-8 rounded-full ${
+              config.profile === 'remote_all' ? 'bg-blue-500' :
+              config.profile === 'local_chat_remote_models' ? 'bg-emerald-500' :
+              'bg-amber-500'
+            }`}></div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm font-medium text-white truncate">
+                  {getProfileDisplayName(config.profile)}
+                </h1>
+                <span title="Ctrl+P: cycle profiles | Ctrl+O: open chat">
+                  <HelpCircle className="w-3 h-3 text-slate-500 cursor-help flex-shrink-0" />
                 </span>
-              </h1>
-              <div className="flex items-center gap-2 text-xs text-slate-300">
-                <span className="truncate">{config.chatApiBaseUrl.includes('localhost') ? 'localhost' : 'cloud'}</span>
-                <ArrowRight className="w-3 h-3" />
-                <span className="truncate">{config.modelsBaseDomain || 'localhost'}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Chat App Dropdown */}
             <div className="relative">
               <div className="flex">
@@ -360,24 +349,24 @@ const ServerPanel: React.FC = () => {
                       openFullApp();
                     }
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-l font-medium transition-colors text-sm text-white"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-l font-medium transition-colors text-xs text-white"
                   title={
                     config.profile === 'remote_all' ? 'Open chat.neevs.io (Ctrl+O)' :
                     config.profile === 'local_chat_remote_models' || config.profile === 'local_all' ? 'Open localhost:8080 (Ctrl+O)' :
                     'Open extension chat (Ctrl+O)'
                   }
                 >
-                  {config.profile === 'remote_all' ? <Cloud className="w-4 h-4" /> :
-                   config.profile === 'local_chat_remote_models' || config.profile === 'local_all' ? <ExternalLink className="w-4 h-4" /> :
-                   <MessageSquare className="w-4 h-4" />}
-                  Open Chat
+                  {config.profile === 'remote_all' ? <Cloud className="w-3 h-3" /> :
+                   config.profile === 'local_chat_remote_models' || config.profile === 'local_all' ? <ExternalLink className="w-3 h-3" /> :
+                   <MessageSquare className="w-3 h-3" />}
+                  Chat
                 </button>
                 <button
                   onClick={() => setShowChatMenu(!showChatMenu)}
-                  className="px-2 py-2 bg-blue-600 hover:bg-blue-700 rounded-r border-l border-blue-700 transition-colors text-white"
+                  className="px-1.5 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-r border-l border-blue-700 transition-colors text-white"
                   title="More options"
                 >
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3 h-3" />
                 </button>
               </div>
               {showChatMenu && (
@@ -412,84 +401,81 @@ const ServerPanel: React.FC = () => {
             </div>
             <button
               onClick={() => setShowConfig(!showConfig)}
-              className="p-2 hover:bg-slate-800 rounded transition-colors text-slate-300 hover:text-white"
+              className="p-1.5 hover:bg-slate-800 rounded transition-colors text-slate-400 hover:text-white"
               title="Settings"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Quick Profile Toggle + Backend Status + Model Health */}
-        <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Quick Switch:</span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => applyProfile('local_chat_remote_models')}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
-                  config.profile === 'local_chat_remote_models'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                }`}
-                title="Development mode (Ctrl+P)"
-              >
-                Dev
-              </button>
-              <button
-                onClick={() => applyProfile('remote_all')}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
-                  config.profile === 'remote_all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                }`}
-                title="Production mode (Ctrl+P)"
-              >
-                Prod
-              </button>
-            </div>
+        {/* Status Bar */}
+        <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded border border-slate-700/30 text-[11px]">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => applyProfile('local_chat_remote_models')}
+              className={`px-2 py-0.5 rounded transition-colors ${
+                config.profile === 'local_chat_remote_models'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+              }`}
+              title="Development mode (Ctrl+P)"
+            >
+              Dev
+            </button>
+            <button
+              onClick={() => applyProfile('remote_all')}
+              className={`px-2 py-0.5 rounded transition-colors ${
+                config.profile === 'remote_all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+              }`}
+              title="Production mode (Ctrl+P)"
+            >
+              Prod
+            </button>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Backend Status + Quick Controls */}
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${
+              <div className={`w-1.5 h-1.5 rounded-full ${
                 backendStatus.process === 'running' ? 'bg-green-500' :
                 backendStatus.process === 'stopped' ? 'bg-red-500' :
                 'bg-slate-500'
               }`}></div>
-              <span className="text-xs text-slate-300">
-                Backend: {backendStatus.process}
+              <span className="text-slate-300">
+                {backendStatus.process}
                 {backendStatus.mode && <span className="text-slate-500"> ({backendStatus.mode})</span>}
               </span>
               {/* Quick Backend Controls */}
-              <div className="flex gap-1 ml-2">
+              <div className="flex gap-0.5 ml-1">
                 {backendStatus.process === 'stopped' ? (
                   <button
                     onClick={startBackend}
                     disabled={backendBusy || !(config.chatApiBaseUrl.includes('localhost') || config.chatApiBaseUrl.includes('127.0.0.1'))}
-                    className="p-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-0.5 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title={config.chatApiBaseUrl.includes('localhost') ? 'Start backend' : 'Backend start requires local chat'}
                   >
-                    <Play className="w-3 h-3" />
+                    <Play className="w-2.5 h-2.5" />
                   </button>
                 ) : (
                   <>
                     <button
                       onClick={stopBackend}
                       disabled={backendBusy}
-                      className="p-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors disabled:opacity-50"
+                      className="p-0.5 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors disabled:opacity-50"
                       title="Stop backend"
                     >
-                      <Square className="w-3 h-3" />
+                      <Square className="w-2.5 h-2.5" />
                     </button>
                     <button
                       onClick={restartBackend}
                       disabled={backendBusy}
-                      className="p-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors disabled:opacity-50"
+                      className="p-0.5 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors disabled:opacity-50"
                       title="Restart backend"
                     >
-                      <RotateCw className="w-3 h-3" />
+                      <RotateCw className="w-2.5 h-2.5" />
                     </button>
                   </>
                 )}
@@ -497,16 +483,16 @@ const ServerPanel: React.FC = () => {
             </div>
 
             {/* Model Health */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {healthyCount === services.length ? (
-                <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                <CheckCircle className="w-3 h-3 text-green-500" />
               ) : healthyCount > 0 ? (
-                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                <AlertCircle className="w-3 h-3 text-amber-500" />
               ) : (
-                <WifiOff className="w-3.5 h-3.5 text-red-500" />
+                <WifiOff className="w-3 h-3 text-red-500" />
               )}
-              <span className="text-xs text-slate-300">
-                Models: {healthyCount}/{services.length}
+              <span className="text-slate-300">
+                {healthyCount}/{services.length}
               </span>
             </div>
           </div>
@@ -514,9 +500,9 @@ const ServerPanel: React.FC = () => {
 
         {/* GitHub Token Warning */}
         {configLoaded && !config.githubToken && (
-          <div className="p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg flex items-center gap-2 text-amber-300">
-            <AlertCircle className="w-4 h-4" />
-            <span className="text-xs">
+          <div className="p-2 bg-amber-950/30 border border-amber-900/40 rounded flex items-center gap-2 text-amber-400/90 text-[11px]">
+            <AlertCircle className="w-3 h-3 flex-shrink-0" />
+            <span className="flex-1">
               GitHub token required for deployments.
               <button
                 onClick={() => setShowConfig(true)}
@@ -529,16 +515,7 @@ const ServerPanel: React.FC = () => {
         )}
 
         {/* Quick Actions */}
-        <div className="flex gap-2">
-          <button
-            onClick={restartBackend}
-            disabled={backendBusy || backendStatus.process !== 'running'}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Restart backend"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-            Restart Backend
-          </button>
+        <div className="flex gap-1.5">
           <button
             onClick={async () => {
               if (config.profile !== 'local_chat_remote_models') {
@@ -549,11 +526,11 @@ const ServerPanel: React.FC = () => {
               }
             }}
             disabled={backendBusy}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-emerald-600/15 text-emerald-400 hover:bg-emerald-600/25 transition-colors disabled:opacity-50 flex-1"
             title="Switch to dev mode and start backend"
           >
-            <Zap className="w-3.5 h-3.5" />
-            Dev Mode
+            <Zap className="w-3 h-3" />
+            Quick Dev
           </button>
           <button
             onClick={() => {
@@ -562,36 +539,36 @@ const ServerPanel: React.FC = () => {
               checkHealth(servicesList);
               addActivity('Refreshed all services', 'pending');
             }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs rounded bg-slate-700/50 text-slate-300 hover:bg-slate-700 transition-colors"
-            title="Refresh service health"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-slate-700/30 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
+            title="Refresh all service health"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh All
+            <RefreshCw className="w-3 h-3" />
+            Refresh
           </button>
         </div>
 
         {/* Recent Activity Feed */}
         {recentActivity.length > 0 && (
-          <details className="p-3 bg-slate-800/30 border border-slate-700/50 rounded-lg">
-            <summary className="cursor-pointer text-xs font-medium text-slate-300 flex items-center gap-2">
-              <Activity className="w-3.5 h-3.5" />
-              Recent Activity ({recentActivity.length})
+          <details className="p-2 bg-slate-800/20 border border-slate-700/30 rounded text-[11px]">
+            <summary className="cursor-pointer font-medium text-slate-400 flex items-center gap-1.5">
+              <Activity className="w-3 h-3" />
+              Activity ({recentActivity.length})
             </summary>
-            <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+            <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
               {recentActivity.map((activity, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
                     {activity.status === 'success' ? (
-                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      <CheckCircle className="w-2.5 h-2.5 text-green-500 flex-shrink-0" />
                     ) : activity.status === 'error' ? (
-                      <AlertCircle className="w-3 h-3 text-red-500" />
+                      <AlertCircle className="w-2.5 h-2.5 text-red-500 flex-shrink-0" />
                     ) : (
-                      <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
+                      <RefreshCw className="w-2.5 h-2.5 text-blue-500 animate-spin flex-shrink-0" />
                     )}
-                    <span className="text-slate-300">{activity.action}</span>
+                    <span className="text-slate-300 truncate">{activity.action}</span>
                   </div>
-                  <span className="text-slate-500 text-[10px]">
-                    {new Date(activity.time).toLocaleTimeString()}
+                  <span className="text-slate-500 text-[9px] flex-shrink-0 ml-2">
+                    {new Date(activity.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               ))}
