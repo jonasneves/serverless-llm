@@ -85,6 +85,11 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const modelSelectorRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
+    // Model failure tracking for smart retry logic
+    const rateLimitedModels = useRef<Map<string, number>>(new Map());
+    const lastSuccessfulModel = useRef<string | null>(null);
+    const RATE_LIMIT_COOLDOWN = 60000; // 60 seconds
+
     // Smooth scroll animation refs (for gesture scrolling)
     const scrollTargetRef = useRef(0);
     const scrollRafRef = useRef<number | null>(null);
@@ -272,7 +277,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }
     }, [messages, onGestureOptionsChange]);
 
-    const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string }> => {
+    const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string; isRateLimit?: boolean }> => {
         try {
             const response = await fetch('/api/chat/stream', {
                 method: 'POST',
@@ -290,6 +295,10 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             });
 
             if (!response.ok) {
+                const isRateLimit = response.status === 429;
+                if (isRateLimit) {
+                    rateLimitedModels.current.set(modelId, Date.now());
+                }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
@@ -322,7 +331,16 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 responseContent += data.content;
                                 setCurrentResponse(prev => prev + data.content);
                             } else if (data.error) {
-                                throw new Error(data.content);
+                                const errorMsg = data.content || '';
+                                const isRateLimit = errorMsg.includes('429') ||
+                                    errorMsg.toLowerCase().includes('rate limit') ||
+                                    errorMsg.toLowerCase().includes('too many requests');
+                                if (isRateLimit) {
+                                    rateLimitedModels.current.set(modelId, Date.now());
+                                }
+                                const error = new Error(errorMsg);
+                                (error as any).isRateLimit = isRateLimit;
+                                throw error;
                             }
                         } catch (e) {
                             if (e instanceof Error && e.message !== jsonStr) {
@@ -333,12 +351,20 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 }
             }
 
+            // Success - record as last successful model and clear any rate limit record
+            lastSuccessfulModel.current = modelId;
+            rateLimitedModels.current.delete(modelId);
             return { success: true, content: responseContent };
         } catch (error: any) {
             if (error.name === 'AbortError') {
                 throw error;
             }
-            return { success: false, content: error.message };
+            const isRateLimit = error.isRateLimit || error.message?.includes('429') ||
+                error.message?.toLowerCase().includes('rate limit');
+            if (isRateLimit) {
+                rateLimitedModels.current.set(modelId, Date.now());
+            }
+            return { success: false, content: error.message, isRateLimit };
         }
     };
 
@@ -396,12 +422,31 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     return false;
                 });
 
-                const sortModels = (modelList: typeof models) => modelList
-                    .map(m => ({
+                // Helper to check if a model is recently rate-limited
+                const isRecentlyRateLimited = (modelId: string) => {
+                    const timestamp = rateLimitedModels.current.get(modelId);
+                    if (!timestamp) return false;
+                    return Date.now() - timestamp < RATE_LIMIT_COOLDOWN;
+                };
+
+                // Smart sorting: prioritize last successful, then non-rate-limited, then by priority
+                const sortModels = (modelList: typeof models) => {
+                    const withPriority = modelList.map(m => ({
                         ...m,
-                        priority: getModelPriority(m.id, m.type || 'local', m.priority)
-                    }))
-                    .sort((a, b) => {
+                        priority: getModelPriority(m.id, m.type || 'local', m.priority),
+                        isRateLimited: isRecentlyRateLimited(m.id),
+                        isLastSuccessful: m.id === lastSuccessfulModel.current
+                    }));
+
+                    // Split into non-rate-limited and rate-limited
+                    const available = withPriority.filter(m => !m.isRateLimited);
+                    const rateLimited = withPriority.filter(m => m.isRateLimited);
+
+                    // Sort available models: last successful first, then by priority
+                    const sortedAvailable = available.sort((a, b) => {
+                        if (a.isLastSuccessful !== b.isLastSuccessful) {
+                            return a.isLastSuccessful ? -1 : 1;
+                        }
                         if (a.priority !== b.priority) {
                             return a.priority - b.priority;
                         }
@@ -410,6 +455,18 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         }
                         return a.id.localeCompare(b.id);
                     });
+
+                    // Sort rate-limited models by priority (used as last resort)
+                    const sortedRateLimited = rateLimited.sort((a, b) => {
+                        if (a.priority !== b.priority) {
+                            return a.priority - b.priority;
+                        }
+                        return a.id.localeCompare(b.id);
+                    });
+
+                    // Return available models first, then rate-limited as fallback
+                    return [...sortedAvailable, ...sortedRateLimited];
+                };
 
                 const sortedPrimary = sortModels(primaryModels);
                 const sortedFallback = sortModels(fallbackModels);
