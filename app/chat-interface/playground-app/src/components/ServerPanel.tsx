@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Server, Globe, Eye, EyeOff, Rocket, Database, ArrowRight, MessageSquare, HelpCircle, Cloud, WifiOff, Link2, ChevronDown, ExternalLink } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Server, Globe, Eye, EyeOff, Rocket, Database, ArrowRight, MessageSquare, HelpCircle, Cloud, WifiOff, Link2, ChevronDown, ExternalLink, Play, Square, RotateCw, Zap } from 'lucide-react';
 import { SERVICES, buildEndpoint, EnvConfig, ProfileId, normalizeEnvConfig } from '../hooks/useExtensionConfig';
 import DeploymentsPanel from './DeploymentsPanel';
 
@@ -40,6 +40,9 @@ const ServerPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('backend');
   const [backendStatus, setBackendStatus] = useState<{ process: 'running' | 'stopped' | 'unknown'; mode: string | null }>({ process: 'unknown', mode: null });
   const [showChatMenu, setShowChatMenu] = useState(false);
+  const [backendBusy, setBackendBusy] = useState(false);
+  const [recentActivity, setRecentActivity] = useState<Array<{ action: string; time: Date; status: 'success' | 'error' | 'pending' }>>([]);
+  const [activeDeployments, setActiveDeployments] = useState(0);
 
   // Build services list from config
   const buildServicesList = useCallback((cfg: EnvConfig): ServiceHealth[] => {
@@ -68,6 +71,81 @@ const ServerPanel: React.FC = () => {
     );
     setServices(results);
   }, []);
+
+  // Native messaging helper
+  const nativeRequest = async (payload: any) => {
+    const isNativeAvailable = () =>
+      typeof chrome !== 'undefined' && !!chrome.runtime?.sendMessage;
+
+    if (!isNativeAvailable()) {
+      return { ok: false, error: 'Native messaging unavailable' };
+    }
+
+    try {
+      const response: any = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({ type: 'NATIVE_MESSAGE', payload }, (resp) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(resp);
+          }
+        });
+      });
+      return response;
+    } catch (err: any) {
+      return { ok: false, error: err.message || 'Request failed' };
+    }
+  };
+
+  // Activity tracking
+  const addActivity = (action: string, status: 'success' | 'error' | 'pending') => {
+    setRecentActivity(prev => [
+      { action, time: new Date(), status },
+      ...prev.slice(0, 9) // Keep last 10 items
+    ]);
+  };
+
+  // Backend controls
+  const startBackend = async () => {
+    setBackendBusy(true);
+    addActivity('Starting backend', 'pending');
+
+    const isLocalChat = config.chatApiBaseUrl.includes('localhost') || config.chatApiBaseUrl.includes('127.0.0.1');
+    if (!isLocalChat) {
+      addActivity('Backend start failed (requires local chat)', 'error');
+      setBackendBusy(false);
+      return;
+    }
+
+    const mode = config.modelsBaseDomain ? 'dev-remote' : 'dev-interface-local';
+    const resp = await nativeRequest({ action: 'start', mode });
+
+    if (resp?.ok) {
+      addActivity(`Backend started (${mode})`, 'success');
+      setBackendStatus({ process: 'running', mode });
+    } else {
+      addActivity('Backend start failed', 'error');
+    }
+
+    setBackendBusy(false);
+  };
+
+  const stopBackend = async () => {
+    setBackendBusy(true);
+    addActivity('Stopping backend', 'pending');
+
+    await nativeRequest({ action: 'stop' });
+    addActivity('Backend stopped', 'success');
+    setBackendStatus({ process: 'stopped', mode: null });
+
+    setBackendBusy(false);
+  };
+
+  const restartBackend = async () => {
+    await stopBackend();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await startBackend();
+  };
 
   useEffect(() => {
     // Load saved config from chrome storage
@@ -203,7 +281,13 @@ const ServerPanel: React.FC = () => {
           applyProfile(profiles[nextIndex]);
         } else if (e.key === 'o') {
           e.preventDefault();
-          openFullApp();
+          if (config.profile === 'remote_all') {
+            window.open('https://chat.neevs.io', '_blank');
+          } else if (config.profile === 'local_chat_remote_models' || config.profile === 'local_all') {
+            window.open('http://localhost:8080', '_blank');
+          } else {
+            openFullApp();
+          }
         }
       }
     };
@@ -265,11 +349,25 @@ const ServerPanel: React.FC = () => {
             <div className="relative">
               <div className="flex">
                 <button
-                  onClick={openFullApp}
+                  onClick={() => {
+                    if (config.profile === 'remote_all') {
+                      window.open('https://chat.neevs.io', '_blank');
+                    } else if (config.profile === 'local_chat_remote_models' || config.profile === 'local_all') {
+                      window.open('http://localhost:8080', '_blank');
+                    } else {
+                      openFullApp();
+                    }
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-l font-medium transition-colors text-sm text-white"
-                  title="Open extension chat (Ctrl+O)"
+                  title={
+                    config.profile === 'remote_all' ? 'Open chat.neevs.io (Ctrl+O)' :
+                    config.profile === 'local_chat_remote_models' || config.profile === 'local_all' ? 'Open localhost:8080 (Ctrl+O)' :
+                    'Open extension chat (Ctrl+O)'
+                  }
                 >
-                  <MessageSquare className="w-4 h-4" />
+                  {config.profile === 'remote_all' ? <Cloud className="w-4 h-4" /> :
+                   config.profile === 'local_chat_remote_models' || config.profile === 'local_all' ? <ExternalLink className="w-4 h-4" /> :
+                   <MessageSquare className="w-4 h-4" />}
                   Open Chat
                 </button>
                 <button
@@ -351,7 +449,7 @@ const ServerPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Backend Status */}
+            {/* Backend Status + Quick Controls */}
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${
                 backendStatus.process === 'running' ? 'bg-green-500' :
@@ -362,6 +460,38 @@ const ServerPanel: React.FC = () => {
                 Backend: {backendStatus.process}
                 {backendStatus.mode && <span className="text-slate-500"> ({backendStatus.mode})</span>}
               </span>
+              {/* Quick Backend Controls */}
+              <div className="flex gap-1 ml-2">
+                {backendStatus.process === 'stopped' ? (
+                  <button
+                    onClick={startBackend}
+                    disabled={backendBusy || !(config.chatApiBaseUrl.includes('localhost') || config.chatApiBaseUrl.includes('127.0.0.1'))}
+                    className="p-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={config.chatApiBaseUrl.includes('localhost') ? 'Start backend' : 'Backend start requires local chat'}
+                  >
+                    <Play className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={stopBackend}
+                      disabled={backendBusy}
+                      className="p-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors disabled:opacity-50"
+                      title="Stop backend"
+                    >
+                      <Square className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={restartBackend}
+                      disabled={backendBusy}
+                      className="p-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors disabled:opacity-50"
+                      title="Restart backend"
+                    >
+                      <RotateCw className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Model Health */}
@@ -394,6 +524,77 @@ const ServerPanel: React.FC = () => {
               </button>
             </span>
           </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="flex gap-2">
+          <button
+            onClick={restartBackend}
+            disabled={backendBusy || backendStatus.process !== 'running'}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Restart backend"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+            Restart Backend
+          </button>
+          <button
+            onClick={async () => {
+              if (config.profile !== 'local_chat_remote_models') {
+                applyProfile('local_chat_remote_models');
+                setTimeout(() => startBackend(), 500);
+              } else if (backendStatus.process !== 'running') {
+                startBackend();
+              }
+            }}
+            disabled={backendBusy}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors disabled:opacity-50"
+            title="Switch to dev mode and start backend"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Dev Mode
+          </button>
+          <button
+            onClick={() => {
+              const servicesList = buildServicesList(config);
+              setServices(servicesList);
+              checkHealth(servicesList);
+              addActivity('Refreshed all services', 'pending');
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs rounded bg-slate-700/50 text-slate-300 hover:bg-slate-700 transition-colors"
+            title="Refresh service health"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh All
+          </button>
+        </div>
+
+        {/* Recent Activity Feed */}
+        {recentActivity.length > 0 && (
+          <details className="p-3 bg-slate-800/30 border border-slate-700/50 rounded-lg">
+            <summary className="cursor-pointer text-xs font-medium text-slate-300 flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5" />
+              Recent Activity ({recentActivity.length})
+            </summary>
+            <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+              {recentActivity.map((activity, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    {activity.status === 'success' ? (
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                    ) : activity.status === 'error' ? (
+                      <AlertCircle className="w-3 h-3 text-red-500" />
+                    ) : (
+                      <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
+                    )}
+                    <span className="text-slate-300">{activity.action}</span>
+                  </div>
+                  <span className="text-slate-500 text-[10px]">
+                    {new Date(activity.time).toLocaleTimeString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
         )}
       </div>
 
@@ -602,6 +803,11 @@ const ServerPanel: React.FC = () => {
             >
               <Rocket className="w-3.5 h-3.5" />
               Deploy
+              {activeDeployments > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-blue-600/30 text-blue-300">
+                  {activeDeployments}
+                </span>
+              )}
             </button>
             <button
               onClick={() => {
@@ -615,6 +821,15 @@ const ServerPanel: React.FC = () => {
             >
               <Activity className="w-3.5 h-3.5" />
               Services
+              {services.length > 0 && (
+                <span className={`ml-1 px-1.5 py-0.5 text-[10px] rounded ${
+                  healthyCount === services.length ? 'bg-green-600/30 text-green-300' :
+                  healthyCount > 0 ? 'bg-amber-600/30 text-amber-300' :
+                  'bg-red-600/30 text-red-300'
+                }`}>
+                  {healthyCount}/{services.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -625,6 +840,7 @@ const ServerPanel: React.FC = () => {
               modelsBaseDomain={config.modelsBaseDomain}
               showOnlyBackend={true}
               onBackendStatusChange={setBackendStatus}
+              onActiveDeploymentsChange={setActiveDeployments}
             />
           ) : activeTab === 'deployments' ? (
             <DeploymentsPanel
@@ -633,6 +849,7 @@ const ServerPanel: React.FC = () => {
               modelsBaseDomain={config.modelsBaseDomain}
               showOnlyBackend={false}
               onBackendStatusChange={setBackendStatus}
+              onActiveDeploymentsChange={setActiveDeployments}
             />
           ) : (
             <>

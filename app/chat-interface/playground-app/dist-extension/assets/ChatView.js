@@ -1,4 +1,4 @@
-import{c as X,r as a,j as e,f as Te,s as Oe}from"./index.js";import{F as pe}from"./FormattedContent.js";import{g as _e,S as De,Z as $,c as he,P as $e}from"./main.js";import{e as Be}from"./GestureOptions.js";import{a as K,S as be,C as ge}from"./server.js";import{S as je}from"./sparkles.js";/**
+import{c as X,r as a,j as e,Z as $,f as Te,s as Oe}from"./index.js";import{F as pe}from"./FormattedContent.js";import{g as _e,S as De,c as he,P as $e}from"./main.js";import{e as Be}from"./GestureOptions.js";import{a as K,S as be,C as ge}from"./server.js";import{S as je}from"./sparkles.js";/**
  * @license lucide-react v0.561.0 - ISC
  *
  * This source code is licensed under the ISC license.

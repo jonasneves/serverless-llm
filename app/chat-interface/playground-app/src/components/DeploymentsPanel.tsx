@@ -23,6 +23,7 @@ interface DeploymentsPanelProps {
     modelsBaseDomain: string;
     showOnlyBackend?: boolean;
     onBackendStatusChange?: (status: { process: 'running' | 'stopped' | 'unknown'; mode: string | null }) => void;
+    onActiveDeploymentsChange?: (count: number) => void;
 }
 
 const REPO_OWNER = 'jonasneves';
@@ -46,7 +47,7 @@ function getHostLabel(url: string): string {
     }
 }
 
-const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, showOnlyBackend = false, onBackendStatusChange }) => {
+const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, showOnlyBackend = false, onBackendStatusChange, onActiveDeploymentsChange }) => {
     const [workflows, setWorkflows] = useState<Map<string, WorkflowInfo>>(new Map());
     const [runs, setRuns] = useState<Map<string, WorkflowRun | null>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -242,7 +243,15 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
         setRuns(runsMap);
         setLoading(false);
-    }, [githubToken]);
+
+        // Count active deployments
+        if (onActiveDeploymentsChange) {
+            const activeCount = Array.from(runsMap.values()).filter(
+                run => run && (run.status === 'in_progress' || run.status === 'queued')
+            ).length;
+            onActiveDeploymentsChange(activeCount);
+        }
+    }, [githubToken, onActiveDeploymentsChange]);
 
     const triggerWorkflow = async (name: string) => {
         const workflow = workflowsRef.current.get(name) || workflows.get(name);
