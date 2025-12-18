@@ -88,42 +88,11 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     // Smart model selection hook
     const { sortModels, recordRateLimit, recordSuccess } = useSmartModelSelection();
 
-    // Smooth scroll animation refs (for gesture scrolling)
-    const scrollTargetRef = useRef(0);
-    const scrollRafRef = useRef<number | null>(null);
+    // Gesture scrolling state
     const userScrolledAwayRef = useRef(false);
-    const lastGestureDeltaRef = useRef(0);
 
-    // Smooth scroll animation step
-    const scrollStep = () => {
-        if (!scrollRef.current) {
-            scrollRafRef.current = null;
-            return;
-        }
-        const current = scrollRef.current.scrollTop;
-        const target = scrollTargetRef.current;
-        const diff = target - current;
-
-        if (Math.abs(diff) < 0.5) {
-            scrollRef.current.scrollTop = target;
-            scrollRafRef.current = null;
-            return;
-        }
-
-        // Ease toward target (faster than arena for snappier feel)
-        const next = current + diff * 0.5;
-        scrollRef.current.scrollTop = next;
-        scrollRafRef.current = requestAnimationFrame(scrollStep);
-    };
-
-    const ensureScrollRaf = () => {
-        if (scrollRafRef.current == null) {
-            scrollRafRef.current = requestAnimationFrame(scrollStep);
-        }
-    };
-
-    // Clamp scroll target to valid bounds
-    const clampScrollTarget = (value: number) => {
+    // Clamp scroll position to valid bounds
+    const clampScroll = (value: number) => {
         if (!scrollRef.current) return value;
         const maxScroll = scrollRef.current.scrollHeight - scrollRef.current.clientHeight;
         return Math.max(0, Math.min(maxScroll, value));
@@ -153,24 +122,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         },
         scroll: (deltaY: number) => {
             if (scrollRef.current) {
-                // Smooth out noisy input - dampen small deltas
-                const smoothedDelta = deltaY * 0.7 + lastGestureDeltaRef.current * 0.3;
-                lastGestureDeltaRef.current = smoothedDelta;
-                
-                // Deadzone to prevent jitter from tiny movements
-                if (Math.abs(smoothedDelta) < 5) return;
-                
                 // Mark that user is manually scrolling (unlocks from auto-follow)
                 userScrolledAwayRef.current = true;
-                
-                // Initialize target from current position if not animating
-                if (scrollRafRef.current == null) {
-                    scrollTargetRef.current = scrollRef.current.scrollTop;
-                }
-                // Negate deltaY: gesture delta is inverted for scrollTop behavior
-                // Hand moving down = positive delta from gesture = should scroll UP (decrease scrollTop)
-                scrollTargetRef.current = clampScrollTarget(scrollTargetRef.current - smoothedDelta);
-                ensureScrollRaf();
+
+                // Direct scroll with native smoothing
+                const currentScroll = scrollRef.current.scrollTop;
+                const newScroll = clampScroll(currentScroll - deltaY);
+                scrollRef.current.scrollTop = newScroll;
             }
         }
     }));
@@ -558,7 +516,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 scroll-smooth pb-32 chat-scroll relative z-[10] [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
+                className="flex-1 overflow-y-auto p-4 pb-32 chat-scroll relative z-[10] [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
                 data-no-arena-scroll
                 onClick={(e) => {
                     // Clear selection if clicking directly on the messages area (not on a message)
