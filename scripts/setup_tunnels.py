@@ -190,6 +190,14 @@ def setup_all_tunnels(
     # Auto-prepare secret output
     valid_results = {k: v for k, v in results.items() if "error" not in v}
     if valid_results:
+        # In GitHub Actions, mask tokens before outputting
+        is_github_actions = os.getenv("GITHUB_ACTIONS") == "true"
+        if is_github_actions:
+            for model_data in valid_results.values():
+                token = model_data.get("tunnel_token", "")
+                if token:
+                    print(f"::add-mask::{token}")
+        
         secret_json = json.dumps(valid_results)
         print("\nGitHub Secret (TUNNELS_JSON):")
         print(secret_json)
