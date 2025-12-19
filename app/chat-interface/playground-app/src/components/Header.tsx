@@ -178,17 +178,17 @@ export default function Header({
             {/* Mode Toggle Track */}
             <div
               ref={trackRef}
-              className="relative flex p-0.5 lg:p-1 rounded-lg bg-black/20 mode-track"
+              className="relative flex p-1 rounded-lg bg-black/20 mode-track"
               role="radiogroup"
               aria-label="Mode selection"
               data-gesture-mode-track="true"
             >
               {/* Sliding indicator */}
               <div
-                className="absolute top-0.5 bottom-0.5 lg:top-1 lg:bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
+                className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
                 style={{
-                  width: sliderWidth !== null ? `${sliderWidth}px` : `calc((100% - ${isLargeScreen ? '8px' : '4px'}) / ${MODES.length})`,
-                  left: sliderWidth !== null ? `${sliderLeft}px` : `calc(${isLargeScreen ? '4px' : '2px'} + (100% - ${isLargeScreen ? '8px' : '4px'}) * ${safeIndex} / ${MODES.length})`
+                  width: sliderWidth !== null ? `${sliderWidth}px` : `calc((100% - 8px) / ${MODES.length})`,
+                  left: sliderWidth !== null ? `${sliderLeft}px` : `calc(4px + (100% - 8px) * ${safeIndex} / ${MODES.length})`
                 }}
               />
               {MODES.map(m => (
@@ -200,13 +200,12 @@ export default function Header({
                   aria-checked={mode === m.value}
                   aria-label={m.label}
                   title={m.label}
-                  className={`relative z-10 py-1.5 px-1.5 lg:px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex items-center justify-center text-center gap-1 lg:gap-1.5 lg:w-[115px] ${mode === m.value
+                  className={`relative z-10 py-2 sm:py-1.5 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.value
                     ? 'text-white'
                     : 'text-slate-400 hover:text-slate-200'
                     }`}
                 >
-                  <span className="flex-shrink-0">{ModeIcons[m.value]}</span>
-                  <span className="hidden lg:inline">{m.label}</span>
+                  {m.label}
                 </button>
               ))}
             </div>

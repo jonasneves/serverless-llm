@@ -9,6 +9,7 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
+from shutil import which
 from typing import Any, Dict, Optional, Tuple
 
 
@@ -86,6 +87,96 @@ def _tail_file(path: Path, max_lines: int = 50) -> str:
         return "\n".join(lines[-max_lines:])
     except Exception:
         return ""
+
+
+def _augment_path_for_node(env: Dict[str, str]) -> Dict[str, str]:
+    path_entries = []
+
+    def add_entry(entry: Path) -> None:
+        try:
+            if entry.is_dir():
+                path_entries.append(str(entry))
+        except Exception:
+            return
+
+    home = Path.home()
+    for entry in (
+        Path("/opt/homebrew/bin"),
+        Path("/usr/local/bin"),
+        Path("/usr/bin"),
+        Path("/bin"),
+        home / ".local" / "bin",
+        home / ".bun" / "bin",
+        home / ".volta" / "bin",
+        home / ".asdf" / "shims",
+        home / ".local" / "share" / "mise" / "shims",
+        home / ".fnm",
+        home / ".fnm" / "current" / "bin",
+    ):
+        add_entry(entry)
+
+    # nvm
+    nvm_root = home / ".nvm" / "versions" / "node"
+    try:
+        if nvm_root.is_dir():
+            for version_dir in sorted(nvm_root.iterdir(), reverse=True):
+                add_entry(version_dir / "bin")
+    except Exception:
+        pass
+
+    existing = env.get("PATH", "")
+    combined = ":".join([*path_entries, existing]) if existing else ":".join(path_entries)
+    env = dict(env)
+    if combined:
+        env["PATH"] = combined
+    return env
+
+
+def _run_make_target(repo_root: Path, target: str, log_path: Path) -> dict:
+    allowed_targets = {"build-playground", "build-extension"}
+    if target not in allowed_targets:
+        return {"ok": False, "error": f"Unsupported make target: {target}"}
+
+    command = ["make", target]
+
+    log_path.parent.mkdir(exist_ok=True)
+    with open(log_path, "a", buffering=1) as log_f:
+        log_f.write(f"\n--- make {target} {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+        log_f.flush()
+
+        env = _augment_path_for_node(os.environ.copy())
+        npm_path = which("npm", path=env.get("PATH", ""))
+        if npm_path is None:
+            msg = (
+                "npm not found in PATH for the native host. "
+                "Install Node.js (npm) and re-run the native-host install script so the browser picks it up."
+            )
+            log_f.write(f"{msg}\n")
+            log_f.write(f"PATH={env.get('PATH','')}\n")
+            log_f.flush()
+            return {"ok": False, "error": msg, "logTail": _tail_file(log_path, 120)}
+        log_f.write(f"Using npm at: {npm_path}\n")
+        log_f.flush()
+
+        try:
+            proc = subprocess.run(
+                command,
+                cwd=str(repo_root),
+                stdout=log_f,
+                stderr=log_f,
+                env=env,
+                text=True,
+            )
+        except Exception as e:
+            return {"ok": False, "error": f"Failed to run make {target}: {e}", "logTail": _tail_file(log_path, 120)}
+
+    ok = proc.returncode == 0
+    return {
+        "ok": ok,
+        "status": "success" if ok else "error",
+        "exitCode": proc.returncode,
+        "logTail": _tail_file(log_path, 120),
+    }
 
 
 def _stop_process_tree(pid: int) -> bool:
@@ -199,6 +290,16 @@ def main() -> None:
         return
 
     action = message.get("action")
+    if action == "make":
+        target = message.get("target")
+        if not isinstance(target, str) or not target.strip():
+            _write_message({"ok": False, "error": "Missing make target"})
+            return
+        target = target.strip()
+        make_log_path = repo_root / ".native-host" / f"make-{target}.log"
+        _write_message(_run_make_target(repo_root, target, make_log_path))
+        return
+
     if action == "start":
         mode = message.get("mode") or "dev-remote"
         if mode not in ("dev-remote", "dev-interface-local"):

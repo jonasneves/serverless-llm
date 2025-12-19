@@ -116,6 +116,8 @@ Chrome extensions can’t run Python/FastAPI directly, but they can call a local
 Notes:
 - Backend logs go to `serverless-llm/.native-host/backend.log`.
 - The helper currently starts `make dev-remote` (expects `venv/` and `.env`).
+- The side panel also includes a `Build` button that runs `make build-playground` via the native host (logs in `serverless-llm/.native-host/make-build-playground.log`).
+- If the build fails with `Error 127`, install Node.js so `npm` is available, then re-run the native host install script (browsers often don’t inherit your shell `PATH`).
 - If you see `Native host has exited`, re-run the install script (it creates a wrapper pointing at your local Python, since browsers often don’t inherit your shell `PATH`).
 
 ### Debug

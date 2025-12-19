@@ -60,6 +60,9 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [backendLogTail, setBackendLogTail] = useState<string | null>(null);
     const [backendNativeError, setBackendNativeError] = useState<string | null>(null);
     const [backendMode, setBackendMode] = useState<string | null>(null);
+    const [buildBusy, setBuildBusy] = useState(false);
+    const [buildLogTail, setBuildLogTail] = useState<string | null>(null);
+    const [buildNativeError, setBuildNativeError] = useState<string | null>(null);
     const refreshInFlight = useRef(false);
     const workflowsRef = useRef<Map<string, WorkflowInfo>>(new Map());
 
@@ -162,6 +165,17 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         const resp = await nativeRequest({ action: 'logs' });
         if (resp?.ok) setBackendLogTail(resp.logTail || null);
         if (!resp?.ok && resp?.error) setBackendNativeError(resp.error);
+    };
+
+    const buildPlayground = async () => {
+        setBuildBusy(true);
+        setBuildLogTail(null);
+        setBuildNativeError(null);
+
+        const resp = await nativeRequest({ action: 'make', target: 'build-playground' });
+        if (resp?.logTail) setBuildLogTail(resp.logTail);
+        if (!resp?.ok && resp?.error) setBuildNativeError(resp.error);
+        setBuildBusy(false);
     };
 
     const fetchWorkflows = useCallback(async () => {
@@ -301,22 +315,24 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         setLoading(true);
         setError(null);
         try {
-            const wf = await fetchWorkflows();
-            if (wf) {
-                await fetchLatestRuns(wf);
+            if (!showOnlyBackend) {
+                const wf = await fetchWorkflows();
+                if (wf) {
+                    await fetchLatestRuns(wf);
+                }
             }
             await Promise.all([checkBackendHealth(), refreshBackendStatus()]);
         } finally {
             refreshInFlight.current = false;
             setLoading(false);
         }
-    }, [fetchWorkflows, fetchLatestRuns, checkBackendHealth, refreshBackendStatus]);
+    }, [fetchWorkflows, fetchLatestRuns, checkBackendHealth, refreshBackendStatus, showOnlyBackend]);
 
     useEffect(() => {
         refresh();
         const interval = setInterval(refresh, 30000);
         return () => clearInterval(interval);
-    }, [githubToken, chatApiBaseUrl]);
+    }, [refresh]);
 
     const getStatusIcon = (run: WorkflowRun | null) => {
         if (!run) return <Clock className="w-4 h-4 text-gray-400" />;
@@ -345,7 +361,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         return date.toLocaleDateString();
     };
 
-    if (!githubToken) {
+    if (!githubToken && !showOnlyBackend) {
         return (
             <div className="mt-2 p-6 text-center rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-800/40 border border-slate-700/30">
                 <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/20">
@@ -423,6 +439,15 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             <Terminal className="w-3 h-3" />
                             Logs
                         </button>
+                        <button
+                            onClick={buildPlayground}
+                            className="flex items-center gap-1 px-2 py-1 text-[11px] text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-colors"
+                            disabled={backendBusy || buildBusy}
+                            title="Run make build-playground"
+                        >
+                            <Zap className={`w-3 h-3 ${buildBusy ? 'animate-pulse' : ''}`} />
+                            Build
+                        </button>
                         {backendProcess !== 'running' ? (
                             <button
                                 onClick={startBackend}
@@ -461,11 +486,24 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                     </pre>
                 )}
 
+                {buildLogTail && (
+                    <pre className="mt-3 max-h-32 overflow-auto text-[10px] leading-relaxed bg-slate-950/60 border border-slate-700/30 rounded-xl p-3 text-slate-300 whitespace-pre-wrap font-mono">
+                        {buildLogTail}
+                    </pre>
+                )}
+
                 {/* Error Message */}
                 {backendNativeError && (
                     <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                         <span className="text-[11px] text-amber-300/90">Native host: {backendNativeError}</span>
+                    </div>
+                )}
+
+                {buildNativeError && (
+                    <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        <span className="text-[11px] text-amber-300/90">Build: {buildNativeError}</span>
                     </div>
                 )}
 
