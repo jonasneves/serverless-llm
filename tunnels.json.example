@@ -1,0 +1,29 @@
+{
+  "chat": {
+    "tunnel_id": "tunnel-id-here",
+    "tunnel_name": "serverless-llm-chat",
+    "subdomain": "chat",
+    "domain": "your-domain.com",
+    "service_url": "http://localhost:8080",
+    "tunnel_token": "your-tunnel-token-here",
+    "url": "https://chat.your-domain.com"
+  },
+  "qwen": {
+    "tunnel_id": "tunnel-id-here",
+    "tunnel_name": "serverless-llm-qwen",
+    "subdomain": "qwen",
+    "domain": "your-domain.com",
+    "service_url": "http://localhost:8000",
+    "tunnel_token": "your-tunnel-token-here",
+    "url": "https://qwen.your-domain.com"
+  },
+  "phi": {
+    "tunnel_id": "tunnel-id-here",
+    "tunnel_name": "serverless-llm-phi",
+    "subdomain": "phi",
+    "domain": "your-domain.com",
+    "service_url": "http://localhost:8000",
+    "tunnel_token": "your-tunnel-token-here",
+    "url": "https://phi.your-domain.com"
+  }
+}

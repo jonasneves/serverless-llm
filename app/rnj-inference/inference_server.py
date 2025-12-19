@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Configuration from environment
 MODEL_REPO = os.getenv("MODEL_REPO", "EssentialAI/rnj-1-instruct-GGUF")
 MODEL_FILE = os.getenv("MODEL_FILE", "rnj-1-8B-instruct-Q4_K_M.gguf")
-PORT = int(os.getenv("PORT", "8000"))
+PORT = int(os.getenv("PORT", "8202"))
 N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "2"))
 N_BATCH = int(os.getenv("N_BATCH", "512"))

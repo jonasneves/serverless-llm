@@ -1,4 +1,6 @@
-name: Build and Push Inference Images
+name: 📦 Build
+
+run-name: "Build Images • ${{ github.event_name == 'push' && 'Push' || inputs.models || 'all' }}"
 
 on:
   push:

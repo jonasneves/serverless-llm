@@ -63,3 +63,6 @@ temp/
 # Agent artifacts (Claude/Gemini/etc)
 .claude/
 .gemini/
+
+# Cloudflare tunnel configuration (contains tokens)
+tunnels.json

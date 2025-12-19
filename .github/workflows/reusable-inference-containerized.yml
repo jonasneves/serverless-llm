@@ -18,9 +18,6 @@ on:
       cache_key_prefix:
         required: true
         type: string
-      tunnel_secret_name:
-        required: true
-        type: string
       restart_event_type:
         required: true
         type: string
@@ -59,7 +56,11 @@ on:
       hf_token:
         required: true
       tunnel_token:
-        required: true
+        required: false
+        description: 'Tunnel token (optional if tunnels_json is provided)'
+      tunnels_json:
+        required: false
+        description: 'tunnels.json content as JSON string (alternative to tunnel_token)'
       workflow_pat:
         required: true
 
@@ -273,9 +274,36 @@ jobs:
             exit 1
           fi
 
+      - name: Get tunnel token
+        id: tunnel_token
+        env:
+          TUNNELS_JSON: ${{ secrets.tunnels_json }}
+          TUNNEL_TOKEN_SECRET: ${{ secrets.tunnel_token }}
+        run: |
+          # Try unified script first (reads from TUNNELS_JSON env var automatically)
+          TOKEN=$(python3 scripts/get_tunnel_token.py "${{ inputs.model_name }}" --silent 2>/dev/null) || true
+          
+          # Fallback to individual tunnel_token secret
+          if [ -z "$TOKEN" ] && [ -n "$TUNNEL_TOKEN_SECRET" ]; then
+            TOKEN="$TUNNEL_TOKEN_SECRET"
+            echo "⚠️  Using tunnel_token secret (model not in tunnels.json)"
+          fi
+          
+          if [ -n "$TOKEN" ]; then
+            # Mask the token so it never appears in logs
+            echo "::add-mask::$TOKEN"
+            echo "token=$TOKEN" >> $GITHUB_OUTPUT
+            echo "✓ Tunnel token configured for ${{ inputs.model_name }}"
+          else
+            echo "❌ Error: No tunnel token available for ${{ inputs.model_name }}"
+            echo "   - Add model to tunnels.json and update TUNNELS_JSON secret, OR"
+            echo "   - Provide tunnel_token secret for this workflow"
+            exit 1
+          fi
+
       - name: Start cloudflared
         env:
-          TUNNEL_TOKEN: ${{ secrets.tunnel_token }}
+          TUNNEL_TOKEN: ${{ steps.tunnel_token.outputs.token }}
         run: |
           docker run -d \
             --name cloudflared \

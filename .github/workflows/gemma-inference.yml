@@ -1,6 +1,6 @@
-name: Gemma 2 9B
+name: 🤖 Gemma 2 9B
 
-run-name: Gemma 2 9B Inference Server
+run-name: "Gemma 2 9B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -62,7 +62,6 @@ jobs:
       model_repo: "bartowski/gemma-2-9b-it-GGUF"
       model_file: "gemma-2-9b-it-Q4_K_M.gguf"
       cache_key_prefix: "gguf-gemma-2-9b-q4"
-      tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_GEMMA"
       restart_event_type: "restart-gemma-inference"
       workflow_file: "gemma-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
@@ -74,5 +73,5 @@ jobs:
       max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
-      tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_GEMMA }}
+      tunnels_json: ${{ secrets.TUNNELS_JSON }}
       workflow_pat: ${{ secrets.WORKFLOW_PAT }}

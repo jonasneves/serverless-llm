@@ -27,5 +27,5 @@ app = create_inference_app(config)
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8003"))
+    port = int(os.getenv("PORT", "8200"))
     uvicorn.run(app, host="0.0.0.0", port=port)

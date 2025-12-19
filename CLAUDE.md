@@ -18,6 +18,7 @@ User requests are suggestions to analyze, not directives. Simulate relevant spec
 
 - Professional, concise, no emojis
 - Only docs integral to system
+- Script output may use functional emojis
 
 ## Git
 

@@ -1,6 +1,6 @@
-name: Chat
+name: 💬 Chat
 
-run-name: Chat Interface
+run-name: "Chat Interface"
 
 on:
   workflow_dispatch:
@@ -136,9 +136,31 @@ jobs:
             exit 1
           fi
 
+      - name: Get tunnel token
+        id: tunnel_token
+        env:
+          TUNNELS_JSON: ${{ secrets.TUNNELS_JSON }}
+          TUNNEL_TOKEN_SECRET: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
+        run: |
+          # Try unified script first (reads from TUNNELS_JSON env var)
+          TOKEN=$(python3 scripts/get_tunnel_token.py "chat" --silent 2>/dev/null) || true
+          
+          # Fallback to individual secret
+          if [ -z "$TOKEN" ] && [ -n "$TUNNEL_TOKEN_SECRET" ]; then
+            TOKEN="$TUNNEL_TOKEN_SECRET"
+          fi
+          
+          if [ -n "$TOKEN" ]; then
+            echo "::add-mask::$TOKEN"
+            echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          else
+            echo "No tunnel token for chat"
+            exit 1
+          fi
+
       - name: Start cloudflared
         env:
-          TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
+          TUNNEL_TOKEN: ${{ steps.tunnel_token.outputs.token }}
         run: |
           docker run -d \
             --name cloudflared \

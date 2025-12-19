@@ -1,6 +1,6 @@
-name: Mistral 7B
+name: 🤖 Mistral 7B
 
-run-name: Mistral 7B Inference Server
+run-name: "Mistral 7B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -62,7 +62,6 @@ jobs:
       model_repo: "bartowski/Mistral-7B-Instruct-v0.3-GGUF"
       model_file: "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf"
       cache_key_prefix: "gguf-mistral-7b-q4"
-      tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_MISTRAL"
       restart_event_type: "restart-mistral-inference"
       workflow_file: "mistral-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
@@ -74,5 +73,5 @@ jobs:
       max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
-      tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_MISTRAL }}
+      tunnels_json: ${{ secrets.TUNNELS_JSON }}
       workflow_pat: ${{ secrets.WORKFLOW_PAT }}

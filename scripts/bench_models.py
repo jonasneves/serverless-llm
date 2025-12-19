@@ -3,8 +3,8 @@
 Benchmark local model endpoints (OpenAI-compatible) for latency and throughput.
 
 Examples:
-  export QWEN_API_URL=http://localhost:8001
-  export PHI_API_URL=http://localhost:8002
+  export QWEN_API_URL=http://localhost:8100
+  export PHI_API_URL=http://localhost:8101
   python scripts/bench_models.py --models qwen phi --stream
 
 This script is intentionally dependency-free (stdlib only).

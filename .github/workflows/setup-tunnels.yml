@@ -1,0 +1,61 @@
+name: ⚙️ Cloudflare
+
+run-name: "Tunnels • ${{ inputs.domain }}${{ inputs.dry_run && ' (dry-run)' || '' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain name (e.g., neevs.io)'
+        required: true
+        type: string
+      models:
+        description: 'Comma-separated list of models (leave empty for all)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run mode (no changes)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Setup tunnels
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python scripts/setup_tunnels.py --domain "${{ inputs.domain }}" --dry-run
+          else
+            if [ -n "${{ inputs.models }}" ]; then
+              python scripts/setup_tunnels.py --domain "${{ inputs.domain }}" --models ${{ inputs.models }}
+            else
+              python scripts/setup_tunnels.py --domain "${{ inputs.domain }}"
+            fi
+          fi
+
+      - name: Upload tunnel config
+        if: inputs.dry_run == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunnels-config
+          path: tunnels.json
+          retention-days: 30

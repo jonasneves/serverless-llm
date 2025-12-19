@@ -1,304 +1,191 @@
-.PHONY: help setup install build-chat build-playground build-qwen build-phi build-llama start-qwen start-phi start-llama stop logs-chat logs-qwen logs-phi health ps clean clean-all dev-remote dev-local dev-qwen dev-phi dev-llama dev-interface-local lint format
+.PHONY: help setup install build-chat build-playground build-extension start stop logs health ps clean lint format setup-tunnels
 
 # Load .env file if it exists
 -include .env
 export
 
-# =============================================================================
-# Serverless LLM - Enhanced Makefile
-# =============================================================================
+# Port scheme (from config/models.py)
+# 8080: Chat, 81XX: Small, 82XX: Medium, 83XX: Reasoning
 
 help:
-	@echo "Serverless LLM Commands"
+	@echo "Serverless LLM"
 	@echo ""
 	@echo "Setup:"
-	@echo "  make setup          Create .env from .env.example"
-	@echo "  make install        Install Python dependencies for local development"
+	@echo "  make setup           Create .env from template"
+	@echo "  make install         Install Python dependencies (venv)"
 	@echo ""
-	@echo "Development (recommended workflows):"
-	@echo "  make dev-remote     Run chat locally with remote models (requires BASE_DOMAIN)"
-	@echo "  make dev-local      Run chat + single model locally (specify MODEL=qwen|phi|llama)"
-	@echo "  make dev-qwen       Run Qwen server only (for testing)"
-	@echo "  make dev-phi        Run Phi server only (for testing)"
+	@echo "Development:"
+	@echo "  make dev-chat        Run chat interface (uses remote models if BASE_DOMAIN set)"
+	@echo "  make dev-MODEL       Run model locally (qwen|phi|gemma|llama|mistral|r1qwen)"
 	@echo ""
-	@echo "Docker (single model testing):"
-	@echo "  make start-qwen     Start chat + Qwen in Docker"
-	@echo "  make start-phi      Start chat + Phi in Docker"
-	@echo "  make start-llama    Start chat + Llama in Docker"
+	@echo "Docker:"
+	@echo "  make start MODEL=x   Start chat + model in Docker"
+	@echo "  make stop            Stop all services"
+	@echo ""
+	@echo "Tunnels:"
+	@echo "  make setup-tunnels   Create Cloudflare tunnels (requires CF env vars)"
 	@echo ""
 	@echo "Build:"
-	@echo "  make build-chat        Build chat interface image"
-	@echo "  make build-playground  Build playground React app (npm build)"
-	@echo "  make build-extension   Build Chrome extension (dist-extension/)"
-	@echo "  make build-qwen        Build Qwen model image"
-	@echo ""
-	@echo "Stop:"
-	@echo "  make stop           Stop all running services"
+	@echo "  make build-chat      Build chat Docker image"
+	@echo "  make build-playground Build React app"
+	@echo "  make build-extension Build Chrome extension"
 	@echo ""
 	@echo "Monitor:"
-	@echo "  make ps             List running containers"
-	@echo "  make logs-chat      Follow chat interface logs"
-	@echo "  make health         Check service health status"
+	@echo "  make health          Check service health"
+	@echo "  make ps              List containers"
+	@echo "  make logs            Follow chat logs"
 	@echo ""
 	@echo "Quality:"
-	@echo "  make lint           Check Python code quality"
-	@echo "  make format         Format Python code"
-	@echo ""
-	@echo "Clean:"
-	@echo "  make clean          Remove stopped containers"
-	@echo "  make clean-all      Remove all containers and images"
+	@echo "  make lint            Check Python code"
+	@echo "  make format          Format Python code"
 
 # =============================================================================
 # Setup
 # =============================================================================
 
 setup:
-	@if [ -f .env ]; then \
-		echo "✓ .env already exists"; \
-	else \
-		cp .env.example .env && echo "✓ Created .env - please edit with your values"; \
-	fi
+	@if [ -f .env ]; then echo ".env exists"; else cp .env.example .env && echo "Created .env"; fi
 
 install:
-	@echo "Setting up Python 3.11 virtual environment..."
-	@if command -v python3.11 >/dev/null 2>&1; then \
-		if [ ! -d venv ]; then \
-			echo "Creating venv with Python 3.11..."; \
-			python3.11 -m venv venv; \
-		fi; \
-		echo "Installing dependencies..."; \
-		./venv/bin/pip install --upgrade pip; \
-		./venv/bin/pip install -r app/chat-interface/requirements.txt; \
-		./venv/bin/pip install -r app/shared/requirements.txt; \
-		echo ""; \
-		echo "✓ Dependencies installed in venv"; \
-		echo ""; \
-		echo "To activate: source venv/bin/activate"; \
-	elif command -v python3 >/dev/null 2>&1; then \
-		PYVER=$$(python3 --version | grep -oE '[0-9]+\.[0-9]+'); \
-		echo "⚠️  Python 3.11 not found (found Python $$PYVER)"; \
-		echo ""; \
-		echo "Install Python 3.11:"; \
-		echo "  macOS:  brew install python@3.11"; \
-		echo "  Linux:  sudo apt install python3.11 python3.11-venv"; \
-		echo ""; \
-		exit 1; \
-	else \
-		echo "❌ Error: Python 3 not found. Please install Python 3.11."; \
-		exit 1; \
+	@if ! command -v python3.11 >/dev/null 2>&1; then \
+		echo "Python 3.11 required. Install: brew install python@3.11"; exit 1; \
 	fi
+	@[ -d venv ] || python3.11 -m venv venv
+	@./venv/bin/pip install -q --upgrade pip
+	@./venv/bin/pip install -q -r app/chat-interface/requirements.txt
+	@./venv/bin/pip install -q -r app/shared/requirements.txt
+	@echo "Done. Activate: source venv/bin/activate"
 
 # =============================================================================
-# Build Commands
+# Development (local, no Docker)
+# =============================================================================
+
+dev-chat:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/chat-interface && ../../venv/bin/python chat_server.py
+
+dev-qwen:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/qwen-inference && PORT=8100 ../../venv/bin/python inference_server.py
+
+dev-phi:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/phi-inference && PORT=8101 ../../venv/bin/python inference_server.py
+
+dev-gemma:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/gemma-inference && PORT=8200 ../../venv/bin/python inference_server.py
+
+dev-llama:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/llama-inference && PORT=8201 ../../venv/bin/python inference_server.py
+
+dev-mistral:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/mistral-inference && PORT=8202 ../../venv/bin/python inference_server.py
+
+dev-rnj:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/rnj-inference && PORT=8203 ../../venv/bin/python inference_server.py
+
+dev-r1qwen:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/deepseek-r1qwen-inference && PORT=8300 ../../venv/bin/python inference_server.py
+
+dev-functiongemma:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/functiongemma-inference && PORT=8103 ../../venv/bin/python inference_server.py
+
+# =============================================================================
+# Docker
+# =============================================================================
+
+start:
+ifndef MODEL
+	@echo "Usage: make start MODEL=qwen|phi|gemma|llama|mistral|rnj|r1qwen"
+else
+	docker-compose --profile $(MODEL) up -d
+endif
+
+stop:
+	docker-compose --profile all down
+
+logs:
+	docker-compose logs -f chat-interface
+
+ps:
+	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# =============================================================================
+# Build
 # =============================================================================
 
 build-chat:
 	docker-compose build chat-interface
 
 build-playground:
-	@echo "Building playground React app..."
-	@cd app/chat-interface/playground-app && \
-		if [ ! -d node_modules ]; then \
-			echo "Installing npm dependencies..."; \
-			npm install; \
-		fi && \
-		npm run build && \
-		echo "✓ Playground built successfully to static/playground/"
+	cd app/chat-interface/playground-app && npm install && npm run build
 
 build-extension:
-	@echo "Building Chrome extension..."
-	@cd app/chat-interface/playground-app && \
-		if [ ! -d node_modules ]; then \
-			echo "Installing npm dependencies..."; \
-			npm install; \
-		fi && \
-		npm run build:extension && \
-		echo "✓ Extension built to dist-extension/" && \
-		echo "" && \
-		echo "To load in Chrome:" && \
-		echo "  1. Open chrome://extensions/" && \
-		echo "  2. Enable 'Developer mode'" && \
-		echo "  3. Click 'Load unpacked'" && \
-		echo "  4. Select: app/chat-interface/playground-app/dist-extension"
-
-build-qwen:
-	docker-compose --profile qwen build qwen
-
-build-phi:
-	docker-compose --profile phi build phi
-
-build-llama:
-	docker-compose --profile llama build llama
+	cd app/chat-interface/playground-app && npm install && npm run build:extension
+	@echo "Load in Chrome: chrome://extensions -> Load unpacked -> dist-extension/"
 
 # =============================================================================
-# Docker Start Commands (single model testing)
+# Tunnels
 # =============================================================================
 
-start-qwen:
-	@echo "Starting chat interface + Qwen in Docker..."
-	docker-compose --profile qwen up -d
+# Use DOMAIN if provided, otherwise fall back to BASE_DOMAIN from .env
+TUNNEL_DOMAIN := $(or $(DOMAIN),$(BASE_DOMAIN))
 
-start-phi:
-	@echo "Starting chat interface + Phi in Docker..."
-	docker-compose --profile phi up -d
+setup-tunnels:
+ifndef CLOUDFLARE_API_TOKEN
+	@echo "Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in .env"
+	@exit 1
+endif
+ifndef TUNNEL_DOMAIN
+	@echo "Set BASE_DOMAIN in .env or use: make setup-tunnels DOMAIN=your-domain.com"
+else
+	python3 scripts/setup_tunnels.py --domain $(TUNNEL_DOMAIN)
+endif
 
-start-llama:
-	@echo "Starting chat interface + Llama in Docker..."
-	docker-compose --profile llama up -d
-
-start-r1qwen:
-	@echo "Starting chat interface + DeepSeek R1 Qwen in Docker..."
-	docker-compose --profile r1qwen up -d
-
-# =============================================================================
-# Development Commands (without Docker)
-# =============================================================================
-
-dev-remote:
-	@echo "Starting chat interface with remote models..."
-	@if [ ! -d venv ]; then \
-		echo "❌ Error: venv not found. Run 'make install' first."; \
-		exit 1; \
-	fi
-	@if [ -z "$$BASE_DOMAIN" ]; then \
-		echo "❌ Error: BASE_DOMAIN not set in .env"; \
-		echo "Set BASE_DOMAIN=your-domain.com to use remote Cloudflare tunnel models"; \
-		exit 1; \
-	fi
-	@echo "✓ Using remote models at $$BASE_DOMAIN"
-	cd app/chat-interface && ../../venv/bin/python chat_server.py
-
-dev-local:
-	@if [ -z "$(MODEL)" ]; then \
-		echo "Usage: make dev-local MODEL=qwen|phi|llama"; \
-		exit 1; \
-	fi
-	@echo "Starting $(MODEL) server + chat interface locally..."
-	@echo "This will start both services. Press Ctrl+C to stop."
-	@echo ""
-	@make -j2 dev-$(MODEL) dev-interface-local
-
-dev-interface-local:
-	@echo "Starting chat interface with local endpoints..."
-	@sleep 3
-	cd app/chat-interface && \
-		QWEN_API_URL=http://localhost:8001 \
-		PHI_API_URL=http://localhost:8002 \
-		LLAMA_API_URL=http://localhost:8003 \
-		../../venv/bin/python chat_server.py
-
-dev-qwen:
-	@echo "Starting Qwen inference server on :8001..."
-	@if [ ! -d venv ]; then \
-		echo "❌ Error: venv not found. Run 'make install' first."; \
-		exit 1; \
-	fi
-	@if [ -z "$$HF_TOKEN" ]; then \
-		echo "⚠️  Warning: HF_TOKEN not set. Model download may fail."; \
-	fi
-	cd app/qwen-inference && PORT=8001 ../../venv/bin/python inference_server.py
-
-dev-phi:
-	@echo "Starting Phi inference server on :8002..."
-	@if [ ! -d venv ]; then \
-		echo "❌ Error: venv not found. Run 'make install' first."; \
-		exit 1; \
-	fi
-	cd app/phi-inference && PORT=8002 ../../venv/bin/python inference_server.py
-
-dev-llama:
-	@echo "Starting Llama inference server on :8003..."
-	@if [ ! -d venv ]; then \
-		echo "❌ Error: venv not found. Run 'make install' first."; \
-		exit 1; \
-	fi
-	cd app/llama-inference && PORT=8003 ../../venv/bin/python inference_server.py
-
-# =============================================================================
-# Stop Commands
-# =============================================================================
-
-stop:
-	docker-compose --profile all down
-
-# =============================================================================
-# Logs
-# =============================================================================
-
-logs-chat:
-	docker-compose logs -f chat-interface
-
-logs-qwen:
-	docker-compose logs -f qwen
-
-logs-phi:
-	docker-compose logs -f phi
+setup-tunnels-dry:
+ifndef TUNNEL_DOMAIN
+	@echo "Set BASE_DOMAIN in .env or use: make setup-tunnels-dry DOMAIN=your-domain.com"
+else
+	python3 scripts/setup_tunnels.py --domain $(TUNNEL_DOMAIN) --dry-run
+endif
 
 # =============================================================================
 # Monitoring
 # =============================================================================
 
-ps:
-	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
 health:
-	@echo "Checking service health..."
-	@echo ""
-	@curl -sf http://localhost:8080/health >/dev/null 2>&1 && \
-		echo "✓ Chat Interface: OK" || echo "✗ Chat Interface: DOWN"
-	@curl -sf http://localhost:8001/health >/dev/null 2>&1 && \
-		echo "✓ Qwen:           OK" || echo "○ Qwen:           Not running"
-	@curl -sf http://localhost:8002/health >/dev/null 2>&1 && \
-		echo "✓ Phi:            OK" || echo "○ Phi:            Not running"
-	@curl -sf http://localhost:8003/health >/dev/null 2>&1 && \
-		echo "✓ Llama:          OK" || echo "○ Llama:          Not running"
-	@curl -sf http://localhost:8004/health >/dev/null 2>&1 && \
-		echo "✓ R1Qwen:         OK" || echo "○ R1Qwen:         Not running"
-	@curl -sf http://localhost:8005/health >/dev/null 2>&1 && \
-		echo "✓ Mistral:        OK" || echo "○ Mistral:        Not running"
-	@curl -sf http://localhost:8006/health >/dev/null 2>&1 && \
-		echo "✓ Gemma:          OK" || echo "○ Gemma:          Not running"
-	@curl -sf http://localhost:8007/health >/dev/null 2>&1 && \
-		echo "✓ RNJ:            OK" || echo "○ RNJ:            Not running"
+	@echo "Services:"
+	@curl -sf http://localhost:8080/health >/dev/null 2>&1 && echo "  Chat (8080): up" || echo "  Chat (8080): down"
+	@curl -sf http://localhost:8100/health >/dev/null 2>&1 && echo "  Qwen (8100): up" || echo "  Qwen (8100): -"
+	@curl -sf http://localhost:8101/health >/dev/null 2>&1 && echo "  Phi (8101): up" || echo "  Phi (8101): -"
+	@curl -sf http://localhost:8103/health >/dev/null 2>&1 && echo "  FunctionGemma (8103): up" || echo "  FunctionGemma (8103): -"
+	@curl -sf http://localhost:8200/health >/dev/null 2>&1 && echo "  Gemma (8200): up" || echo "  Gemma (8200): -"
+	@curl -sf http://localhost:8201/health >/dev/null 2>&1 && echo "  Llama (8201): up" || echo "  Llama (8201): -"
+	@curl -sf http://localhost:8202/health >/dev/null 2>&1 && echo "  Mistral (8202): up" || echo "  Mistral (8202): -"
+	@curl -sf http://localhost:8203/health >/dev/null 2>&1 && echo "  RNJ (8203): up" || echo "  RNJ (8203): -"
+	@curl -sf http://localhost:8300/health >/dev/null 2>&1 && echo "  R1Qwen (8300): up" || echo "  R1Qwen (8300): -"
 
 # =============================================================================
-# Quality Checks
+# Quality
 # =============================================================================
 
 lint:
-	@echo "Checking Python code quality..."
-	@if command -v ruff >/dev/null 2>&1; then \
-		find app -name "*.py" -not -path "*/.*" -exec ruff check {} +; \
-	else \
-		echo "ruff not installed. Install with: pip install ruff"; \
-		exit 1; \
-	fi
+	@command -v ruff >/dev/null || { echo "Install: pip install ruff"; exit 1; }
+	ruff check app scripts config
 
 format:
-	@echo "Formatting Python code..."
-	@if command -v ruff >/dev/null 2>&1; then \
-		find app -name "*.py" -not -path "*/.*" -exec ruff format {} +; \
-	else \
-		echo "ruff not installed. Install with: pip install ruff"; \
-		exit 1; \
-	fi
+	@command -v ruff >/dev/null || { echo "Install: pip install ruff"; exit 1; }
+	ruff format app scripts config
 
 # =============================================================================
 # Cleanup
 # =============================================================================
 
 clean:
-	@echo "Removing stopped containers..."
 	docker container prune -f
-
-clean-all:
-	@echo "⚠️  WARNING: This will remove all containers, images, and volumes!"
-	@read -p "Are you sure? [y/N] " -n 1 -r; \
-	echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		docker-compose --profile all down -v; \
-		docker system prune -af --volumes; \
-		echo "✓ Cleanup complete"; \
-	else \
-		echo "Cancelled"; \
-	fi

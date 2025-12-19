@@ -1,6 +1,6 @@
-name: RNJ-1 Inference
+name: 🤖 RNJ-1
 
-run-name: RNJ-1 Inference Server
+run-name: "RNJ-1 Instruct • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -62,7 +62,6 @@ jobs:
       model_repo: "EssentialAI/rnj-1-instruct-GGUF"
       model_file: "rnj-1-8B-instruct-Q4_K_M.gguf"
       cache_key_prefix: "gguf-rnj-1"
-      tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_RNJ"
       restart_event_type: "restart-rnj-inference"
       workflow_file: "rnj-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
@@ -74,5 +73,5 @@ jobs:
       max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
-      tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_RNJ }}
+      tunnels_json: ${{ secrets.TUNNELS_JSON }}
       workflow_pat: ${{ secrets.WORKFLOW_PAT }}

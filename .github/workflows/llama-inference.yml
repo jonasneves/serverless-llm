@@ -1,6 +1,6 @@
-name: Llama 3.2-3B
+name: 🤖 Llama 3.2-3B
 
-run-name: Llama 3.2-3B Inference Server
+run-name: "Llama 3.2-3B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -62,7 +62,6 @@ jobs:
       model_repo: "bartowski/Llama-3.2-3B-Instruct-GGUF"
       model_file: "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
       cache_key_prefix: "gguf-llama-3.2-3b-q4"
-      tunnel_secret_name: "CLOUDFLARE_TUNNEL_TOKEN_LLAMA"
       restart_event_type: "restart-llama-inference"
       workflow_file: "llama-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
@@ -74,5 +73,5 @@ jobs:
       max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '4' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
-      tunnel_token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_LLAMA }}
+      tunnels_json: ${{ secrets.TUNNELS_JSON }}
       workflow_pat: ${{ secrets.WORKFLOW_PAT }}
