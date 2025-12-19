@@ -186,10 +186,6 @@ const ServerPanel: React.FC = () => {
     });
   };
 
-  const openFullApp = () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
-  };
-
   const getStatusIcon = (status: string) => {
     if (status === 'ok') return <CheckCircle className="w-4 h-4 text-green-500" />;
     if (status === 'down') return <AlertCircle className="w-4 h-4 text-red-500" />;
@@ -294,13 +290,7 @@ const ServerPanel: React.FC = () => {
           applyProfile(profiles[nextIndex]);
         } else if (e.key === 'o') {
           e.preventDefault();
-          if (config.profile === 'remote_all') {
-            window.open('https://chat.neevs.io', '_blank');
-          } else if (config.profile === 'local_chat_remote_models' || config.profile === 'local_all') {
-            window.open('http://localhost:8080', '_blank');
-          } else {
-            openFullApp();
-          }
+          openChat();
         } else if (e.key === 'b') {
           e.preventDefault();
           // Toggle backend start/stop

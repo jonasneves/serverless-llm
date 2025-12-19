@@ -10,7 +10,6 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
         sidepanel: resolve(__dirname, 'sidepanel.html'),
       },
       output: {
