@@ -1,0 +1,89 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "enhance_reasoning",
+      "description": "Use a specialized model to analyze the problem, reason through it step-by-step, and potentially write code to help solve it. Choose based on task complexity and cost constraints.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "enum": ["reasoner-1", "reasoner-2", "reasoner-3", "reasoner-4", "reasoner-5", "reasoner-6", "reasoner-7"],
+            "description": "The reasoning model to use (ranked by Dec 2025 benchmarks):\n- reasoner-1 (Qwen3 4B): Best overall - multilingual (119 langs), 1M context, exceptional reasoning/coding. Best for: complex logic, code, agent tasks.\n- reasoner-2 (DeepSeek R1 1.5B): o1-preview level reasoning, 96.3% Codeforces. Best for: math, step-by-step thinking, algorithms.\n- reasoner-3 (Gemma 2 9B): Strong reasoning, safety-aligned. Best for: fact-checking, educational content.\n- reasoner-4 (Mistral 7B): Fast instruction-following, structured output. Best for: JSON generation, tool use.\n- reasoner-5 (Phi-3 Mini): Compact but capable reasoning. Best for: moderate difficulty tasks.\n- reasoner-6 (RNJ-1 Instruct): 70% SWE-Bench, strong tool-calling. Best for: automation workflows.\n- reasoner-7 (Llama 3.2 3B): Lightweight, 131K context. Best for: simple tasks, creative writing."
+          },
+          "reasoning_focus": {
+            "type": "string",
+            "description": "What aspect to focus reasoning on (e.g., 'mathematical proof', 'code logic', 'problem decomposition')"
+          }
+        },
+        "required": ["model"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "answer",
+      "description": "Generate the final answer to the user's question using the most appropriate model. Only call this when you have enough information to provide a complete answer.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "enum": ["answer-1", "answer-2", "answer-3", "answer-4", "answer-5", "answer-6", "answer-7"],
+            "description": "The answer model to use (ranked by Dec 2025 benchmarks):\n- answer-1 (Qwen3 4B): Best overall - multilingual, comprehensive answers, code explanations.\n- answer-2 (DeepSeek R1 1.5B): Thoughtful chain-of-thought answers, math/coding focused.\n- answer-3 (Gemma 2 9B): Balanced, safe responses, fact-checking.\n- answer-4 (Mistral 7B): Fast, structured responses.\n- answer-5 (Phi-3 Mini): Concise, instruction-following answers.\n- answer-6 (RNJ-1 Instruct): Technical answers, code-focused.\n- answer-7 (Llama 3.2 3B): Conversational, creative writing."
+          }
+        },
+        "required": ["model"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search",
+      "description": "Search the web for missing information or current events. Use this when the question requires knowledge beyond the model's training data or real-time information.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query to find relevant information"
+          },
+          "num_results": {
+            "type": "integer",
+            "description": "Number of search results to retrieve (1-5)",
+            "default": 3,
+            "minimum": 1,
+            "maximum": 5
+          }
+        },
+        "required": ["query"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "code_interpreter",
+      "description": "Execute Python code in a sandboxed environment to perform calculations, data analysis, or testing. Use this for precise mathematical computations or when you need to verify logic.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Python code to execute. Must be self-contained with all imports."
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Execution timeout in seconds (max 30)",
+            "default": 10,
+            "maximum": 30
+          }
+        },
+        "required": ["code"]
+      }
+    }
+  }
+]

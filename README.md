@@ -119,7 +119,7 @@ serverless-llm/
 │   ├── rnj-inference/          # RNJ-1 Instruct model server
 │   ├── llama-inference/        # Llama 3.2 3B model server
 │   ├── functiongemma-inference/ # FunctionGemma 270M model server
-│   └── chat-interface/         # Web interface + API proxy
+│   └── chat/         # Web interface + API proxy
 ├── config/                     # Centralized configuration
 │   └── models.py               # Model ports and metadata
 ├── scripts/                    # Automation scripts
@@ -187,7 +187,7 @@ python inference_server.py  # Runs on port 8100
 ### Start the Web Interface
 
 ```bash
-cd app/chat-interface
+cd app/chat
 export QWEN_API_URL=http://localhost:8100
 export GH_MODELS_TOKEN=ghp_xxxxxxxxxxxxx  # Optional
 python chat_server.py  # Runs on port 8080

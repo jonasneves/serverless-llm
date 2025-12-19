@@ -27,10 +27,10 @@ services:
   # =============================================================================
   # Chat Interface (always available)
   # =============================================================================
-  chat-interface:
+  chat:
     build:
-      context: ./app/chat-interface
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: app/chat/Dockerfile
     ports:
       - "${CHAT_PORT:-8080}:8080"
     environment:

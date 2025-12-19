@@ -52,7 +52,7 @@ install:
 	fi
 	@[ -d venv ] || python3.11 -m venv venv
 	@./venv/bin/pip install -q --upgrade pip
-	@./venv/bin/pip install -q -r app/chat-interface/requirements.txt
+	@./venv/bin/pip install -q -r app/chat/requirements.txt
 	@./venv/bin/pip install -q -r app/shared/requirements.txt
 	@echo "Done. Activate: source venv/bin/activate"
 
@@ -62,7 +62,7 @@ install:
 
 dev-chat:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/chat-interface && ../../venv/bin/python chat_server.py
+	cd app/chat && ../../venv/bin/python chat_server.py
 
 dev-qwen:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
@@ -111,7 +111,7 @@ stop:
 	docker-compose --profile all down
 
 logs:
-	docker-compose logs -f chat-interface
+	docker-compose logs -f chat
 
 ps:
 	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
@@ -121,13 +121,13 @@ ps:
 # =============================================================================
 
 build-chat:
-	docker-compose build chat-interface
+	docker-compose build chat
 
 build-playground:
-	cd app/chat-interface/playground-app && npm install && npm run build
+	cd app/chat/playground-app && npm install && npm run build
 
 build-extension:
-	cd app/chat-interface/playground-app && npm install && npm run build:extension
+	cd app/chat/playground-app && npm install && npm run build:extension
 	@echo "Load in Chrome: chrome://extensions -> Load unpacked -> dist-extension/"
 
 # =============================================================================

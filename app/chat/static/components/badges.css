@@ -1,0 +1,295 @@
+/**
+ * Badge Components
+ * Pills, badges, and status indicators
+ */
+
+/* Base badge */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+}
+
+/* Badge variants */
+.badge.streaming,
+.badge.audit {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+/* Turn badge */
+.turn-badge {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-xs);
+}
+
+/* Model type badges */
+.model-type-badge {
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-xs);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+}
+
+.model-type-badge.api {
+    background: rgba(59, 130, 246, 0.1); /* blue-500 at 10% */
+    color: #3b82f6; /* blue-500 */
+    border: 1px solid rgba(59, 130, 246, 0.3); /* blue-500 at 30% */
+}
+
+.model-type-badge.local {
+    background: rgba(16, 185, 129, 0.1); /* emerald-500 at 10% */
+    color: #10b981; /* emerald-500 */
+    border: 1px solid rgba(16, 185, 129, 0.3); /* emerald-500 at 30% */
+}
+
+.model-chip.selected .model-type-badge.api {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* Model badge (roundtable) */
+.model-badge {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-md);
+}
+
+.model-badge.qwen {
+    background: var(--qwen-color);
+    color: white;
+}
+
+.model-badge.phi {
+    background: var(--phi-color);
+    color: white;
+}
+
+.model-badge.llama {
+    background: var(--llama-color);
+    color: white;
+}
+
+/* Compliance pills */
+.compliance-pill {
+    font-size: var(--text-sm);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-pill);
+    font-weight: var(--font-semibold);
+    text-transform: capitalize;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.compliance-pill.negative {
+    background: rgba(229, 115, 115, 0.15);
+    color: #e57373;
+}
+
+.compliance-pill.partial {
+    background: rgba(255, 183, 77, 0.2);
+    color: #ffb74d;
+}
+
+.compliance-pill.positive {
+    background: rgba(61, 176, 139, 0.2);
+    color: #3db08b;
+}
+
+/* Evaluation badges */
+.evaluation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-xs);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+}
+
+.evaluation-badge.high {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+}
+
+.evaluation-badge.medium {
+    background: rgba(217, 119, 6, 0.1);
+    color: var(--warning-color);
+}
+
+.evaluation-badge.low {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-md);
+    font-weight: var(--font-medium);
+}
+
+.status-indicator.analyzing {
+    background: rgba(2, 132, 199, 0.1);
+    color: var(--info-color);
+}
+
+.status-indicator.discussing {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+}
+
+.status-indicator.synthesizing {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--qwen-color);
+}
+
+/* Domain badges */
+.domain-badge {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-xs);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+/* Expertise score */
+.expertise-score {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+/* Example chips */
+.example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--chip-gap);
+}
+
+.example-chip {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--chip-padding-sm-y) var(--chip-padding-sm-x);
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition-all);
+    white-space: nowrap;
+    font-family: inherit;
+    font-weight: var(--font-medium);
+    min-height: var(--button-height-sm);
+}
+
+.example-chip:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.15);
+}
+
+[data-theme="dark"] .example-chip {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .example-chip:hover {
+    background: var(--bg-secondary);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+/* Example prompts (full-width) */
+.examples-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.example-prompt {
+    text-align: left;
+    padding: var(--space-3) var(--chip-padding-sm-x);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    transition: var(--transition-all);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: inherit;
+    min-height: var(--button-height);
+}
+
+.example-prompt:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-color);
+    transform: translateX(4px);
+}
+
+.example-prompt svg {
+    flex-shrink: 0;
+    color: var(--accent-color);
+}
+
+[data-theme="dark"] .example-prompt {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .example-prompt:hover {
+    background: var(--bg-secondary);
+    border-color: var(--accent-color);
+}
+
+.example-prompts {
+    margin-top: var(--space-3);
+}
+
+.example-prompts-label {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-3);
+    font-weight: var(--font-normal);
+}
+
+/* Confession grade */
+.confession-grade {
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    background: rgba(61, 176, 139, 0.1);
+    border: 1px solid rgba(61, 176, 139, 0.3);
+}
+
+.confession-grade.fail {
+    background: rgba(229, 115, 115, 0.1);
+    border-color: rgba(229, 115, 115, 0.4);
+}
+
+.confession-grade h4 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xl);
+}

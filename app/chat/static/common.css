@@ -1,0 +1,164 @@
+/**
+ * Common Styles
+ */
+button.primary {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-button);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: var(--transition-all);
+    font-family: inherit;
+    min-height: var(--button-height-sm);
+}
+
+button.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
+}
+
+button.primary:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+button.primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-button);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: var(--transition-all);
+    font-family: inherit;
+    min-height: var(--button-height-sm);
+}
+
+button.secondary:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    transform: translateY(-1px);
+}
+
+button.secondary:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+button.secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+button.ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-button);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: var(--transition-all);
+    font-family: inherit;
+}
+
+button.ghost:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+button.ghost:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+button.small {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+}
+
+/* Table styles */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+    border: 1px solid var(--border-color);
+    padding: var(--space-3);
+    text-align: left;
+}
+
+.table th {
+    background: var(--bg-tertiary);
+    font-weight: var(--font-semibold);
+}
+
+/* Utility classes */
+
+/* Display utilities */
+.hidden {
+    display: none;
+}
+
+.block {
+    display: block;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+/* Text alignment */
+.text-left {
+    text-align: left;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+/* Cursor */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.cursor-not-allowed {
+    cursor: not-allowed;
+}
+
+/* Visibility */
+.visible {
+    visibility: visible;
+}
+
+.invisible {
+    visibility: hidden;
+}
+
+/* Overflow */
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-auto {
+    overflow: auto;
+}
+
+.overflow-scroll {
+    overflow: scroll;
+}

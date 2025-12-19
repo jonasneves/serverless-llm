@@ -11,7 +11,7 @@ on:
       - 'app/*/Dockerfile'
       - 'app/*/requirements.txt'
       - 'app/*/inference_server.py'
-      - 'app/chat-interface/**'
+      - 'app/chat/**'
       - 'config/**'
       - 'docker/cloudflared/**'
       - '.github/workflows/build-push-images.yml'
@@ -58,8 +58,8 @@ jobs:
             echo "Changed files:"
             echo "$CHANGED_FILES"
 
-            # Extract changed model directories (includes -inference and chat-interface)
-            CHANGED_MODELS=$(echo "$CHANGED_FILES" | grep -E '^app/(.+-inference|chat-interface)/' | cut -d'/' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
+            # Extract changed model directories (includes -inference and chat)
+            CHANGED_MODELS=$(echo "$CHANGED_FILES" | grep -E '^app/(.+-inference|chat)/' | cut -d'/' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
 
             # Check if cloudflared changed
             CLOUDFLARED_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^docker/cloudflared/' && echo "cloudflared" || echo "")
@@ -84,7 +84,7 @@ jobs:
 
           if [ "$MODELS" = "all" ] || [ -z "$MODELS" ]; then
             # Build all services (inference servers + chat + cloudflared)
-            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","gemma-inference","mistral-inference","chat-interface","cloudflared"]'
+            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","gemma-inference","mistral-inference","chat","cloudflared"]'
           else
             # Build only specified models (use -c for compact output)
             MATRIX=$(echo "$MODELS" | jq -cR 'split(",") | map(select(length > 0))')
@@ -131,9 +131,9 @@ jobs:
           # Determine which Dockerfile to use
           if [ "${{ matrix.model }}" = "cloudflared" ]; then
             DOCKERFILE="./docker/cloudflared/Dockerfile"
-          elif [ "${{ matrix.model }}" = "chat-interface" ]; then
-            # Chat interface has its own Dockerfile
-            DOCKERFILE="./app/chat-interface/Dockerfile"
+          elif [ "${{ matrix.model }}" = "chat" ]; then
+            # Chat has its own Dockerfile
+            DOCKERFILE="./app/chat/Dockerfile"
           elif [ "${{ matrix.model }}" = "rnj-inference" ]; then
             # RNJ has its own Dockerfile (builds llama.cpp from source)
             DOCKERFILE="./app/rnj-inference/Dockerfile"
@@ -156,9 +156,9 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || matrix.model == 'chat-interface' && '.' || './app' }}
-          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat-interface' && './app/chat-interface/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
-          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat-interface' && format('MODEL_DIR={0}', matrix.model) || '' }}
+          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || matrix.model == 'chat' && '.' || './app' }}
+          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
+          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && format('MODEL_DIR={0}', matrix.model) || '' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

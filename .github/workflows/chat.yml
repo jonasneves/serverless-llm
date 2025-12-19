@@ -1,0 +1,281 @@
+name: 💬 Chat
+
+run-name: "Chat Interface"
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_hours:
+        description: 'Duration (max 5.5 hours)'
+        required: false
+        default: '5'
+        type: string
+      auto_restart:
+        description: 'Auto-restart before timeout'
+        required: false
+        default: true
+        type: boolean
+      instances:
+        description: 'Parallel instances (1-3)'
+        required: false
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+
+  repository_dispatch:
+    types: [restart-chat-interface]
+
+jobs:
+  chat:
+    name: Chat Interface #${{ matrix.instance }}
+    runs-on: ubuntu-24.04-arm  # ARM64 for consistency
+    timeout-minutes: 350
+    permissions:
+      actions: write
+      contents: read
+      packages: read
+    strategy:
+      matrix:
+        instance: ${{ fromJson((github.event.client_payload.instances || github.event.inputs.instances || '1') == '3' && '[1,2,3]' || (github.event.client_payload.instances || github.event.inputs.instances || '1') == '2' && '[1,2]' || '[1]') }}
+      fail-fast: false
+
+    steps:
+      - name: Find previous workflow
+        id: find_previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          API_RESPONSE=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/chat.yml/runs?status=in_progress")
+
+          PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id < ${{ github.run_id }}) | .id" | head -1)
+
+          if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ]; then
+            echo "previous_run_id=$PREVIOUS_RUN_ID" >> $GITHUB_OUTPUT
+          else
+            echo "previous_run_id=" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull cloudflared from GHCR
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest"
+          echo "Pulling $IMAGE"
+          docker pull "$IMAGE"
+          docker tag "$IMAGE" "cloudflared:latest"
+          echo "Successfully pulled cloudflared from GHCR"
+
+      - name: Pull chat image from GHCR
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/serverless-llm/chat:latest"
+          echo "Pulling $IMAGE"
+          docker pull "$IMAGE"
+          docker tag "$IMAGE" "chat-server:latest"
+          echo "Successfully pulled image from GHCR"
+
+      - name: Create network
+        run: docker network create chat-network
+
+      - name: Start chat server
+        env:
+          PORT: "8080"
+          BASE_DOMAIN: ${{ secrets.BASE_DOMAIN }}
+          QWEN_API_URL: ${{ secrets.QWEN_API_URL }}
+          PHI_API_URL: ${{ secrets.PHI_API_URL }}
+          LLAMA_API_URL: ${{ secrets.LLAMA_API_URL }}
+          MISTRAL_API_URL: ${{ secrets.MISTRAL_API_URL }}
+          GEMMA_API_URL: ${{ secrets.GEMMA_API_URL }}
+          GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+        run: |
+          docker run -d \
+            --name chat-server \
+            --network chat-network \
+            -p 8080:8080 \
+            -e PORT -e BASE_DOMAIN -e QWEN_API_URL -e PHI_API_URL \
+            -e LLAMA_API_URL -e MISTRAL_API_URL -e GEMMA_API_URL \
+            -e GH_MODELS_TOKEN \
+            chat-server:latest
+
+          # Health check
+          HEALTHY=false
+          for i in {1..15}; do
+            if ! docker ps | grep -q chat-server; then
+              docker logs chat-server
+              exit 1
+            fi
+
+            RESPONSE=$(curl -s http://localhost:8080/health || echo "")
+            if echo "$RESPONSE" | grep -q "healthy"; then
+              echo "Server ready"
+              HEALTHY=true
+              break
+            fi
+
+            echo "Waiting... ($i/15)"
+            sleep 5
+          done
+
+          if [ "$HEALTHY" = "false" ]; then
+            docker logs chat-server
+            exit 1
+          fi
+
+      - name: Get tunnel token
+        id: tunnel_token
+        env:
+          TUNNELS_JSON: ${{ secrets.TUNNELS_JSON }}
+          TUNNEL_TOKEN_SECRET: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_CHAT }}
+        run: |
+          # Try unified script first (reads from TUNNELS_JSON env var)
+          TOKEN=$(python3 scripts/get_tunnel_token.py "chat" --silent 2>/dev/null) || true
+          
+          # Fallback to individual secret
+          if [ -z "$TOKEN" ] && [ -n "$TUNNEL_TOKEN_SECRET" ]; then
+            TOKEN="$TUNNEL_TOKEN_SECRET"
+          fi
+          
+          if [ -n "$TOKEN" ]; then
+            echo "::add-mask::$TOKEN"
+            echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          else
+            echo "No tunnel token for chat"
+            exit 1
+          fi
+
+      - name: Start cloudflared
+        env:
+          TUNNEL_TOKEN: ${{ steps.tunnel_token.outputs.token }}
+        run: |
+          docker run -d \
+            --name cloudflared \
+            --network host \
+            cloudflared:latest \
+            tunnel --no-autoupdate run --token "$TUNNEL_TOKEN"
+
+          sleep 10
+          docker logs cloudflared | head -20
+
+      - name: Cancel previous workflow
+        if: steps.find_previous.outputs.previous_run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ steps.find_previous.outputs.previous_run_id }}/cancel"
+
+          echo "Graceful handoff: waiting 60s for previous instance to shutdown"
+          sleep 60
+
+      - name: Monitor
+        run: |
+          cleanup() {
+            docker stop chat-server cloudflared 2>/dev/null || true
+            docker rm chat-server cloudflared 2>/dev/null || true
+            docker network rm chat-network 2>/dev/null || true
+            exit 0
+          }
+          trap cleanup SIGTERM SIGINT
+
+          # Get duration from inputs/payload
+          DURATION_HOURS="${{ github.event.client_payload.duration_hours || github.event.inputs.duration_hours || '5' }}"
+          DURATION=$((DURATION_HOURS * 3600))
+          RESTART_THRESHOLD=$((DURATION - 360))
+          START_TIME=$(date +%s)
+          RESTART_TRIGGERED=false
+
+          # Auto-restart defaults to true unless explicitly set to false
+          AUTO_RESTART="${{ github.event.client_payload.auto_restart || github.event.inputs.auto_restart }}"
+          if [ -z "$AUTO_RESTART" ]; then
+            AUTO_RESTART="true"
+          fi
+
+          # Store instances count for restart trigger
+          INSTANCES="${{ github.event.client_payload.instances || github.event.inputs.instances || '1' }}"
+
+          echo "Duration: ${DURATION_HOURS}h | Auto-restart: $AUTO_RESTART | Instances: $INSTANCES"
+
+          while true; do
+            ELAPSED=$(($(date +%s) - START_TIME))
+            REMAINING=$((DURATION - ELAPSED))
+
+            CHAT_STATUS=$(docker inspect -f '{{.State.Status}}' chat-server 2>/dev/null || echo "stopped")
+            TUNNEL_STATUS=$(docker inspect -f '{{.State.Status}}' cloudflared 2>/dev/null || echo "stopped")
+
+            printf "[%s] Chat: %s | Tunnel: %s | %dm elapsed | %dm remaining\n" \
+              "$(date '+%H:%M:%S')" "$CHAT_STATUS" "$TUNNEL_STATUS" "$((ELAPSED/60))" "$((REMAINING/60))"
+
+            [ "$CHAT_STATUS" != "running" ] && docker start chat-server
+            [ "$TUNNEL_STATUS" != "running" ] && docker start cloudflared
+
+            # Auto-restart (only from instance 1 to avoid multiple dispatches)
+            if [ "$ELAPSED" -gt "$RESTART_THRESHOLD" ] && [ "$RESTART_TRIGGERED" = "false" ] && [ "${{ matrix.instance }}" = "1" ]; then
+              if [ "$AUTO_RESTART" = "true" ]; then
+                echo ""
+                echo "=========================================="
+                echo "Triggering restart workflow..."
+                echo "=========================================="
+
+                PAT="${{ secrets.WORKFLOW_PAT }}"
+                if [ -z "$PAT" ]; then
+                  echo "ERROR: WORKFLOW_PAT secret is not set!"
+                  echo "Auto-restart requires a Personal Access Token with 'repo' scope"
+                  RESTART_TRIGGERED=true
+                else
+                  RESPONSE=$(curl -sX POST \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Authorization: Bearer $PAT" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    https://api.github.com/repos/${{ github.repository }}/dispatches \
+                    -d "{\"event_type\":\"restart-chat-interface\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$([ \"$AUTO_RESTART\" = \"true\" ] && echo \"true\" || echo \"false\"),\"instances\":\"$INSTANCES\"}}" \
+                    -w "\nHTTP_STATUS:%{http_code}" 2>&1)
+
+                  HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+                  BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
+
+                  if [ "$HTTP_CODE" = "204" ]; then
+                    echo "SUCCESS: Restart triggered!"
+                    echo "Waiting 90s for new instance to start..."
+                    sleep 90
+                  elif [ "$HTTP_CODE" = "401" ]; then
+                    echo "ERROR: Authentication failed (401) - Check WORKFLOW_PAT"
+                  elif [ "$HTTP_CODE" = "403" ]; then
+                    echo "ERROR: Permission denied (403) - WORKFLOW_PAT needs 'repo' scope"
+                  else
+                    echo "ERROR: Failed to trigger restart (HTTP $HTTP_CODE)"
+                    [ -n "$BODY" ] && echo "Response: $BODY"
+                  fi
+
+                  RESTART_TRIGGERED=true
+                fi
+              fi
+            fi
+
+            [ $ELAPSED -gt $DURATION ] && break
+            sleep 30
+          done
+
+          cleanup
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          docker logs chat-server 2>&1 | tail -100
+          docker logs cloudflared 2>&1 | tail -50

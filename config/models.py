@@ -76,7 +76,7 @@ MODELS: dict[str, ModelConfig] = {
         port=8080,
         subdomain="chat",
         category=ModelCategory.CORE,
-        inference_dir="chat-interface",
+        inference_dir="chat",
         description="Main chat interface and API gateway",
     ),
     
