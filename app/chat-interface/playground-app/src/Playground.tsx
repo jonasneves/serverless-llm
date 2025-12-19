@@ -928,14 +928,6 @@ function PlaygroundInner() {
     },
   );
 
-  const cycleBgStyle = (direction: 'prev' | 'next') => {
-    const currentIndex = BG_STYLES.indexOf(bgStyle);
-    const newIndex = direction === 'next'
-      ? (currentIndex + 1) % BG_STYLES.length
-      : (currentIndex - 1 + BG_STYLES.length) % BG_STYLES.length;
-    setBgStyle(BG_STYLES[newIndex]);
-  };
-
   const moderatorModel = modelsData.find(m => m.id === moderator);
   const inspectorModels = modelsData.filter(m => selectedCardIds.has(m.id));
 
@@ -1253,28 +1245,6 @@ function PlaygroundInner() {
             />
           </Suspense>
         }
-        bgCyclerSlot={
-          <div className="flex items-center rounded-md bg-slate-800/50 backdrop-blur-md border border-slate-700/50 shadow-lg">
-            <button
-              onClick={() => cycleBgStyle('prev')}
-              className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none border-r border-slate-700/50"
-              title="Previous background"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={() => cycleBgStyle('next')}
-              className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
-              title="Next background"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        }
       />
 
       {/* Content Wrapper with Sidebar Offset */}
@@ -1546,6 +1516,8 @@ function PlaygroundInner() {
           setToken={setGithubToken}
           showCouncilReviewerNames={showCouncilReviewerNames}
           setShowCouncilReviewerNames={setShowCouncilReviewerNames}
+          bgStyle={bgStyle}
+          setBgStyle={setBgStyle}
         />
       </Suspense>
 

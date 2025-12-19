@@ -489,7 +489,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 select-none pb-20 relative">
                             <Bot size={48} className="mb-4 opacity-50" />
                             <div className="flex items-center gap-2 mb-4">
-                                <p className="text-base opacity-50">Chat with</p>
                                 {autoMode ? (
                                     <div className="flex items-center gap-1.5">
                                         <div className="relative" ref={dropdownRef}>

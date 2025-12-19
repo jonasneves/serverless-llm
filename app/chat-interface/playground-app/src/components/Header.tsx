@@ -10,7 +10,6 @@ interface HeaderProps {
   setShowDock: (show: boolean) => void;
   onOpenSettings: () => void;
   gestureButtonSlot?: React.ReactNode;
-  bgCyclerSlot?: React.ReactNode;
   hasRightPanel?: boolean; // Whether a right panel is visible (for centering)
 }
 
@@ -60,7 +59,6 @@ export default function Header({
   setShowDock,
   onOpenSettings,
   gestureButtonSlot,
-  bgCyclerSlot,
   hasRightPanel = true
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -98,11 +96,11 @@ export default function Header({
       const activeButton = buttons[safeIndex] as HTMLElement;
       const buttonRect = activeButton.getBoundingClientRect();
       const trackRect = track.getBoundingClientRect();
-      
+
       const buttonWidth = buttonRect.width;
       const buttonLeft = buttonRect.left;
       const trackLeft = trackRect.left;
-      
+
       // Calculate position relative to track (buttons are already positioned accounting for track padding)
       setSliderWidth(buttonWidth);
       setSliderLeft(buttonLeft - trackLeft);
@@ -110,16 +108,16 @@ export default function Header({
 
     // Small delay to ensure DOM is updated
     const timeoutId = setTimeout(updateSliderPosition, 0);
-    
+
     // Update on resize
     const resizeObserver = new ResizeObserver(() => {
       setTimeout(updateSliderPosition, 0);
     });
     resizeObserver.observe(trackRef.current);
-    
+
     // Also listen to window resize for breakpoint changes
     window.addEventListener('resize', updateSliderPosition);
-    
+
     return () => {
       clearTimeout(timeoutId);
       resizeObserver.disconnect();
@@ -202,7 +200,7 @@ export default function Header({
                   aria-checked={mode === m.value}
                   aria-label={m.label}
                   title={m.label}
-                  className={`relative z-10 py-1.5 px-1.5 lg:px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center gap-1 lg:gap-1.5 ${mode === m.value
+                  className={`relative z-10 py-1.5 px-1.5 lg:px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex items-center justify-center text-center gap-1 lg:gap-1.5 lg:w-[115px] ${mode === m.value
                     ? 'text-white'
                     : 'text-slate-400 hover:text-slate-200'
                     }`}
@@ -262,12 +260,8 @@ export default function Header({
         </div>
       </div>
 
-      {/* Right: Background Cycler + Settings */}
+      {/* Right: Settings */}
       <div className="flex items-center gap-2 w-auto justify-end pointer-events-auto z-20">
-        {/* Background switcher */}
-        <div>
-          {bgCyclerSlot}
-        </div>
         <button
           onClick={onOpenSettings}
           className="min-w-[42px] min-h-[42px] w-[42px] h-[42px] rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700/50 hover:border-slate-600 transition-colors active:scale-95 focus:outline-none focus-visible:outline-none"
