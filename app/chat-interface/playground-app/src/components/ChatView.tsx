@@ -491,7 +491,12 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             <div className="flex items-center gap-2 mb-4">
                                 {autoMode ? (
                                     <div className="flex items-center gap-1.5">
-                                        <div className="relative" ref={dropdownRef}>
+                                        <div
+                                            className="relative"
+                                            ref={dropdownRef}
+                                            onMouseEnter={() => setShowTooltip(true)}
+                                            onMouseLeave={() => setShowTooltip(false)}
+                                        >
                                             <button
                                                 onClick={() => setShowAutoDropdown(!showAutoDropdown)}
                                                 className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
@@ -504,48 +509,9 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                 <ChevronDown size={11} className="text-slate-200/60 transition-transform" />
                                             </button>
 
-                                            {showAutoDropdown && (
-                                                <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                                    {(['local', 'api'] as ChatAutoModeScope[]).map(scope => (
-                                                        <button
-                                                            key={scope}
-                                                            onClick={() => {
-                                                                setAutoModeScope(scope);
-                                                                setShowAutoDropdown(false);
-                                                            }}
-                                                            className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${autoModeScope === scope
-                                                                ? 'bg-yellow-500/20 text-yellow-300'
-                                                                : 'text-slate-300 hover:bg-slate-700/50'
-                                                                }`}
-                                                        >
-                                                            {autoScopeLabels[scope]}
-                                                            {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
-                                                            {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
-                                                        </button>
-                                                    ))}
-                                                    <div className="border-t border-slate-700">
-                                                        <button
-                                                            onClick={() => {
-                                                                setAutoMode(false);
-                                                                setShowAutoDropdown(false);
-                                                            }}
-                                                            className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
-                                                        >
-                                                            Manual Mode
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div
-                                            className="relative"
-                                            onMouseEnter={() => setShowTooltip(true)}
-                                            onMouseLeave={() => setShowTooltip(false)}
-                                        >
-                                            <Info size={13} className="text-slate-500/60 hover:text-slate-400/80 transition-colors cursor-help" />
-                                            {showTooltip && (
-                                                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs z-50 shadow-xl w-48">
+                                            {/* Tooltip bubble above */}
+                                            {showTooltip && !showAutoDropdown && (
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs z-50 shadow-xl w-48">
                                                     {autoModeScope === 'local' && (
                                                         <ul className="space-y-1.5">
                                                             <li className="flex items-center gap-2">
@@ -578,6 +544,41 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                             </li>
                                                         </ul>
                                                     )}
+                                                    {/* Speech bubble arrow */}
+                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-700" />
+                                                </div>
+                                            )}
+
+                                            {showAutoDropdown && (
+                                                <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                                    {(['local', 'api'] as ChatAutoModeScope[]).map(scope => (
+                                                        <button
+                                                            key={scope}
+                                                            onClick={() => {
+                                                                setAutoModeScope(scope);
+                                                                setShowAutoDropdown(false);
+                                                            }}
+                                                            className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${autoModeScope === scope
+                                                                ? 'bg-yellow-500/20 text-yellow-300'
+                                                                : 'text-slate-300 hover:bg-slate-700/50'
+                                                                }`}
+                                                        >
+                                                            {autoScopeLabels[scope]}
+                                                            {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
+                                                            {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
+                                                        </button>
+                                                    ))}
+                                                    <div className="border-t border-slate-700">
+                                                        <button
+                                                            onClick={() => {
+                                                                setAutoMode(false);
+                                                                setShowAutoDropdown(false);
+                                                            }}
+                                                            className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
+                                                        >
+                                                            Manual Mode
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
