@@ -63,6 +63,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [buildBusy, setBuildBusy] = useState(false);
     const [buildLogTail, setBuildLogTail] = useState<string | null>(null);
     const [buildNativeError, setBuildNativeError] = useState<string | null>(null);
+    const [workflowNotice, setWorkflowNotice] = useState<string | null>(null);
+    const [workflowError, setWorkflowError] = useState<string | null>(null);
     const refreshInFlight = useRef(false);
     const workflowsRef = useRef<Map<string, WorkflowInfo>>(new Map());
 
@@ -70,6 +72,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         'Authorization': `Bearer ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'serverless-llm-extension',
     };
 
     const checkBackendHealth = useCallback(async () => {
@@ -271,6 +274,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         const workflow = workflowsRef.current.get(name) || workflows.get(name);
         if (!workflow || !githubToken) return;
 
+        setWorkflowNotice(null);
+        setWorkflowError(null);
         setTriggering(name);
         try {
             const response = await fetch(
@@ -295,8 +300,12 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             );
 
             if (!response.ok && response.status !== 204) {
-                throw new Error(`Failed to trigger: ${response.status}`);
+                const body = await response.text();
+                throw new Error(`Failed to trigger ${name}: ${response.status} ${response.statusText} ${body || ''}`.trim());
             }
+
+            setWorkflowNotice(`Triggered "${name}" (workflow ${workflow.id})`);
+            setWorkflowError(null);
 
             // Wait a bit then refresh
             setTimeout(() => {
@@ -304,7 +313,9 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 setTriggering(null);
             }, 2000);
         } catch (err: any) {
+            const msg = err?.message || 'Failed to trigger workflow';
             console.error('Failed to trigger workflow:', err);
+            setWorkflowError(msg);
             setTriggering(null);
         }
     };
@@ -528,6 +539,19 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
             {!showOnlyBackend && (
                 <>
+                    {workflowNotice && (
+                        <div className="flex items-center gap-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 text-xs">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span className="truncate">{workflowNotice}</span>
+                        </div>
+                    )}
+                    {workflowError && (
+                        <div className="flex items-center gap-2 p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200 text-xs">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            <span className="truncate">{workflowError}</span>
+                        </div>
+                    )}
+
                     {/* Header */}
                     <div className="flex items-center justify-between mb-3">
                         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
