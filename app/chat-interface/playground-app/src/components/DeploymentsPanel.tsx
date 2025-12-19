@@ -63,7 +63,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [buildBusy, setBuildBusy] = useState(false);
     const [buildLogTail, setBuildLogTail] = useState<string | null>(null);
     const [buildNativeError, setBuildNativeError] = useState<string | null>(null);
-    const [workflowNotice, setWorkflowNotice] = useState<string | null>(null);
+    const [workflowNotice, setWorkflowNotice] = useState<{ text: string; url?: string } | null>(null);
     const [workflowError, setWorkflowError] = useState<string | null>(null);
     const refreshInFlight = useRef(false);
     const workflowsRef = useRef<Map<string, WorkflowInfo>>(new Map());
@@ -304,7 +304,12 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 throw new Error(`Failed to trigger ${name}: ${response.status} ${response.statusText} ${body || ''}`.trim());
             }
 
-            setWorkflowNotice(`Triggered "${name}" (workflow ${workflow.id})`);
+            setWorkflowNotice({
+                text: `Triggered "${name}"`,
+                url: workflow.path
+                    ? `https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${workflow.path}`
+                    : `https://github.com/${REPO_OWNER}/${REPO_NAME}/actions`
+            });
             setWorkflowError(null);
 
             // Wait a bit then refresh
@@ -542,7 +547,18 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                     {workflowNotice && (
                         <div className="flex items-center gap-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 text-xs">
                             <CheckCircle className="w-3.5 h-3.5" />
-                            <span className="truncate">{workflowNotice}</span>
+                            {workflowNotice.url ? (
+                                <a
+                                    href={workflowNotice.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="truncate underline hover:text-emerald-100"
+                                >
+                                    {workflowNotice.text}
+                                </a>
+                            ) : (
+                                <span className="truncate">{workflowNotice.text}</span>
+                            )}
                         </div>
                     )}
                     {workflowError && (
