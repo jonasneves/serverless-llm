@@ -154,14 +154,33 @@ Edit `public/manifest.json` for:
 
 ## Limitations
 
-- Backend server must run separately (no auto-start yet)
 - Native file system access limited to Chrome's sandboxed storage
 - WebRTC/MediaPipe features work but require camera permissions
 
+## What's Been Implemented
+
+### ✅ Native Messaging (Backend Auto-Start)
+- Start/Stop/Restart local backend directly from sidepanel
+- Process status monitoring with PID display
+- Log viewing for debugging
+- Automatic mode detection (dev-remote vs dev-interface-local)
+
+### ✅ CI/CD Deployment Triggers
+- Monitor GitHub Actions workflow status (Chat, Build Images)
+- Trigger deployments directly from sidepanel
+- Active deployment count badges
+- Quick action buttons for common deployments
+
+### ✅ Enhanced Sidepanel UX
+- Profile switching (Dev/Prod modes)
+- Health monitoring for all services
+- Recent activity feed
+- Keyboard shortcuts (Ctrl+P, Ctrl+O)
+
 ## Future Enhancements
 
-Potential additions:
-- Native messaging host for auto-starting backend
-- Offline mode with cached responses
-- Browser action popup for quick chat
-- Context menu integration for selected text
+Potential additions to the control panel:
+- **Deployment history** — Show recent workflow runs with success/failure timeline
+- **Log streaming** — Real-time backend logs in sidepanel (currently shows tail only)
+- **Environment editor** — Edit `.env` variables directly from sidepanel
+- **Model status dashboard** — Show which models are loaded/available on each endpoint

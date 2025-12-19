@@ -290,12 +290,23 @@ const ServerPanel: React.FC = () => {
           } else {
             openFullApp();
           }
+        } else if (e.key === 'b') {
+          e.preventDefault();
+          // Toggle backend start/stop
+          const isLocalChat = config.chatApiBaseUrl.includes('localhost') || config.chatApiBaseUrl.includes('127.0.0.1');
+          if (isLocalChat && !backendBusy) {
+            if (backendStatus.process === 'running') {
+              stopBackend();
+            } else {
+              startBackend();
+            }
+          }
         }
       }
     };
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [config.profile]);
+  }, [config.profile, config.chatApiBaseUrl, backendStatus.process, backendBusy]);
 
   // Close chat menu when clicking outside
   useEffect(() => {
@@ -328,7 +339,7 @@ const ServerPanel: React.FC = () => {
                 <h1 className="text-sm font-medium text-white truncate">
                   {getProfileDisplayName(config.profile)}
                 </h1>
-                <span title="Ctrl+P: cycle profiles | Ctrl+O: open chat">
+                <span title="Shortcuts: ⌘/Ctrl+P cycle profiles • ⌘/Ctrl+O open chat • ⌘/Ctrl+B toggle backend">
                   <HelpCircle className="w-3 h-3 text-slate-500 cursor-help flex-shrink-0" />
                 </span>
               </div>
@@ -419,7 +430,7 @@ const ServerPanel: React.FC = () => {
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
               }`}
-              title="Development mode (Ctrl+P)"
+              title="Development: Local chat server + cloud models. Best for testing code changes. (⌘/Ctrl+P to cycle)"
             >
               Dev
             </button>
@@ -430,9 +441,20 @@ const ServerPanel: React.FC = () => {
                   ? 'bg-blue-600 text-white'
                   : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
               }`}
-              title="Production mode (Ctrl+P)"
+              title="Production: Everything runs in the cloud. No local setup required. (⌘/Ctrl+P to cycle)"
             >
               Prod
+            </button>
+            <button
+              onClick={() => applyProfile('local_all')}
+              className={`px-2 py-0.5 rounded transition-colors ${
+                config.profile === 'local_all'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+              }`}
+              title="Offline: Fully local. Requires running model servers. (⌘/Ctrl+P to cycle)"
+            >
+              Local
             </button>
           </div>
 
@@ -514,37 +536,64 @@ const ServerPanel: React.FC = () => {
           </div>
         )}
 
-        {/* Quick Actions */}
-        <div className="flex gap-1.5">
-          <button
-            onClick={async () => {
-              if (config.profile !== 'local_chat_remote_models') {
-                applyProfile('local_chat_remote_models');
-                setTimeout(() => startBackend(), 500);
-              } else if (backendStatus.process !== 'running') {
-                startBackend();
-              }
-            }}
-            disabled={backendBusy}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-emerald-600/15 text-emerald-400 hover:bg-emerald-600/25 transition-colors disabled:opacity-50 flex-1"
-            title="Switch to dev mode and start backend"
-          >
-            <Zap className="w-3 h-3" />
-            Quick Dev
-          </button>
-          <button
-            onClick={() => {
-              const servicesList = buildServicesList(config);
-              setServices(servicesList);
-              checkHealth(servicesList);
-              addActivity('Refreshed all services', 'pending');
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-slate-700/30 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
-            title="Refresh all service health"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Refresh
-          </button>
+        {/* Quick Actions / One-Click Presets */}
+        <div className="space-y-1.5">
+          <div className="flex gap-1.5">
+            <button
+              onClick={async () => {
+                if (config.profile !== 'local_chat_remote_models') {
+                  applyProfile('local_chat_remote_models');
+                  setTimeout(() => startBackend(), 500);
+                } else if (backendStatus.process !== 'running') {
+                  startBackend();
+                }
+              }}
+              disabled={backendBusy}
+              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-emerald-600/15 text-emerald-400 hover:bg-emerald-600/25 transition-colors disabled:opacity-50 flex-1"
+              title="Switch to dev mode and start backend. Best for local development with cloud models."
+            >
+              <Zap className="w-3 h-3" />
+              Quick Dev
+            </button>
+            <button
+              onClick={restartBackend}
+              disabled={backendBusy || backendStatus.process !== 'running'}
+              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-blue-600/15 text-blue-400 hover:bg-blue-600/25 transition-colors disabled:opacity-50 flex-1"
+              title="Stop and restart the backend server. Use after code changes. (⌘/Ctrl+B toggles)"
+            >
+              <RotateCw className="w-3 h-3" />
+              Restart
+            </button>
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => {
+                applyProfile('local_all');
+                if (backendStatus.process !== 'running') {
+                  setTimeout(() => startBackend(), 500);
+                }
+              }}
+              disabled={backendBusy}
+              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-amber-600/15 text-amber-400 hover:bg-amber-600/25 transition-colors disabled:opacity-50 flex-1"
+              title="Switch to fully offline mode with local models. Requires model servers running."
+            >
+              <WifiOff className="w-3 h-3" />
+              Test Local
+            </button>
+            <button
+              onClick={() => {
+                const servicesList = buildServicesList(config);
+                setServices(servicesList);
+                checkHealth(servicesList);
+                addActivity('Refreshed all services', 'pending');
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded bg-slate-700/30 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
+              title="Check health of all model endpoints"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Refresh All
+            </button>
+          </div>
         </div>
 
         {/* Recent Activity Feed */}
@@ -581,7 +630,12 @@ const ServerPanel: React.FC = () => {
         <div className="space-y-4 mb-6">
           {/* Profile */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Environment Profile</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+              Environment Profile
+              <span title="Choose how chat and model services connect. Production uses cloud servers, Development runs chat locally with cloud models, Offline runs everything locally.">
+                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
+              </span>
+            </label>
             <div className="grid grid-cols-3 gap-2 mb-2">
               <button
                 onClick={() => applyProfile('remote_all')}
@@ -590,6 +644,7 @@ const ServerPanel: React.FC = () => {
                     ? 'border-blue-500 bg-blue-500/10'
                     : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                 }`}
+                title="Everything runs in the cloud. Zero setup required. Best for everyday use."
               >
                 <div className="text-xs font-medium text-white mb-1">Production</div>
                 <div className="text-[10px] text-slate-300">Chat: Cloud</div>
@@ -603,6 +658,7 @@ const ServerPanel: React.FC = () => {
                     ? 'border-emerald-500 bg-emerald-500/10'
                     : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                 }`}
+                title="Run chat server locally for development, but use cloud models. Click 'Start' in Backend tab to launch."
               >
                 <div className="text-xs font-medium text-white mb-1">Development</div>
                 <div className="text-[10px] text-slate-300">Chat: Local</div>
@@ -616,6 +672,7 @@ const ServerPanel: React.FC = () => {
                     ? 'border-amber-500 bg-amber-500/10'
                     : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                 }`}
+                title="Fully offline mode. Requires running model inference servers locally (make dev-interface-local)."
               >
                 <div className="text-xs font-medium text-white mb-1">Offline</div>
                 <div className="text-[10px] text-slate-300">Chat: Local</div>
@@ -637,7 +694,12 @@ const ServerPanel: React.FC = () => {
 
           {/* Chat API */}
           <div className="pt-3 border-t border-slate-700">
-            <label className="block text-sm font-medium text-slate-300 mb-1">Chat API Base URL</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
+              Chat API Base URL
+              <span title="The URL where the chat backend server runs. Use localhost:8080 for local development.">
+                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
+              </span>
+            </label>
             <input
               type="text"
               value={config.chatApiBaseUrl}
@@ -652,7 +714,12 @@ const ServerPanel: React.FC = () => {
 
           {/* GitHub Token */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">GitHub Token</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
+              GitHub Token
+              <span title="Personal Access Token with 'repo' and 'workflow' scopes. Required for GitHub Models API and triggering deployments.">
+                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
+              </span>
+            </label>
             <div className="relative">
               <input
                 type={showToken ? 'text' : 'password'}
@@ -688,6 +755,9 @@ const ServerPanel: React.FC = () => {
             <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
               <Globe className="w-4 h-4" />
               Models Base Domain
+              <span title="Base domain for model inference endpoints. Endpoints are constructed as https://[model].domain. Leave empty for localhost.">
+                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
+              </span>
             </label>
             <input
               type="text"
@@ -769,9 +839,13 @@ const ServerPanel: React.FC = () => {
                 ? 'border-blue-500 text-blue-400'
                 : 'border-transparent text-slate-400 hover:text-white'
                 }`}
+              title="Manage local backend server for development"
             >
               <Database className="w-3.5 h-3.5" />
               Backend
+              {backendStatus.process === 'running' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('deployments')}
@@ -779,6 +853,7 @@ const ServerPanel: React.FC = () => {
                 ? 'border-blue-500 text-blue-400'
                 : 'border-transparent text-slate-400 hover:text-white'
                 }`}
+              title="Trigger GitHub Actions to deploy chat interface or build model images"
             >
               <Rocket className="w-3.5 h-3.5" />
               Deploy
@@ -797,6 +872,7 @@ const ServerPanel: React.FC = () => {
                 ? 'border-blue-500 text-blue-400'
                 : 'border-transparent text-slate-400 hover:text-white'
                 }`}
+              title="Check health status of all model inference endpoints"
             >
               <Activity className="w-3.5 h-3.5" />
               Services
@@ -853,6 +929,9 @@ const ServerPanel: React.FC = () => {
                   <h2 className="text-sm font-medium text-slate-300 flex items-center gap-2">
                     <Activity className="w-4 h-4" />
                     Service Health
+                    <span title="Model inference endpoints health status">
+                      <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
+                    </span>
                   </h2>
                   <button
                     onClick={() => checkHealth(services)}
@@ -861,11 +940,37 @@ const ServerPanel: React.FC = () => {
                     Refresh
                   </button>
                 </div>
+
+                {/* Empty state when all services are down */}
+                {healthyCount === 0 && services.every(s => s.status === 'down') && (
+                  <div className="mb-4 p-4 text-center bg-slate-900/50 rounded-lg border border-slate-700/30">
+                    <WifiOff className="w-8 h-8 mx-auto mb-2 text-slate-600" />
+                    <p className="text-sm text-slate-400 mb-1">All services offline</p>
+                    <p className="text-xs text-slate-500 mb-3">
+                      {config.modelsBaseDomain 
+                        ? `Cannot reach ${config.modelsBaseDomain}` 
+                        : 'Local model servers are not running'}
+                    </p>
+                    {!config.modelsBaseDomain && (
+                      <button
+                        onClick={() => {
+                          applyProfile('local_chat_remote_models');
+                          addActivity('Switched to cloud models', 'success');
+                        }}
+                        className="px-3 py-1.5 text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded transition-colors"
+                      >
+                        Switch to Cloud Models
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   {services.map((service) => (
                     <div
                       key={service.key}
                       className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded"
+                      title={`Endpoint: ${service.endpoint}`}
                     >
                       <div className="flex items-center gap-2">
                         {getStatusIcon(service.status)}

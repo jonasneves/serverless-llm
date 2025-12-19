@@ -29,6 +29,7 @@ help:
 	@echo "Build:"
 	@echo "  make build-chat        Build chat interface image"
 	@echo "  make build-playground  Build playground React app (npm build)"
+	@echo "  make build-extension   Build Chrome extension (dist-extension/)"
 	@echo "  make build-qwen        Build Qwen model image"
 	@echo ""
 	@echo "Stop:"
