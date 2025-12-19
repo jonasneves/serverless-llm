@@ -65,10 +65,67 @@ export default function Header({
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [isLargeScreen, setIsLargeScreen] = useState(true);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [sliderWidth, setSliderWidth] = useState<number | null>(null);
+  const [sliderLeft, setSliderLeft] = useState<number>(0);
 
   const currentModeIndex = MODES.findIndex(m => m.value === mode);
   const safeIndex = currentModeIndex === -1 ? 0 : currentModeIndex;
   const currentModeLabel = MODES[safeIndex].label;
+
+  // Track window size for responsive slider calculation
+  useEffect(() => {
+    const checkSize = () => {
+      setIsLargeScreen(window.innerWidth >= 1024);
+    };
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
+
+  // Calculate slider position based on actual button widths
+  useEffect(() => {
+    if (!trackRef.current) return;
+
+    const updateSliderPosition = () => {
+      const track = trackRef.current;
+      if (!track) return;
+
+      const buttons = track.querySelectorAll('button[role="radio"]');
+      if (buttons.length === 0 || safeIndex >= buttons.length) return;
+
+      const activeButton = buttons[safeIndex] as HTMLElement;
+      const buttonRect = activeButton.getBoundingClientRect();
+      const trackRect = track.getBoundingClientRect();
+      
+      const buttonWidth = buttonRect.width;
+      const buttonLeft = buttonRect.left;
+      const trackLeft = trackRect.left;
+      
+      // Calculate position relative to track (buttons are already positioned accounting for track padding)
+      setSliderWidth(buttonWidth);
+      setSliderLeft(buttonLeft - trackLeft);
+    };
+
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(updateSliderPosition, 0);
+    
+    // Update on resize
+    const resizeObserver = new ResizeObserver(() => {
+      setTimeout(updateSliderPosition, 0);
+    });
+    resizeObserver.observe(trackRef.current);
+    
+    // Also listen to window resize for breakpoint changes
+    window.addEventListener('resize', updateSliderPosition);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateSliderPosition);
+    };
+  }, [mode, isLargeScreen, safeIndex]);
 
   // Close mobile menu on click outside
   useEffect(() => {
@@ -122,17 +179,18 @@ export default function Header({
 
             {/* Mode Toggle Track */}
             <div
-              className="relative flex p-1 rounded-lg bg-black/20 mode-track"
+              ref={trackRef}
+              className="relative flex p-0.5 lg:p-1 rounded-lg bg-black/20 mode-track"
               role="radiogroup"
               aria-label="Mode selection"
               data-gesture-mode-track="true"
             >
               {/* Sliding indicator */}
               <div
-                className="absolute top-1 bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
+                className="absolute top-0.5 bottom-0.5 lg:top-1 lg:bottom-1 rounded-md transition-all duration-300 ease-out mode-slider"
                 style={{
-                  width: `calc((100% - 8px) / ${MODES.length})`,
-                  left: `calc(4px + (100% - 8px) * ${safeIndex} / ${MODES.length})`
+                  width: sliderWidth !== null ? `${sliderWidth}px` : `calc((100% - ${isLargeScreen ? '8px' : '4px'}) / ${MODES.length})`,
+                  left: sliderWidth !== null ? `${sliderLeft}px` : `calc(${isLargeScreen ? '4px' : '2px'} + (100% - ${isLargeScreen ? '8px' : '4px'}) * ${safeIndex} / ${MODES.length})`
                 }}
               />
               {MODES.map(m => (
@@ -144,7 +202,7 @@ export default function Header({
                   aria-checked={mode === m.value}
                   aria-label={m.label}
                   title={m.label}
-                  className={`relative z-10 py-2 sm:py-1.5 px-2 lg:px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center gap-1.5 ${mode === m.value
+                  className={`relative z-10 py-1.5 px-1.5 lg:px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center gap-1 lg:gap-1.5 ${mode === m.value
                     ? 'text-white'
                     : 'text-slate-400 hover:text-slate-200'
                     }`}

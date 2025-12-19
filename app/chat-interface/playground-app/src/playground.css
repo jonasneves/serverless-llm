@@ -104,15 +104,22 @@
 /* When in icon-only mode (below lg breakpoint), make track more compact */
 @media (max-width: 1023px) {
   .mode-track {
-    max-width: min(280px, 85vw);
+    max-width: min(240px, 85vw);
   }
 }
 
 .mode-slider {
-  width: calc((100% - 8px) / 3);
+  /* Width and left position are calculated inline based on number of modes */
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.4));
   box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Adjust slider for icon-only mode */
+@media (max-width: 1023px) {
+  .mode-slider {
+    /* Smaller padding in icon-only mode is handled by inline styles */
+  }
 }
 
 .topics-scroll {
