@@ -96,7 +96,16 @@
 }
 
 .mode-track {
-  width: min(500px, 90vw);
+  width: auto;
+  min-width: fit-content;
+  max-width: min(500px, 90vw);
+}
+
+/* When in icon-only mode (below lg breakpoint), make track more compact */
+@media (max-width: 1023px) {
+  .mode-track {
+    max-width: min(280px, 85vw);
+  }
 }
 
 .mode-slider {

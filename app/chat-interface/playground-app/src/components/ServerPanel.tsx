@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Globe, Eye, EyeOff, Rocket, Database, HelpCircle, WifiOff } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Globe, Eye, EyeOff, Rocket, Database, HelpCircle, WifiOff, Sparkles, ExternalLink, Zap } from 'lucide-react';
 import { SERVICES, buildEndpoint, EnvConfig, ProfileId, normalizeEnvConfig } from '../hooks/useExtensionConfig';
 import DeploymentsPanel from './DeploymentsPanel';
 
@@ -12,10 +12,10 @@ interface ServiceHealth {
 
 const DEFAULT_CONFIG: EnvConfig = {
   githubToken: '',
-  profile: 'local_all',
+  profile: 'local_chat_remote_models',
   chatApiBaseUrl: 'http://localhost:8080',
-  modelsBaseDomain: '',
-  modelsUseHttps: false,
+  modelsBaseDomain: 'neevs.io',
+  modelsUseHttps: true,
 };
 
 type Tab = 'backend' | 'deployments' | 'services';
@@ -30,6 +30,13 @@ function buildAllEndpoints(baseDomain: string, useHttps: boolean): Record<string
   }
   return endpoints;
 }
+
+// Status glow colors
+const STATUS_GLOW = {
+  ok: 'shadow-[0_0_8px_rgba(34,197,94,0.6)]',
+  down: 'shadow-[0_0_8px_rgba(239,68,68,0.6)]',
+  checking: 'shadow-[0_0_8px_rgba(59,130,246,0.6)]',
+};
 
 const ServerPanel: React.FC = () => {
   const [services, setServices] = useState<ServiceHealth[]>([]);
@@ -180,33 +187,20 @@ const ServerPanel: React.FC = () => {
     });
   };
 
-  const getStatusIcon = (status: string) => {
-    if (status === 'ok') return <CheckCircle className="w-4 h-4 text-green-500" />;
-    if (status === 'down') return <AlertCircle className="w-4 h-4 text-red-500" />;
-    return <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />;
-  };
-
   const healthyCount = services.filter(s => s.status === 'ok').length;
   const isUsingRemoteModels = !!config.modelsBaseDomain;
 
   const getProfileIndicatorStyle = () => {
-    const profiles: ProfileId[] = ['local_chat_remote_models', 'remote_all', 'local_all'];
+    const profiles: ProfileId[] = ['local_chat_remote_models', 'remote_all'];
     const index = profiles.indexOf(config.profile as ProfileId);
-    if (index === -1) return { left: '2px', width: 'calc(33.33% - 4px)' };
-    return { left: `calc(${index * 33.33}% + 2px)`, width: 'calc(33.33% - 4px)' };
+    if (index === -1) return { left: '2px', width: 'calc(50% - 4px)' };
+    return { left: `calc(${index * 50}% + 2px)`, width: 'calc(50% - 4px)' };
   };
 
   const getTabIndicatorStyle = () => {
     const tabs: Tab[] = ['backend', 'deployments', 'services'];
     const index = tabs.indexOf(activeTab);
     return { left: `calc(${index * 33.33}% + 3px)`, width: 'calc(33.33% - 6px)' };
-  };
-
-  const getProfileSliderClass = () => {
-    if (config.profile === 'local_chat_remote_models') return 'profile-slider dev';
-    if (config.profile === 'remote_all') return 'profile-slider prod';
-    if (config.profile === 'local_all') return 'profile-slider local';
-    return 'profile-slider dev';
   };
 
   const openChat = () => {
@@ -240,17 +234,6 @@ const ServerPanel: React.FC = () => {
       saveConfig();
       return;
     }
-    if (profile === 'local_all') {
-      setConfig({
-        ...config,
-        profile,
-        chatApiBaseUrl: 'http://localhost:8080',
-        modelsBaseDomain: '',
-        modelsUseHttps: false,
-      });
-      saveConfig();
-      return;
-    }
     setConfig({ ...config, profile: 'custom' });
   };
 
@@ -278,7 +261,7 @@ const ServerPanel: React.FC = () => {
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 'p') {
           e.preventDefault();
-          const profiles: ProfileId[] = ['remote_all', 'local_chat_remote_models', 'local_all'];
+          const profiles: ProfileId[] = ['local_chat_remote_models', 'remote_all'];
           const currentIndex = profiles.indexOf(config.profile as ProfileId);
           const nextIndex = (currentIndex + 1) % profiles.length;
           applyProfile(profiles[nextIndex]);
@@ -304,75 +287,126 @@ const ServerPanel: React.FC = () => {
   }, [config.profile, config.chatApiBaseUrl, backendStatus.process, backendBusy, activeTab, showConfig]);
 
   return (
-    <div className="min-h-screen font-sans bg-slate-950 text-slate-100">
-      {/* Unified Header */}
-      <div className="server-header">
-        {/* Profile Switcher */}
-        <div className="profile-track" title="⌘/Ctrl+P to cycle profiles">
-          <div className={getProfileSliderClass()} style={getProfileIndicatorStyle()} />
-          <button
-            onClick={() => applyProfile('local_chat_remote_models')}
-            className={`profile-btn ${config.profile === 'local_chat_remote_models' ? 'active' : ''}`}
-          >
-            Dev
-          </button>
-          <button
-            onClick={() => applyProfile('remote_all')}
-            className={`profile-btn ${config.profile === 'remote_all' ? 'active' : ''}`}
-          >
-            Prod
-          </button>
-          <button
-            onClick={() => applyProfile('local_all')}
-            className={`profile-btn ${config.profile === 'local_all' ? 'active' : ''}`}
-          >
-            Local
-          </button>
-        </div>
+    <div className="min-h-screen font-sans bg-slate-950 text-slate-100 relative overflow-hidden">
+      {/* Subtle gradient background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5" />
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(148, 163, 184, 0.4) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+      </div>
+      
+      {/* Premium Header with Glassmorphism */}
+      <div className="relative z-10 px-4 py-3 bg-slate-900/80 backdrop-blur-xl border-b border-white/5">
+        <div className="flex items-center justify-between gap-3">
+          {/* Logo/Brand */}
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Zap className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-semibold text-white/90 tracking-tight">Serverless LLM</span>
+          </div>
+          
+          {/* Profile Switcher - Pill Style */}
+          <div className="flex items-center gap-2">
+            <div 
+              className="relative flex p-0.5 bg-slate-800/60 rounded-full border border-slate-700/40" 
+              title="⌘/Ctrl+P to cycle profiles"
+            >
+              <div 
+                className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out ${
+                  config.profile === 'remote_all' 
+                    ? 'bg-gradient-to-r from-blue-500/40 to-blue-600/40 border border-blue-500/30' 
+                    : 'bg-gradient-to-r from-emerald-500/40 to-emerald-600/40 border border-emerald-500/30'
+                }`}
+                style={getProfileIndicatorStyle()}
+              />
+              <button
+                onClick={() => applyProfile('local_chat_remote_models')}
+                className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${
+                  config.profile === 'local_chat_remote_models' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Dev
+              </button>
+              <button
+                onClick={() => applyProfile('remote_all')}
+                className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${
+                  config.profile === 'remote_all' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Prod
+              </button>
+            </div>
 
-        {/* Settings */}
-        <button
-          onClick={() => setShowConfig(!showConfig)}
-          className="icon-btn"
-          title="Settings"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+            {/* Settings Button */}
+            <button
+              onClick={() => setShowConfig(!showConfig)}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
+                showConfig 
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Settings"
+            >
+              <Settings className={`w-4 h-4 transition-transform duration-300 ${showConfig ? 'rotate-90' : ''}`} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Premium Style */}
       {!showConfig && (
-        <div className="p-3 pb-0">
-          <div className="server-tabs relative flex">
-            <div className="mode-slider absolute top-[3px] bottom-[3px] rounded-md transition-all duration-300" style={getTabIndicatorStyle()} />
+        <div className="relative z-10 px-4 pt-4 pb-2">
+          <div className="relative flex p-1 bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
+            {/* Animated sliding indicator */}
+            <div 
+              className="absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/20 transition-all duration-300 ease-out"
+              style={getTabIndicatorStyle()}
+            />
+            
             <button
               onClick={() => setActiveTab('backend')}
-              className={`mode-btn ${activeTab === 'backend' ? 'active' : ''}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${
+                activeTab === 'backend' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <Database className="w-3.5 h-3.5" />
+              <Database className={`w-3.5 h-3.5 transition-colors ${activeTab === 'backend' ? 'text-blue-400' : ''}`} />
               Backend
             </button>
+            
             <button
               onClick={() => setActiveTab('deployments')}
-              className={`mode-btn ${activeTab === 'deployments' ? 'active' : ''}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${
+                activeTab === 'deployments' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <Rocket className="w-3.5 h-3.5" />
+              <Rocket className={`w-3.5 h-3.5 transition-colors ${activeTab === 'deployments' ? 'text-purple-400' : ''}`} />
               Deploy
             </button>
+            
             <button
               onClick={() => {
                 setActiveTab('services');
                 checkHealth(services);
               }}
-              className={`mode-btn ${activeTab === 'services' ? 'active' : ''}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${
+                activeTab === 'services' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <Activity className="w-3.5 h-3.5" />
+              <Activity className={`w-3.5 h-3.5 transition-colors ${activeTab === 'services' ? 'text-emerald-400' : ''}`} />
               Services
               {services.length > 0 && (
-                <span className={`ml-1 px-1.5 py-0.5 text-[10px] rounded ${
-                  healthyCount === services.length ? 'bg-green-600/30 text-green-300' :
-                  healthyCount > 0 ? 'bg-amber-600/30 text-amber-300' :
-                  'bg-red-600/30 text-red-300'
+                <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded-full ${
+                  healthyCount === services.length 
+                    ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                    : healthyCount > 0 
+                      ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30' 
+                      : 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
                 }`}>
                   {healthyCount}/{services.length}
                 </span>
@@ -383,10 +417,17 @@ const ServerPanel: React.FC = () => {
       )}
 
       {showConfig ? (
-        <div className="p-3 space-y-3">
+        <div className="relative z-10 p-4 space-y-4">
+          {/* Settings Header */}
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-700/30">
+            <Sparkles className="w-4 h-4 text-blue-400" />
+            <h2 className="text-sm font-semibold text-white">Configuration</h2>
+          </div>
+          
           {/* GitHub Token - Most Important */}
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+          <div className="p-3 rounded-xl bg-slate-800/40 backdrop-blur-sm border border-slate-700/30">
+            <label className="flex items-center gap-2 text-xs font-medium text-slate-200 mb-2">
+              <Globe className="w-3.5 h-3.5 text-purple-400" />
               GitHub Token
             </label>
             <div className="relative">
@@ -394,69 +435,76 @@ const ServerPanel: React.FC = () => {
                 type={showToken ? 'text' : 'password'}
                 value={config.githubToken}
                 onChange={(e) => setConfig({ ...config, githubToken: e.target.value })}
-                className="w-full px-2.5 py-1.5 pr-8 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 pr-10 bg-slate-900/60 border border-slate-600/40 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 transition-all"
                 placeholder="github_pat_..."
               />
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
               >
-                {showToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
             {!config.githubToken && (
-              <p className="text-[10px] text-amber-400/80 mt-1">
+              <p className="flex items-center gap-1.5 mt-2 text-[11px] text-amber-400/90">
+                <AlertCircle className="w-3 h-3" />
                 Required for deployments.{' '}
                 <a
                   href="https://github.com/settings/tokens/new?description=Serverless+LLM+Extension&scopes=repo,workflow&default_expires_at=none"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline hover:text-amber-300"
+                  className="underline hover:text-amber-300 inline-flex items-center gap-1"
                 >
-                  Create token →
+                  Create token <ExternalLink className="w-2.5 h-2.5" />
                 </a>
+              </p>
+            )}
+            {config.githubToken && (
+              <p className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-400/90">
+                <CheckCircle className="w-3 h-3" />
+                Token configured
               </p>
             )}
           </div>
 
           {/* Advanced Settings - Collapsible */}
           <details className="group">
-            <summary className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-pointer hover:text-slate-300">
-              <span className="group-open:rotate-90 transition-transform">▶</span>
+            <summary className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
+              <span className="group-open:rotate-90 transition-transform duration-200">▶</span>
               Advanced Settings
             </summary>
-            <div className="mt-3 space-y-3 pl-4 border-l border-slate-700/50">
+            <div className="mt-3 p-3 space-y-3 rounded-xl bg-slate-800/30 border border-slate-700/20">
               {/* Chat API */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Chat API URL</label>
+                <label className="block text-[11px] text-slate-400 mb-1.5">Chat API URL</label>
                 <input
                   type="text"
                   value={config.chatApiBaseUrl}
                   onChange={(e) => setConfig({ ...config, profile: 'custom', chatApiBaseUrl: e.target.value })}
-                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-900/60 border border-slate-600/40 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 transition-all"
                   placeholder="http://localhost:8080"
                 />
               </div>
 
               {/* Models Domain */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Models Domain</label>
+                <label className="block text-[11px] text-slate-400 mb-1.5">Models Domain</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={config.modelsBaseDomain}
                     onChange={(e) => setConfig({ ...config, profile: 'custom', modelsBaseDomain: e.target.value.trim() })}
-                    className="flex-1 px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    className="flex-1 px-3 py-2 bg-slate-900/60 border border-slate-600/40 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     placeholder="neevs.io (or empty for localhost)"
                   />
                   {config.modelsBaseDomain && (
-                    <label className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                    <label className="flex items-center gap-1.5 px-3 py-2 bg-slate-900/60 border border-slate-600/40 rounded-lg text-[11px] text-slate-300 cursor-pointer hover:border-slate-500/60 transition-colors">
                       <input
                         type="checkbox"
                         checked={config.modelsUseHttps}
                         onChange={(e) => setConfig({ ...config, profile: 'custom', modelsUseHttps: e.target.checked })}
-                        className="w-3 h-3 rounded bg-slate-800 border-slate-700"
+                        className="w-3.5 h-3.5 rounded bg-slate-800 border-slate-600 accent-blue-500"
                       />
                       HTTPS
                     </label>
@@ -469,13 +517,13 @@ const ServerPanel: React.FC = () => {
           {/* Save Button */}
           <button
             onClick={saveConfig}
-            className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+            className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl text-sm font-medium text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all active:scale-[0.98]"
           >
-            Save
+            Save Configuration
           </button>
         </div>
       ) : (
-        <div className="p-3 pt-0">
+        <div className="relative z-10 px-4 pb-4">
           {activeTab === 'backend' ? (
             <DeploymentsPanel
               githubToken={config.githubToken}
@@ -496,57 +544,75 @@ const ServerPanel: React.FC = () => {
             />
           ) : (
             <>
-              {/* Connection Status Summary */}
-              <div className="mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+              {/* Connection Status Summary - Premium Card */}
+              <div className="mb-4 p-4 rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-800/40 backdrop-blur-sm border border-slate-700/30 shadow-xl shadow-black/10">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm text-slate-300">
-                      {isUsingRemoteModels ? config.modelsBaseDomain : 'localhost'}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      healthyCount === services.length 
+                        ? 'bg-emerald-500/20 text-emerald-400' 
+                        : healthyCount > 0 
+                          ? 'bg-amber-500/20 text-amber-400' 
+                          : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      <Globe className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {isUsingRemoteModels ? config.modelsBaseDomain : 'localhost'}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {healthyCount === services.length 
+                          ? 'All services healthy' 
+                          : healthyCount > 0 
+                            ? 'Some services unavailable' 
+                            : 'Services offline'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500">
-                    {healthyCount}/{services.length} online
+                  <div className="flex items-center gap-2">
+                    <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      healthyCount === services.length 
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                        : healthyCount > 0 
+                          ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30' 
+                          : 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
+                    }`}>
+                      {healthyCount}/{services.length}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Service Health */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                    <Activity className="w-4 h-4" />
+                  <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-400" />
                     Service Health
                     <span title="Model inference endpoints health status">
-                      <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
+                      <HelpCircle className="w-3 h-3 text-slate-500 cursor-help hover:text-slate-300 transition-colors" />
                     </span>
                   </h2>
                   <button
                     onClick={() => checkHealth(services)}
-                    className="text-xs text-slate-400 hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                   >
+                    <RefreshCw className="w-3 h-3" />
                     Refresh
                   </button>
                 </div>
 
                 {/* Empty state when all services are down */}
                 {healthyCount === 0 && services.every(s => s.status === 'down') && (
-                  <div className="mb-4 p-4 text-center bg-slate-900/50 rounded-lg border border-slate-700/30">
-                    <WifiOff className="w-8 h-8 mx-auto mb-2 text-slate-600" />
-                    <p className="text-sm text-slate-400 mb-1">All services offline</p>
-                    <p className="text-xs text-slate-500 mb-3">
-                      {config.modelsBaseDomain 
-                        ? `Cannot reach ${config.modelsBaseDomain}` 
-                        : 'Local model servers are not running'}
+                  <div className="mb-4 p-6 text-center rounded-2xl bg-slate-900/60 border border-slate-700/30">
+                    <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-slate-800/60 flex items-center justify-center">
+                      <WifiOff className="w-7 h-7 text-slate-500" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-300 mb-1">All services offline</p>
+                    <p className="text-xs text-slate-500">
+                      Cannot reach {config.modelsBaseDomain || 'model servers'}
                     </p>
-                    {!config.modelsBaseDomain && (
-                      <button
-                        onClick={() => applyProfile('local_chat_remote_models')}
-                        className="px-3 py-1.5 text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded transition-colors"
-                      >
-                        Switch to Cloud Models
-                      </button>
-                    )}
                   </div>
                 )}
 
@@ -554,20 +620,27 @@ const ServerPanel: React.FC = () => {
                   {services.map((service) => (
                     <div
                       key={service.key}
-                      className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded"
+                      className="group flex items-center justify-between px-3 py-2.5 bg-slate-800/40 hover:bg-slate-800/60 rounded-xl border border-transparent hover:border-slate-700/40 transition-all cursor-default"
                       title={`Endpoint: ${service.endpoint}`}
                     >
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(service.status)}
-                        <span className="text-sm">{service.name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          service.status === 'ok' 
+                            ? `bg-emerald-400 ${STATUS_GLOW.ok}` 
+                            : service.status === 'down' 
+                              ? `bg-red-400 ${STATUS_GLOW.down}` 
+                              : `bg-blue-400 ${STATUS_GLOW.checking} animate-pulse`
+                        }`} />
+                        <span className="text-sm text-slate-200 group-hover:text-white transition-colors">{service.name}</span>
                       </div>
-                      <span className="text-xs text-slate-500 truncate max-w-[120px]" title={service.endpoint}>
+                      <span className="text-[11px] text-slate-500 group-hover:text-slate-400 truncate max-w-[140px] transition-colors" title={service.endpoint}>
                         {service.endpoint.replace('https://', '').replace('http://', '')}
                       </span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 text-xs text-slate-500">
+                <div className="mt-3 text-[11px] text-slate-500 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
                   Last check: {lastCheck.toLocaleTimeString()}
                 </div>
               </div>
