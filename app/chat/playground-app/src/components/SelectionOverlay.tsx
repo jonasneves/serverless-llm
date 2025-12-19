@@ -16,7 +16,7 @@ export default function SelectionOverlay({ rect }: SelectionOverlayProps) {
 
     return (
         <div
-            className="absolute pointer-events-none z-40"
+            className="absolute pointer-events-none z-30"
             style={{
                 left: rect.left,
                 top: rect.top,
