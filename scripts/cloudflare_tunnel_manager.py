@@ -205,19 +205,17 @@ class CloudflareTunnelManager:
             existing_content = record.get("content", "").rstrip(".")  # Remove trailing dot if present
             dns_target_clean = dns_target.rstrip(".")
             
-            # Only update if content is different
-            if existing_content != dns_target_clean:
-                # Preserve existing record properties
+            # Only update if content is different or proxy is disabled
+            existing_proxied = record.get("proxied", False)
+            if existing_content != dns_target_clean or not existing_proxied:
+                # Update record with proxied enabled (tunnels require proxy)
                 data = {
                     "name": record_name,
                     "type": "CNAME",
                     "content": dns_target,
-                    "ttl": record.get("ttl", 1),  # Preserve existing TTL
+                    "ttl": 1,  # Auto
+                    "proxied": True,  # Tunnels require Cloudflare proxy
                 }
-                
-                # Preserve proxied status if it exists
-                if "proxied" in record:
-                    data["proxied"] = record["proxied"]
                 
                 try:
                     response = requests.put(
@@ -247,12 +245,13 @@ class CloudflareTunnelManager:
                 # Record already exists with correct content
                 return record
         else:
-            # Create new record
+            # Create new record with proxied enabled (matches tunnel connector behavior)
             data = {
                 "name": record_name,
                 "type": "CNAME",
                 "content": dns_target,
                 "ttl": 1,  # Auto
+                "proxied": True,  # Enable Cloudflare proxy for tunnel
             }
             response = requests.post(records_url, headers=self.headers, json=data)
             response.raise_for_status()
