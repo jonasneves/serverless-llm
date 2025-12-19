@@ -12,6 +12,7 @@ on:
       - 'app/*/requirements.txt'
       - 'app/*/inference_server.py'
       - 'app/chat-interface/**'
+      - 'config/**'
       - 'docker/cloudflared/**'
       - '.github/workflows/build-push-images.yml'
   workflow_dispatch:
@@ -155,7 +156,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || matrix.model == 'chat-interface' && './app/chat-interface' || './app' }}
+          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || matrix.model == 'chat-interface' && '.' || './app' }}
           file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat-interface' && './app/chat-interface/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
           build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat-interface' && format('MODEL_DIR={0}', matrix.model) || '' }}
           push: true

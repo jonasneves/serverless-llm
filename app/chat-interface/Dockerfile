@@ -4,7 +4,7 @@ FROM node:20-alpine AS playground-builder
 WORKDIR /app
 
 # Copy playground package files first (for better layer caching)
-COPY playground-app/package*.json ./playground-app/
+COPY app/chat-interface/playground-app/package*.json ./playground-app/
 WORKDIR /app/playground-app
 
 # Install dependencies
@@ -12,7 +12,7 @@ RUN npm ci
 
 # Copy playground source files
 WORKDIR /app
-COPY playground-app/ ./playground-app/
+COPY app/chat-interface/playground-app/ ./playground-app/
 WORKDIR /app/playground-app
 
 # Build playground (outputs to ../static/playground, which becomes /app/static/playground)
@@ -29,7 +29,7 @@ WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
+COPY app/chat-interface/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 3: Runtime
@@ -46,25 +46,26 @@ WORKDIR /app
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy application code
+# Copy application code (paths relative to project root since context is now '.')
 # Copy all Python files and JSON config
-COPY --chown=appuser:appuser *.py .
-COPY --chown=appuser:appuser *.json .
+COPY --chown=appuser:appuser app/chat-interface/*.py .
+COPY --chown=appuser:appuser app/chat-interface/*.json .
 # Copy directories
-COPY --chown=appuser:appuser core ./core
-COPY --chown=appuser:appuser utils ./utils
-COPY --chown=appuser:appuser api ./api
-COPY --chown=appuser:appuser services ./services
-COPY --chown=appuser:appuser prompts ./prompts
-COPY --chown=appuser:appuser clients ./clients
-COPY --chown=appuser:appuser middleware ./middleware
-COPY --chown=appuser:appuser engines ./engines
+COPY --chown=appuser:appuser app/chat-interface/core ./core
+COPY --chown=appuser:appuser app/chat-interface/utils ./utils
+COPY --chown=appuser:appuser app/chat-interface/api ./api
+COPY --chown=appuser:appuser app/chat-interface/services ./services
+COPY --chown=appuser:appuser app/chat-interface/prompts ./prompts
+COPY --chown=appuser:appuser app/chat-interface/clients ./clients
+COPY --chown=appuser:appuser app/chat-interface/middleware ./middleware
+COPY --chown=appuser:appuser app/chat-interface/engines ./engines
+COPY --chown=appuser:appuser app/chat-interface/tools ./tools
+# Copy config module from project root (Single Source of Truth)
+COPY --chown=appuser:appuser config ./config
 # Copy static files (excluding playground, which will be copied from builder)
-COPY --chown=appuser:appuser static ./static
-# Copy pre-built playground from playground-builder stage (overwrites any existing playground)
-# The playground build outputs to ../static/playground relative to playground-app, so it's at /app/static/playground
+COPY --chown=appuser:appuser app/chat-interface/static ./static
+# Copy pre-built playground from playground-builder stage
 COPY --from=playground-builder --chown=appuser:appuser /app/static/playground ./static/playground
-COPY --chown=appuser:appuser tools ./tools
 
 # Switch to non-root user
 USER appuser
