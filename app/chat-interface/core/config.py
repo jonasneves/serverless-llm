@@ -1,66 +1,21 @@
-import os
-from urllib.parse import urlparse
-from constants import DEFAULT_LOCAL_ENDPOINTS
+"""
+Model endpoint configuration for chat-interface.
 
-# Models ordered by capability (Dec 2025 benchmarks)
-MODEL_CONFIG = (
-    {  # Rank 1: Multilingual (119 langs), 1M context, reasoning, coding
-        "id": "qwen3-4b",
-        "name": "Qwen3 4B",
-        "env": "QWEN_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["QWEN_API_URL"],
-        "default": True,
-        "service": "qwen",
-    },
-    {  # Rank 2: o1-preview level reasoning, 96.3% Codeforces
-        "id": "deepseek-r1-distill-qwen-1.5b",
-        "name": "DeepSeek R1 1.5B",
-        "env": "R1QWEN_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["R1QWEN_API_URL"],
-        "service": "r1qwen",
-    },
-    {  # Rank 3: On-device efficiency, reasoning, safety-aligned
-        "id": "gemma-2-9b-instruct",
-        "name": "Gemma 2 9B",
-        "env": "GEMMA_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["GEMMA_API_URL"],
-    },
-    {  # Rank 4: Instruction-following, structured output, function calling
-        "id": "mistral-7b-instruct-v0.3",
-        "name": "Mistral 7B v0.3",
-        "env": "MISTRAL_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["MISTRAL_API_URL"],
-    },
-    {  # Rank 5: Compact reasoning, synthetic data efficiency
-        "id": "phi-3-mini",
-        "name": "Phi-3 Mini",
-        "env": "PHI_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["PHI_API_URL"],
-    },
-    {  # Rank 6: Tool-calling, agentic (70% SWE-Bench)
-        "id": "rnj-1-instruct",
-        "name": "RNJ-1 Instruct",
-        "env": "RNJ_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["RNJ_API_URL"],
-        "service": "rnj",
-    },
-    {  # Rank 7: Lightweight chat, creative writing, long context
-        "id": "llama-3.2-3b",
-        "name": "Llama 3.2-3B",
-        "env": "LLAMA_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["LLAMA_API_URL"],
-    },
-    {  # Rank 8: Function calling specialist, edge-optimized
-        "id": "functiongemma-270m-it",
-        "name": "FunctionGemma 270M",
-        "env": "FUNCTIONGEMMA_API_URL",
-        "default_url": DEFAULT_LOCAL_ENDPOINTS["FUNCTIONGEMMA_API_URL"],
-        "service": "functiongemma",
-    },
-)
+Uses config/models.py as the Single Source of Truth, with runtime
+endpoint resolution based on environment variables and BASE_DOMAIN.
+"""
+
+import os
+import sys
+from pathlib import Path
+from urllib.parse import urlparse
+
+# Add project root to path for config import
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
+from config.models import get_inference_models, get_default_model, ModelConfig
 
 # Base domain configuration for production (Cloudflare tunnels)
-# Accepts raw hostnames ("neevs.io") or full URLs ("https://neevs.io")
 RAW_BASE_DOMAIN = os.getenv("BASE_DOMAIN", "").strip()
 BASE_DOMAIN = ""
 BASE_SCHEME = "https"
@@ -73,37 +28,51 @@ if RAW_BASE_DOMAIN:
         candidate = (parsed.netloc or parsed.path).strip()
     BASE_DOMAIN = candidate.rstrip("/")
 
-def build_service_url(service: str) -> str:
-    """Construct a service URL using the normalized base domain."""
-    return f"{BASE_SCHEME}://{service}.{BASE_DOMAIN}"
 
-def get_endpoint(config):
-    """Get endpoint URL for a service, prioritization: Env Var > Base Domain > Default."""
+def get_endpoint(model: ModelConfig) -> str:
+    """Get endpoint URL for a model.
+    
+    Priority: Environment Variable > BASE_DOMAIN > Local Default
+    """
     # 1. Specific Env Var (e.g. QWEN_API_URL)
-    if os.getenv(config["env"]):
-        return os.getenv(config["env"])
+    env_value = os.getenv(model.env_var)
+    if env_value:
+        return env_value
 
     # 2. Base Domain (if configured)
     if BASE_DOMAIN:
-        # Allow explicit service override, otherwise derive from model ID
-        # Qwen IDs include version numbers (e.g., qwen2.5), so we need to map them to "qwen"
-        service = config.get("service") or config["id"].split("-")[0].split(".")[0]
-        return build_service_url(service)
+        return f"{BASE_SCHEME}://{model.subdomain}.{BASE_DOMAIN}"
     
     # 3. Default Local URL
-    return config["default_url"]
+    return model.service_url
 
-MODEL_ENDPOINTS = {
-    config["id"]: get_endpoint(config)
-    for config in MODEL_CONFIG
-}
 
-MODEL_DISPLAY_NAMES = {
-    config["id"]: config["name"]
-    for config in MODEL_CONFIG
-}
-
-DEFAULT_MODEL_ID = next(
-    (config["id"] for config in MODEL_CONFIG if config.get("default")),
-    MODEL_CONFIG[0]["id"] if MODEL_CONFIG else None,
+# Build MODEL_CONFIG tuple for backward compatibility
+# Sorted by rank (capability)
+MODEL_CONFIG = tuple(
+    {
+        "id": m.model_id,
+        "name": m.display_name,
+        "env": m.env_var,
+        "default_url": m.service_url,
+        "service": m.name,
+        "default": m.default,
+        "rank": m.rank,
+    }
+    for m in get_inference_models()
 )
+
+# Model endpoints dict
+MODEL_ENDPOINTS = {
+    m.model_id: get_endpoint(m)
+    for m in get_inference_models()
+}
+
+# Display names dict
+MODEL_DISPLAY_NAMES = {
+    m.model_id: m.display_name
+    for m in get_inference_models()
+}
+
+# Default model ID
+DEFAULT_MODEL_ID = get_default_model().model_id

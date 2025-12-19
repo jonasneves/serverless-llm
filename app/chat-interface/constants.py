@@ -1,30 +1,28 @@
 """
-Shared constants for chat-interface defaults to avoid drift.
+Shared constants for chat-interface.
+
+Ports and endpoints are derived from config/models.py (Single Source of Truth).
 """
 
-# Local default endpoints (ports match config/models.py scheme)
-# 8080: Chat, 81XX: Small, 82XX: Medium, 83XX: Reasoning
+import sys
+from pathlib import Path
+
+# Add project root to path for config import
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from config.models import MODELS, get_inference_models, ModelCategory
+
+# Local default endpoints (derived from config/models.py)
 DEFAULT_LOCAL_ENDPOINTS = {
-    "QWEN_API_URL": "http://localhost:8100",
-    "PHI_API_URL": "http://localhost:8101",
-    "FUNCTIONGEMMA_API_URL": "http://localhost:8103",
-    "GEMMA_API_URL": "http://localhost:8200",
-    "LLAMA_API_URL": "http://localhost:8201",
-    "MISTRAL_API_URL": "http://localhost:8202",
-    "RNJ_API_URL": "http://localhost:8203",
-    "R1QWEN_API_URL": "http://localhost:8300",
+    m.env_var: m.service_url
+    for m in MODELS.values() if m.category != ModelCategory.CORE
 }
 
-# Remote hosted defaults
+# Remote hosted defaults (derived from config/models.py)
+# Uses neevs.io as the default domain
 DEFAULT_REMOTE_ENDPOINTS = {
-    "QWEN_API_URL": "https://qwen.neevs.io",
-    "PHI_API_URL": "https://phi.neevs.io",
-    "FUNCTIONGEMMA_API_URL": "https://functiongemma.neevs.io",
-    "GEMMA_API_URL": "https://gemma.neevs.io",
-    "LLAMA_API_URL": "https://llama.neevs.io",
-    "MISTRAL_API_URL": "https://mistral.neevs.io",
-    "RNJ_API_URL": "https://rnj.neevs.io",
-    "R1QWEN_API_URL": "https://r1qwen.neevs.io",
+    m.env_var: m.remote_url("neevs.io")
+    for m in MODELS.values() if m.category != ModelCategory.CORE
 }
 
 # GitHub Models API endpoint
@@ -32,8 +30,8 @@ GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
 
 # Generation defaults - keep in sync with playground-app/src/constants.ts
 GENERATION_DEFAULTS = {
-    "max_tokens": 1024,     # Reasonable default for comparison
-    "temperature": 0.7,     # Balanced creativity/coherence
+    "max_tokens": 1024,
+    "temperature": 0.7,
 }
 
 # Standard event types for streaming
