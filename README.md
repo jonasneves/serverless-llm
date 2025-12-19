@@ -7,6 +7,7 @@
 [![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
 [![RNJ API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/rnj-1-instruct)](https://rnj.neevs.io/health)
 [![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
+[![FunctionGemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/functiongemma-270m-it)](https://functiongemma.neevs.io/health)
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
@@ -18,7 +19,7 @@ Serverless LLM inference on GitHub Actions free tier (unlimited minutes for publ
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: 7 models ranked by capability (see table below)
+- **Multi-Model Support**: 8 models ranked by capability (see table below)
 - **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
 - **Continuous Availability**: Auto-restart with graceful handoff
@@ -41,6 +42,7 @@ Models ranked by overall capability based on Dec 2025 benchmarks (MMLU-Pro, GPQA
 | 5 | **Phi-3 Mini** | 3.8B | Compact reasoning, synthetic data efficiency, instruction following | Logic puzzles, moderate difficulty tasks |
 | 6 | **RNJ-1 Instruct** | 8B | Tool-calling, agentic capabilities (70% SWE-Bench) | Automation workflows, tool use |
 | 7 | **Llama 3.2 3B** | 3B | Lightweight chat, creative writing, long context (131K) | Casual conversation, summarization, storytelling |
+| 8 | **FunctionGemma 270M** | 270M | Function calling specialist, edge-optimized, action execution | Edge device agents, mobile actions, API automation, offline function calling |
 
 ## Quick Start
 
@@ -53,7 +55,7 @@ Add to **Settings > Secrets and variables > Actions**:
 | Secret | Description |
 |--------|-------------|
 | `HF_TOKEN` | Hugging Face token for gated models |
-| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, GEMMA, R1QWEN, RNJ) |
+| `CLOUDFLARE_TUNNEL_TOKEN_{MODEL}` | Tunnel token for each model (QWEN, PHI, LLAMA, MISTRAL, GEMMA, R1QWEN, RNJ, FUNCTIONGEMMA) |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | Tunnel token for web interface |
 | `{MODEL}_API_URL` | Public URL for each model (e.g., `https://qwen.neevs.io`) |
 | `GH_MODELS_TOKEN` | **[OPTIONAL]** GitHub token for Discussion/Agents modes. Default uses free quota ([create your own](https://github.com/settings/personal-access-tokens/new)) |
@@ -109,6 +111,7 @@ serverless-llm/
 │   ├── phi-inference/          # Phi-3 Mini model server
 │   ├── rnj-inference/          # RNJ-1 Instruct model server
 │   ├── llama-inference/        # Llama 3.2 3B model server
+│   ├── functiongemma-inference/ # FunctionGemma 270M model server
 │   └── chat-interface/         # Web interface + API proxy
 ├── architecture.png            # System architecture diagram
 └── README.md                   # This file
@@ -167,9 +170,10 @@ In a separate terminal:
 cd app/chat-interface
 
 # Configure model endpoints (update with your running models)
-export QWEN_API_URL=http://localhost:8000
-export PHI_API_URL=http://localhost:8001
-export LLAMA_API_URL=http://localhost:8002
+export QWEN_API_URL=http://localhost:8001
+export PHI_API_URL=http://localhost:8002
+export LLAMA_API_URL=http://localhost:8003
+export FUNCTIONGEMMA_API_URL=http://localhost:8007
 # ... add other models as needed
 
 # Optional: GitHub Models token for Discussion/Agents modes (uses free quota by default)
@@ -190,12 +194,16 @@ Start each model server on a different port (edit `inference_server.py` or set `
 cd app/qwen-inference && PORT=8000 python inference_server.py
 
 # Terminal 2: Phi
-cd app/phi-inference && PORT=8001 python inference_server.py
+cd app/phi-inference && PORT=8002 python inference_server.py
 
-# Terminal 3: Interface
+# Terminal 3: FunctionGemma
+cd app/functiongemma-inference && PORT=8007 python inference_server.py
+
+# Terminal 4: Interface
 cd app/chat-interface
-export QWEN_API_URL=http://localhost:8000
-export PHI_API_URL=http://localhost:8001
+export QWEN_API_URL=http://localhost:8001
+export PHI_API_URL=http://localhost:8002
+export FUNCTIONGEMMA_API_URL=http://localhost:8007
 python chat_server.py
 ```
 

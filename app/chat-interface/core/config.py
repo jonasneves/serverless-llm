@@ -50,6 +50,13 @@ MODEL_CONFIG = (
         "env": "LLAMA_API_URL",
         "default_url": DEFAULT_LOCAL_ENDPOINTS["LLAMA_API_URL"],
     },
+    {  # Rank 8: Function calling specialist, edge-optimized
+        "id": "functiongemma-270m-it",
+        "name": "FunctionGemma 270M",
+        "env": "FUNCTIONGEMMA_API_URL",
+        "default_url": DEFAULT_LOCAL_ENDPOINTS["FUNCTIONGEMMA_API_URL"],
+        "service": "functiongemma",
+    },
 )
 
 # Base domain configuration for production (Cloudflare tunnels)

@@ -594,6 +594,55 @@ RNJ_1_PROFILE = {
 }
 
 
+# FunctionGemma 270M (local, GGUF)
+FUNCTIONGEMMA_270M_PROFILE = {
+    "model_id": "functiongemma-270m-it",
+    "display_name": "FunctionGemma 270M",
+    "model_type": "local",
+    "creator": "Google",
+    "size": "270M parameters",
+    "quantization": "Q8_0",
+
+    "primary_strengths": ["function_calling", "edge_deployment", "action_execution", "tool_use"],
+
+    # Based on Dec 2025 release - specialized for function calling
+    "benchmark_scores": {
+        "Mobile Actions": 58.0,      # Baseline (85% after fine-tuning)
+        "Function Calling": 85.0,    # After fine-tuning on specific domain
+    },
+
+    "expertise_domains": {
+        "function_calling": 0.95,         # Exceptional - core specialization
+        "tool_use": 0.92,                 # Exceptional - designed for API actions
+        "action_execution": 0.90,         # Exceptional - translates NL to actions
+        "edge_deployment": 0.95,          # Exceptional - optimized for edge devices
+        "structured_output": 0.88,        # Strong - JSON function calls
+        "instruction_following": 0.85,    # Strong - understands commands
+        "agent_capabilities": 0.88,       # Strong - acts as independent agent
+        "multilingual": 0.75,              # Good - Gemma's 256k vocabulary
+        "reasoning": 0.70,                 # Moderate - lightweight model
+        "conversation": 0.65,              # Moderate - can summarize results
+        "coding": 0.60,                    # Moderate - basic ability
+        "mathematics": 0.55,               # Moderate - not specialized
+        "creative_writing": 0.50,          # Limited - not designed for this
+    },
+
+    "use_as_lead_for": [
+        "function calling",
+        "API action execution",
+        "edge device agents",
+        "mobile actions",
+        "tool orchestration",
+        "system automation",
+        "offline agent tasks",
+        "local-first deployments",
+    ],
+
+    "context_length": 4096,
+    "description": "Specialized 270M model for function calling and edge deployment - transforms natural language into executable API actions",
+}
+
+
 # Aggregate profiles for easy access (ordered by capability rank)
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models (ranked by Dec 2025 benchmarks)
@@ -604,6 +653,7 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "phi-3-mini": PHI_PROFILE,                                 # Rank 5
     "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 6
     "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 7
+    "functiongemma-270m-it": FUNCTIONGEMMA_270M_PROFILE,       # Rank 8
     # API models
     "openai/gpt-4.1": GPT4_1_PROFILE,
     "openai/gpt-4o": GPT4O_PROFILE,

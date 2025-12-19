@@ -11,6 +11,7 @@ DEFAULT_LOCAL_ENDPOINTS = {
     "RNJ_API_URL": "http://localhost:8009",
     "MISTRAL_API_URL": "http://localhost:8005",
     "GEMMA_API_URL": "http://localhost:8006",
+    "FUNCTIONGEMMA_API_URL": "http://localhost:8007",
 }
 
 # Remote hosted defaults (optional deployments)
