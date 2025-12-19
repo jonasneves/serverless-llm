@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Globe, Eye, EyeOff, Rocket, Database, HelpCircle, WifiOff, ExternalLink, Play, Square, RotateCw } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Settings, RefreshCw, Globe, Eye, EyeOff, Rocket, Database, HelpCircle, WifiOff } from 'lucide-react';
 import { SERVICES, buildEndpoint, EnvConfig, ProfileId, normalizeEnvConfig } from '../hooks/useExtensionConfig';
 import DeploymentsPanel from './DeploymentsPanel';
 
@@ -120,12 +120,6 @@ const ServerPanel: React.FC = () => {
     await nativeRequest({ action: 'stop' });
     setBackendStatus({ process: 'stopped', mode: null });
     setBackendBusy(false);
-  };
-
-  const restartBackend = async () => {
-    await stopBackend();
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    await startBackend();
   };
 
   useEffect(() => {
@@ -336,58 +330,14 @@ const ServerPanel: React.FC = () => {
           </button>
         </div>
 
-        {/* Backend Status */}
-        <div className="backend-status" title="⌘/Ctrl+B to toggle backend">
-          <span className={`status-dot ${
-            backendStatus.process === 'running' ? 'bg-green-500' :
-            backendStatus.process === 'stopped' ? 'bg-red-500' : 'bg-slate-500'
-          }`} />
-          <span>{backendStatus.process === 'running' ? 'Running' : backendStatus.process === 'stopped' ? 'Stopped' : '...'}</span>
-          {backendStatus.process === 'running' ? (
-            <>
-              <button
-                onClick={stopBackend}
-                disabled={backendBusy}
-                className="control-btn"
-                title="Stop backend"
-              >
-                <Square className="w-2.5 h-2.5" />
-              </button>
-              <button
-                onClick={restartBackend}
-                disabled={backendBusy}
-                className="control-btn"
-                title="Restart backend"
-              >
-                <RotateCw className="w-2.5 h-2.5" />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={startBackend}
-              disabled={backendBusy || config.profile === 'remote_all'}
-              className="control-btn"
-              title={config.profile === 'remote_all' ? 'Not available in Prod mode' : 'Start backend'}
-            >
-              <Play className="w-2.5 h-2.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="header-actions">
-          <button onClick={openChat} className="chat-btn" title="⌘/Ctrl+O to open chat">
-            <ExternalLink className="w-3 h-3" />
-            Chat
-          </button>
-          <button
-            onClick={() => setShowConfig(!showConfig)}
-            className="icon-btn"
-            title="Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Settings */}
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className="icon-btn"
+          title="Settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Tab Navigation */}
@@ -433,195 +383,95 @@ const ServerPanel: React.FC = () => {
       )}
 
       {showConfig ? (
-        <div className="p-3 space-y-4">
-          {/* GitHub Token Warning */}
-          {!config.githubToken && (
-            <div className="p-2 bg-amber-950/30 border border-amber-900/40 rounded flex items-center gap-2 text-amber-400/90 text-[11px]">
-              <AlertCircle className="w-3 h-3 flex-shrink-0" />
-              <span>GitHub token required for deployments. Configure below.</span>
-            </div>
-          )}
-
-          {/* Profile */}
+        <div className="p-3 space-y-3">
+          {/* GitHub Token - Most Important */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-              Environment Profile
-              <span title="Choose how chat and model services connect. Production uses cloud servers, Development runs chat locally with cloud models, Offline runs everything locally.">
-                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
-              </span>
-            </label>
-            <div className="grid grid-cols-3 gap-2 mb-2">
-              <button
-                onClick={() => applyProfile('remote_all')}
-                className={`p-3 rounded-lg border-2 transition-all text-left ${
-                  config.profile === 'remote_all'
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-                }`}
-                title="Everything runs in the cloud. Zero setup required. Best for everyday use."
-              >
-                <div className="text-xs font-medium text-white mb-1">Production</div>
-                <div className="text-[10px] text-slate-300">Chat: Cloud</div>
-                <div className="text-[10px] text-slate-300">Models: Cloud</div>
-                <div className="text-[10px] text-blue-400 mt-1">No setup</div>
-              </button>
-              <button
-                onClick={() => applyProfile('local_chat_remote_models')}
-                className={`p-3 rounded-lg border-2 transition-all text-left ${
-                  config.profile === 'local_chat_remote_models'
-                    ? 'border-emerald-500 bg-emerald-500/10'
-                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-                }`}
-                title="Run chat server locally for development, but use cloud models. Click 'Start' in Backend tab to launch."
-              >
-                <div className="text-xs font-medium text-white mb-1">Development</div>
-                <div className="text-[10px] text-slate-300">Chat: Local</div>
-                <div className="text-[10px] text-slate-300">Models: Cloud</div>
-                <div className="text-[10px] text-emerald-400 mt-1">Click Start</div>
-              </button>
-              <button
-                onClick={() => applyProfile('local_all')}
-                className={`p-3 rounded-lg border-2 transition-all text-left ${
-                  config.profile === 'local_all'
-                    ? 'border-amber-500 bg-amber-500/10'
-                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-                }`}
-                title="Fully offline mode. Requires running model inference servers locally (make dev-interface-local)."
-              >
-                <div className="text-xs font-medium text-white mb-1">Offline</div>
-                <div className="text-[10px] text-slate-300">Chat: Local</div>
-                <div className="text-[10px] text-slate-300">Models: Local</div>
-                <div className="text-[10px] text-amber-400 mt-1">Requires models</div>
-              </button>
-            </div>
-            <button
-              onClick={() => setConfig({ ...config, profile: 'custom' })}
-              className={`w-full px-3 py-2 rounded border text-xs transition-colors ${
-                config.profile === 'custom'
-                  ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                  : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600'
-              }`}
-            >
-              Custom Configuration
-            </button>
-          </div>
-
-          {/* Chat API */}
-          <div className="pt-3 border-t border-slate-700">
-            <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
-              Chat API Base URL
-              <span title="The URL where the chat backend server runs. Use localhost:8080 for local development.">
-                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
-              </span>
-            </label>
-            <input
-              type="text"
-              value={config.chatApiBaseUrl}
-              onChange={(e) => setConfig({ ...config, profile: 'custom', chatApiBaseUrl: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              placeholder="http://localhost:8080"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Used by the main app streaming API and the Deploy tab health check.
-            </p>
-          </div>
-
-          {/* GitHub Token */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
               GitHub Token
-              <span title="Personal Access Token with 'repo' and 'workflow' scopes. Required for GitHub Models API and triggering deployments.">
-                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
-              </span>
             </label>
             <div className="relative">
               <input
                 type={showToken ? 'text' : 'password'}
                 value={config.githubToken}
                 onChange={(e) => setConfig({ ...config, githubToken: e.target.value })}
-                className="w-full px-3 py-2 pr-10 bg-slate-800 border border-slate-700 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 pr-8 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 placeholder="github_pat_..."
               />
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-200 transition-colors"
-                title={showToken ? 'Hide token' : 'Show token'}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
               >
-                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Required for API models & deployments.{' '}
-              <a
-                href="https://github.com/settings/tokens/new?description=Serverless+LLM+Extension&scopes=repo,workflow&default_expires_at=none"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 underline"
-              >
-                Create token →
-              </a>
-            </p>
+            {!config.githubToken && (
+              <p className="text-[10px] text-amber-400/80 mt-1">
+                Required for deployments.{' '}
+                <a
+                  href="https://github.com/settings/tokens/new?description=Serverless+LLM+Extension&scopes=repo,workflow&default_expires_at=none"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-amber-300"
+                >
+                  Create token →
+                </a>
+              </p>
+            )}
           </div>
 
-          {/* Models Base Domain */}
-          <div className="pt-3 border-t border-slate-700">
-            <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              Models Base Domain
-              <span title="Base domain for model inference endpoints. Endpoints are constructed as https://[model].domain. Leave empty for localhost.">
-                <HelpCircle className="w-3 h-3 text-slate-500 cursor-help" />
-              </span>
-            </label>
-            <input
-              type="text"
-              value={config.modelsBaseDomain}
-              onChange={(e) => setConfig({ ...config, profile: 'custom', modelsBaseDomain: e.target.value.trim() })}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              placeholder="neevs.io"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              {config.modelsBaseDomain
-                ? `Endpoints: ${config.modelsUseHttps ? 'https' : 'http'}://[service].${config.modelsBaseDomain}`
-                : 'Leave empty for localhost (default ports)'
-              }
-            </p>
-          </div>
+          {/* Advanced Settings - Collapsible */}
+          <details className="group">
+            <summary className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-pointer hover:text-slate-300">
+              <span className="group-open:rotate-90 transition-transform">▶</span>
+              Advanced Settings
+            </summary>
+            <div className="mt-3 space-y-3 pl-4 border-l border-slate-700/50">
+              {/* Chat API */}
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1">Chat API URL</label>
+                <input
+                  type="text"
+                  value={config.chatApiBaseUrl}
+                  onChange={(e) => setConfig({ ...config, profile: 'custom', chatApiBaseUrl: e.target.value })}
+                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  placeholder="http://localhost:8080"
+                />
+              </div>
 
-          {/* Models HTTPS Toggle */}
-          {config.modelsBaseDomain && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="modelsUseHttps"
-                checked={config.modelsUseHttps}
-                onChange={(e) => setConfig({ ...config, profile: 'custom', modelsUseHttps: e.target.checked })}
-                className="w-4 h-4 rounded bg-slate-800 border-slate-700"
-              />
-              <label htmlFor="modelsUseHttps" className="text-sm text-slate-400">Use HTTPS</label>
-            </div>
-          )}
-
-          {/* Preview Endpoints */}
-          {config.modelsBaseDomain && (
-            <div className="p-3 bg-slate-800/50 rounded border border-slate-700/50">
-              <p className="text-xs font-medium text-slate-400 mb-2">Endpoint Preview</p>
-              <div className="space-y-1 text-xs text-slate-500 font-mono">
-                {SERVICES.slice(0, 3).map(s => (
-                  <div key={s.key}>
-                    {buildEndpoint(s.key, s.localPort, config.modelsBaseDomain, config.modelsUseHttps)}
-                  </div>
-                ))}
-                <div className="text-slate-600">...and {SERVICES.length - 3} more</div>
+              {/* Models Domain */}
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1">Models Domain</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.modelsBaseDomain}
+                    onChange={(e) => setConfig({ ...config, profile: 'custom', modelsBaseDomain: e.target.value.trim() })}
+                    className="flex-1 px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    placeholder="neevs.io (or empty for localhost)"
+                  />
+                  {config.modelsBaseDomain && (
+                    <label className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                      <input
+                        type="checkbox"
+                        checked={config.modelsUseHttps}
+                        onChange={(e) => setConfig({ ...config, profile: 'custom', modelsUseHttps: e.target.checked })}
+                        className="w-3 h-3 rounded bg-slate-800 border-slate-700"
+                      />
+                      HTTPS
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
-          )}
+          </details>
 
+          {/* Save Button */}
           <button
             onClick={saveConfig}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-medium transition-colors text-sm"
+            className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
           >
-            Save Configuration
+            Save
           </button>
         </div>
       ) : (
