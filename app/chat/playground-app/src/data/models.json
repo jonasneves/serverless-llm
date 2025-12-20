@@ -49,6 +49,12 @@
       "priority": 9
     },
     {
+      "id": "gpt-oss-20b",
+      "name": "GPT-OSS 20B",
+      "type": "local",
+      "priority": 10
+    },
+    {
       "id": "gpt-4o",
       "name": "GPT-4o",
       "type": "api",

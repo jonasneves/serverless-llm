@@ -185,6 +185,17 @@ MODELS: dict[str, ModelConfig] = {
         description="MoE hybrid (Mamba2+Transformer), 30B params / 3.5B active, reasoning traces",
         rank=9,
     ),
+    "gptoss": ModelConfig(
+        name="gptoss",
+        port=8302,
+        subdomain="gptoss",
+        category=ModelCategory.REASONING,
+        model_id="gpt-oss-20b",
+        display_name="GPT-OSS 20B",
+        inference_dir="gpt-oss-inference",
+        description="MoE (21B params / 3.6B active), function calling, agentic operations",
+        rank=10,
+    ),
 }
 
 
