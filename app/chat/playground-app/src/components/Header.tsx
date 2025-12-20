@@ -61,7 +61,7 @@ export default function Header({
   onOpenSettings,
   gestureButtonSlot,
   hasRightPanel = false,
-  onToggleTranscript
+  onToggleTranscript,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -73,6 +73,7 @@ export default function Header({
   const currentModeIndex = MODES.findIndex(m => m.value === mode);
   const safeIndex = currentModeIndex === -1 ? 0 : currentModeIndex;
   const currentModeLabel = MODES[safeIndex].label;
+
 
   // Track window size for responsive slider calculation
   useEffect(() => {
