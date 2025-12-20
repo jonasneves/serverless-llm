@@ -46,7 +46,7 @@ const AppCard: React.FC<AppCardProps> = ({
     switch (status) {
       case 'running':
       case 'ok':
-        return 'Running';
+        return 'Available';
       case 'stopped':
         return 'Stopped';
       case 'down':

@@ -368,6 +368,13 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         return 'unknown';
     };
 
+    const chatEndpoint = normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080';
+    const publicDomain = modelsBaseDomain || 'neevs.io';
+    const publicScheme = modelsBaseDomain ? (modelsUseHttps ? 'https' : 'http') : 'https';
+    const chatPublicUrl = (chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1'))
+        ? `${publicScheme}://chat.${publicDomain}`
+        : (normalizeBaseUrl(chatApiBaseUrl) || `${publicScheme}://chat.${publicDomain}`);
+
     const apps: Array<{
         id: string;
         name: string;
@@ -385,9 +392,9 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             status: backendHealth === 'ok' ? 'running' : backendHealth === 'down' ? 'stopped' : 'checking',
             deploymentStatus: getDeploymentStatusForApp('chat-api'),
             localStatus: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? backendHealth : undefined,
-            publicEndpoint: 'chat.neevs.io',
-            endpointUrl: `${normalizeBaseUrl(chatApiBaseUrl)}/health`,
-            localEndpointUrl: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? chatApiBaseUrl : undefined,
+            publicEndpoint: `chat.${publicDomain}`,
+            endpointUrl: chatPublicUrl,
+            localEndpointUrl: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? chatEndpoint : undefined,
             deploymentUrl: runs.get('Chat')?.html_url,
         },
         ...SERVICES.map(service => {
@@ -395,14 +402,15 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             const health = modelHealthStatuses.get(service.key) || 'checking';
             const workflowName = service.name;
             const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
+            const publicEndpointUrl = `${publicScheme}://${service.key}.${publicDomain}`;
             return {
                 id: service.key,
                 name: service.name,
                 status: health,
                 deploymentStatus: getDeploymentStatusForApp(service.key),
                 localStatus: isLocal ? health : undefined,
-                publicEndpoint: `${service.key}.neevs.io`,
-                endpointUrl: `${endpoint}/health`,
+                publicEndpoint: `${service.key}.${publicDomain}`,
+                endpointUrl: publicEndpointUrl,
                 localEndpointUrl: isLocal ? endpoint : undefined,
                 deploymentUrl: runs.get(workflowName)?.html_url,
             };
