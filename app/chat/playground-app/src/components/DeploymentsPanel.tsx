@@ -42,10 +42,12 @@ const KEY_WORKFLOWS = [
     { name: 'Phi', path: 'phi-inference.yml' },
     { name: 'Llama', path: 'llama-inference.yml' },
     { name: 'Mistral', path: 'mistral-inference.yml' },
-    { name: 'Gemma', path: 'gemma-inference.yml' },
-    { name: 'R1 Qwen', path: 'r1qwen-inference.yml' },
-    { name: 'RNJ', path: 'rnj-inference.yml' },
+  { name: 'Gemma', path: 'gemma-inference.yml' },
+  { name: 'R1 Qwen', path: 'r1qwen-inference.yml' },
+  { name: 'RNJ', path: 'rnj-inference.yml' },
 ];
+
+const WORKFLOW_PATHS = new Map(KEY_WORKFLOWS.map(wf => [wf.name, wf.path]));
 
 function normalizeBaseUrl(url: string): string {
     return url.trim().replace(/\/+$/, '');
@@ -376,6 +378,12 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         return 'unknown';
     };
 
+    const buildWorkflowUrl = (workflowName: string | null) => {
+        if (!workflowName) return undefined;
+        const path = WORKFLOW_PATHS.get(workflowName);
+        return path ? `https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${path}` : `https://github.com/${REPO_OWNER}/${REPO_NAME}/actions`;
+    };
+
     const chatEndpoint = normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080';
     const publicDomain = modelsBaseDomain || 'neevs.io';
     const publicScheme = modelsBaseDomain ? (modelsUseHttps ? 'https' : 'http') : 'https';
@@ -403,7 +411,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             publicEndpoint: `chat.${publicDomain}`,
             endpointUrl: chatPublicUrl,
             localEndpointUrl: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? chatEndpoint : undefined,
-            deploymentUrl: runs.get('Chat')?.html_url,
+            deploymentUrl: runs.get('Chat')?.html_url || buildWorkflowUrl('Chat'),
         },
         ...SERVICES.map(service => {
             const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
@@ -420,7 +428,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 publicEndpoint: `${service.key}.${publicDomain}`,
                 endpointUrl: publicEndpointUrl,
                 localEndpointUrl: isLocal ? endpoint : undefined,
-                deploymentUrl: runs.get(workflowName)?.html_url,
+                deploymentUrl: runs.get(workflowName)?.html_url || buildWorkflowUrl(workflowName),
             };
         }),
     ];
@@ -436,6 +444,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         id={app.id}
                         name={app.name}
                         status={app.status}
+                        activeMode={globalTab}
                         deploymentStatus={app.deploymentStatus}
                         localStatus={app.localStatus}
                         publicEndpoint={app.publicEndpoint}
