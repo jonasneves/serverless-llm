@@ -514,7 +514,12 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                         </button>
 
                                         {showModelSelector && !isGenerating && (
-                                            <div className="fixed left-1/2 -translate-x-1/2 w-64 max-h-[400px] bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[100] flex flex-col overflow-hidden" style={{ top: 'calc(50% - 280px)' }}>
+                                            <>
+                                                {/* Backdrop */}
+                                                <div className="fixed inset-0 z-[99]" onClick={() => setShowModelSelector(false)} />
+
+                                                {/* Dropdown */}
+                                                <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-72 max-h-[70vh] bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-xl shadow-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                                 {models.length === 0 ? (
                                                     <div className="px-3 py-4 text-xs text-slate-500 text-center">
                                                         No models available
@@ -607,6 +612,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                     </div>
                                                 )}
                                             </div>
+                                            </>
                                         )}
                                     </div>
                                 )}
