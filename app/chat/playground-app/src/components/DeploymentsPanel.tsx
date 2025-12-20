@@ -282,12 +282,17 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
     const triggerWorkflow = async (workflowName: string) => {
         const wf = workflows.get(workflowName);
-        if (!wf) return;
+        const fallbackPath = WORKFLOW_PATHS.get(workflowName);
+        if (!wf && !fallbackPath) {
+            setError(`Workflow ${workflowName} not found`);
+            return;
+        }
 
         setTriggering(workflowName);
         try {
+            const workflowIdentifier = wf?.id ?? fallbackPath;
             const response = await fetch(
-                `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${wf.id}/dispatches`,
+                `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${workflowIdentifier}/dispatches`,
                 {
                     method: 'POST',
                     headers: { ...headers, 'Content-Type': 'application/json' },
