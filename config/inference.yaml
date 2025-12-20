@@ -38,7 +38,10 @@ models:
     # Uses defaults - 7B distilled model
 
   functiongemma:
-    # Uses defaults - 2B parameter model, very fast
+    # Uses defaults - 270M parameter model, very fast
+
+  nanbeige:
+    # Uses defaults - Nanbeige4-3B-Thinking is a small reasoning model
 
   nemotron:
     # 30B MoE model with IQ2_M quantization (~18GB)

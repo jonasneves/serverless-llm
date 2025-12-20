@@ -84,7 +84,7 @@ jobs:
 
           if [ "$MODELS" = "all" ] || [ -z "$MODELS" ]; then
             # Build all services (inference servers + chat + cloudflared)
-            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","nemotron-inference","gpt-oss-inference","gemma-inference","mistral-inference","chat","cloudflared"]'
+            MATRIX='["nanbeige-inference","deepseek-r1qwen-inference","functiongemma-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","nemotron-inference","gpt-oss-inference","gemma-inference","mistral-inference","chat","cloudflared"]'
           else
             # Build only specified models (use -c for compact output)
             MATRIX=$(echo "$MODELS" | jq -cR 'split(",") | map(select(length > 0))')

@@ -1,6 +1,6 @@
-name: 🤖 Qwen 3-4B
+name: 🤖 Nanbeige4-3B Thinking
 
-run-name: "Qwen 3-4B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
+run-name: "Nanbeige4-3B Thinking • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ on:
         type: boolean
 
   repository_dispatch:
-    types: [restart-qwen-inference]
+    types: [restart-nanbeige-inference]
 
 permissions:
   actions: write
@@ -37,13 +37,13 @@ jobs:
   inference:
     uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "qwen"
-      model_dir: "qwen-inference"
-      model_repo: "unsloth/Qwen3-4B-Instruct-2507-GGUF"
-      model_file: "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-qwen3-4b-2507-q4"
-      restart_event_type: "restart-qwen-inference"
-      workflow_file: "qwen-inference.yml"
+      model_name: "nanbeige"
+      model_dir: "nanbeige-inference"
+      model_repo: "bartowski/Nanbeige_Nanbeige4-3B-Thinking-2511-GGUF"
+      model_file: "Nanbeige_Nanbeige4-3B-Thinking-2511-Q4_K_M.gguf"
+      cache_key_prefix: "gguf-nanbeige-3b-thinking-q4"
+      restart_event_type: "restart-nanbeige-inference"
+      workflow_file: "nanbeige-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
       auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
       instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
