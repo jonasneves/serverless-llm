@@ -1,0 +1,77 @@
+name: 🤖 Nemotron-3 Nano 30B
+
+run-name: "Nemotron-3 Nano 30B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      instances:
+        description: 'Parallel instances (1-3)'
+        required: false
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+      duration_hours:
+        description: 'Duration (max 5.5 hours)'
+        required: false
+        default: '5'
+        type: string
+      auto_restart:
+        description: 'Auto-restart before timeout'
+        required: false
+        default: true
+        type: boolean
+      n_ctx:
+        description: 'Context window size'
+        required: false
+        default: '8192'
+        type: string
+      n_threads:
+        description: 'CPU threads'
+        required: false
+        default: '2'
+        type: string
+      n_batch:
+        description: 'Batch size'
+        required: false
+        default: '128'
+        type: string
+      max_concurrent:
+        description: 'Max concurrent requests per instance'
+        required: false
+        default: '2'
+        type: string
+
+  repository_dispatch:
+    types: [restart-nemotron-inference]
+
+permissions:
+  actions: write
+  contents: read
+  packages: read
+
+jobs:
+  inference:
+    uses: ./.github/workflows/reusable-inference-containerized.yml
+    with:
+      model_name: "nemotron"
+      model_dir: "nemotron-inference"
+      model_repo: "unsloth/Nemotron-3-Nano-30B-A3B-GGUF"
+      model_file: "Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf"
+      cache_key_prefix: "gguf-nemotron-30b-q4"
+      restart_event_type: "restart-nemotron-inference"
+      workflow_file: "nemotron-inference.yml"
+      duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
+      auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
+      instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
+      n_ctx: ${{ github.event.client_payload.n_ctx || inputs.n_ctx || '8192' }}
+      n_threads: ${{ github.event.client_payload.n_threads || inputs.n_threads || '2' }}
+      n_batch: ${{ github.event.client_payload.n_batch || inputs.n_batch || '128' }}
+      max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '2' }}
+    secrets:
+      hf_token: ${{ secrets.HF_TOKEN }}
+      tunnels_json: ${{ secrets.TUNNELS_JSON }}
+      workflow_pat: ${{ secrets.WORKFLOW_PAT }}

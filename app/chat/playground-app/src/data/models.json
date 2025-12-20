@@ -43,6 +43,12 @@
       "priority": 7
     },
     {
+      "id": "nemotron-3-nano-30b-a3b",
+      "name": "Nemotron-3 Nano 30B",
+      "type": "local",
+      "priority": 9
+    },
+    {
       "id": "gpt-4o",
       "name": "GPT-4o",
       "type": "api",

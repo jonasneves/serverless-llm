@@ -174,6 +174,17 @@ MODELS: dict[str, ModelConfig] = {
         description="o1-preview level reasoning, 96.3% Codeforces",
         rank=2,
     ),
+    "nemotron": ModelConfig(
+        name="nemotron",
+        port=8301,
+        subdomain="nemotron",
+        category=ModelCategory.REASONING,
+        model_id="nemotron-3-nano-30b-a3b",
+        display_name="Nemotron-3 Nano 30B",
+        inference_dir="nemotron-inference",
+        description="MoE hybrid (Mamba2+Transformer), 30B params / 3.5B active, reasoning traces",
+        rank=9,
+    ),
 }
 
 
