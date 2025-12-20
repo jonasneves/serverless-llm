@@ -24,11 +24,11 @@ const BuildPanel: React.FC<BuildPanelProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         <button
           onClick={() => onBuild('playground')}
           disabled={buildBusy}
-          className="flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[140px] flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Package className="w-3.5 h-3.5 text-blue-400" />
           <span>Build Frontend</span>
@@ -36,7 +36,7 @@ const BuildPanel: React.FC<BuildPanelProps> = ({
         <button
           onClick={() => onBuild('extension')}
           disabled={buildBusy}
-          className="flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[140px] flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Wrench className="w-3.5 h-3.5 text-purple-400" />
           <span>Build Extension</span>
@@ -44,7 +44,7 @@ const BuildPanel: React.FC<BuildPanelProps> = ({
         <button
           onClick={() => onBuild('both')}
           disabled={buildBusy}
-          className="flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[140px] flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Zap className={`w-3.5 h-3.5 text-amber-400 ${buildBusy ? 'animate-pulse' : ''}`} />
           <span>Build All</span>

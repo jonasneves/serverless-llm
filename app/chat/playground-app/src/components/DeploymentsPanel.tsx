@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Globe, Terminal } from 'lucide-react';
 import AppCard from './AppCard';
 import BuildPanel from './BuildPanel';
 import DeployPanel from './DeployPanel';
@@ -27,6 +26,7 @@ interface DeploymentsPanelProps {
     chatApiBaseUrl: string;
     modelsBaseDomain: string;
     modelsUseHttps: boolean;
+    globalTab: 'build' | 'deploy' | 'observe';
     showOnlyBackend?: boolean;
     onBackendStatusChange?: (status: { process: 'running' | 'stopped' | 'unknown'; mode: string | null }) => void;
     onActiveDeploymentsChange?: (count: number) => void;
@@ -51,7 +51,7 @@ function normalizeBaseUrl(url: string): string {
     return url.trim().replace(/\/+$/, '');
 }
 
-const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, modelsUseHttps, showOnlyBackend = false, onBackendStatusChange, onActiveDeploymentsChange }) => {
+const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, modelsUseHttps, globalTab, showOnlyBackend = false, onBackendStatusChange, onActiveDeploymentsChange }) => {
     const [workflows, setWorkflows] = useState<Map<string, WorkflowInfo>>(new Map());
     const [runs, setRuns] = useState<Map<string, WorkflowRun | null>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -340,6 +340,14 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
     const [activeTabs, setActiveTabs] = useState<Record<string, 'build' | 'deploy' | 'observe'>>(defaultTabs);
 
+    useEffect(() => {
+        const updatedTabs: Record<string, 'build' | 'deploy' | 'observe'> = { 'chat-api': globalTab };
+        SERVICES.forEach(service => {
+            updatedTabs[service.key] = globalTab;
+        });
+        setActiveTabs(updatedTabs);
+    }, [globalTab]);
+
     const setActiveTab = (appId: string, tab: 'build' | 'deploy' | 'observe') => {
         setActiveTabs(prev => ({ ...prev, [appId]: tab }));
     };
@@ -419,30 +427,6 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
     return (
         <div className="space-y-2 pt-1">
-            {/* Open App Row */}
-            <div className="flex gap-2">
-                <button
-                    onClick={() => chrome.tabs.create({ url: 'http://localhost:8080' })}
-                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all ${chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                        : 'bg-slate-800/40 border-slate-700/30 text-slate-400 hover:text-white hover:border-slate-600'
-                        }`}
-                >
-                    <Terminal className="w-3.5 h-3.5" />
-                    Open Local
-                </button>
-                <button
-                    onClick={() => chrome.tabs.create({ url: 'https://chat.neevs.io' })}
-                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all ${chatApiBaseUrl.includes('neevs.io')
-                        ? 'bg-blue-500/15 border-blue-500/30 text-blue-300'
-                        : 'bg-slate-800/40 border-slate-700/30 text-slate-400 hover:text-white hover:border-slate-600'
-                        }`}
-                >
-                    <Globe className="w-3.5 h-3.5" />
-                    Open Cloud
-                </button>
-            </div>
-
             {/* App Cards */}
             {apps.map((app) => {
                 const activeTab = activeTabs[app.id] || 'observe';
@@ -458,7 +442,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         endpointUrl={app.endpointUrl}
                         localEndpointUrl={app.localEndpointUrl}
                         deploymentUrl={app.deploymentUrl}
-                        defaultExpanded={app.id === 'qwen'}
+                        defaultExpanded={false}
                     >
                         {/* Tab Bar */}
                         <div className="flex gap-1 mb-3 bg-slate-900/40 p-1 rounded-lg">

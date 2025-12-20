@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Settings, Globe, Eye, EyeOff, Sparkles, ExternalLink } from 'lucide-react';
-import { SERVICES, buildEndpoint, EnvConfig, ProfileId, normalizeEnvConfig } from '../hooks/useExtensionConfig';
+import { SERVICES, buildEndpoint, EnvConfig, normalizeEnvConfig } from '../hooks/useExtensionConfig';
 import DeploymentsPanel from './DeploymentsPanel';
 
 const DEFAULT_CONFIG: EnvConfig = {
@@ -26,6 +26,7 @@ const ServerPanel: React.FC = () => {
   const [config, setConfig] = useState<EnvConfig>(DEFAULT_CONFIG);
   const [showConfig, setShowConfig] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [globalTab, setGlobalTab] = useState<'build' | 'deploy' | 'observe'>('observe');
   const [, setBackendStatus] = useState<{ process: 'running' | 'stopped' | 'unknown'; mode: string | null }>({ process: 'unknown', mode: null });
   const [, setActiveDeployments] = useState(0);
 
@@ -54,65 +55,6 @@ const ServerPanel: React.FC = () => {
     chrome.storage.local.set({ envConfig: configToSave });
   };
 
-  const getProfileIndicatorStyle = () => {
-    const profiles: ProfileId[] = ['local_chat_remote_models', 'remote_all'];
-    const index = profiles.indexOf(config.profile as ProfileId);
-    if (index === -1) return { left: '2px', width: 'calc(50% - 4px)' };
-    return { left: `calc(${index * 50}% + 2px)`, width: 'calc(50% - 4px)' };
-  };
-
-  const applyProfile = (profile: ProfileId) => {
-    if (profile === 'remote_all') {
-      const newConfig = {
-        ...config,
-        profile,
-        chatApiBaseUrl: 'https://chat.neevs.io',
-        modelsBaseDomain: 'neevs.io',
-        modelsUseHttps: true,
-      };
-      setConfig(newConfig);
-      chrome.storage.local.set({ envConfig: newConfig });
-      return;
-    }
-    if (profile === 'local_chat_remote_models') {
-      const newConfig = {
-        ...config,
-        profile,
-        chatApiBaseUrl: 'http://localhost:8080',
-        modelsBaseDomain: 'neevs.io',
-        modelsUseHttps: true,
-      };
-      setConfig(newConfig);
-      chrome.storage.local.set({ envConfig: newConfig });
-      return;
-    }
-    setConfig({ ...config, profile: 'custom' });
-  };
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'p') {
-          e.preventDefault();
-          const profiles: ProfileId[] = ['local_chat_remote_models', 'remote_all'];
-          const currentIndex = profiles.indexOf(config.profile as ProfileId);
-          const nextIndex = (currentIndex + 1) % profiles.length;
-          applyProfile(profiles[nextIndex]);
-        } else if (e.key === 'o') {
-          e.preventDefault();
-          const url = config.profile === 'remote_all' ? 'https://chat.neevs.io' : 'http://localhost:8080';
-          window.open(url, '_blank');
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [config.profile]);
-
   return (
     <div className="min-h-screen font-sans bg-slate-950 text-slate-100 relative overflow-hidden">
       {/* Subtle gradient background */}
@@ -129,39 +71,28 @@ const ServerPanel: React.FC = () => {
 
       {/* Compact Header */}
       <div className="relative z-10 px-4 py-2.5 bg-slate-900/80 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center justify-between gap-3">
-          {/* Profile Switcher */}
-          <div
-            className="relative flex p-0.5 bg-slate-800/60 rounded-full border border-slate-700/40"
-            title="⌘/Ctrl+P to cycle profiles"
-          >
-            <div
-              className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out ${config.profile === 'remote_all'
-                ? 'bg-gradient-to-r from-blue-500/40 to-blue-600/40 border border-blue-500/30'
-                : 'bg-gradient-to-r from-emerald-500/40 to-emerald-600/40 border border-emerald-500/30'
+        <div className="relative flex items-center justify-center">
+          {/* Mode Switcher */}
+          <div className="flex p-0.5 bg-slate-800/60 rounded-full border border-slate-700/40">
+            {(['build', 'deploy', 'observe'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setGlobalTab(tab)}
+                className={`px-3 py-1 text-[11px] font-medium rounded-full transition-all ${
+                  globalTab === tab
+                    ? 'bg-gradient-to-r from-blue-500/30 to-blue-600/30 text-white shadow-inner shadow-blue-500/20'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
-              style={getProfileIndicatorStyle()}
-            />
-            <button
-              onClick={() => applyProfile('local_chat_remote_models')}
-              className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${config.profile === 'local_chat_remote_models' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              Local
-            </button>
-            <button
-              onClick={() => applyProfile('remote_all')}
-              className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${config.profile === 'remote_all' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              Cloud
-            </button>
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
           </div>
 
           {/* Settings Button */}
           <button
             onClick={() => setShowConfig(!showConfig)}
-            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${showConfig
+            className={`absolute right-0 w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${showConfig
               ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
               : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
@@ -277,15 +208,16 @@ const ServerPanel: React.FC = () => {
         </div>
       ) : (
         <div className="relative z-10 overflow-y-auto px-4 pb-4 h-[calc(100vh-60px)]">
-          <DeploymentsPanel
-            githubToken={config.githubToken}
-            chatApiBaseUrl={config.chatApiBaseUrl}
-            modelsBaseDomain={config.modelsBaseDomain}
-            modelsUseHttps={config.modelsUseHttps}
-            showOnlyBackend={false}
-            onBackendStatusChange={setBackendStatus}
-            onActiveDeploymentsChange={setActiveDeployments}
-          />
+      <DeploymentsPanel
+        githubToken={config.githubToken}
+        chatApiBaseUrl={config.chatApiBaseUrl}
+        modelsBaseDomain={config.modelsBaseDomain}
+        modelsUseHttps={config.modelsUseHttps}
+        globalTab={globalTab}
+        showOnlyBackend={false}
+        onBackendStatusChange={setBackendStatus}
+        onActiveDeploymentsChange={setActiveDeployments}
+      />
         </div>
       )}
     </div>
