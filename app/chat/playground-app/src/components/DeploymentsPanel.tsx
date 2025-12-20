@@ -434,7 +434,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     ];
 
     return (
-        <div className="space-y-2 pt-1">
+        <div className="space-y-3 pt-1">
             {/* App Cards */}
             {apps.map((app) => {
                 const activeTab = activeTabs[app.id] || 'observe';

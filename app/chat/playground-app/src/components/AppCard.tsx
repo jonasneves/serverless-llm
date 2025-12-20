@@ -51,23 +51,13 @@ const AppCard: React.FC<AppCardProps> = ({
     }
   };
 
-  const getBadgeEmphasis = (kind: 'local' | 'status' | 'deploy') => {
-    if (activeMode === 'build' && (kind === 'local' || kind === 'status')) {
-      return 'shadow-inner shadow-blue-500/30 ring-1 ring-blue-500/30';
-    }
-    if (activeMode === 'deploy' && kind === 'deploy') {
-      return 'shadow-inner shadow-blue-400/30 ring-1 ring-blue-400/30';
-    }
-    return '';
-  };
-
   const statusBadge = endpointUrl ? (
     <a
       href={endpointUrl}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium transition-all hover:opacity-80 ${getBadgeEmphasis('status')} ${
+      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 ${
         status === 'running' || status === 'ok'
           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
           : status === 'stopped' || status === 'down'
@@ -80,7 +70,7 @@ const AppCard: React.FC<AppCardProps> = ({
     </a>
   ) : (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium ${getBadgeEmphasis('status')} ${
+      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium ${
         status === 'running' || status === 'ok'
           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
           : status === 'stopped' || status === 'down'
@@ -114,14 +104,14 @@ const AppCard: React.FC<AppCardProps> = ({
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium transition-all hover:opacity-80 ${getDeploymentClasses()} ${getBadgeEmphasis('deploy')}`}
+      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 ${getDeploymentClasses()}`}
       title={deploymentUrl}
     >
       {getDeploymentLabel()}
     </a>
   ) : (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium ${getDeploymentClasses()} ${getBadgeEmphasis('deploy')}`}
+      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium ${getDeploymentClasses()}`}
       title={deploymentStatus && deploymentStatus !== 'unknown' ? 'No link available' : 'No recent deploy'}
     >
       {getDeploymentLabel()}
@@ -135,7 +125,7 @@ const AppCard: React.FC<AppCardProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium transition-all hover:opacity-80 border ${getBadgeEmphasis('local')} ${
+          className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 border ${
             localStatus === 'ok'
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
               : localStatus === 'down'
@@ -148,7 +138,7 @@ const AppCard: React.FC<AppCardProps> = ({
         </a>
       ) : (
         <span
-          className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium border ${getBadgeEmphasis('local')} ${
+          className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium border ${
             localStatus === 'ok'
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
               : localStatus === 'down'
@@ -162,7 +152,7 @@ const AppCard: React.FC<AppCardProps> = ({
       )
     : (
       <span
-        className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium border border-slate-700/70 bg-slate-900/50 text-slate-500 ${getBadgeEmphasis('local')}`}
+        className="inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium border border-slate-700/70 bg-slate-900/50 text-slate-500"
         title="No local service configured"
       >
         Local Service
@@ -170,15 +160,15 @@ const AppCard: React.FC<AppCardProps> = ({
     );
 
   const renderSeparator = () => (
-    <span className="text-slate-600 text-[10px]">→</span>
+    <span className="text-slate-600 text-[10px] leading-none px-0.5">→</span>
   );
 
   return (
-    <div className="rounded-lg bg-slate-800/40 border border-slate-700/30 overflow-hidden">
+    <div className="rounded-xl bg-slate-800/40 border border-slate-700/30 overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-slate-700/20 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-3 hover:bg-slate-700/20 transition-colors"
       >
         <div className="flex flex-col items-start min-w-0 flex-1">
           <span className="text-sm font-medium text-slate-200">{name}</span>
@@ -199,7 +189,10 @@ const AppCard: React.FC<AppCardProps> = ({
       )}
 
       {/* Footer with Status Badges */}
-      <div className="border-t border-slate-700/30 px-3 py-2 bg-slate-900/40 flex items-center gap-2">
+      <div
+        className="border-t border-slate-700/30 px-3 py-2.5 bg-slate-900/40 flex items-center gap-1.5 flex-wrap"
+        data-mode={activeMode}
+      >
         {/* Local → Web Status → Deployment */}
         {localBadge}
         {localBadge && (statusBadge || deploymentBadge) && renderSeparator()}
