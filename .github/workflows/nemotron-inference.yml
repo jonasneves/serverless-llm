@@ -27,22 +27,22 @@ on:
       n_ctx:
         description: 'Context window size'
         required: false
-        default: '8192'
+        default: '4096'
         type: string
       n_threads:
         description: 'CPU threads'
         required: false
-        default: '2'
+        default: '4'
         type: string
       n_batch:
         description: 'Batch size'
         required: false
-        default: '128'
+        default: '256'
         type: string
       max_concurrent:
         description: 'Max concurrent requests per instance'
         required: false
-        default: '2'
+        default: '1'
         type: string
 
   repository_dispatch:
@@ -67,10 +67,10 @@ jobs:
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
       auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
       instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
-      n_ctx: ${{ github.event.client_payload.n_ctx || inputs.n_ctx || '8192' }}
-      n_threads: ${{ github.event.client_payload.n_threads || inputs.n_threads || '2' }}
-      n_batch: ${{ github.event.client_payload.n_batch || inputs.n_batch || '128' }}
-      max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '2' }}
+      n_ctx: ${{ github.event.client_payload.n_ctx || inputs.n_ctx || '4096' }}
+      n_threads: ${{ github.event.client_payload.n_threads || inputs.n_threads || '4' }}
+      n_batch: ${{ github.event.client_payload.n_batch || inputs.n_batch || '256' }}
+      max_concurrent: ${{ github.event.client_payload.max_concurrent || inputs.max_concurrent || '1' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnels_json: ${{ secrets.TUNNELS_JSON }}
