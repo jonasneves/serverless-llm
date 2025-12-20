@@ -1,0 +1,54 @@
+# =============================================================================
+# Inference Server Configuration
+# =============================================================================
+# Centralized config for all GGUF model inference servers.
+# These values are optimized for GitHub Actions ARM runners (4 vCPU, 16GB RAM).
+#
+# Models inherit from 'defaults' unless they have specific overrides.
+# =============================================================================
+
+defaults:
+  n_ctx: 4096        # Context window size (tokens)
+  n_threads: 4       # CPU threads - matches runner vCPU count
+  n_batch: 256       # Batch size for prompt processing
+  max_concurrent: 2  # Max parallel requests per instance
+
+# Model-specific overrides
+# Only specify values that differ from defaults
+models:
+  llama:
+    # Uses defaults - Llama 3.2 3B is lightweight
+
+  gemma:
+    # Uses defaults - Gemma 2 9B runs well with standard settings
+
+  mistral:
+    # Uses defaults - Mistral 7B is efficient
+
+  phi:
+    # Uses defaults - Phi-3.5 Mini is small and fast
+
+  qwen:
+    # Uses defaults - Qwen 2.5 7B is well-optimized
+
+  gpt-oss:
+    # Uses defaults - GPT-2 is tiny
+
+  deepseek-r1qwen:
+    # Uses defaults - 7B distilled model
+
+  functiongemma:
+    # Uses defaults - 2B parameter model, very fast
+
+  nemotron:
+    # 30B MoE model with IQ2_M quantization (~18GB)
+    # Needs more resources, limit concurrency
+    n_ctx: 4096
+    n_batch: 256
+    max_concurrent: 1
+
+  rnj:
+    # 8B model with unique architecture
+    n_ctx: 2048
+    n_batch: 512
+    max_concurrent: 3

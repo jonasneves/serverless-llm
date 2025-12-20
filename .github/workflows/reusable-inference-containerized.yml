@@ -36,22 +36,6 @@ on:
       port:
         type: string
         default: '8000'
-      n_ctx:
-        type: string
-        required: false
-        description: 'Context window size (leave empty to use model default)'
-      n_threads:
-        type: string
-        required: false
-        description: 'Number of CPU threads (leave empty to use model default)'
-      n_batch:
-        type: string
-        required: false
-        description: 'Batch size for processing (leave empty to use model default)'
-      max_concurrent:
-        type: string
-        required: false
-        description: 'Maximum concurrent requests per instance (leave empty to use model default)'
     secrets:
       hf_token:
         required: true
@@ -98,6 +82,39 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
+
+      - name: Read inference config
+        id: config
+        run: |
+          # Install yq for YAML parsing
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64
+          sudo chmod +x /usr/local/bin/yq
+          
+          MODEL="${{ inputs.model_name }}"
+          CONFIG_FILE="config/inference.yaml"
+          
+          # Read model-specific value or fall back to default
+          get_config() {
+            local key=$1
+            local model_value=$(yq ".models.$MODEL.$key // \"\"" "$CONFIG_FILE")
+            if [ -n "$model_value" ] && [ "$model_value" != "null" ]; then
+              echo "$model_value"
+            else
+              yq ".defaults.$key" "$CONFIG_FILE"
+            fi
+          }
+          
+          N_CTX=$(get_config "n_ctx")
+          N_THREADS=$(get_config "n_threads")
+          N_BATCH=$(get_config "n_batch")
+          MAX_CONCURRENT=$(get_config "max_concurrent")
+          
+          echo "n_ctx=$N_CTX" >> $GITHUB_OUTPUT
+          echo "n_threads=$N_THREADS" >> $GITHUB_OUTPUT
+          echo "n_batch=$N_BATCH" >> $GITHUB_OUTPUT
+          echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
+          
+          echo "✓ Config for $MODEL: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT"
 
       - name: Move Docker data to /mnt
         run: |
@@ -196,50 +213,31 @@ jobs:
           MODEL_FILE: ${{ inputs.model_file }}
           PORT: ${{ inputs.port }}
           HF_TOKEN: ${{ secrets.hf_token }}
-          N_CTX: ${{ inputs.n_ctx }}
-          N_THREADS: ${{ inputs.n_threads }}
-          N_BATCH: ${{ inputs.n_batch }}
-          MAX_CONCURRENT: ${{ inputs.max_concurrent }}
+          N_CTX: ${{ steps.config.outputs.n_ctx }}
+          N_THREADS: ${{ steps.config.outputs.n_threads }}
+          N_BATCH: ${{ steps.config.outputs.n_batch }}
+          MAX_CONCURRENT: ${{ steps.config.outputs.max_concurrent }}
         run: |
-          # Build docker run command with optional parameters
-          CMD="docker run -d \
+          # Start inference server with config from config/inference.yaml
+          docker run -d \
             --name inference-server \
             --network inference-network \
             -p ${{ inputs.port }}:${{ inputs.port }} \
-            -e MODEL_REPO=\"$MODEL_REPO\" \
-            -e MODEL_FILE=\"$MODEL_FILE\" \
-            -e PORT=\"$PORT\" \
-            -e HF_TOKEN=\"$HF_TOKEN\" \
+            -e MODEL_REPO="$MODEL_REPO" \
+            -e MODEL_FILE="$MODEL_FILE" \
+            -e PORT="$PORT" \
+            -e HF_TOKEN="$HF_TOKEN" \
             -e HF_HOME=/app/.cache/huggingface \
-            -e INSTANCE_ID=\"${{ matrix.instance }}\" \
-            -e GITHUB_SHA=\"${{ github.sha }}\""
+            -e INSTANCE_ID="${{ matrix.instance }}" \
+            -e GITHUB_SHA="${{ github.sha }}" \
+            -e N_CTX="$N_CTX" \
+            -e N_THREADS="$N_THREADS" \
+            -e N_BATCH="$N_BATCH" \
+            -e MAX_CONCURRENT="$MAX_CONCURRENT" \
+            -v /mnt/huggingface-cache:/app/.cache/huggingface \
+            ${{ inputs.model_name }}-inference:latest
 
-          # Add N_CTX if provided
-          if [ -n "$N_CTX" ]; then
-            CMD="$CMD -e N_CTX=\"$N_CTX\""
-          fi
-
-          # Add N_THREADS if provided
-          if [ -n "$N_THREADS" ]; then
-            CMD="$CMD -e N_THREADS=\"$N_THREADS\""
-          fi
-
-          # Add N_BATCH if provided
-          if [ -n "$N_BATCH" ]; then
-            CMD="$CMD -e N_BATCH=\"$N_BATCH\""
-          fi
-
-          # Add MAX_CONCURRENT if provided
-          if [ -n "$MAX_CONCURRENT" ]; then
-            CMD="$CMD -e MAX_CONCURRENT=\"$MAX_CONCURRENT\""
-          fi
-
-          CMD="$CMD -v /mnt/huggingface-cache:/app/.cache/huggingface \
-            ${{ inputs.model_name }}-inference:latest"
-
-          echo "Starting inference server with command:"
-          echo "$CMD"
-          eval $CMD
+          echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT"
 
           # Health check
           HEALTHY=false
@@ -353,11 +351,7 @@ jobs:
           fi
 
           INSTANCES="${{ inputs.instances }}"
-          N_CTX="${{ inputs.n_ctx }}"
-          N_THREADS="${{ inputs.n_threads }}"
-          N_BATCH="${{ inputs.n_batch }}"
-          MAX_CONCURRENT="${{ inputs.max_concurrent }}"
-          echo "Duration: ${DURATION_HOURS}h | Auto-restart: $AUTO_RESTART | Instances: $INSTANCES | n_ctx: $N_CTX"
+          echo "Duration: ${DURATION_HOURS}h | Auto-restart: $AUTO_RESTART | Instances: $INSTANCES"
 
           while true; do
             ELAPSED=$(($(date +%s) - START_TIME))
@@ -386,12 +380,13 @@ jobs:
                   echo "Auto-restart requires a Personal Access Token with 'repo' scope"
                   RESTART_TRIGGERED=true
                 else
+                  # Note: n_ctx, n_threads, n_batch, max_concurrent are read from config/inference.yaml
                   RESPONSE=$(curl -sX POST \
                     -H "Accept: application/vnd.github+json" \
                     -H "Authorization: Bearer $PAT" \
                     -H "X-GitHub-Api-Version: 2022-11-28" \
                     https://api.github.com/repos/${{ github.repository }}/dispatches \
-                    -d "{\"event_type\":\"${{ inputs.restart_event_type }}\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$([ \"$AUTO_RESTART\" = \"true\" ] && echo \"true\" || echo \"false\"),\"instances\":\"$INSTANCES\",\"n_ctx\":\"$N_CTX\",\"n_threads\":\"$N_THREADS\",\"n_batch\":\"$N_BATCH\",\"max_concurrent\":\"$MAX_CONCURRENT\"}}" \
+                    -d "{\"event_type\":\"${{ inputs.restart_event_type }}\",\"client_payload\":{\"duration_hours\":\"$DURATION_HOURS\",\"auto_restart\":$([ \"$AUTO_RESTART\" = \"true\" ] && echo \"true\" || echo \"false\"),\"instances\":\"$INSTANCES\"}}" \
                     -w "\nHTTP_STATUS:%{http_code}" 2>&1)
 
                   HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
