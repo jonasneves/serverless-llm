@@ -101,12 +101,9 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
-        # Memory-optimized settings for constrained environments
-        "--no-mmap",                 # Load model fully (avoids mmap memory spikes)
-        "--cache-type-k", "q8_0",    # Quantize KV cache
-        "--cache-type-v", "q8_0",    # Quantize value cache
-        "--cont-batching",           # Efficient request batching
-        "--log-disable",             # Reduce logging overhead
+        # Keeping it minimal - mmap is default and pages in on-demand
+        # No --no-mmap (causes large upfront allocation)
+        # No cache quantization (may cause issues)
     ]
 
     logger.info(f"Starting llama-server: {' '.join(cmd)}")
