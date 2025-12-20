@@ -43,13 +43,12 @@ models:
     # Uses defaults - 270M parameter model, very fast
 
   nanbeige:
-    # Nanbeige4-3B-Thinking: #1 reasoning model, optimized for quality
-    # Larger context benefits chain-of-thought, batch 512 for faster prompts
-    # KV-cache quant reduces memory ~30% with minimal quality impact
-    n_ctx: 8192
-    n_batch: 512
-    max_concurrent: 3
-    kv_cache_quant: true
+    # Nanbeige4-3B-Thinking: SPEED-OPTIMIZED config
+    # Smaller context + Q4 quant + KV-cache quant = maximum throughput
+    n_ctx: 2048          # Minimal context for speed
+    n_batch: 512         # Fast prompt processing
+    max_concurrent: 4    # Maximum parallel requests
+    kv_cache_quant: true # Reduces memory bandwidth
 
   nemotron:
     # 30B MoE model with IQ2_M quantization (~8GB) - smallest available

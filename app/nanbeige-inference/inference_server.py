@@ -20,10 +20,10 @@ config = ModelConfig(
     openai_model_id="nanbeige4-3b-thinking",
     owned_by="nanbeige",
     default_repo="bartowski/Nanbeige_Nanbeige4-3B-Thinking-2511-GGUF",
-    default_file="Nanbeige_Nanbeige4-3B-Thinking-2511-Q5_K_M.gguf",  # Q5 for better reasoning quality
-    default_n_ctx=8192,   # Larger context for chain-of-thought
+    default_file="Nanbeige_Nanbeige4-3B-Thinking-2511-Q4_K_M.gguf",  # Q4 for speed
+    default_n_ctx=2048,   # Minimal context for speed
     default_n_threads=4,
-    n_batch=512,          # Faster prompt processing
+    n_batch=512,          # Fast prompt processing
 )
 
 app = create_inference_app(config)
