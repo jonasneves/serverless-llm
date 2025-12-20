@@ -13,6 +13,7 @@ import { useSessionController } from './hooks/useSessionController';
 import { useSelectionBox } from './hooks/useSelectionBox';
 import { useCardReorder } from './hooks/useCardReorder';
 import { useInspectorSelection } from './hooks/useInspectorSelection';
+import { useModelSelection } from './hooks/useModelSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
@@ -29,7 +30,7 @@ const HandBackground = lazy(() => import('./components/HandBackground'));
 const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
 import ErrorBoundary from './components/ErrorBoundary';
 
-import type { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
+import type { ChatViewHandle, ChatMessage } from './components/ChatView';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
 
@@ -150,8 +151,16 @@ function PlaygroundInner() {
 
   // Chat mode state - persisted across mode switches
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatAutoMode, setChatAutoMode] = useState(true);
-  const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('local');
+  // Use useModelSelection hook for better state management
+  const {
+    autoMode: chatAutoMode,
+    autoModeScope: chatAutoModeScope,
+    setAutoMode: setChatAutoMode,
+    setAutoModeScope: setChatAutoModeScope,
+  } = useModelSelection({
+    autoMode: true,
+    autoModeScope: 'local',
+  });
   const [chatCurrentResponse, setChatCurrentResponse] = useState('');
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
   const {
