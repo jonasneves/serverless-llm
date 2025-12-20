@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Zap, ChevronDown, Info, Server, Infinity, Cloud, Sparkles } from 'lucide-react';
+import { Bot, AlertTriangle, User, Zap, ChevronDown } from 'lucide-react';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
@@ -76,7 +76,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [expandedApiModels, setExpandedApiModels] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
-    const [showTooltip, setShowTooltip] = useState(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -466,12 +465,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             <div className="flex items-center gap-2 mb-4">
                                 {autoMode ? (
                                     <div className="flex items-center gap-1.5">
-                                        <div
-                                            className="relative"
-                                            ref={dropdownRef}
-                                            onMouseEnter={() => setShowTooltip(true)}
-                                            onMouseLeave={() => setShowTooltip(false)}
-                                        >
+                                        <div className="relative" ref={dropdownRef}>
                                             <button
                                                 onClick={() => setShowAutoDropdown(!showAutoDropdown)}
                                                 className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
@@ -483,46 +477,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                 </span>
                                                 <ChevronDown size={11} className="text-slate-200/60 transition-transform" />
                                             </button>
-
-                                            {/* Tooltip bubble above */}
-                                            {showTooltip && !showAutoDropdown && (
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs z-50 shadow-xl w-48">
-                                                    {autoModeScope === 'local' && (
-                                                        <ul className="space-y-1.5">
-                                                            <li className="flex items-center gap-2">
-                                                                <Zap size={11} className="shrink-0 text-emerald-400" />
-                                                                <span>Small language models</span>
-                                                            </li>
-                                                            <li className="flex items-center gap-2">
-                                                                <Server size={11} className="shrink-0 text-slate-400" />
-                                                                <span>Hosted on our servers</span>
-                                                            </li>
-                                                            <li className="flex items-center gap-2">
-                                                                <Infinity size={11} className="shrink-0 text-blue-400" />
-                                                                <span>No quota limits</span>
-                                                            </li>
-                                                        </ul>
-                                                    )}
-                                                    {autoModeScope === 'api' && (
-                                                        <ul className="space-y-1.5">
-                                                            <li className="flex items-center gap-2">
-                                                                <Cloud size={11} className="shrink-0 text-blue-400" />
-                                                                <span>Cloud-based models</span>
-                                                            </li>
-                                                            <li className="flex items-center gap-2">
-                                                                <Sparkles size={11} className="shrink-0 text-yellow-400" />
-                                                                <span>Free quota available</span>
-                                                            </li>
-                                                            <li className="flex items-center gap-2">
-                                                                <Zap size={11} className="shrink-0 text-purple-400" />
-                                                                <span>More capable models</span>
-                                                            </li>
-                                                        </ul>
-                                                    )}
-                                                    {/* Speech bubble arrow */}
-                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-700" />
-                                                </div>
-                                            )}
 
                                             {showAutoDropdown && (
                                                 <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
@@ -682,52 +636,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                 </div>
                                             )}
                                         </div>
-
-                                        {selectedModel && (
-                                            <div
-                                                className="relative"
-                                                onMouseEnter={() => setShowTooltip(true)}
-                                                onMouseLeave={() => setShowTooltip(false)}
-                                            >
-                                                <Info size={13} className="text-slate-500/60 hover:text-slate-400/80 transition-colors cursor-help" />
-                                                {showTooltip && (
-                                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs z-50 shadow-xl w-48">
-                                                        {selectedModel.type === 'local' && (
-                                                            <ul className="space-y-1.5">
-                                                                <li className="flex items-center gap-2">
-                                                                    <Zap size={11} className="shrink-0 text-emerald-400" />
-                                                                    <span>Small language models</span>
-                                                                </li>
-                                                                <li className="flex items-center gap-2">
-                                                                    <Server size={11} className="shrink-0 text-slate-400" />
-                                                                    <span>Hosted on our servers</span>
-                                                                </li>
-                                                                <li className="flex items-center gap-2">
-                                                                    <Infinity size={11} className="shrink-0 text-blue-400" />
-                                                                    <span>No quota limits</span>
-                                                                </li>
-                                                            </ul>
-                                                        )}
-                                                        {selectedModel.type === 'api' && (
-                                                            <ul className="space-y-1.5">
-                                                                <li className="flex items-center gap-2">
-                                                                    <Cloud size={11} className="shrink-0 text-blue-400" />
-                                                                    <span>Cloud-based models</span>
-                                                                </li>
-                                                                <li className="flex items-center gap-2">
-                                                                    <Sparkles size={11} className="shrink-0 text-yellow-400" />
-                                                                    <span>Free quota available</span>
-                                                                </li>
-                                                                <li className="flex items-center gap-2">
-                                                                    <Zap size={11} className="shrink-0 text-purple-400" />
-                                                                    <span>More capable models</span>
-                                                                </li>
-                                                            </ul>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>
