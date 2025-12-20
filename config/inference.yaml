@@ -46,9 +46,9 @@ models:
 
   nemotron:
     # 30B MoE model with Q3_K_M quantization (~12GB)
-    # Optimized: reduced context, larger batch, flash attention enabled
+    # Optimized: reduced context, large batch, KV cache quantization
     n_ctx: 2048
-    n_batch: 512
+    n_batch: 1024
     max_concurrent: 1
 
   rnj:

@@ -33,9 +33,8 @@ MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-Q3_K_M.gguf")
 PORT = int(os.getenv("PORT", "8301"))
 N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "4"))
-N_BATCH = int(os.getenv("N_BATCH", "512"))
+N_BATCH = int(os.getenv("N_BATCH", "1024"))
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "1"))
-FLASH_ATTN = os.getenv("FLASH_ATTN", "auto")  # llama-server expects an explicit value
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # Internal port for llama-server (proxied through FastAPI)
@@ -101,8 +100,11 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
-        "--flash-attn", FLASH_ATTN,  # Explicit value required by llama-server CLI
-        "--cont-batching",           # Efficient parallel request handling
+        # CPU-focused optimizations (flash-attn is GPU-only)
+        "--cache-type-k", "q8_0",    # Quantize KV cache for faster access
+        "--cache-type-v", "q8_0",    # Quantize value cache too
+        "--cont-batching",           # Efficient request batching
+        "--log-disable",             # Reduce logging overhead
     ]
 
     logger.info(f"Starting llama-server: {' '.join(cmd)}")
