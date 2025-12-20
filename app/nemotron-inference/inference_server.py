@@ -85,7 +85,12 @@ def download_model() -> str:
 
 
 def start_llama_server(model_path: str) -> subprocess.Popen:
-    """Start the llama-server process"""
+    """Start the llama-server process
+    
+    Note: The 30B Q4_K_M model requires ~17GB memory for weights.
+    We use mmap (default) for efficient memory usage with swap.
+    The model will use swap for portions that don't fit in RAM.
+    """
     cmd = [
         "/usr/local/bin/llama-server",
         "--model", model_path,
@@ -111,17 +116,28 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
     )
 
     # Wait for server to be ready
-    max_wait = 120
+    # 30B models can take 3-5 minutes to load into memory on CPU
+    max_wait = 300
     start_time = time.time()
+    check_count = 0
 
     while time.time() - start_time < max_wait:
+        check_count += 1
+        elapsed = int(time.time() - start_time)
+        
         try:
             response = httpx.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=2)
             if response.status_code == 200:
-                logger.info("llama-server is ready")
+                logger.info(f"llama-server is ready (took {elapsed}s)")
                 return process
+            elif response.status_code == 503:
+                # 503 means server is running but model still loading
+                if check_count % 10 == 0:
+                    logger.info(f"llama-server still loading model... ({elapsed}s elapsed)")
         except Exception:
-            pass
+            # Server not responding yet
+            if check_count % 10 == 0:
+                logger.info(f"Waiting for llama-server to start... ({elapsed}s elapsed)")
 
         # Check if process died
         if process.poll() is not None:
@@ -147,7 +163,7 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
     except Exception:
         pass
 
-    raise RuntimeError("llama-server did not become healthy in time")
+    raise RuntimeError(f"llama-server did not become healthy in {max_wait}s (model may need more time or resources)")
 
 
 def cleanup():
