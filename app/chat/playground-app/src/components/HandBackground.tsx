@@ -563,6 +563,56 @@ export default function HandBackground({
             }
         }
 
+        // Middle Finger Easter Egg Detection
+        // Check if middle finger is extended while others are curled
+        if (landmarks) {
+            const wrist = landmarks[0];
+            const indexTip = landmarks[8];
+            const middleTip = landmarks[12];
+            const ringTip = landmarks[16];
+            const pinkyTip = landmarks[20];
+            const middlePip = landmarks[10];
+
+            // Simple distance check (relative to wrist)
+            const d = (p1: any, p2: any) => (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2;
+
+            // Thresholds: Middle tip should be far, others close
+            const middleExt = d(middleTip, wrist);
+            const indexExt = d(indexTip, wrist);
+            const ringExt = d(ringTip, wrist);
+            const pinkyExt = d(pinkyTip, wrist);
+            const middleStraight = d(middleTip, wrist) > d(middlePip, wrist);
+
+            // Middle should be significantly more extended than others
+            if (middleStraight &&
+                middleExt > indexExt * 2.0 &&
+                middleExt > ringExt * 2.0 &&
+                middleExt > pinkyExt * 2.0) {
+
+                if (persistence.candidate === 'Middle_Finger') {
+                    persistence.frames++;
+                } else {
+                    persistence.candidate = 'Middle_Finger';
+                    persistence.frames = 1;
+                }
+
+                if (persistence.frames > 8) { // Require persistence
+                    // Trigger action
+                    const now = performance.now();
+                    if (now - lastGestureTime.current > gestureCooldown) {
+                        if (onSendMessageRef.current) {
+                            onSendMessageRef.current("🖕");
+                            lastGestureTime.current = now;
+                        }
+                        if (onGestureStateRef.current) {
+                            onGestureStateRef.current({ gesture: 'Middle_Finger', progress: 1, triggered: true });
+                        }
+                    }
+                    return 'Middle_Finger';
+                }
+            }
+        }
+
         // Handle other gestures with persistence
         if (gestureConfig?.action === 'message' && gestureConfig.message) {
             if (persistence.candidate === gestureName) {
@@ -907,6 +957,9 @@ export default function HandBackground({
                         } else if (gesture === 'Open_Palm' || gesture === 'WAVE') {
                             mainColor = '#f59e0b'; // Amber for wave
                             glowColor = '#fcd34d';
+                        } else if (gesture === 'Middle_Finger') {
+                            mainColor = '#ef4444'; // Red
+                            glowColor = '#f87171';
                         } else {
                             mainColor = '#3b82f6'; // Default blue
                             glowColor = '#60a5fa';

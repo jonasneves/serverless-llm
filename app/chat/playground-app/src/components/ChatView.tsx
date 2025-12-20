@@ -10,6 +10,7 @@ import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
 import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
 import ModelSelector from './ModelSelector';
+import { useGestureOptional } from '../context/GestureContext';
 
 
 export interface ChatViewHandle {
@@ -69,6 +70,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     gesturesActive = false,
 }, ref) => {
     const [inputFocused, setInputFocused] = useState(false);
+    const [angryReactionPending, setAngryReactionPending] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -76,6 +78,10 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+    // Gesture context for Easter egg
+    const gestureCtx = useGestureOptional();
+    const isMiddleFinger = gestureCtx?.gestureState?.gesture === 'Middle_Finger';
 
     // Smart model selection hook
     const { sortModels, recordRateLimit, recordSuccess } = useSmartModelSelection();
@@ -253,6 +259,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         if (!text.trim() || isGenerating) return;
         if (!autoMode && !selectedModelId) return;
 
+        // Easter Egg Delay: If sending middle finger in empty chat, wait to show the angry robot
+        if (messages.length === 0 && (text === "🖕" || text.includes("middle finger"))) {
+            setAngryReactionPending(true);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            setAngryReactionPending(false);
+        }
+
         const userMessage: ChatMessage = { role: 'user', content: text };
         setMessages(prev => [...prev, userMessage]);
         setIsGenerating(true);
@@ -267,14 +280,22 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 content: 'User is hands-free using gesture control. Build an interactive interface to guide them.\n\nAvailable gesture inputs:\n- 👍 (yes/approve/like)\n- 👎 (no/disapprove/dislike)\n- 👋 (hi/hello/greeting)\n- "ok" (okay/continue)\n- "thanks" (thank you)\n- "stop" (stop/wait)\n- Pointing finger (select UI buttons)\n\nChoose interaction style:\n- Simple binary: "Give 👍 to continue or 👎 to stop" (no JSON needed)\n- Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)\n\nFor JSON UI (when appropriate):\n```json\n{\n  "options": [\n    {"id": "opt1", "label": "Option 1", "action": "message", "value": "option 1"},\n    {"id": "opt2", "label": "Option 2", "action": "message", "value": "option 2"}\n  ]\n}\n```\n\nGuidelines:\n- Keep response concise (2-3 sentences)\n- Use simple gestures for yes/no/continue (more efficient)\n- Use JSON UI for 3+ options or complex choices\n- Provide 2-4 options max in JSON\n- User can point at buttons with index finger'
             } : null;
 
+            // Easter egg: Angry robot context
+            const angrySystemMessage = (text === "🖕" || isMiddleFinger) ? {
+                role: 'system' as const,
+                content: "The user is showing you their middle finger (gesture). This is a playful interaction. Respond with humorous, over-the-top anger, indignation, or witty comeback. Don't be actually offended, but play along with the 'angry robot' persona."
+            } : null;
+
             const baseMessages = [...messages, userMessage].map(m => ({
                 role: m.role,
                 content: m.content
             }));
 
-            const apiMessages = gestureSystemMessage
-                ? [gestureSystemMessage, ...baseMessages]
-                : baseMessages;
+            const apiMessages = [
+                ...(gestureSystemMessage ? [gestureSystemMessage] : []),
+                ...(angrySystemMessage ? [angrySystemMessage] : []),
+                ...baseMessages
+            ];
 
             if (autoMode) {
                 // Filter models based on scope, with fallback to other type
@@ -436,7 +457,15 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center text-slate-500 select-none pb-20 relative pt-[30vh]">
-                            <Bot size={48} className="mb-4 opacity-50" />
+                            {(isMiddleFinger || angryReactionPending) ? (
+                                <div className="mb-4 relative">
+                                    <div className="absolute inset-0 bg-red-500 blur-xl opacity-50 rounded-full"></div>
+                                    <Bot size={72} className="relative text-red-500" />
+                                    <div className="absolute -top-2 -right-2 text-3xl">💢</div>
+                                </div>
+                            ) : (
+                                <Bot size={72} className="mb-4 opacity-50 transition-all duration-300" />
+                            )}
 
                             {/* Model Selection Controls */}
                             <div className="flex flex-col items-center gap-2 mb-4 sticky top-4 z-30">
