@@ -1425,29 +1425,31 @@ function PlaygroundInner() {
               </div>
             </div>
 
-            {/* Right Panel: Transcript (All non-chat modes) */}
-            <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
-              <Suspense fallback={null}>
-                <DiscussionTranscript
-                  history={history}
-                  models={modelsData}
-                  mode={mode}
-                  onSelectPrompt={(prompt) => {
-                    if (inputRef.current) {
-                      inputRef.current.value = prompt;
-                      inputRef.current.focus();
-                    }
-                  }}
-                  onNewSession={handleNewSession}
-                  className="pt-24 pb-6 mask-fade-top"
-                  phaseLabel={phaseLabel}
-                  isGenerating={isGenerating}
-                  isSynthesizing={isSynthesizing}
-                  speakingCount={speaking.size}
-                  totalParticipants={selectedModels.length}
-                />
-              </Suspense>
-            </div>
+            {/* Right Panel: Transcript (Council, Roundtable, Personality modes only) */}
+            {mode !== 'compare' && (
+              <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
+                <Suspense fallback={null}>
+                  <DiscussionTranscript
+                    history={history}
+                    models={modelsData}
+                    mode={mode}
+                    onSelectPrompt={(prompt) => {
+                      if (inputRef.current) {
+                        inputRef.current.value = prompt;
+                        inputRef.current.focus();
+                      }
+                    }}
+                    onNewSession={handleNewSession}
+                    className="pt-24 pb-6 mask-fade-top"
+                    phaseLabel={phaseLabel}
+                    isGenerating={isGenerating}
+                    isSynthesizing={isSynthesizing}
+                    speakingCount={speaking.size}
+                    totalParticipants={selectedModels.length}
+                  />
+                </Suspense>
+              </div>
+            )}
           </div>
         )}
 
@@ -1540,7 +1542,7 @@ function PlaygroundInner() {
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : mode === 'personality' ? "Ask the personas..." : "Steer the discussion..."}
-            className="fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
+            className={`fixed bottom-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300 ${mode === 'compare' ? 'right-0' : 'right-[400px] xl:right-[480px]'}`}
             style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           />
         )
