@@ -6,7 +6,8 @@ import { Bot, AlertTriangle, User, Zap, ChevronDown, Info, Server, Infinity, Clo
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
-import { extractTextWithoutJSON } from './GestureOptions';
+import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
+import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
 
 
@@ -33,20 +34,18 @@ interface ChatViewProps {
     onSelectModel: (id: string) => void;
     githubToken?: string;
     onOpenTopics: () => void;
-    // External state management for persistence across mode switches
     messages: ChatMessage[];
     setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
     autoMode: boolean;
     setAutoMode: (value: boolean) => void;
     autoModeScope: ChatAutoModeScope;
     setAutoModeScope: (value: ChatAutoModeScope) => void;
-    // Generation state - persisted across mode switches
     currentResponse: string;
     setCurrentResponse: React.Dispatch<React.SetStateAction<string>>;
     isGenerating: boolean;
     setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
     onModelUsed?: (modelId: string) => void;
-    onGestureOptionsChange?: (content: string | null) => void;
+    gesturesActive?: boolean;
 }
 
 // ChatMessage interface moved above ChatViewProps for export
@@ -68,7 +67,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     isGenerating,
     setIsGenerating,
     onModelUsed,
-    onGestureOptionsChange,
+    gesturesActive = false,
 }, ref) => {
     const [inputFocused, setInputFocused] = useState(false);
     const [showAutoDropdown, setShowAutoDropdown] = useState(false);
@@ -222,17 +221,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    // Track gesture options from latest assistant message
-    useEffect(() => {
-        if (onGestureOptionsChange) {
-            // Find the last assistant message with JSON options
-            const lastAssistantMsg = [...messages].reverse().find(m =>
-                m.role === 'assistant' && m.content.includes('```json')
-            );
-            onGestureOptionsChange(lastAssistantMsg?.content || null);
-        }
-    }, [messages, onGestureOptionsChange]);
 
     const tryModelStream = async (modelId: string, apiMessages: any[]): Promise<{ success: boolean; content: string; isRateLimit?: boolean }> => {
         try {
@@ -807,6 +795,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 <div className="prose prose-invert prose-sm max-w-none">
                                     <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
                                 </div>
+                                {msg.role === 'assistant' && gesturesActive && msg.content.includes('```json') && (
+                                    <GestureOptions
+                                        content={msg.content}
+                                        onSelect={(value) => handleSend(value, true)}
+                                        isInline={true}
+                                    />
+                                )}
                             </div>
                         </div>
                     ))}
@@ -857,7 +852,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 </div>
             </div>
 
-            {/* Input Area - always positioned to account for right panel */}
             <PromptInput
                 inputRef={inputRef}
                 inputFocused={inputFocused}
@@ -867,7 +861,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 placeholder={autoMode ? "Message (Auto mode - will use auto-selected model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
                 isGenerating={isGenerating}
                 onStop={handleStop}
-                className="fixed bottom-0 left-0 right-[400px] xl:right-[480px] z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
+                className="fixed bottom-0 left-0 right-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300"
                 style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
             />
         </div>

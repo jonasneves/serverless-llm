@@ -27,7 +27,7 @@ const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscrip
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const HandBackground = lazy(() => import('./components/HandBackground'));
 const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
-const GesturePanel = lazy(() => import('./components/GesturePanel'));
+const TranscriptOverlay = lazy(() => import('./components/TranscriptOverlay'));
 import ErrorBoundary from './components/ErrorBoundary';
 
 import type { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
@@ -155,7 +155,7 @@ function PlaygroundInner() {
   const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('api');
   const [chatCurrentResponse, setChatCurrentResponse] = useState('');
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
-  const [gestureOptionsContent, setGestureOptionsContent] = useState<string | null>(null);
+  const [showTranscript, setShowTranscript] = useState(false);
   const {
     history,
     historyRef: conversationHistoryRef,
@@ -1085,7 +1085,8 @@ function PlaygroundInner() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
-        hasRightPanel={true}
+        hasRightPanel={false}
+        onToggleTranscript={() => setShowTranscript(prev => !prev)}
         gestureButtonSlot={
           <Suspense fallback={null}>
             <GestureControl
@@ -1278,60 +1279,58 @@ function PlaygroundInner() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="flex h-screen w-full relative z-[10]">
-            <div className={`flex-1 relative ${gestureCtx.isActive ? '' : 'px-2 sm:px-6'} pt-20 pb-6`}>
-              <ErrorBoundary>
-                <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
-                  <ChatView
-                    ref={chatViewRef}
-                    models={modelsData}
-                    selectedModelId={chatModelId}
-                    onSelectModel={setChatModelId}
-                    githubToken={githubToken}
-                    onOpenTopics={() => setShowTopics(true)}
-                    messages={chatMessages}
-                    setMessages={setChatMessages}
-                    autoMode={chatAutoMode}
-                    setAutoMode={setChatAutoMode}
-                    autoModeScope={chatAutoModeScope}
-                    setAutoModeScope={setChatAutoModeScope}
-                    currentResponse={chatCurrentResponse}
-                    setCurrentResponse={setChatCurrentResponse}
-                    isGenerating={chatIsGenerating}
-                    setIsGenerating={setChatIsGenerating}
-                    onModelUsed={setChatModelId}
-                    onGestureOptionsChange={setGestureOptionsContent}
-                  />
-                </Suspense>
-              </ErrorBoundary>
-            </div>
-            {/* Right Panel: Gesture Panel or Chat History Panel */}
-            {gestureCtx.isActive ? (
-              <Suspense fallback={null}>
-                <GesturePanel
-                  content={gestureOptionsContent}
-                  onSelect={(value) => {
-                    chatViewRef.current?.sendMessage(value, true);
-                  }}
-                />
-              </Suspense>
-            ) : (
-              <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
-                <Suspense fallback={null}>
-                  <DiscussionTranscript
-                    history={[]}
-                    models={modelsData}
-                    mode={mode}
-                    onSelectPrompt={(prompt) => {
-                      chatViewRef.current?.setInput(prompt);
-                    }}
-                    onNewSession={() => setChatMessages([])}
-                    className="pt-24 pb-6 mask-fade-top"
-                  />
-                </Suspense>
+          <>
+            <div className="flex h-screen w-full relative z-[10]">
+              <div className="flex-1 relative px-2 sm:px-6 pt-20 pb-6">
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
+                    <ChatView
+                      ref={chatViewRef}
+                      models={modelsData}
+                      selectedModelId={chatModelId}
+                      onSelectModel={setChatModelId}
+                      githubToken={githubToken}
+                      onOpenTopics={() => setShowTopics(true)}
+                      messages={chatMessages}
+                      setMessages={setChatMessages}
+                      autoMode={chatAutoMode}
+                      setAutoMode={setChatAutoMode}
+                      autoModeScope={chatAutoModeScope}
+                      setAutoModeScope={setChatAutoModeScope}
+                      currentResponse={chatCurrentResponse}
+                      setCurrentResponse={setChatCurrentResponse}
+                      isGenerating={chatIsGenerating}
+                      setIsGenerating={setChatIsGenerating}
+                      onModelUsed={setChatModelId}
+                      gesturesActive={gestureCtx.isActive}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
               </div>
-            )}
-          </div>
+            </div>
+
+            <Suspense fallback={null}>
+              <TranscriptOverlay
+                isOpen={showTranscript}
+                onClose={() => setShowTranscript(false)}
+              >
+                <DiscussionTranscript
+                  history={[]}
+                  models={modelsData}
+                  mode={mode}
+                  onSelectPrompt={(prompt) => {
+                    chatViewRef.current?.setInput(prompt);
+                    setShowTranscript(false);
+                  }}
+                  onNewSession={() => {
+                    setChatMessages([]);
+                    setShowTranscript(false);
+                  }}
+                  className="pt-6 pb-6 mask-fade-top"
+                />
+              </TranscriptOverlay>
+            </Suspense>
+          </>
         )}
 
         {/* Main Content Area (Arena/Transcript) - Hidden in Chat Mode */}

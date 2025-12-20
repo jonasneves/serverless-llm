@@ -1,60 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
-
-interface GestureOption {
-  id: string;
-  label: string;
-  action: 'message' | 'confirm' | 'choice';
-  value: string;
-}
+import { useState, useRef, useEffect } from 'react';
+import { useGestureOptions } from '../hooks/useGestureOptions';
 
 interface GestureOptionsProps {
   content: string;
   onSelect: (value: string) => void;
+  isInline?: boolean;
 }
 
-const DWELL_TIME = 1800; // 1.8 seconds to select
+const DWELL_TIME = 1800;
 
-export default function GestureOptions({ content, onSelect }: GestureOptionsProps) {
-  const [options, setOptions] = useState<GestureOption[]>([]);
+export default function GestureOptions({ content, onSelect, isInline = false }: GestureOptionsProps) {
+  const options = useGestureOptions(content);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [dwellProgress, setDwellProgress] = useState<Record<string, number>>({});
   const dwellStartRef = useRef<number>(0);
   const animationFrameRef = useRef<number>(0);
-
-  useEffect(() => {
-    // Parse JSON from content
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        let jsonStr = jsonMatch[1];
-
-        // Try to repair common JSON issues
-        jsonStr = jsonStr
-          .replace(/[\\']/g, '"') // Replace single quotes and escaped quotes with double quotes
-          .replace(/,\s*}/g, '}') // Remove trailing commas before }
-          .replace(/,\s*]/g, ']') // Remove trailing commas before ]
-          .replace(/}\s*[\\]+\s*$/g, '}') // Remove trailing backslashes
-          .replace(/"\s*"\s*$/g, '') // Remove extra quotes at end
-          .trim();
-
-        const data = JSON.parse(jsonStr);
-        if (data.options && Array.isArray(data.options)) {
-          // Validate each option has required fields
-          const validOptions = data.options.filter((opt: any) =>
-            opt.id && opt.label && opt.value
-          );
-          if (validOptions.length > 0) {
-            setOptions(validOptions);
-          } else {
-            console.warn('No valid gesture options found in JSON');
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse gesture options:', e);
-        console.error('JSON content:', jsonMatch[1]);
-      }
-    }
-  }, [content]);
 
   useEffect(() => {
     // Listen for gesture hover events
@@ -122,9 +82,27 @@ export default function GestureOptions({ content, onSelect }: GestureOptionsProp
 
   if (options.length === 0) return null;
 
+  const containerClasses = isInline
+    ? "w-full mt-3"
+    : "w-full px-4";
+
+  const gridClasses = isInline
+    ? "grid grid-cols-2 gap-2"
+    : "flex flex-col gap-3 items-center";
+
+  const buttonClasses = (isHovered: boolean) => isInline
+    ? `relative overflow-hidden rounded-lg font-medium text-xs border transition-all duration-200 text-center min-h-[40px] flex items-center justify-center px-3 py-2 ${isHovered
+      ? 'bg-blue-500/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10'
+      : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800/80 hover:border-slate-700/80'
+    }`
+    : `relative overflow-hidden rounded-xl font-medium text-sm border transition-all duration-200 w-[85%] max-w-[340px] text-left min-h-[44px] flex items-center px-5 py-3 ${isHovered
+      ? 'bg-blue-500/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10'
+      : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800/80 hover:border-slate-700/80'
+    }`;
+
   return (
-    <div className="w-full px-4">
-      <div className="flex flex-col gap-3 items-center">
+    <div className={containerClasses}>
+      <div className={gridClasses}>
         {options.map((option) => {
           const progress = dwellProgress[option.id] || 0;
           const isHovered = hoveredId === option.id;
@@ -136,17 +114,8 @@ export default function GestureOptions({ content, onSelect }: GestureOptionsProp
               onMouseEnter={() => handleMouseEnter(option.id)}
               onMouseLeave={handleMouseLeave}
               data-gesture-option={option.id}
-              className={`
-                relative overflow-hidden rounded-xl font-medium text-sm
-                border transition-all duration-200 w-[85%] max-w-[340px]
-                text-left min-h-[44px] flex items-center px-5 py-3
-                ${isHovered
-                  ? 'bg-blue-500/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10'
-                  : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800/80 hover:border-slate-700/80'
-                }
-              `}
+              className={buttonClasses(isHovered)}
             >
-              {/* Progress indicator */}
               {isHovered && progress > 0 && (
                 <div
                   className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 to-blue-500 transition-all duration-75"
