@@ -45,11 +45,17 @@ Click the extension icon in Chrome toolbar to open the full-page chat interface 
 - All existing playground features
 
 ### Side Panel
-Access server controls via side panel:
-- **Service Health Monitoring**: Real-time status checks for all inference servers
-- **Configuration Management**: Store and edit server settings (ports, domains, tokens)
-- **Quick Actions**: Launch full app, refresh health checks
-- **Quick Start Guide**: Terminal command reference
+Access the DevOps control plane via side panel with two tabs:
+
+**Control Tab:**
+- **Open App**: Quick buttons to open Dev (localhost) or Prod (chat.neevs.io) 
+- **Local Server**: Start/stop/restart local backend with logs
+- **Build**: Dropdown to build Playground, Extension, or Both
+- **CI/CD Deployments**: Trigger GitHub Actions workflows (Chat, Build Images)
+
+**Status Tab:**
+- **Service Health**: Real-time status checks for all model inference servers
+- **Connection Summary**: Overview of healthy/unhealthy services
 
 To open side panel:
 1. Click extension icon → right-click → "Open side panel"

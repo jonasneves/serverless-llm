@@ -282,23 +282,10 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         abortControllerRef.current = new AbortController();
 
         try {
-            // Determine model type for gesture context
-            let modelType: 'local' | 'api' = 'local';
-            if (autoMode) {
-                // In auto mode, use scope directly
-                modelType = autoModeScope === 'api' ? 'api' : 'local';
-            } else if (selectedModelId) {
-                // In manual mode, check selected model type
-                const selectedModel = models.find(m => m.id === selectedModelId);
-                modelType = selectedModel?.type || 'local';
-            }
-
             // Prepend gesture mode context as system message if from gesture
             const gestureSystemMessage = fromGesture ? {
                 role: 'system' as const,
-                content: modelType === 'api'
-                    ? 'User is hands-free using gesture control. Build an interactive interface to guide them.\n\nAvailable gesture inputs:\n- 👍 (yes/approve/like)\n- 👎 (no/disapprove/dislike)\n- 👋 (hi/hello/greeting)\n- "ok" (okay/continue)\n- "thanks" (thank you)\n- "stop" (stop/wait)\n- Pointing finger (select UI buttons)\n\nChoose interaction style:\n- Simple binary: "Give 👍 to continue or 👎 to stop" (no JSON needed)\n- Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)\n\nFor JSON UI (when appropriate):\n```json\n{\n  "options": [\n    {"id": "opt1", "label": "Option 1", "action": "message", "value": "option 1"},\n    {"id": "opt2", "label": "Option 2", "action": "message", "value": "option 2"}\n  ]\n}\n```\n\nGuidelines:\n- Keep response concise (2-3 sentences)\n- Use simple gestures for yes/no/continue (more efficient)\n- Use JSON UI for 3+ options or complex choices\n- Provide 2-4 options max in JSON\n- User can point at buttons with index finger'
-                    : 'User is hands-free (limited input). TOTAL OUTPUT under 50 words (including any thinking). Minimize or skip thinking - just answer. End with: "Want [A] or [B]?" or "Say \'yes\' for [next step]." Use single words/emojis for options.'
+                content: 'User is hands-free using gesture control. Build an interactive interface to guide them.\n\nAvailable gesture inputs:\n- 👍 (yes/approve/like)\n- 👎 (no/disapprove/dislike)\n- 👋 (hi/hello/greeting)\n- "ok" (okay/continue)\n- "thanks" (thank you)\n- "stop" (stop/wait)\n- Pointing finger (select UI buttons)\n\nChoose interaction style:\n- Simple binary: "Give 👍 to continue or 👎 to stop" (no JSON needed)\n- Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)\n\nFor JSON UI (when appropriate):\n```json\n{\n  "options": [\n    {"id": "opt1", "label": "Option 1", "action": "message", "value": "option 1"},\n    {"id": "opt2", "label": "Option 2", "action": "message", "value": "option 2"}\n  ]\n}\n```\n\nGuidelines:\n- Keep response concise (2-3 sentences)\n- Use simple gestures for yes/no/continue (more efficient)\n- Use JSON UI for 3+ options or complex choices\n- Provide 2-4 options max in JSON\n- User can point at buttons with index finger'
             } : null;
 
             const baseMessages = [...messages, userMessage].map(m => ({
