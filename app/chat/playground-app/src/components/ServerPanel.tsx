@@ -210,14 +210,14 @@ const ServerPanel: React.FC = () => {
               className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${config.profile === 'local_chat_remote_models' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
             >
-              Dev
+              Local
             </button>
             <button
               onClick={() => applyProfile('remote_all')}
               className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${config.profile === 'remote_all' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
             >
-              Prod
+              Cloud
             </button>
           </div>
 
