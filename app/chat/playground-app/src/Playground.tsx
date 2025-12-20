@@ -27,7 +27,6 @@ const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscrip
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const HandBackground = lazy(() => import('./components/HandBackground'));
 const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
-const TranscriptOverlay = lazy(() => import('./components/TranscriptOverlay'));
 import ErrorBoundary from './components/ErrorBoundary';
 
 import type { ChatViewHandle, ChatMessage, ChatAutoModeScope } from './components/ChatView';
@@ -155,7 +154,6 @@ function PlaygroundInner() {
   const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('local');
   const [chatCurrentResponse, setChatCurrentResponse] = useState('');
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
   const {
     history,
     historyRef: conversationHistoryRef,
@@ -1085,8 +1083,6 @@ function PlaygroundInner() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
-        hasRightPanel={false}
-        onToggleTranscript={() => setShowTranscript(prev => !prev)}
         gestureButtonSlot={
           <Suspense fallback={null}>
             <GestureControl
@@ -1308,28 +1304,6 @@ function PlaygroundInner() {
                 </ErrorBoundary>
               </div>
             </div>
-
-            <Suspense fallback={null}>
-              <TranscriptOverlay
-                isOpen={showTranscript}
-                onClose={() => setShowTranscript(false)}
-              >
-                <DiscussionTranscript
-                  history={[]}
-                  models={modelsData}
-                  mode={mode}
-                  onSelectPrompt={(prompt) => {
-                    chatViewRef.current?.setInput(prompt);
-                    setShowTranscript(false);
-                  }}
-                  onNewSession={() => {
-                    setChatMessages([]);
-                    setShowTranscript(false);
-                  }}
-                  className="pt-6 pb-6 mask-fade-top"
-                />
-              </TranscriptOverlay>
-            </Suspense>
           </>
         )}
 
