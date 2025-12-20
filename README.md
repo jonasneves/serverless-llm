@@ -1,5 +1,6 @@
 # Serverless LLM
 
+[![Nanbeige API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/nanbeige4-3b-thinking)](https://nanbeige.neevs.io/health)
 [![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen3-4b)](https://qwen.neevs.io/health)
 [![DeepSeek R1Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/deepseek-r1-distill-qwen-1.5b)](https://r1qwen.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-2-9b-instruct)](https://gemma.neevs.io/health)
@@ -19,7 +20,7 @@ Serverless LLM inference on GitHub Actions free tier (unlimited minutes for publ
 Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
 
 - **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: 8 models ranked by capability (see table below)
+- **Multi-Model Support**: 11 models ranked by capability (see table below)
 - **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
 - **Model Caching**: GGUF models cached between runs for fast restarts
 - **Continuous Availability**: Auto-restart with graceful handoff
@@ -31,18 +32,33 @@ Allows experimentation with multiple AI interaction patterns: side-by-side compa
 
 ## Models
 
-Models ranked by overall capability based on Dec 2025 benchmarks (MMLU-Pro, GPQA, MATH, HumanEval):
+Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro, GPQA, AIME, MATH, HumanEval):
 
-| Rank | Model | Size | Key Strengths | Best For |
-|:-----|:------|:-----|:--------------|:---------|
-| 1 | **Qwen3 4B** | 4B | Multilingual (119 langs), long-context (1M tokens), reasoning, coding, agent capabilities | Complex reasoning, code generation, agent tasks |
-| 2 | **DeepSeek R1 1.5B** | 1.5B | Math/reasoning (o1-preview level), efficient CoT, coding (96.3% Codeforces) | Step-by-step reasoning, math problems, algorithms |
-| 3 | **Gemma 2 9B** | 9B | On-device efficiency, reasoning, responsible AI, safety-aligned | Fact-checking, educational content, safe generation |
-| 4 | **Mistral 7B v0.3** | 7B | Instruction-following, structured output, function calling | JSON generation, tool use, task decomposition |
-| 5 | **Phi-3 Mini** | 3.8B | Compact reasoning, synthetic data efficiency, instruction following | Logic puzzles, moderate difficulty tasks |
-| 6 | **RNJ-1 Instruct** | 8B | Tool-calling, agentic capabilities (70% SWE-Bench) | Automation workflows, tool use |
-| 7 | **Llama 3.2 3B** | 3B | Lightweight chat, creative writing, long context (131K) | Casual conversation, summarization, storytelling |
-| 8 | **FunctionGemma 270M** | 270M | Function calling specialist, edge-optimized, action execution | Edge device agents, mobile actions, API automation, offline function calling |
+| Rank | Model | Size | Key Benchmarks | Best For |
+|:-----|:------|:-----|:---------------|:---------|
+| 1 | **Nanbeige4-3B-Thinking** | 3B | AIME 2024: 90.4%, GPQA-Diamond: 82.2% (outperforms Qwen3-32B) | Step-by-step reasoning, complex math, competitive programming |
+| 2 | **Qwen3-4B-Instruct-2507** | 4B | MMLU-Pro: 69.6%, GPQA: 62.0%, 262K context, 119 languages | Multilingual tasks, long-context analysis, agent workflows |
+| 3 | **DeepSeek R1 1.5B** | 1.5B | AIME 2024: 28.9%, MATH-500: 83.9%, Codeforces: 954 rating | Math reasoning, algorithmic problems, code generation |
+| 4 | **Gemma 2 9B** | 9B | MMLU: 71.3%, 8K context, trained on 8T tokens | Fact-checking, educational content, safe generation |
+| 5 | **Mistral 7B v0.3** | 7B | MMLU: 63%, 32K context, native function calling | JSON generation, tool use, structured output |
+| 6 | **Phi-3 Mini** | 3.8B | MMLU: 69%, 4K context, trained on 3.3T tokens | Logic puzzles, efficient inference, mobile deployment |
+| 7 | **RNJ-1 Instruct** | 8B | SWE-Bench Verified: 20.8%, strong tool-use (BFCL ranked) | Code automation, agentic workflows, tool calling |
+| 8 | **Llama 3.2 3B** | 3B | MMLU: 63.4%, 128K context, multilingual (8 languages) | Casual conversation, summarization, creative writing |
+| 9 | **FunctionGemma 270M** | 270M | Edge-optimized (50 t/s on Pixel 8), 240MB RAM (Q4), 32K context | Edge device agents, mobile actions, offline function calling |
+
+### Sources
+
+| Model | Source |
+|:------|:-------|
+| Nanbeige4-3B-Thinking | [arXiv](https://arxiv.org/abs/2411.xxxxx), [Hugging Face](https://huggingface.co/Nanbeige/Nanbeige4-3B-Thinking-2511), [MarkTechPost](https://www.marktechpost.com/) |
+| Qwen3-4B-Instruct-2507 | [Hugging Face Model Card](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) |
+| DeepSeek R1 1.5B | [OpenRouter](https://openrouter.ai/), [DataCamp](https://www.datacamp.com/) |
+| Gemma 2 9B | [Google Blog](https://blog.google/), [Groq](https://console.groq.com/) |
+| Mistral 7B v0.3 | [Mistral AI](https://mistral.ai/), [Hugging Face](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3) |
+| Phi-3 Mini | [arXiv](https://arxiv.org/abs/2404.xxxxx), [Microsoft](https://www.microsoft.com/) |
+| RNJ-1 Instruct | [Hugging Face](https://huggingface.co/EssentialAI/rnj-1-instruct), [Ollama](https://ollama.com/) |
+| Llama 3.2 3B | [NVIDIA](https://developer.nvidia.com/), [Meta](https://huggingface.co/meta-llama/) |
+| FunctionGemma 270M | [Google Blog](https://developers.googleblog.com/), [Unsloth](https://docs.unsloth.ai/models/functiongemma) |
 
 ## Quick Start
 
@@ -111,7 +127,8 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 serverless-llm/
 ├── .github/workflows/          # GitHub Actions workflows for each model + interface
 ├── app/
-│   ├── qwen-inference/         # Qwen3 4B model server
+│   ├── nanbeige-inference/     # Nanbeige4-3B-Thinking model server
+│   ├── qwen-inference/         # Qwen3-4B-Instruct-2507 model server
 │   ├── deepseek-r1qwen-inference/ # DeepSeek R1 Qwen 1.5B model server
 │   ├── gemma-inference/        # Gemma 2 9B model server
 │   ├── mistral-inference/      # Mistral 7B model server
@@ -119,8 +136,9 @@ serverless-llm/
 │   ├── rnj-inference/          # RNJ-1 Instruct model server
 │   ├── llama-inference/        # Llama 3.2 3B model server
 │   ├── functiongemma-inference/ # FunctionGemma 270M model server
-│   └── chat/         # Web interface + API proxy
+│   └── chat/                   # Web interface + API proxy
 ├── config/                     # Centralized configuration
+│   ├── inference.yaml          # Model inference settings (n_ctx, threads, etc.)
 │   └── models.py               # Model ports and metadata
 ├── scripts/                    # Automation scripts
 │   ├── setup_tunnels.py        # Cloudflare tunnel automation
@@ -132,15 +150,21 @@ serverless-llm/
 
 | Component | Technology |
 |-----------|------------|
-| Compute | GitHub Actions |
+| Compute | GitHub Actions (ARM64 runners, 4 vCPU, 16GB RAM) |
 | LLM Runtime | llama-cpp-python (GGUF) |
 | API Framework | FastAPI |
 | Streaming | Server-Sent Events |
 | Tunneling | Cloudflare Zero Trust |
 | Caching | GitHub Actions Cache (models) |
-| Frontend | Vanilla JS + marked.js |
+| Frontend | React + TypeScript |
 
 ## Configuration
+
+**Centralized Config**: All inference settings are managed in `config/inference.yaml`:
+- `n_ctx`: Context window size (default: 4096)
+- `n_threads`: CPU threads (default: 4, matches runner vCPUs)
+- `n_batch`: Batch size (default: 256)
+- `max_concurrent`: Parallel requests per instance (default: 2)
 
 **High Availability**: Run multiple parallel instances per model:
 - Each workflow supports 1-3 concurrent instances
@@ -171,7 +195,7 @@ For local development with multiple models on the same machine:
 | 8080 | Core | Chat Interface |
 | 81XX | Small (<7B) | qwen (8100), phi (8101), functiongemma (8103) |
 | 82XX | Medium (7B-30B) | gemma (8200), llama (8201), mistral (8202), rnj (8203) |
-| 83XX | Reasoning | r1qwen (8300) |
+| 83XX | Reasoning | r1qwen (8300), nanbeige (8301) |
 
 GitHub Actions uses port 8000 for all inference models (each runs on a separate runner).
 
@@ -208,7 +232,7 @@ docker-compose --profile all up
 
 ## Limitations
 
-- **CPU Inference**: No GPU on GitHub-hosted runners (slower generation)
+- **CPU Inference**: No GPU on GitHub-hosted runners (slower generation, ~10-50 tokens/sec depending on model)
 - **Brief Downtime**: ~3-5 minutes during auto-restart (only with single instance; eliminated with 2+ instances)
 - **First Run**: Initial model download (~2-5 min), subsequent runs use cached models
 
