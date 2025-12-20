@@ -112,18 +112,37 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         n_ctx = int(os.getenv("N_CTX", str(config.default_n_ctx)))
         n_threads = int(os.getenv("N_THREADS", str(config.default_n_threads)))
         n_batch = int(os.getenv("N_BATCH", str(config.n_batch)))
+        
+        # KV-cache quantization (Q8_0 = 8) reduces memory ~30% with minimal quality loss
+        # Enable via KV_CACHE_QUANT=1 or KV_CACHE_QUANT=8 for Q8_0
+        kv_cache_quant = os.getenv("KV_CACHE_QUANT", "").strip().lower()
+        type_k = None
+        type_v = None
+        if kv_cache_quant in {"1", "true", "yes", "on", "8", "q8"}:
+            type_k = 8  # Q8_0
+            type_v = 8  # Q8_0
 
         print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}, max_concurrent={max_concurrent}")
-        llm = Llama(
-            model_path=model_path,
-            n_ctx=n_ctx,
-            n_threads=n_threads,
-            use_mlock=True,
-            use_mmap=True,
-            n_batch=n_batch,
-            last_n_tokens_size=config.last_n_tokens_size,
-            verbose=True,
-        )
+        if type_k:
+            print(f"  KV-cache quantization enabled: type_k={type_k}, type_v={type_v}")
+        
+        llama_kwargs = {
+            "model_path": model_path,
+            "n_ctx": n_ctx,
+            "n_threads": n_threads,
+            "use_mlock": True,
+            "use_mmap": True,
+            "n_batch": n_batch,
+            "last_n_tokens_size": config.last_n_tokens_size,
+            "verbose": True,
+        }
+        
+        # Add KV-cache quantization if enabled
+        if type_k is not None:
+            llama_kwargs["type_k"] = type_k
+            llama_kwargs["type_v"] = type_v
+        
+        llm = Llama(**llama_kwargs)
         print("Model loaded successfully!")
 
         # Warm up the model with a tiny inference (non-blocking errors)

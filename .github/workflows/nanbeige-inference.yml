@@ -40,8 +40,8 @@ jobs:
       model_name: "nanbeige"
       model_dir: "nanbeige-inference"
       model_repo: "bartowski/Nanbeige_Nanbeige4-3B-Thinking-2511-GGUF"
-      model_file: "Nanbeige_Nanbeige4-3B-Thinking-2511-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-nanbeige-3b-thinking-q4"
+      model_file: "Nanbeige_Nanbeige4-3B-Thinking-2511-Q5_K_M.gguf"
+      cache_key_prefix: "gguf-nanbeige-3b-thinking-q5km"
       restart_event_type: "restart-nanbeige-inference"
       workflow_file: "nanbeige-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}

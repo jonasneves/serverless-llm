@@ -108,13 +108,15 @@ jobs:
           N_THREADS=$(get_config "n_threads")
           N_BATCH=$(get_config "n_batch")
           MAX_CONCURRENT=$(get_config "max_concurrent")
+          KV_CACHE_QUANT=$(get_config "kv_cache_quant")
           
           echo "n_ctx=$N_CTX" >> $GITHUB_OUTPUT
           echo "n_threads=$N_THREADS" >> $GITHUB_OUTPUT
           echo "n_batch=$N_BATCH" >> $GITHUB_OUTPUT
           echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
+          echo "kv_cache_quant=$KV_CACHE_QUANT" >> $GITHUB_OUTPUT
           
-          echo "✓ Config for $MODEL: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT"
+          echo "✓ Config for $MODEL: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
 
       - name: Move Docker data to /mnt
         run: |
@@ -217,6 +219,7 @@ jobs:
           N_THREADS: ${{ steps.config.outputs.n_threads }}
           N_BATCH: ${{ steps.config.outputs.n_batch }}
           MAX_CONCURRENT: ${{ steps.config.outputs.max_concurrent }}
+          KV_CACHE_QUANT: ${{ steps.config.outputs.kv_cache_quant }}
         run: |
           # Start inference server with config from config/inference.yaml
           docker run -d \
@@ -234,10 +237,11 @@ jobs:
             -e N_THREADS="$N_THREADS" \
             -e N_BATCH="$N_BATCH" \
             -e MAX_CONCURRENT="$MAX_CONCURRENT" \
+            -e KV_CACHE_QUANT="$KV_CACHE_QUANT" \
             -v /mnt/huggingface-cache:/app/.cache/huggingface \
             ${{ inputs.model_name }}-inference:latest
 
-          echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT"
+          echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
 
           # Health check
           HEALTHY=false

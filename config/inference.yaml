@@ -12,6 +12,7 @@ defaults:
   n_threads: 4       # CPU threads - matches runner vCPU count
   n_batch: 256       # Batch size for prompt processing
   max_concurrent: 2  # Max parallel requests per instance
+  kv_cache_quant: false  # Q8_0 KV-cache quantization (reduces memory ~30%)
 
 # Model-specific overrides
 # Only specify values that differ from defaults
@@ -42,7 +43,13 @@ models:
     # Uses defaults - 270M parameter model, very fast
 
   nanbeige:
-    # Uses defaults - Nanbeige4-3B-Thinking is a small reasoning model
+    # Nanbeige4-3B-Thinking: #1 reasoning model, optimized for quality
+    # Larger context benefits chain-of-thought, batch 512 for faster prompts
+    # KV-cache quant reduces memory ~30% with minimal quality impact
+    n_ctx: 8192
+    n_batch: 512
+    max_concurrent: 3
+    kv_cache_quant: true
 
   nemotron:
     # 30B MoE model with IQ2_M quantization (~8GB) - smallest available
