@@ -70,7 +70,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     gesturesActive = false,
 }, ref) => {
     const [inputFocused, setInputFocused] = useState(false);
-    const [showAutoDropdown, setShowAutoDropdown] = useState(false);
     const [showModelSelector, setShowModelSelector] = useState(false);
     const [expandedLocalModels, setExpandedLocalModels] = useState(true);
     const [expandedApiModels, setExpandedApiModels] = useState(false);
@@ -80,7 +79,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const modelSelectorRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -207,12 +205,9 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedMessages, messages]);
 
-    // Close dropdowns when clicking outside
+    // Close model selector when clicking outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setShowAutoDropdown(false);
-            }
             if (modelSelectorRef.current && !modelSelectorRef.current.contains(e.target as Node)) {
                 setShowModelSelector(false);
             }
@@ -436,99 +431,81 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         ? models.find(m => m.id === currentAutoModel)
         : selectedModel;
 
-    const autoScopeLabels: Record<ChatAutoModeScope, string> = {
-        local: 'Local',
-        api: 'API'
-    };
-
     return (
         <div ref={containerRef} className="flex flex-col h-full relative isolate z-[10]">
             {/* Blue Selection Rectangle */}
             <SelectionOverlay rect={selectionRect} />
 
-            {/* Messages Area */}
-            <div
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 pb-32 chat-scroll relative z-[10] [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
-                data-no-arena-scroll
-                onClick={(e) => {
-                    // Clear selection if clicking directly on the messages area (not on a message)
-                    if (e.target === e.currentTarget || !(e.target as HTMLElement).closest('[data-message]')) {
-                        setSelectedMessages(new Set());
-                    }
-                }}
-            >
-                <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
-                    {messages.length === 0 && (
-                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 select-none pb-20 relative">
-                            <Bot size={48} className="mb-4 opacity-50" />
-                            <div className="flex items-center gap-2 mb-4">
-                                {autoMode ? (
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="relative" ref={dropdownRef}>
-                                            <button
-                                                onClick={() => setShowAutoDropdown(!showAutoDropdown)}
-                                                className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
-                                            >
-                                                <Zap size={12} className="text-yellow-400" />
-                                                <span className="text-slate-200/60">
-                                                    {autoModeScope === 'local' && 'Local Models (Auto)'}
-                                                    {autoModeScope === 'api' && 'API Models (Auto)'}
-                                                </span>
-                                                <ChevronDown size={11} className="text-slate-200/60 transition-transform" />
-                                            </button>
+            {/* Model Selection Controls - Fixed at top */}
+            <div className="absolute top-0 left-0 right-0 z-20 flex justify-center pt-4 pb-2 pointer-events-none">
+                <div className="flex flex-col items-center gap-2 pointer-events-auto">
+                    {/* Auto vs Manual Mode Toggle */}
+                    <div className="flex items-center gap-1.5 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 backdrop-blur-sm">
+                        <button
+                            onClick={() => setAutoMode(true)}
+                            className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium ${
+                                autoMode
+                                    ? 'bg-yellow-500/20 text-yellow-300 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-300'
+                            }`}
+                        >
+                            <Zap size={12} />
+                            <span>Auto</span>
+                        </button>
+                        <button
+                            onClick={() => setAutoMode(false)}
+                            className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium ${
+                                !autoMode
+                                    ? 'bg-blue-500/20 text-blue-300 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-300'
+                            }`}
+                        >
+                            <Bot size={12} />
+                            <span>Manual</span>
+                        </button>
+                    </div>
 
-                                            {showAutoDropdown && (
-                                                <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                                    {(['local', 'api'] as ChatAutoModeScope[]).map(scope => (
-                                                        <button
-                                                            key={scope}
-                                                            onClick={() => {
-                                                                setAutoModeScope(scope);
-                                                                setShowAutoDropdown(false);
-                                                            }}
-                                                            className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors ${autoModeScope === scope
-                                                                ? 'bg-yellow-500/20 text-yellow-300'
-                                                                : 'text-slate-300 hover:bg-slate-700/50'
-                                                                }`}
-                                                        >
-                                                            {autoScopeLabels[scope]}
-                                                            {scope === 'local' && <span className="text-[10px] text-slate-500 ml-1">(no quota)</span>}
-                                                            {scope === 'api' && <span className="text-[10px] text-slate-500 ml-1">(cloud only)</span>}
-                                                        </button>
-                                                    ))}
-                                                    <div className="border-t border-slate-700">
-                                                        <button
-                                                            onClick={() => {
-                                                                setAutoMode(false);
-                                                                setShowAutoDropdown(false);
-                                                            }}
-                                                            className="w-full px-3 py-2 text-left text-xs font-medium text-slate-400 hover:bg-slate-700/50 transition-colors"
-                                                        >
-                                                            Manual Mode
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="relative" ref={modelSelectorRef}>
-                                            <button
-                                                onClick={() => setShowModelSelector(!showModelSelector)}
-                                                className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
-                                                disabled={isGenerating}
-                                            >
-                                                {selectedModel && (
-                                                    <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-                                                )}
-                                                <span className="text-slate-200/60">{selectedModel ? selectedModel.name : 'Select a model'}</span>
-                                                {!isGenerating && <ChevronDown size={11} className="text-slate-200/60" />}
-                                            </button>
+                    {autoMode ? (
+                        <div className="flex items-center gap-1.5 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 backdrop-blur-sm">
+                            <button
+                                onClick={() => setAutoModeScope('local')}
+                                className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium ${
+                                    autoModeScope === 'local'
+                                        ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
+                                        : 'text-slate-400 hover:text-slate-300'
+                                }`}
+                            >
+                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                <span>Local</span>
+                            </button>
+                            <button
+                                onClick={() => setAutoModeScope('api')}
+                                className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium ${
+                                    autoModeScope === 'api'
+                                        ? 'bg-blue-500/20 text-blue-300 shadow-sm'
+                                        : 'text-slate-400 hover:text-slate-300'
+                                }`}
+                            >
+                                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                <span>API</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="relative" ref={modelSelectorRef}>
+                            <button
+                                onClick={() => setShowModelSelector(!showModelSelector)}
+                                className="h-7 px-3 flex items-center gap-2 rounded-lg border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 backdrop-blur-sm transition-all active:scale-95 text-xs font-medium"
+                                disabled={isGenerating}
+                            >
+                                {selectedModel && (
+                                    <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                )}
+                                <span className="text-slate-200/80">{selectedModel ? selectedModel.name : 'Select a model'}</span>
+                                {!isGenerating && <ChevronDown size={12} className="text-slate-400" />}
+                            </button>
 
                                             {showModelSelector && !isGenerating && (
-                                                <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
                                                     {models.length === 0 ? (
                                                         <div className="px-3 py-4 text-xs text-slate-500 text-center">
                                                             No models available
@@ -618,30 +595,33 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                                     )}
                                                                 </div>
                                                             )}
-
-                                                            <div className="border-t border-slate-700">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setAutoMode(true);
-                                                                        setShowModelSelector(false);
-                                                                    }}
-                                                                    className="w-full px-3 py-2 text-left text-xs font-medium text-yellow-400 hover:bg-slate-700/50 transition-colors flex items-center gap-2"
-                                                                >
-                                                                    <Zap size={12} />
-                                                                    <span>Enable Auto Mode</span>
-                                                                </button>
-                                                            </div>
                                                         </>
                                                     )}
                                                 </div>
                                             )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
 
+            {/* Messages Area */}
+            <div
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto p-4 pb-32 chat-scroll relative z-[10] [mask-image:linear-gradient(to_bottom,transparent_0%,black_2rem,black_calc(100%-4rem),transparent_100%)]"
+                data-no-arena-scroll
+                onClick={(e) => {
+                    // Clear selection if clicking directly on the messages area (not on a message)
+                    if (e.target === e.currentTarget || !(e.target as HTMLElement).closest('[data-message]')) {
+                        setSelectedMessages(new Set());
+                    }
+                }}
+            >
+                <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px', paddingTop: '80px' }}>
+                    {messages.length === 0 && (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 select-none pb-20 relative">
+                            <Bot size={48} className="mb-4 opacity-50" />
                             {!githubToken && ((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-16 flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs whitespace-nowrap">
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs">
                                     <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
                                     <span>Add GitHub token in Settings for dedicated quota</span>
                                 </div>
