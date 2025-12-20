@@ -29,11 +29,11 @@ logger = logging.getLogger(__name__)
 
 # Configuration from environment
 MODEL_REPO = os.getenv("MODEL_REPO", "unsloth/Nemotron-3-Nano-30B-A3B-GGUF")
-MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf")
+MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-Q3_K_M.gguf")
 PORT = int(os.getenv("PORT", "8301"))
-N_CTX = int(os.getenv("N_CTX", "4096"))
+N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "4"))
-N_BATCH = int(os.getenv("N_BATCH", "256"))
+N_BATCH = int(os.getenv("N_BATCH", "512"))
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "1"))
 HF_TOKEN = os.getenv("HF_TOKEN")
 
@@ -100,6 +100,8 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
+        "--flash-attn",      # Faster attention computation
+        "--cont-batching",   # Efficient parallel request handling
     ]
 
     logger.info(f"Starting llama-server: {' '.join(cmd)}")

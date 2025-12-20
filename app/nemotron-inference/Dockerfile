@@ -65,11 +65,12 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY nemotron-inference/inference_server.py .
 
 ENV MODEL_REPO=unsloth/Nemotron-3-Nano-30B-A3B-GGUF
-ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf
+# Q3_K_M (~12GB) offers ~25-30% faster inference vs IQ2_M with better quality
+ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-Q3_K_M.gguf
 ENV PORT=8000
-ENV N_CTX=4096
+ENV N_CTX=2048
 ENV N_THREADS=4
-ENV N_BATCH=256
+ENV N_BATCH=512
 ENV MAX_CONCURRENT=1
 
 EXPOSE 8000
