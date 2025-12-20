@@ -210,7 +210,7 @@ def _start_backend(repo_root: Path, state_path: Path, log_path: Path, mode: str)
     if isinstance(pid, int) and _is_pid_alive(pid):
         return {"ok": True, "status": "running", "pid": pid}
 
-    command = ["make", "dev-remote"] if mode == "dev-remote" else ["make", "dev-interface-local"]
+    command = ["make", "dev-chat"] if mode == "dev-chat" else ["make", "dev-interface-local"]
 
     log_path.parent.mkdir(exist_ok=True)
     log_f = open(log_path, "a", buffering=1)
@@ -301,8 +301,8 @@ def main() -> None:
         return
 
     if action == "start":
-        mode = message.get("mode") or "dev-remote"
-        if mode not in ("dev-remote", "dev-interface-local"):
+        mode = message.get("mode") or "dev-chat"
+        if mode not in ("dev-chat", "dev-interface-local"):
             _write_message({"ok": False, "error": f"Unknown mode: {mode}"})
             return
         _write_message(_start_backend(repo_root, state_path, log_path, mode))

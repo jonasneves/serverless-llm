@@ -145,7 +145,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             return;
         }
 
-        const mode = modelsBaseDomain ? 'dev-remote' : 'dev-interface-local';
+        const mode = modelsBaseDomain ? 'dev-chat' : 'dev-interface-local';
         const resp = await nativeRequest({ action: 'start', mode });
         if (!resp?.ok && resp?.logTail) setBackendLogTail(resp.logTail);
         if (!resp?.ok && resp?.error) setBackendNativeError(resp.error);
@@ -404,13 +404,12 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-800/40 backdrop-blur-sm border border-slate-700/30 shadow-xl shadow-black/10">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                            backendHealth === 'ok' 
-                                ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' 
-                                : backendHealth === 'down' 
-                                    ? 'bg-red-500/20 text-red-400' 
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${backendHealth === 'ok'
+                                ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                                : backendHealth === 'down'
+                                    ? 'bg-red-500/20 text-red-400'
                                     : 'bg-blue-500/20 text-blue-400'
-                        }`}>
+                            }`}>
                             {backendHealth === 'ok' && <CheckCircle className="w-5 h-5" />}
                             {backendHealth === 'down' && <XCircle className="w-5 h-5" />}
                             {backendHealth === 'checking' && <RefreshCw className="w-5 h-5 animate-spin" />}
@@ -468,11 +467,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             <button
                                 onClick={startBackend}
                                 disabled={backendBusy || !(chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1'))}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                                    chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
+                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
                                         ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-300 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/20'
                                         : 'bg-slate-700/30 text-slate-500 cursor-not-allowed'
-                                }`}
+                                    }`}
                                 title={
                                     chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
                                         ? modelsBaseDomain ? 'Start with remote models' : 'Start with local models'
@@ -594,23 +592,21 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             return (
                                 <div
                                     key={kw.name}
-                                    className={`p-4 rounded-xl bg-slate-800/40 backdrop-blur-sm border transition-all ${
-                                        isActive 
-                                            ? 'border-blue-500/30 shadow-lg shadow-blue-500/5' 
+                                    className={`p-4 rounded-xl bg-slate-800/40 backdrop-blur-sm border transition-all ${isActive
+                                            ? 'border-blue-500/30 shadow-lg shadow-blue-500/5'
                                             : 'border-slate-700/30 hover:border-slate-600/40'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                                run?.conclusion === 'success' 
-                                                    ? 'bg-emerald-500/20 text-emerald-400' 
-                                                    : run?.conclusion === 'failure' 
-                                                        ? 'bg-red-500/20 text-red-400' 
-                                                        : isActive 
-                                                            ? 'bg-blue-500/20 text-blue-400' 
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${run?.conclusion === 'success'
+                                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                                    : run?.conclusion === 'failure'
+                                                        ? 'bg-red-500/20 text-red-400'
+                                                        : isActive
+                                                            ? 'bg-blue-500/20 text-blue-400'
                                                             : 'bg-slate-700/50 text-slate-400'
-                                            }`}>
+                                                }`}>
                                                 {getStatusIcon(run ?? null)}
                                             </div>
                                             <div>
@@ -635,11 +631,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                             <button
                                                 onClick={() => triggerWorkflow(kw.name)}
                                                 disabled={isTriggering || loading}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                                                    isTriggering
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${isTriggering
                                                         ? 'bg-slate-700/50 text-slate-400'
                                                         : 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 hover:from-blue-500/30 hover:to-purple-500/30 border border-blue-500/20'
-                                                }`}
+                                                    }`}
                                             >
                                                 {isTriggering ? (
                                                     <RefreshCw className="w-3 h-3 animate-spin" />

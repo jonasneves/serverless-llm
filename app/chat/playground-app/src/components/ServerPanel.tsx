@@ -112,7 +112,7 @@ const ServerPanel: React.FC = () => {
       return;
     }
 
-    const mode = config.modelsBaseDomain ? 'dev-remote' : 'dev-interface-local';
+    const mode = config.modelsBaseDomain ? 'dev-chat' : 'dev-interface-local';
     const resp = await nativeRequest({ action: 'start', mode });
 
     if (resp?.ok) {
@@ -291,7 +291,7 @@ const ServerPanel: React.FC = () => {
       {/* Subtle gradient background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5" />
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: 'radial-gradient(rgba(148, 163, 184, 0.4) 1px, transparent 1px)',
@@ -299,7 +299,7 @@ const ServerPanel: React.FC = () => {
           }}
         />
       </div>
-      
+
       {/* Premium Header with Glassmorphism */}
       <div className="relative z-10 px-4 py-3 bg-slate-900/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center justify-between gap-3">
@@ -310,34 +310,31 @@ const ServerPanel: React.FC = () => {
             </div>
             <span className="text-sm font-semibold text-white/90 tracking-tight">Serverless LLM</span>
           </div>
-          
+
           {/* Profile Switcher - Pill Style */}
           <div className="flex items-center gap-2">
-            <div 
-              className="relative flex p-0.5 bg-slate-800/60 rounded-full border border-slate-700/40" 
+            <div
+              className="relative flex p-0.5 bg-slate-800/60 rounded-full border border-slate-700/40"
               title="⌘/Ctrl+P to cycle profiles"
             >
-              <div 
-                className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out ${
-                  config.profile === 'remote_all' 
-                    ? 'bg-gradient-to-r from-blue-500/40 to-blue-600/40 border border-blue-500/30' 
+              <div
+                className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out ${config.profile === 'remote_all'
+                    ? 'bg-gradient-to-r from-blue-500/40 to-blue-600/40 border border-blue-500/30'
                     : 'bg-gradient-to-r from-emerald-500/40 to-emerald-600/40 border border-emerald-500/30'
-                }`}
+                  }`}
                 style={getProfileIndicatorStyle()}
               />
               <button
                 onClick={() => applyProfile('local_chat_remote_models')}
-                className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${
-                  config.profile === 'local_chat_remote_models' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${config.profile === 'local_chat_remote_models' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                  }`}
               >
                 Dev
               </button>
               <button
                 onClick={() => applyProfile('remote_all')}
-                className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${
-                  config.profile === 'remote_all' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`relative z-10 px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${config.profile === 'remote_all' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                  }`}
               >
                 Prod
               </button>
@@ -346,11 +343,10 @@ const ServerPanel: React.FC = () => {
             {/* Settings Button */}
             <button
               onClick={() => setShowConfig(!showConfig)}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
-                showConfig 
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${showConfig
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
               title="Settings"
             >
               <Settings className={`w-4 h-4 transition-transform duration-300 ${showConfig ? 'rotate-90' : ''}`} />
@@ -364,50 +360,46 @@ const ServerPanel: React.FC = () => {
         <div className="relative z-10 px-4 pt-4 pb-2">
           <div className="relative flex p-1 bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
             {/* Animated sliding indicator */}
-            <div 
+            <div
               className="absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/20 transition-all duration-300 ease-out"
               style={getTabIndicatorStyle()}
             />
-            
+
             <button
               onClick={() => setActiveTab('backend')}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${
-                activeTab === 'backend' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'backend' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               <Database className={`w-3.5 h-3.5 transition-colors ${activeTab === 'backend' ? 'text-blue-400' : ''}`} />
               Backend
             </button>
-            
+
             <button
               onClick={() => setActiveTab('deployments')}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${
-                activeTab === 'deployments' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'deployments' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               <Rocket className={`w-3.5 h-3.5 transition-colors ${activeTab === 'deployments' ? 'text-purple-400' : ''}`} />
               Deploy
             </button>
-            
+
             <button
               onClick={() => {
                 setActiveTab('services');
                 checkHealth(services);
               }}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${
-                activeTab === 'services' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'services' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               <Activity className={`w-3.5 h-3.5 transition-colors ${activeTab === 'services' ? 'text-emerald-400' : ''}`} />
               Services
               {services.length > 0 && (
-                <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded-full ${
-                  healthyCount === services.length 
-                    ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
-                    : healthyCount > 0 
-                      ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30' 
+                <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded-full ${healthyCount === services.length
+                    ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
+                    : healthyCount > 0
+                      ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30'
                       : 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
-                }`}>
+                  }`}>
                   {healthyCount}/{services.length}
                 </span>
               )}
@@ -423,7 +415,7 @@ const ServerPanel: React.FC = () => {
             <Sparkles className="w-4 h-4 text-blue-400" />
             <h2 className="text-sm font-semibold text-white">Configuration</h2>
           </div>
-          
+
           {/* GitHub Token - Most Important */}
           <div className="p-3 rounded-xl bg-slate-800/40 backdrop-blur-sm border border-slate-700/30">
             <label className="flex items-center gap-2 text-xs font-medium text-slate-200 mb-2">
@@ -548,13 +540,12 @@ const ServerPanel: React.FC = () => {
               <div className="mb-4 p-4 rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-800/40 backdrop-blur-sm border border-slate-700/30 shadow-xl shadow-black/10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      healthyCount === services.length 
-                        ? 'bg-emerald-500/20 text-emerald-400' 
-                        : healthyCount > 0 
-                          ? 'bg-amber-500/20 text-amber-400' 
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${healthyCount === services.length
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : healthyCount > 0
+                          ? 'bg-amber-500/20 text-amber-400'
                           : 'bg-red-500/20 text-red-400'
-                    }`}>
+                      }`}>
                       <Globe className="w-5 h-5" />
                     </div>
                     <div>
@@ -562,22 +553,21 @@ const ServerPanel: React.FC = () => {
                         {isUsingRemoteModels ? config.modelsBaseDomain : 'localhost'}
                       </p>
                       <p className="text-[11px] text-slate-400">
-                        {healthyCount === services.length 
-                          ? 'All services healthy' 
-                          : healthyCount > 0 
-                            ? 'Some services unavailable' 
+                        {healthyCount === services.length
+                          ? 'All services healthy'
+                          : healthyCount > 0
+                            ? 'Some services unavailable'
                             : 'Services offline'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      healthyCount === services.length 
-                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
-                        : healthyCount > 0 
-                          ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30' 
+                    <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${healthyCount === services.length
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
+                        : healthyCount > 0
+                          ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30'
                           : 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
-                    }`}>
+                      }`}>
                       {healthyCount}/{services.length}
                     </div>
                   </div>
@@ -624,13 +614,12 @@ const ServerPanel: React.FC = () => {
                       title={`Endpoint: ${service.endpoint}`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${
-                          service.status === 'ok' 
-                            ? `bg-emerald-400 ${STATUS_GLOW.ok}` 
-                            : service.status === 'down' 
-                              ? `bg-red-400 ${STATUS_GLOW.down}` 
+                        <div className={`w-2 h-2 rounded-full ${service.status === 'ok'
+                            ? `bg-emerald-400 ${STATUS_GLOW.ok}`
+                            : service.status === 'down'
+                              ? `bg-red-400 ${STATUS_GLOW.down}`
                               : `bg-blue-400 ${STATUS_GLOW.checking} animate-pulse`
-                        }`} />
+                          }`} />
                         <span className="text-sm text-slate-200 group-hover:text-white transition-colors">{service.name}</span>
                       </div>
                       <span className="text-[11px] text-slate-500 group-hover:text-slate-400 truncate max-w-[140px] transition-colors" title={service.endpoint}>
