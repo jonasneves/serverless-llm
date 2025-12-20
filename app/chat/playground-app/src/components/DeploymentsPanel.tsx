@@ -373,8 +373,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         name: string;
         status: 'running' | 'stopped' | 'building' | 'deploying' | 'ok' | 'down' | 'checking';
         deploymentStatus: 'success' | 'failure' | 'in_progress' | 'queued' | 'unknown';
-        endpoint?: string;
+        localStatus?: 'ok' | 'down' | 'checking';
+        publicEndpoint: string;
         endpointUrl?: string;
+        localEndpointUrl?: string;
         deploymentUrl?: string;
     }> = [
         {
@@ -382,21 +384,26 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             name: 'Chat API',
             status: backendHealth === 'ok' ? 'running' : backendHealth === 'down' ? 'stopped' : 'checking',
             deploymentStatus: getDeploymentStatusForApp('chat-api'),
-            endpoint: chatApiBaseUrl,
+            localStatus: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? backendHealth : undefined,
+            publicEndpoint: 'chat.neevs.io',
             endpointUrl: `${normalizeBaseUrl(chatApiBaseUrl)}/health`,
+            localEndpointUrl: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? chatApiBaseUrl : undefined,
             deploymentUrl: runs.get('Chat')?.html_url,
         },
         ...SERVICES.map(service => {
             const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
             const health = modelHealthStatuses.get(service.key) || 'checking';
             const workflowName = service.name;
+            const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
             return {
                 id: service.key,
                 name: service.name,
                 status: health,
                 deploymentStatus: getDeploymentStatusForApp(service.key),
-                endpoint,
+                localStatus: isLocal ? health : undefined,
+                publicEndpoint: `${service.key}.neevs.io`,
                 endpointUrl: `${endpoint}/health`,
+                localEndpointUrl: isLocal ? endpoint : undefined,
                 deploymentUrl: runs.get(workflowName)?.html_url,
             };
         }),
@@ -438,8 +445,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         name={app.name}
                         status={app.status}
                         deploymentStatus={app.deploymentStatus}
-                        endpoint={app.endpoint}
+                        localStatus={app.localStatus}
+                        publicEndpoint={app.publicEndpoint}
                         endpointUrl={app.endpointUrl}
+                        localEndpointUrl={app.localEndpointUrl}
                         deploymentUrl={app.deploymentUrl}
                         defaultExpanded={app.id === 'qwen'}
                     >

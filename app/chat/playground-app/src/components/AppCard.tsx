@@ -6,8 +6,10 @@ interface AppCardProps {
   name: string;
   status: 'running' | 'stopped' | 'building' | 'deploying' | 'ok' | 'down' | 'checking';
   deploymentStatus?: 'success' | 'failure' | 'in_progress' | 'queued' | 'unknown';
-  endpoint?: string;
+  localStatus?: 'ok' | 'down' | 'checking';
+  publicEndpoint: string;
   endpointUrl?: string;
+  localEndpointUrl?: string;
   deploymentUrl?: string;
   children?: React.ReactNode;
   defaultExpanded?: boolean;
@@ -17,13 +19,28 @@ const AppCard: React.FC<AppCardProps> = ({
   name,
   status,
   deploymentStatus,
-  endpoint,
+  localStatus,
+  publicEndpoint,
   endpointUrl,
+  localEndpointUrl,
   deploymentUrl,
   children,
   defaultExpanded = false,
 }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const getLocalBadgeIcon = () => {
+    switch (localStatus) {
+      case 'ok':
+        return '✓';
+      case 'down':
+        return '✗';
+      case 'checking':
+        return '◌';
+      default:
+        return '';
+    }
+  };
 
   const getStatusText = () => {
     switch (status) {
@@ -54,9 +71,7 @@ const AppCard: React.FC<AppCardProps> = ({
       >
         <div className="flex flex-col items-start min-w-0 flex-1">
           <span className="text-sm font-medium text-slate-200">{name}</span>
-          {endpoint && (
-            <span className="text-[10px] text-slate-500 truncate max-w-full">{endpoint}</span>
-          )}
+          <span className="text-[10px] text-slate-500 truncate max-w-full">{publicEndpoint}</span>
         </div>
         <ChevronRight
           className={`w-4 h-4 text-slate-500 transition-transform flex-shrink-0 ${
@@ -140,6 +155,39 @@ const AppCard: React.FC<AppCardProps> = ({
                deploymentStatus === 'failure' ? 'Failed' :
                deploymentStatus === 'in_progress' ? 'Deploying' :
                'Queued'}
+            </span>
+          )
+        )}
+
+        {/* Local Badge */}
+        {localStatus && (
+          localEndpointUrl ? (
+            <a
+              href={localEndpointUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium transition-all hover:opacity-80 border ${
+                localStatus === 'ok'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : localStatus === 'down'
+                  ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                  : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+              }`}
+            >
+              {getLocalBadgeIcon()} Local
+            </a>
+          ) : (
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-medium border ${
+                localStatus === 'ok'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : localStatus === 'down'
+                  ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                  : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+              }`}
+            >
+              {getLocalBadgeIcon()} Local
             </span>
           )
         )}
