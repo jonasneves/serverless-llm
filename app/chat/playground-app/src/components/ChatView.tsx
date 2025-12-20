@@ -514,13 +514,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                         </button>
 
                                         {showModelSelector && !isGenerating && (
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-64 max-h-[60vh] bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col">
+                                            <div className="fixed left-1/2 -translate-x-1/2 w-64 max-h-[400px] bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[100] flex flex-col overflow-hidden" style={{ top: 'calc(50% - 280px)' }}>
                                                 {models.length === 0 ? (
                                                     <div className="px-3 py-4 text-xs text-slate-500 text-center">
                                                         No models available
                                                     </div>
                                                 ) : (
-                                                    <div className="overflow-y-auto">
+                                                    <div className="overflow-y-auto flex-1">
                                                         {models.filter(m => m.type === 'local').length > 0 && (
                                                             <div>
                                                                 <button
