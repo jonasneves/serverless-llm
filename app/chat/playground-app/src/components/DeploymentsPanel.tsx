@@ -40,11 +40,15 @@ const KEY_WORKFLOWS = [
     { name: 'Build Images', path: 'build-push-images.yml' },
     { name: 'Qwen', path: 'qwen-inference.yml' },
     { name: 'Phi', path: 'phi-inference.yml' },
+    { name: 'FunctionGemma', path: 'functiongemma-inference.yml' },
+    { name: 'Gemma', path: 'gemma-inference.yml' },
     { name: 'Llama', path: 'llama-inference.yml' },
     { name: 'Mistral', path: 'mistral-inference.yml' },
-  { name: 'Gemma', path: 'gemma-inference.yml' },
-  { name: 'R1 Qwen', path: 'r1qwen-inference.yml' },
-  { name: 'RNJ', path: 'rnj-inference.yml' },
+    { name: 'RNJ', path: 'rnj-inference.yml' },
+    { name: 'R1 Qwen', path: 'r1qwen-inference.yml' },
+    { name: 'Nanbeige', path: 'nanbeige-inference.yml' },
+    { name: 'Nemotron', path: 'nemotron-inference.yml' },
+    { name: 'GPT-OSS', path: 'gpt-oss-inference.yml' },
 ];
 
 const WORKFLOW_PATHS = new Map(KEY_WORKFLOWS.map(wf => [wf.name, wf.path]));
@@ -364,11 +368,15 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         if (appId === 'chat-api') workflowName = 'Chat';
         else if (appId === 'qwen') workflowName = 'Qwen';
         else if (appId === 'phi') workflowName = 'Phi';
+        else if (appId === 'functiongemma') workflowName = 'FunctionGemma';
+        else if (appId === 'gemma') workflowName = 'Gemma';
         else if (appId === 'llama') workflowName = 'Llama';
         else if (appId === 'mistral') workflowName = 'Mistral';
-        else if (appId === 'gemma') workflowName = 'Gemma';
-        else if (appId === 'r1qwen') workflowName = 'R1 Qwen';
         else if (appId === 'rnj') workflowName = 'RNJ';
+        else if (appId === 'r1qwen') workflowName = 'R1 Qwen';
+        else if (appId === 'nanbeige') workflowName = 'Nanbeige';
+        else if (appId === 'nemotron') workflowName = 'Nemotron';
+        else if (appId === 'gptoss') workflowName = 'GPT-OSS';
 
         if (!workflowName) return 'unknown';
 
@@ -407,36 +415,36 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         localEndpointUrl?: string;
         deploymentUrl?: string;
     }> = [
-        {
-            id: 'chat-api',
-            name: 'Chat API',
-            status: backendHealth === 'ok' ? 'running' : backendHealth === 'down' ? 'stopped' : 'checking',
-            deploymentStatus: getDeploymentStatusForApp('chat-api'),
-            localStatus: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? backendHealth : undefined,
-            publicEndpoint: `chat.${publicDomain}`,
-            endpointUrl: chatPublicUrl,
-            localEndpointUrl: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? chatEndpoint : undefined,
-            deploymentUrl: runs.get('Chat')?.html_url || buildWorkflowUrl('Chat'),
-        },
-        ...SERVICES.map(service => {
-            const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
-            const health = modelHealthStatuses.get(service.key) || 'checking';
-            const workflowName = service.name;
-            const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
-            const publicEndpointUrl = `${publicScheme}://${service.key}.${publicDomain}`;
-            return {
-                id: service.key,
-                name: service.name,
-                status: health,
-                deploymentStatus: getDeploymentStatusForApp(service.key),
-                localStatus: isLocal ? health : undefined,
-                publicEndpoint: `${service.key}.${publicDomain}`,
-                endpointUrl: publicEndpointUrl,
-                localEndpointUrl: isLocal ? endpoint : undefined,
-                deploymentUrl: runs.get(workflowName)?.html_url || buildWorkflowUrl(workflowName),
-            };
-        }),
-    ];
+            {
+                id: 'chat-api',
+                name: 'Chat API',
+                status: backendHealth === 'ok' ? 'running' : backendHealth === 'down' ? 'stopped' : 'checking',
+                deploymentStatus: getDeploymentStatusForApp('chat-api'),
+                localStatus: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? backendHealth : undefined,
+                publicEndpoint: `chat.${publicDomain}`,
+                endpointUrl: chatPublicUrl,
+                localEndpointUrl: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? chatEndpoint : undefined,
+                deploymentUrl: runs.get('Chat')?.html_url || buildWorkflowUrl('Chat'),
+            },
+            ...SERVICES.map(service => {
+                const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
+                const health = modelHealthStatuses.get(service.key) || 'checking';
+                const workflowName = service.name;
+                const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
+                const publicEndpointUrl = `${publicScheme}://${service.key}.${publicDomain}`;
+                return {
+                    id: service.key,
+                    name: service.name,
+                    status: health,
+                    deploymentStatus: getDeploymentStatusForApp(service.key),
+                    localStatus: isLocal ? health : undefined,
+                    publicEndpoint: `${service.key}.${publicDomain}`,
+                    endpointUrl: publicEndpointUrl,
+                    localEndpointUrl: isLocal ? endpoint : undefined,
+                    deploymentUrl: runs.get(workflowName)?.html_url || buildWorkflowUrl(workflowName),
+                };
+            }),
+        ];
 
     return (
         <div className="space-y-3 pt-1">
@@ -462,31 +470,28 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         <div className="flex gap-1 mb-3 bg-slate-900/40 p-1 rounded-lg">
                             <button
                                 onClick={() => setActiveTab(app.id, 'build')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                                    activeTab === 'build'
-                                        ? 'bg-slate-700/60 text-white'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                }`}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'build'
+                                    ? 'bg-slate-700/60 text-white'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                    }`}
                             >
                                 Build
                             </button>
                             <button
                                 onClick={() => setActiveTab(app.id, 'deploy')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                                    activeTab === 'deploy'
-                                        ? 'bg-slate-700/60 text-white'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                }`}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'deploy'
+                                    ? 'bg-slate-700/60 text-white'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                    }`}
                             >
                                 Deploy
                             </button>
                             <button
                                 onClick={() => setActiveTab(app.id, 'observe')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                                    activeTab === 'observe'
-                                        ? 'bg-slate-700/60 text-white'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                }`}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'observe'
+                                    ? 'bg-slate-700/60 text-white'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                    }`}
                             >
                                 Observe
                             </button>

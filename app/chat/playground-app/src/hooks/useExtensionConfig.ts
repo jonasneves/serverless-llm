@@ -7,15 +7,19 @@
 import { useState, useEffect } from 'react';
 import { setApiBase } from '../utils/streaming';
 
-// Service definitions
+// Service definitions - ports aligned with config/models.py
 export const SERVICES = [
-  { key: 'qwen', name: 'Qwen', localPort: 8001 },
-  { key: 'phi', name: 'Phi', localPort: 8002 },
-  { key: 'llama', name: 'Llama', localPort: 8003 },
-  { key: 'r1qwen', name: 'R1 Qwen', localPort: 8004 },
-  { key: 'mistral', name: 'Mistral', localPort: 8005 },
-  { key: 'gemma', name: 'Gemma', localPort: 8006 },
-  { key: 'rnj', name: 'RNJ', localPort: 8007 },
+  { key: 'qwen', name: 'Qwen', localPort: 8100 },
+  { key: 'phi', name: 'Phi', localPort: 8101 },
+  { key: 'functiongemma', name: 'FunctionGemma', localPort: 8103 },
+  { key: 'gemma', name: 'Gemma', localPort: 8200 },
+  { key: 'llama', name: 'Llama', localPort: 8201 },
+  { key: 'mistral', name: 'Mistral', localPort: 8202 },
+  { key: 'rnj', name: 'RNJ', localPort: 8203 },
+  { key: 'r1qwen', name: 'R1 Qwen', localPort: 8300 },
+  { key: 'nanbeige', name: 'Nanbeige', localPort: 8301 },
+  { key: 'nemotron', name: 'Nemotron', localPort: 8302 },
+  { key: 'gptoss', name: 'GPT-OSS', localPort: 8303 },
 ] as const;
 
 export type ProfileId = 'remote_all' | 'local_chat_remote_models' | 'local_all' | 'custom';
@@ -59,9 +63,9 @@ export function normalizeEnvConfig(raw: unknown): EnvConfig {
 
   const profile: ProfileId =
     merged.profile === 'remote_all' ||
-    merged.profile === 'local_chat_remote_models' ||
-    merged.profile === 'local_all' ||
-    merged.profile === 'custom'
+      merged.profile === 'local_chat_remote_models' ||
+      merged.profile === 'local_all' ||
+      merged.profile === 'custom'
       ? merged.profile
       : DEFAULT_CONFIG.profile;
 
