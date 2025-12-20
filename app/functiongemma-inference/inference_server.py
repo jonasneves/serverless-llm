@@ -19,7 +19,7 @@ config = ModelConfig(
     default_repo="ggml-org/functiongemma-270m-it-GGUF",
     default_file="functiongemma-270m-it-q8_0.gguf",
     default_n_ctx=4096,
-    default_n_threads=2,
+    default_n_threads=4,
     n_batch=256,
 )
 

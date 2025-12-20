@@ -19,7 +19,7 @@ config = ModelConfig(
     default_repo="bartowski/Mistral-7B-Instruct-v0.3-GGUF",
     default_file="Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
     default_n_ctx=4096,
-    default_n_threads=2,
+    default_n_threads=4,
     n_batch=256,
 )
 

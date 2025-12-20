@@ -19,7 +19,7 @@ config = ModelConfig(
     default_repo="bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
     default_file="DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
     default_n_ctx=4096,
-    default_n_threads=2,
+    default_n_threads=4,
     n_batch=512,
 )
 

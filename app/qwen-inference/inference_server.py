@@ -21,7 +21,7 @@ config = ModelConfig(
     default_repo="unsloth/Qwen3-4B-GGUF",
     default_file="Qwen3-4B-Q4_K_M.gguf",
     default_n_ctx=4096,
-    default_n_threads=2,
+    default_n_threads=4,
     n_batch=512,
 )
 

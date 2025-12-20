@@ -45,9 +45,9 @@ class ModelConfig:
     default_repo: str
     default_file: str
 
-    # llama.cpp tuning
+    # llama.cpp tuning - 4 threads matches GitHub Actions ARM runner vCPUs
     default_n_ctx: int = 4096
-    default_n_threads: int = 2
+    default_n_threads: int = 4
     n_batch: int = 256
     last_n_tokens_size: int = 64
 

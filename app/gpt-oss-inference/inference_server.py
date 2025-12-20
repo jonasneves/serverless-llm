@@ -19,7 +19,7 @@ config = ModelConfig(
     default_repo="unsloth/gpt-oss-20b-GGUF",
     default_file="gpt-oss-20b-Q6_K.gguf",
     default_n_ctx=8192,
-    default_n_threads=2,
+    default_n_threads=4,
     n_batch=128,
 )
 

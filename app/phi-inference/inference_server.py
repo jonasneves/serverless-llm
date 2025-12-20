@@ -19,7 +19,7 @@ config = ModelConfig(
     default_repo="microsoft/Phi-3-mini-4k-instruct-gguf",
     default_file="Phi-3-mini-4k-instruct-q4.gguf",
     default_n_ctx=4096,
-    default_n_threads=2,
+    default_n_threads=4,
     n_batch=256,
 )
 

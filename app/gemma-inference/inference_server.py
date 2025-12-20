@@ -19,7 +19,7 @@ config = ModelConfig(
     default_repo="bartowski/gemma-2-9b-it-GGUF",
     default_file="gemma-2-9b-it-Q4_K_M.gguf",
     default_n_ctx=4096,
-    default_n_threads=2,
+    default_n_threads=4,
     n_batch=128,
 )
 
