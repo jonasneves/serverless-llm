@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Serverless LLM Playground",
+  "name": "shipctl",
   "version": "1.0.0",
-  "description": "Multi-model LLM chat interface with gesture control and collaborative modes",
+  "description": "shipctl side panel for Serverless LLM DevOps controls",
   "icons": {
     "16": "icon-16.svg",
     "48": "icon-48.svg",
     "128": "icon-128.svg"
   },
   "action": {
-    "default_title": "Open Serverless LLM Playground"
+    "default_title": "Open shipctl"
   },
   "side_panel": {
     "default_path": "sidepanel.html"

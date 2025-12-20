@@ -1,6 +1,6 @@
 # Chrome Extension Setup
 
-The Serverless LLM Playground can run as a Chrome extension with full-page interface and side panel controls.
+`shipctl` is the Serverless LLM side panel Chrome extension with full-page interface and DevOps controls.
 
 ## Quick Start
 
@@ -26,10 +26,10 @@ The extension connects to your local FastAPI server at `http://localhost:8080`.
 2. Enable "Developer mode" (toggle in top right)
 3. Click "Load unpacked"
 4. Navigate to: `app/chat/playground-app/dist-extension`
-5. Click "Select"
+5. Click "Select" (you should see the `shipctl` card appear)
 
 Optional: enable auto-start for the local backend (Native Messaging)
-- Copy the extension ID shown on its card in `chrome://extensions/`
+- Copy the extension ID shown on the `shipctl` card in `chrome://extensions/`
 - Follow "Auto-start local backend (Native Messaging)" below
 
 ### 4. Use the Extension
