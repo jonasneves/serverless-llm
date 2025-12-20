@@ -70,7 +70,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     gesturesActive = false,
 }, ref) => {
     const [inputFocused, setInputFocused] = useState(false);
-    const [angryReactionPending, setAngryReactionPending] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -259,13 +258,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         if (!text.trim() || isGenerating) return;
         if (!autoMode && !selectedModelId) return;
 
-        // Easter Egg Delay: If sending middle finger in empty chat, wait to show the angry robot
-        if (messages.length === 0 && (text === "🖕" || text.includes("middle finger"))) {
-            setAngryReactionPending(true);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            setAngryReactionPending(false);
-        }
-
         const userMessage: ChatMessage = { role: 'user', content: text };
         setMessages(prev => [...prev, userMessage]);
         setIsGenerating(true);
@@ -281,7 +273,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             } : null;
 
             // Easter egg: Angry robot context
-            const angrySystemMessage = (text === "🖕" || isMiddleFinger) ? {
+            const angrySystemMessage = (text === "🖕" || text.includes("middle finger")) ? {
                 role: 'system' as const,
                 content: "The user is showing you their middle finger (gesture). This is a playful interaction. Respond with humorous, over-the-top anger, indignation, or witty comeback. Don't be actually offended, but play along with the 'angry robot' persona."
             } : null;
@@ -457,7 +449,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center text-slate-500 select-none pb-20 relative pt-[30vh]">
-                            {(isMiddleFinger || angryReactionPending) ? (
+                            {isMiddleFinger ? (
                                 <div className="mb-4 relative">
                                     <div className="absolute inset-0 bg-red-500 blur-xl opacity-50 rounded-full"></div>
                                     <Bot size={72} className="relative text-red-500" />

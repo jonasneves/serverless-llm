@@ -191,15 +191,16 @@ export default function HandBackground({
     const cursorStateRef = useRef<CursorState>({ visible: false, x: 0, y: 0, isClicking: false });
     const smoothedCursorRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-    // Gesture state
-    const lastGestureTime = useRef<number>(0);
-    const gestureCooldown = 1500;
-    const PERSISTENCE_THRESHOLD = 15;
-    const gesturePersistence = useRef<Map<number, { candidate: string; frames: number }>>(new Map());
+// Gesture state
+const lastGestureTime = useRef<number>(0);
+const gestureCooldown = 1500;
+const PERSISTENCE_THRESHOLD = 15;
+const MIDDLE_FINGER_PERSISTENCE = 8;
+const gesturePersistence = useRef<Map<number, { candidate: string; frames: number }>>(new Map());
 
-    // Navigation mode state (for scroll, pointing)
-    const handStates = useRef<Map<number, {
-        isScrolling: boolean;
+// Navigation mode state (for scroll, pointing)
+const handStates = useRef<Map<number, {
+    isScrolling: boolean;
         lastScrollY: number | null;
         scrollVelocity: number;
         lastOpenTime: number;
@@ -213,6 +214,7 @@ export default function HandBackground({
         pointingOnlyStartTime: number;
         twoFingerFrames: number;
         clickLocked: boolean;
+        middleFingerActive: boolean;
     }>>(new Map());
 
     // ASL mode state
@@ -291,7 +293,8 @@ export default function HandBackground({
                 wasPointingOnly: false,
                 pointingOnlyStartTime: 0,
                 twoFingerFrames: 0,
-                clickLocked: false
+                clickLocked: false,
+                middleFingerActive: false
             });
         }
         return handStates.current.get(index)!;
@@ -388,6 +391,10 @@ export default function HandBackground({
             if (cursorStateRef.current.visible && cursorRef.current) {
                 cursorRef.current.style.opacity = '0';
                 cursorStateRef.current.visible = false;
+            }
+            if (state.middleFingerActive && onGestureStateRef.current) {
+                onGestureStateRef.current({ gesture: null, progress: 0, triggered: false });
+                state.middleFingerActive = false;
             }
             return null;
         }
@@ -596,19 +603,28 @@ export default function HandBackground({
                     persistence.frames = 1;
                 }
 
-                if (persistence.frames > 8) { // Require persistence
-                    // Trigger action
-                    const now = performance.now();
-                    if (now - lastGestureTime.current > gestureCooldown) {
-                        if (onSendMessageRef.current) {
-                            onSendMessageRef.current("🖕");
-                            lastGestureTime.current = now;
-                        }
-                        if (onGestureStateRef.current) {
-                            onGestureStateRef.current({ gesture: 'Middle_Finger', progress: 1, triggered: true });
-                        }
-                    }
+                const progress = Math.min(1, persistence.frames / MIDDLE_FINGER_PERSISTENCE);
+                const isActive = persistence.frames >= MIDDLE_FINGER_PERSISTENCE;
+
+                state.middleFingerActive = isActive;
+
+                if (onGestureStateRef.current) {
+                    onGestureStateRef.current({
+                        gesture: 'Middle_Finger',
+                        progress,
+                        triggered: isActive
+                    });
+                }
+
+                if (isActive) {
                     return 'Middle_Finger';
+                }
+            } else if (state.middleFingerActive || persistence.candidate === 'Middle_Finger') {
+                state.middleFingerActive = false;
+                persistence.candidate = 'NEUTRAL';
+                persistence.frames = 0;
+                if (onGestureStateRef.current) {
+                    onGestureStateRef.current({ gesture: null, progress: 0, triggered: false });
                 }
             }
         }
