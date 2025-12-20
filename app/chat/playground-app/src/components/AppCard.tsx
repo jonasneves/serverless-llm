@@ -7,6 +7,7 @@ interface AppCardProps {
   status: 'running' | 'stopped' | 'building' | 'deploying' | 'ok' | 'down' | 'checking';
   deploymentStatus?: 'success' | 'failure' | 'in_progress' | 'queued' | 'unknown';
   localStatus?: 'ok' | 'down' | 'checking';
+  latency?: number;
   publicEndpoint: string;
   endpointUrl?: string;
   localEndpointUrl?: string;
@@ -16,11 +17,25 @@ interface AppCardProps {
   activeMode?: 'build' | 'deploy' | 'observe';
 }
 
+const formatLatency = (latency?: number) => {
+  if (!latency) return null;
+  if (latency < 1000) return `${latency}ms`;
+  return `${(latency / 1000).toFixed(1)}s`;
+};
+
+const getLatencyColor = (latency?: number) => {
+  if (!latency) return 'text-slate-500';
+  if (latency < 500) return 'text-emerald-400';
+  if (latency < 1500) return 'text-yellow-400';
+  return 'text-red-400';
+};
+
 const AppCard: React.FC<AppCardProps> = ({
   name,
   status,
   deploymentStatus,
   localStatus,
+  latency,
   publicEndpoint,
   endpointUrl,
   localEndpointUrl,
@@ -57,26 +72,24 @@ const AppCard: React.FC<AppCardProps> = ({
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 ${
-        status === 'running' || status === 'ok'
-          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-          : status === 'stopped' || status === 'down'
+      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 ${status === 'running' || status === 'ok'
+        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+        : status === 'stopped' || status === 'down'
           ? 'bg-red-500/20 text-red-300 border border-red-500/30'
           : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-      }`}
+        }`}
       title={endpointUrl || publicEndpoint}
     >
       {getStatusText()}
     </a>
   ) : (
     <span
-      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium ${
-        status === 'running' || status === 'ok'
-          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-          : status === 'stopped' || status === 'down'
+      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium ${status === 'running' || status === 'ok'
+        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+        : status === 'stopped' || status === 'down'
           ? 'bg-red-500/20 text-red-300 border border-red-500/30'
           : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-      }`}
+        }`}
       title={publicEndpoint}
     >
       {getStatusText()}
@@ -120,36 +133,34 @@ const AppCard: React.FC<AppCardProps> = ({
 
   const localBadge = localStatus
     ? localEndpointUrl ? (
-        <a
-          href={localEndpointUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 border ${
-            localStatus === 'ok'
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-              : localStatus === 'down'
-              ? 'bg-red-500/20 text-red-300 border-red-500/30'
-              : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+      <a
+        href={localEndpointUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 border ${localStatus === 'ok'
+          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+          : localStatus === 'down'
+            ? 'bg-red-500/20 text-red-300 border-red-500/30'
+            : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
           }`}
-          title={localEndpointUrl}
-        >
-          Local Service
-        </a>
-      ) : (
-        <span
-          className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium border ${
-            localStatus === 'ok'
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-              : localStatus === 'down'
-              ? 'bg-red-500/20 text-red-300 border-red-500/30'
-              : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+        title={localEndpointUrl}
+      >
+        Local Service
+      </a>
+    ) : (
+      <span
+        className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium border ${localStatus === 'ok'
+          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+          : localStatus === 'down'
+            ? 'bg-red-500/20 text-red-300 border-red-500/30'
+            : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
           }`}
-          title="Local endpoint unavailable"
-        >
-          Local Service
-        </span>
-      )
+        title="Local endpoint unavailable"
+      >
+        Local Service
+      </span>
+    )
     : (
       <span
         className="inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium border border-slate-700/70 bg-slate-900/50 text-slate-500"
@@ -171,13 +182,19 @@ const AppCard: React.FC<AppCardProps> = ({
         className="w-full flex items-center justify-between px-3 py-3 hover:bg-slate-700/20 transition-colors"
       >
         <div className="flex flex-col items-start min-w-0 flex-1">
-          <span className="text-sm font-medium text-slate-200">{name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-200">{name}</span>
+            {latency && (status === 'running' || status === 'ok') && (
+              <span className={`text-[10px] font-mono ${getLatencyColor(latency)}`} title="Response latency">
+                {formatLatency(latency)}
+              </span>
+            )}
+          </div>
           <span className="text-[10px] text-slate-500 truncate max-w-full">{publicEndpoint}</span>
         </div>
         <ChevronRight
-          className={`w-4 h-4 text-slate-500 transition-transform flex-shrink-0 ${
-            expanded ? 'rotate-90' : ''
-          }`}
+          className={`w-4 h-4 text-slate-500 transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''
+            }`}
         />
       </button>
 

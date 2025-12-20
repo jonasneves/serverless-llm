@@ -2,25 +2,67 @@
  * Hook to load extension configuration
  * - Extension mode: from chrome.storage, sets API base URL
  * - Web mode: uses relative URLs (same origin)
+ * 
+ * IMPORTANT: Service definitions are generated from config/models.py
+ * Run `python3 scripts/generate_extension_config.py` to update.
  */
 
 import { useState, useEffect } from 'react';
 import { setApiBase } from '../utils/streaming';
+import extensionConfig from '../data/extension-config.json';
 
-// Service definitions - ports aligned with config/models.py
-export const SERVICES = [
-  { key: 'qwen', name: 'Qwen', localPort: 8100 },
-  { key: 'phi', name: 'Phi', localPort: 8101 },
-  { key: 'functiongemma', name: 'FunctionGemma', localPort: 8103 },
-  { key: 'gemma', name: 'Gemma', localPort: 8200 },
-  { key: 'llama', name: 'Llama', localPort: 8201 },
-  { key: 'mistral', name: 'Mistral', localPort: 8202 },
-  { key: 'rnj', name: 'RNJ', localPort: 8203 },
-  { key: 'r1qwen', name: 'R1 Qwen', localPort: 8300 },
-  { key: 'nanbeige', name: 'Nanbeige', localPort: 8301 },
-  { key: 'nemotron', name: 'Nemotron', localPort: 8302 },
-  { key: 'gptoss', name: 'GPT-OSS', localPort: 8303 },
-] as const;
+// Types for generated config
+export interface ServiceConfig {
+  key: string;
+  name: string;
+  localPort: number;
+  category: 'core' | 'small' | 'medium' | 'reasoning';
+  modelId: string;
+  rank: number;
+}
+
+export interface WorkflowConfig {
+  name: string;
+  path: string;
+  category: 'core' | 'small' | 'medium' | 'reasoning';
+  serviceKey?: string;
+}
+
+export interface CategoryConfig {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+}
+
+// Service definitions - GENERATED from config/models.py
+// Do not edit manually! Run: python3 scripts/generate_extension_config.py
+export const SERVICES: ServiceConfig[] = extensionConfig.services as ServiceConfig[];
+export const WORKFLOWS: WorkflowConfig[] = extensionConfig.workflows as WorkflowConfig[];
+export const CATEGORIES: CategoryConfig[] = extensionConfig.categories as CategoryConfig[];
+export const CONFIG_GENERATED_AT = extensionConfig.generatedAt;
+
+// Build workflow name -> path map for quick lookups
+export const WORKFLOW_PATHS = new Map(WORKFLOWS.map(wf => [wf.name, wf.path]));
+
+// Build service key -> workflow name map
+export const SERVICE_TO_WORKFLOW = new Map(
+  WORKFLOWS.filter(wf => wf.serviceKey).map(wf => [wf.serviceKey!, wf.name])
+);
+
+// Helper to get services by category
+export function getServicesByCategory(category: string): ServiceConfig[] {
+  return SERVICES.filter(s => s.category === category).sort((a, b) => a.rank - b.rank);
+}
+
+// Helper to get all services grouped by category
+export function getServicesGroupedByCategory(): Map<string, ServiceConfig[]> {
+  const grouped = new Map<string, ServiceConfig[]>();
+  for (const category of CATEGORIES) {
+    grouped.set(category.id, getServicesByCategory(category.id));
+  }
+  return grouped;
+}
 
 export type ProfileId = 'remote_all' | 'local_chat_remote_models' | 'local_all' | 'custom';
 

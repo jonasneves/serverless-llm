@@ -1,9 +1,19 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import AppCard from './AppCard';
 import BuildPanel from './BuildPanel';
 import DeployPanel from './DeployPanel';
 import ObservePanel from './ObservePanel';
-import { SERVICES, buildEndpoint } from '../hooks/useExtensionConfig';
+import {
+    SERVICES,
+    WORKFLOWS,
+    CATEGORIES,
+    WORKFLOW_PATHS,
+    SERVICE_TO_WORKFLOW,
+    ServiceConfig,
+    buildEndpoint,
+    getServicesGroupedByCategory
+} from '../hooks/useExtensionConfig';
+import { ChevronDown, ChevronRight, Zap, RefreshCw, AlertCircle, CheckCircle, Clock, Loader2 } from 'lucide-react';
 
 interface WorkflowRun {
     id: number;
@@ -21,6 +31,12 @@ interface WorkflowInfo {
     path: string;
 }
 
+interface HealthStatus {
+    status: 'ok' | 'down' | 'checking';
+    latency?: number;
+    lastCheck?: string;
+}
+
 interface DeploymentsPanelProps {
     githubToken: string;
     chatApiBaseUrl: string;
@@ -35,23 +51,8 @@ interface DeploymentsPanelProps {
 const REPO_OWNER = 'jonasneves';
 const REPO_NAME = 'serverless-llm';
 
-const KEY_WORKFLOWS = [
-    { name: 'Chat', path: 'chat.yml' },
-    { name: 'Build Images', path: 'build-push-images.yml' },
-    { name: 'Qwen', path: 'qwen-inference.yml' },
-    { name: 'Phi', path: 'phi-inference.yml' },
-    { name: 'FunctionGemma', path: 'functiongemma-inference.yml' },
-    { name: 'Gemma', path: 'gemma-inference.yml' },
-    { name: 'Llama', path: 'llama-inference.yml' },
-    { name: 'Mistral', path: 'mistral-inference.yml' },
-    { name: 'RNJ', path: 'rnj-inference.yml' },
-    { name: 'R1 Qwen', path: 'r1qwen-inference.yml' },
-    { name: 'Nanbeige', path: 'nanbeige-inference.yml' },
-    { name: 'Nemotron', path: 'nemotron-inference.yml' },
-    { name: 'GPT-OSS', path: 'gpt-oss-inference.yml' },
-];
-
-const WORKFLOW_PATHS = new Map(KEY_WORKFLOWS.map(wf => [wf.name, wf.path]));
+// Use generated workflows from config
+const KEY_WORKFLOWS = WORKFLOWS;
 
 function normalizeBaseUrl(url: string): string {
     return url.trim().replace(/\/+$/, '');
@@ -63,16 +64,17 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [triggering, setTriggering] = useState<string | null>(null);
-    const [backendHealth, setBackendHealth] = useState<'ok' | 'down' | 'checking'>('checking');
+    const [backendHealth, setBackendHealth] = useState<HealthStatus>({ status: 'checking' });
     const [backendProcess, setBackendProcess] = useState<'running' | 'stopped' | 'unknown'>('unknown');
     const [backendPid, setBackendPid] = useState<number | null>(null);
     const [backendBusy, setBackendBusy] = useState(false);
     const [backendLogTail, setBackendLogTail] = useState<string | null>(null);
     const [backendNativeError, setBackendNativeError] = useState<string | null>(null);
-    const [modelHealthStatuses, setModelHealthStatuses] = useState<Map<string, 'ok' | 'down' | 'checking'>>(new Map());
+    const [modelHealthStatuses, setModelHealthStatuses] = useState<Map<string, HealthStatus>>(new Map());
     const [buildBusy, setBuildBusy] = useState(false);
     const [buildLogTail, setBuildLogTail] = useState<string | null>(null);
     const [buildNativeError, setBuildNativeError] = useState<string | null>(null);
+    const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
     const refreshInFlight = useRef(false);
     const workflowsRef = useRef<Map<string, WorkflowInfo>>(new Map());
 
@@ -83,8 +85,42 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         'User-Agent': 'serverless-llm-extension',
     };
 
+    // Aggregate status stats
+    const stats = useMemo(() => {
+        const healthValues = [...modelHealthStatuses.values()];
+        const runValues = [...runs.values()];
+        return {
+            online: healthValues.filter(s => s.status === 'ok').length,
+            checking: healthValues.filter(s => s.status === 'checking').length,
+            down: healthValues.filter(s => s.status === 'down').length,
+            deploying: runValues.filter(r => r?.status === 'in_progress' || r?.status === 'queued').length,
+            total: SERVICES.length,
+        };
+    }, [modelHealthStatuses, runs]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if typing in input
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+            switch (e.key.toLowerCase()) {
+                case 'r':
+                    if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        refresh();
+                    }
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     const checkBackendHealth = useCallback(async () => {
-        setBackendHealth('checking');
+        setBackendHealth({ status: 'checking' });
+        const start = Date.now();
         try {
             const baseUrl = normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080';
             const response = await fetch(`${baseUrl}/health`, {
@@ -93,13 +129,19 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 credentials: 'omit',
                 signal: AbortSignal.timeout(5000),
             });
-            setBackendHealth(response.ok ? 'ok' : 'down');
+            const latency = Date.now() - start;
+            setBackendHealth({
+                status: response.ok ? 'ok' : 'down',
+                latency,
+                lastCheck: new Date().toISOString(),
+            });
         } catch {
-            setBackendHealth('down');
+            setBackendHealth({ status: 'down', lastCheck: new Date().toISOString() });
         }
     }, [chatApiBaseUrl]);
 
     const checkModelHealth = useCallback(async (serviceKey: string, endpoint: string) => {
+        const start = Date.now();
         try {
             const response = await fetch(`${endpoint}/health`, {
                 method: 'GET',
@@ -107,16 +149,24 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 credentials: 'omit',
                 signal: AbortSignal.timeout(3000),
             });
-            setModelHealthStatuses(prev => new Map(prev).set(serviceKey, response.ok ? 'ok' : 'down'));
+            const latency = Date.now() - start;
+            setModelHealthStatuses(prev => new Map(prev).set(serviceKey, {
+                status: response.ok ? 'ok' : 'down',
+                latency,
+                lastCheck: new Date().toISOString(),
+            }));
         } catch {
-            setModelHealthStatuses(prev => new Map(prev).set(serviceKey, 'down'));
+            setModelHealthStatuses(prev => new Map(prev).set(serviceKey, {
+                status: 'down',
+                lastCheck: new Date().toISOString(),
+            }));
         }
     }, []);
 
     const checkAllModelsHealth = useCallback(async () => {
         for (const service of SERVICES) {
             const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
-            setModelHealthStatuses(prev => new Map(prev).set(service.key, 'checking'));
+            setModelHealthStatuses(prev => new Map(prev).set(service.key, { status: 'checking' }));
             await checkModelHealth(service.key, endpoint);
         }
     }, [modelsBaseDomain, modelsUseHttps, checkModelHealth]);
@@ -279,10 +329,13 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         if (refreshInFlight.current) return;
         refreshInFlight.current = true;
         setLoading(true);
-        await fetchWorkflows();
-        await fetchLatestRuns();
+        await Promise.all([
+            fetchWorkflows().then(() => fetchLatestRuns()),
+            checkBackendHealth(),
+            checkAllModelsHealth(),
+        ]);
         refreshInFlight.current = false;
-    }, [fetchWorkflows, fetchLatestRuns]);
+    }, [fetchWorkflows, fetchLatestRuns, checkBackendHealth, checkAllModelsHealth]);
 
     const triggerWorkflow = async (workflowName: string) => {
         const wf = workflows.get(workflowName);
@@ -314,6 +367,13 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             setError(err.message);
         } finally {
             setTriggering(null);
+        }
+    };
+
+    const triggerCategoryWorkflows = async (category: string) => {
+        const categoryWorkflows = KEY_WORKFLOWS.filter(wf => wf.category === category && wf.serviceKey);
+        for (const wf of categoryWorkflows) {
+            await triggerWorkflow(wf.name);
         }
     };
 
@@ -365,18 +425,13 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
     const getDeploymentStatusForApp = (appId: string): 'success' | 'failure' | 'in_progress' | 'queued' | 'unknown' => {
         let workflowName: string | null = null;
-        if (appId === 'chat-api') workflowName = 'Chat';
-        else if (appId === 'qwen') workflowName = 'Qwen';
-        else if (appId === 'phi') workflowName = 'Phi';
-        else if (appId === 'functiongemma') workflowName = 'FunctionGemma';
-        else if (appId === 'gemma') workflowName = 'Gemma';
-        else if (appId === 'llama') workflowName = 'Llama';
-        else if (appId === 'mistral') workflowName = 'Mistral';
-        else if (appId === 'rnj') workflowName = 'RNJ';
-        else if (appId === 'r1qwen') workflowName = 'R1 Qwen';
-        else if (appId === 'nanbeige') workflowName = 'Nanbeige';
-        else if (appId === 'nemotron') workflowName = 'Nemotron';
-        else if (appId === 'gptoss') workflowName = 'GPT-OSS';
+
+        if (appId === 'chat-api') {
+            workflowName = 'Chat';
+        } else {
+            // Use generated mapping
+            workflowName = SERVICE_TO_WORKFLOW.get(appId) || null;
+        }
 
         if (!workflowName) return 'unknown';
 
@@ -397,6 +452,18 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         return path ? `https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${path}` : `https://github.com/${REPO_OWNER}/${REPO_NAME}/actions`;
     };
 
+    const toggleCategory = (categoryId: string) => {
+        setCollapsedCategories(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(categoryId)) {
+                newSet.delete(categoryId);
+            } else {
+                newSet.add(categoryId);
+            }
+            return newSet;
+        });
+    };
+
     const chatEndpoint = normalizeBaseUrl(chatApiBaseUrl) || 'http://localhost:8080';
     const publicDomain = modelsBaseDomain || 'neevs.io';
     const publicScheme = modelsBaseDomain ? (modelsUseHttps ? 'https' : 'http') : 'https';
@@ -404,73 +471,125 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         ? `${publicScheme}://chat.${publicDomain}`
         : (normalizeBaseUrl(chatApiBaseUrl) || `${publicScheme}://chat.${publicDomain}`);
 
-    const apps: Array<{
-        id: string;
-        name: string;
-        status: 'running' | 'stopped' | 'building' | 'deploying' | 'ok' | 'down' | 'checking';
-        deploymentStatus: 'success' | 'failure' | 'in_progress' | 'queued' | 'unknown';
-        localStatus?: 'ok' | 'down' | 'checking';
-        publicEndpoint: string;
-        endpointUrl?: string;
-        localEndpointUrl?: string;
-        deploymentUrl?: string;
-    }> = [
-            {
+    // Build apps grouped by category
+    const buildApp = (service: ServiceConfig | null, appId: string, name: string, isChatApi: boolean = false) => {
+        if (isChatApi) {
+            return {
                 id: 'chat-api',
                 name: 'Chat API',
-                status: backendHealth === 'ok' ? 'running' : backendHealth === 'down' ? 'stopped' : 'checking',
+                status: backendHealth.status === 'ok' ? 'running' as const : backendHealth.status === 'down' ? 'stopped' as const : 'checking' as const,
                 deploymentStatus: getDeploymentStatusForApp('chat-api'),
-                localStatus: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? backendHealth : undefined,
+                localStatus: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? backendHealth.status : undefined,
+                latency: backendHealth.latency,
                 publicEndpoint: `chat.${publicDomain}`,
                 endpointUrl: chatPublicUrl,
                 localEndpointUrl: chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1') ? chatEndpoint : undefined,
                 deploymentUrl: runs.get('Chat')?.html_url || buildWorkflowUrl('Chat'),
-            },
-            ...SERVICES.map(service => {
-                const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
-                const health = modelHealthStatuses.get(service.key) || 'checking';
-                const workflowName = service.name;
-                const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
-                const publicEndpointUrl = `${publicScheme}://${service.key}.${publicDomain}`;
-                return {
-                    id: service.key,
-                    name: service.name,
-                    status: health,
-                    deploymentStatus: getDeploymentStatusForApp(service.key),
-                    localStatus: isLocal ? health : undefined,
-                    publicEndpoint: `${service.key}.${publicDomain}`,
-                    endpointUrl: publicEndpointUrl,
-                    localEndpointUrl: isLocal ? endpoint : undefined,
-                    deploymentUrl: runs.get(workflowName)?.html_url || buildWorkflowUrl(workflowName),
-                };
-            }),
-        ];
+            };
+        }
+
+        const endpoint = buildEndpoint(appId, service!.localPort, modelsBaseDomain, modelsUseHttps);
+        const health = modelHealthStatuses.get(appId) || { status: 'checking' as const };
+        const workflowName = SERVICE_TO_WORKFLOW.get(appId) || name;
+        const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
+        const publicEndpointUrl = `${publicScheme}://${appId}.${publicDomain}`;
+
+        return {
+            id: appId,
+            name: name,
+            status: health.status,
+            deploymentStatus: getDeploymentStatusForApp(appId),
+            localStatus: isLocal ? health.status : undefined,
+            latency: health.latency,
+            publicEndpoint: `${appId}.${publicDomain}`,
+            endpointUrl: publicEndpointUrl,
+            localEndpointUrl: isLocal ? endpoint : undefined,
+            deploymentUrl: runs.get(workflowName)?.html_url || buildWorkflowUrl(workflowName),
+        };
+    };
+
+    const chatApp = buildApp(null, 'chat-api', 'Chat API', true);
+    const groupedServices = getServicesGroupedByCategory();
 
     return (
         <div className="space-y-3 pt-1">
-            {/* App Cards */}
-            {apps.map((app) => {
-                const activeTab = activeTabs[app.id] || 'observe';
-                return (
+            {/* Aggregate Status Bar */}
+            <div className="flex items-center justify-between px-3 py-2 bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
+                <div className="flex items-center gap-4 text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400 font-medium">{stats.online}</span>
+                        <span className="text-slate-500">online</span>
+                    </div>
+                    {stats.deploying > 0 && (
+                        <div className="flex items-center gap-1.5">
+                            <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                            <span className="text-blue-400 font-medium">{stats.deploying}</span>
+                            <span className="text-slate-500">deploying</span>
+                        </div>
+                    )}
+                    {stats.down > 0 && (
+                        <div className="flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                            <span className="text-red-400 font-medium">{stats.down}</span>
+                            <span className="text-slate-500">down</span>
+                        </div>
+                    )}
+                    {stats.checking > 0 && (
+                        <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="text-slate-400 font-medium">{stats.checking}</span>
+                            <span className="text-slate-500">checking</span>
+                        </div>
+                    )}
+                </div>
+                <button
+                    onClick={refresh}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-all"
+                    title="Refresh all (R)"
+                >
+                    <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Refresh</span>
+                </button>
+            </div>
+
+            {/* Core Services (Chat API) */}
+            <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                    <button
+                        onClick={() => toggleCategory('core')}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors"
+                    >
+                        {collapsedCategories.has('core') ? (
+                            <ChevronRight className="w-3.5 h-3.5" />
+                        ) : (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                        )}
+                        Core Services
+                    </button>
+                </div>
+
+                {!collapsedCategories.has('core') && (
                     <AppCard
-                        key={app.id}
-                        id={app.id}
-                        name={app.name}
-                        status={app.status}
+                        key={chatApp.id}
+                        id={chatApp.id}
+                        name={chatApp.name}
+                        status={chatApp.status}
                         activeMode={globalTab}
-                        deploymentStatus={app.deploymentStatus}
-                        localStatus={app.localStatus}
-                        publicEndpoint={app.publicEndpoint}
-                        endpointUrl={app.endpointUrl}
-                        localEndpointUrl={app.localEndpointUrl}
-                        deploymentUrl={app.deploymentUrl}
+                        deploymentStatus={chatApp.deploymentStatus}
+                        localStatus={chatApp.localStatus}
+                        latency={chatApp.latency}
+                        publicEndpoint={chatApp.publicEndpoint}
+                        endpointUrl={chatApp.endpointUrl}
+                        localEndpointUrl={chatApp.localEndpointUrl}
+                        deploymentUrl={chatApp.deploymentUrl}
                         defaultExpanded={false}
                     >
-                        {/* Tab Bar */}
                         <div className="flex gap-1 mb-3 bg-slate-900/40 p-1 rounded-lg">
                             <button
-                                onClick={() => setActiveTab(app.id, 'build')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'build'
+                                onClick={() => setActiveTab(chatApp.id, 'build')}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTabs[chatApp.id] === 'build'
                                     ? 'bg-slate-700/60 text-white'
                                     : 'text-slate-400 hover:text-slate-200'
                                     }`}
@@ -478,8 +597,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                 Build
                             </button>
                             <button
-                                onClick={() => setActiveTab(app.id, 'deploy')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'deploy'
+                                onClick={() => setActiveTab(chatApp.id, 'deploy')}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTabs[chatApp.id] === 'deploy'
                                     ? 'bg-slate-700/60 text-white'
                                     : 'text-slate-400 hover:text-slate-200'
                                     }`}
@@ -487,8 +606,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                 Deploy
                             </button>
                             <button
-                                onClick={() => setActiveTab(app.id, 'observe')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'observe'
+                                onClick={() => setActiveTab(chatApp.id, 'observe')}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTabs[chatApp.id] === 'observe'
                                     ? 'bg-slate-700/60 text-white'
                                     : 'text-slate-400 hover:text-slate-200'
                                     }`}
@@ -497,18 +616,17 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             </button>
                         </div>
 
-                        {/* Tab Content */}
-                        {activeTab === 'build' && (
+                        {activeTabs[chatApp.id] === 'build' && (
                             <BuildPanel
-                                appId={app.id}
+                                appId={chatApp.id}
                                 buildBusy={buildBusy}
                                 buildLogTail={buildLogTail}
                                 onBuild={runBuild}
                             />
                         )}
-                        {activeTab === 'deploy' && (
+                        {activeTabs[chatApp.id] === 'deploy' && (
                             <DeployPanel
-                                appId={app.id}
+                                appId={chatApp.id}
                                 githubToken={githubToken}
                                 runs={runs}
                                 triggering={triggering}
@@ -517,10 +635,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                 onRefresh={refresh}
                             />
                         )}
-                        {activeTab === 'observe' && (
+                        {activeTabs[chatApp.id] === 'observe' && (
                             <ObservePanel
-                                appId={app.id}
-                                backendHealth={backendHealth}
+                                appId={chatApp.id}
+                                backendHealth={backendHealth.status}
                                 backendProcess={backendProcess}
                                 backendPid={backendPid}
                                 backendBusy={backendBusy}
@@ -533,6 +651,135 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             />
                         )}
                     </AppCard>
+                )}
+            </div>
+
+            {/* Model Categories */}
+            {CATEGORIES.filter(cat => cat.id !== 'core').map(category => {
+                const services = groupedServices.get(category.id) || [];
+                if (services.length === 0) return null;
+
+                const categoryOnline = services.filter(s => modelHealthStatuses.get(s.key)?.status === 'ok').length;
+                const isCollapsed = collapsedCategories.has(category.id);
+
+                return (
+                    <div key={category.id} className="space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                            <button
+                                onClick={() => toggleCategory(category.id)}
+                                className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors"
+                            >
+                                {isCollapsed ? (
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                ) : (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                )}
+                                {category.name}
+                                <span className="ml-1 text-[10px] text-slate-500 font-normal">
+                                    ({categoryOnline}/{services.length} online)
+                                </span>
+                            </button>
+
+                            {!isCollapsed && globalTab === 'deploy' && (
+                                <button
+                                    onClick={() => triggerCategoryWorkflows(category.id)}
+                                    disabled={!githubToken || !!triggering}
+                                    className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Zap className="w-3 h-3" />
+                                    Deploy All
+                                </button>
+                            )}
+                        </div>
+
+                        {!isCollapsed && services.map(service => {
+                            const app = buildApp(service, service.key, service.name);
+                            const activeTab = activeTabs[app.id] || 'observe';
+
+                            return (
+                                <AppCard
+                                    key={app.id}
+                                    id={app.id}
+                                    name={app.name}
+                                    status={app.status}
+                                    activeMode={globalTab}
+                                    deploymentStatus={app.deploymentStatus}
+                                    localStatus={app.localStatus}
+                                    latency={app.latency}
+                                    publicEndpoint={app.publicEndpoint}
+                                    endpointUrl={app.endpointUrl}
+                                    localEndpointUrl={app.localEndpointUrl}
+                                    deploymentUrl={app.deploymentUrl}
+                                    defaultExpanded={false}
+                                >
+                                    <div className="flex gap-1 mb-3 bg-slate-900/40 p-1 rounded-lg">
+                                        <button
+                                            onClick={() => setActiveTab(app.id, 'build')}
+                                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'build'
+                                                ? 'bg-slate-700/60 text-white'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                                }`}
+                                        >
+                                            Build
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab(app.id, 'deploy')}
+                                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'deploy'
+                                                ? 'bg-slate-700/60 text-white'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                                }`}
+                                        >
+                                            Deploy
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab(app.id, 'observe')}
+                                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'observe'
+                                                ? 'bg-slate-700/60 text-white'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                                }`}
+                                        >
+                                            Observe
+                                        </button>
+                                    </div>
+
+                                    {activeTab === 'build' && (
+                                        <BuildPanel
+                                            appId={app.id}
+                                            buildBusy={buildBusy}
+                                            buildLogTail={buildLogTail}
+                                            onBuild={runBuild}
+                                        />
+                                    )}
+                                    {activeTab === 'deploy' && (
+                                        <DeployPanel
+                                            appId={app.id}
+                                            githubToken={githubToken}
+                                            runs={runs}
+                                            triggering={triggering}
+                                            loading={loading}
+                                            onDeploy={triggerWorkflow}
+                                            onRefresh={refresh}
+                                        />
+                                    )}
+                                    {activeTab === 'observe' && (
+                                        <ObservePanel
+                                            appId={app.id}
+                                            backendHealth={backendHealth.status}
+                                            backendProcess={backendProcess}
+                                            backendPid={backendPid}
+                                            backendBusy={backendBusy}
+                                            backendLogTail={backendLogTail}
+                                            backendNativeError={backendNativeError}
+                                            chatApiBaseUrl={chatApiBaseUrl}
+                                            onStart={startBackend}
+                                            onStop={stopBackend}
+                                            onFetchLogs={fetchBackendLogs}
+                                        />
+                                    )}
+                                </AppCard>
+                            );
+                        })}
+                    </div>
                 );
             })}
 
@@ -549,6 +796,11 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                     <span className="text-[10px] text-amber-300">{error}</span>
                 </div>
             )}
+
+            {/* Keyboard shortcuts hint */}
+            <div className="text-center text-[9px] text-slate-600 pt-2">
+                Press <kbd className="px-1 py-0.5 bg-slate-800 rounded text-slate-500">R</kbd> to refresh
+            </div>
         </div>
     );
 };

@@ -1,4 +1,4 @@
-.PHONY: help setup install build-chat build-playground build-extension start stop logs health ps clean lint format setup-tunnels
+.PHONY: help setup install build-chat build-playground build-extension generate-configs start stop logs health ps clean lint format setup-tunnels
 
 # Load .env file if it exists
 -include .env
@@ -26,9 +26,10 @@ help:
 	@echo "  make setup-tunnels   Create Cloudflare tunnels (requires CF env vars)"
 	@echo ""
 	@echo "Build:"
+	@echo "  make generate-configs Generate TypeScript config from Python"
 	@echo "  make build-chat      Build chat Docker image"
-	@echo "  make build-playground Build React app"
-	@echo "  make build-extension Build Chrome extension"
+	@echo "  make build-playground Build React app (runs generate-configs)"
+	@echo "  make build-extension Build Chrome extension (runs generate-configs)"
 	@echo ""
 	@echo "Monitor:"
 	@echo "  make health          Check service health"
@@ -123,10 +124,15 @@ ps:
 build-chat:
 	docker-compose build chat
 
-build-playground:
+# Generate TypeScript config from Python source of truth
+generate-configs:
+	@echo "Generating extension config from config/models.py..."
+	python3 scripts/generate_extension_config.py
+
+build-playground: generate-configs
 	cd app/chat/playground-app && npm install && npm run build
 
-build-extension:
+build-extension: generate-configs
 	cd app/chat/playground-app && npm install && npm run build:extension
 	@echo "Load in Chrome: chrome://extensions -> Load unpacked -> dist-extension/"
 
