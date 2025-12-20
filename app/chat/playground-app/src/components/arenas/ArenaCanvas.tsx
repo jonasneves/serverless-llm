@@ -26,7 +26,6 @@ interface ArenaCanvasProps {
   speaking: Set<string>;
   selectedCardIds: Set<string>;
   setSelectedCardIds: Dispatch<SetStateAction<Set<string>>>;
-  setActiveInspectorId: (id: string | null) => void;
   executionTimes: Record<string, ExecutionTimeData>;
   failedModels: Set<string>;
   cardRefs: MutableRefObject<Map<string, HTMLDivElement>>;
@@ -75,7 +74,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     speaking,
     selectedCardIds,
     setSelectedCardIds,
-    setActiveInspectorId,
     executionTimes,
     failedModels,
     cardRefs,
@@ -300,11 +298,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 selectedModels,
                 lastSelectedCardRef,
               })}
-              onDoubleClick={(e) => handleCardDoubleClick({
-                e,
-                modelId: model.id,
-                setActiveInspectorId,
-              })}
               onMouseEnter={() => isCircleMode && setHoveredCard(model.id)}
               onMouseLeave={() => isCircleMode && setHoveredCard(null)}
               className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
@@ -475,12 +468,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             if (moderatorId) {
               setSelectedCardIds(new Set([moderatorId]));
               lastSelectedCardRef.current = moderatorId;
-            }
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            if (moderatorId) {
-              setActiveInspectorId(moderatorId);
             }
           }}
           onContextMenu={(e) => {
@@ -860,19 +847,6 @@ function handleCardClick({
     setSelectedCardIds(new Set([modelId]));
     lastSelectedCardRef.current = modelId;
   }
-}
-
-function handleCardDoubleClick({
-  e,
-  modelId,
-  setActiveInspectorId,
-}: {
-  e: ReactMouseEvent;
-  modelId: string;
-  setActiveInspectorId: (id: string | null) => void;
-}) {
-  e.stopPropagation();
-  setActiveInspectorId(modelId);
 }
 
 function renderCardContent({

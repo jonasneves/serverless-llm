@@ -34,7 +34,6 @@ interface ChatViewProps {
     selectedModelId: string | null;
     onSelectModel: (id: string) => void;
     githubToken?: string;
-    onOpenTopics: () => void;
     messages: ChatMessage[];
     setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
     autoMode: boolean;
@@ -56,7 +55,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     selectedModelId,
     onSelectModel,
     githubToken,
-    onOpenTopics,
     messages,
     setMessages,
     autoMode,
@@ -608,7 +606,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 inputFocused={inputFocused}
                 setInputFocused={setInputFocused}
                 onSendMessage={handleSend}
-                onOpenTopics={onOpenTopics}
                 placeholder={autoMode ? "Message (Auto mode - will use auto-selected model)..." : (selectedModel ? `Message ${selectedModel.name}...` : "Select a model from the dock to start chatting...")}
                 isGenerating={isGenerating}
                 onStop={handleStop}

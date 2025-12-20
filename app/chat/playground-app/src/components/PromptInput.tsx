@@ -1,4 +1,3 @@
-import { SUGGESTED_TOPICS } from '../constants';
 import { Square, ArrowUp } from 'lucide-react';
 
 interface PromptInputProps {
@@ -6,7 +5,6 @@ interface PromptInputProps {
   inputFocused: boolean;
   setInputFocused: (focused: boolean) => void;
   onSendMessage: (text: string) => void;
-  onOpenTopics: () => void;
   className?: string;
   style?: React.CSSProperties;
   placeholder?: string;
@@ -19,7 +17,6 @@ export default function PromptInput({
   inputFocused,
   setInputFocused,
   onSendMessage,
-  onOpenTopics,
   className,
   style,
   placeholder,
@@ -35,42 +32,6 @@ export default function PromptInput({
       }}
     >
       <div className="w-full pointer-events-auto" style={{ maxWidth: '600px' }}>
-        <div className="mb-4 flex items-center gap-2">
-          <button
-            onClick={onOpenTopics}
-            onMouseDown={(e) => e.currentTarget.blur()}
-            className="shrink-0 w-8 h-8 rounded-lg border border-slate-700/60 bg-slate-900/70 text-slate-400 hover:text-white hover:border-blue-400/60 hover:bg-blue-500/10 transition-colors active:scale-95 flex items-center justify-center focus:outline-none focus-visible:outline-none"
-            title="Search topics"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
-          <div
-            className="relative overflow-hidden h-6 w-full backdrop-blur-md bg-slate-900/40 rounded-lg border border-white/5 ticker-mask"
-          >
-            <div className="absolute whitespace-nowrap animate-ticker flex gap-2 items-center text-[11px] text-slate-300 font-medium h-full px-4">
-              {[...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS, ...SUGGESTED_TOPICS].map((s, i) => ( // Repeat for infinite scroll effect
-                <div key={i} className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (inputRef.current) {
-                        inputRef.current.value = s.prompt;
-                        inputRef.current.focus();
-                      }
-                    }}
-                    onMouseDown={(e) => e.currentTarget.blur()}
-                    className="hover:text-blue-400 transition-colors cursor-pointer px-2 py-1 sm:px-1 sm:py-0.5 rounded hover:bg-white/5 active:scale-95 focus:outline-none focus-visible:outline-none"
-                  >
-                    {s.label}
-                  </button>
-                  <span className="text-slate-600">•</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div
           className={`rounded-xl p-2.5 transition-all duration-300 flex items-center gap-2 border border-slate-700/40 header-shell ${inputFocused ? 'prompt-panel-focused' : ''}`}
         >

@@ -12,7 +12,6 @@ import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
 import { useSelectionBox } from './hooks/useSelectionBox';
 import { useCardReorder } from './hooks/useCardReorder';
-import { useInspectorSelection } from './hooks/useInspectorSelection';
 import { useModelSelection } from './hooks/useModelSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
@@ -21,9 +20,7 @@ import SelectionOverlay from './components/SelectionOverlay';
 import { GestureProvider, useGesture } from './context/GestureContext';
 import './playground.css';
 
-const ResponseInspector = lazy(() => import('./components/ResponseInspector'));
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
-const TopicsDrawer = lazy(() => import('./components/TopicsDrawer'));
 const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscript'));
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const HandBackground = lazy(() => import('./components/HandBackground'));
@@ -87,14 +84,10 @@ function PlaygroundInner() {
   const arenaTargetYRef = useRef(0);
   const wheelRafRef = useRef<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showTopics, setShowTopics] = useState(false);
   const [githubToken, setGithubToken] = usePersistedSetting<string>('github_models_token', '', {
     serialize: value => value ? value : null,
     deserialize: (stored, fallback) => stored ?? fallback,
   });
-
-  // Inspector position - simple state, resets on mode change, not persisted
-  const [inspectorPosition, setInspectorPosition] = useState<'left' | 'right'>('right');
 
   const [showCouncilReviewerNames, setShowCouncilReviewerNames] = usePersistedSetting<boolean>(
     'show_council_reviewer_names',
@@ -349,13 +342,9 @@ function PlaygroundInner() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null); // For tiny preview on hover
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
   const [inputFocused, setInputFocused] = useState<boolean>(false);
-  const {
-    selectedCardIds,
-    setSelectedCardIds,
-    activeInspectorId,
-    setActiveInspectorId,
-    clearInspectorSelection,
-  } = useInspectorSelection();
+  // Card selection state (for arena modes)
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const clearSelection = () => setSelectedCardIds(new Set());
 
   const [arenaSize, setArenaSize] = useState<{ width: number; height: number } | null>(null);
 
@@ -412,7 +401,7 @@ function PlaygroundInner() {
         resizeObserver.unobserve(visualizationAreaRef.current);
       }
     };
-  }, [mode, activeInspectorId, inspectorPosition]); // Recalculate when layout changes
+  }, [mode]); // Recalculate when layout changes
   const inputRef = useRef<HTMLInputElement>(null);
   const visualizationAreaRef = useRef<HTMLDivElement>(null);
 
@@ -443,22 +432,8 @@ function PlaygroundInner() {
     cardRefs,
     selectedCardIds,
     setSelectedCardIds,
-    setActiveInspectorId,
     suppressClickRef,
   });
-
-  const handleSelectPrompt = (prompt: string) => {
-    // In chat mode, use ChatView's setInput method
-    if (mode === 'chat' && chatViewRef.current) {
-      chatViewRef.current.setInput(prompt);
-    } else if (inputRef.current) {
-      // For other modes, use the Playground's inputRef
-      inputRef.current.value = prompt;
-      inputRef.current.focus();
-      setInputFocused(true);
-    }
-    setShowTopics(false);
-  };
 
   const { dragState, handlePointerDown } = useCardReorder({
     visualizationAreaRef,
@@ -503,10 +478,10 @@ function PlaygroundInner() {
         return;
       }
       setHoveredCard(null);
-      clearInspectorSelection();
+      clearSelection();
       suppressClickRef.current.background = false;
     },
-    [isBackgroundTarget, clearInspectorSelection],
+    [isBackgroundTarget, clearSelection],
   );
 
   const handleBackgroundContextMenu = useCallback(
@@ -627,13 +602,13 @@ function PlaygroundInner() {
     average_rank: number;
     votes_count: number;
   }> | null>(null);
-  const [councilAnonymousReviews, setCouncilAnonymousReviews] = useState<Array<{
+  const [, setCouncilAnonymousReviews] = useState<Array<{
     reviewer_model_id: string;
     reviewer_model_name: string;
     text: string;
     error?: boolean;
   }>>([]);
-  const [discussionTurnsByModel, setDiscussionTurnsByModel] = useState<Record<string, Array<{
+  const [, setDiscussionTurnsByModel] = useState<Record<string, Array<{
     turn_number: number;
     response: string;
     evaluation?: any;
@@ -712,16 +687,12 @@ function PlaygroundInner() {
           setShowSettings(false);
           return;
         }
-        if (showTopics) {
-          setShowTopics(false);
-          return;
-        }
         if (contextMenu) {
           setContextMenu(null);
           return;
         }
-        if (activeInspectorId || selectedCardIds.size > 0) {
-          clearInspectorSelection();
+        if (selectedCardIds.size > 0) {
+          clearSelection();
           setHoveredCard(null);
           return;
         }
@@ -777,15 +748,7 @@ function PlaygroundInner() {
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCardIds.size > 0) {
         event.preventDefault();
         setSelected(prev => prev.filter(id => !selectedCardIds.has(id)));
-        clearInspectorSelection();
-        return;
-      }
-
-      // Enter opens inspector for selected card(s)
-      if (event.key === 'Enter' && selectedCardIds.size >= 1) {
-        event.preventDefault();
-        const selectedId = Array.from(selectedCardIds)[0];
-        setActiveInspectorId(selectedId);
+        clearSelection();
         return;
       }
 
@@ -805,13 +768,11 @@ function PlaygroundInner() {
   }, [
     showDock,
     showSettings,
-    showTopics,
     contextMenu,
-    activeInspectorId,
     selectedCardIds,
     mode,
     handleModeChange,
-    clearInspectorSelection,
+    clearSelection,
   ]);
 
   // Handle wheel scroll to move arena up/down
@@ -936,7 +897,6 @@ function PlaygroundInner() {
   );
 
   const moderatorModel = modelsData.find(m => m.id === moderator);
-  const inspectorModels = modelsData.filter(m => selectedCardIds.has(m.id));
 
   const orchestratorStatus = isSynthesizing
     ? 'responding'
@@ -1088,7 +1048,7 @@ function PlaygroundInner() {
         mode={mode}
         setMode={handleModeChange}
         setHoveredCard={setHoveredCard}
-        clearSelection={clearInspectorSelection}
+        clearSelection={clearSelection}
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
@@ -1256,8 +1216,8 @@ function PlaygroundInner() {
       {/* Content Wrapper with Sidebar Offset */}
       <div
         style={{
-          paddingLeft: activeInspectorId && mode === 'compare' && inspectorPosition === 'left' ? '28rem' : '1.5rem',
-          paddingRight: activeInspectorId && mode === 'compare' && inspectorPosition === 'right' ? '28rem' : '0',
+          paddingLeft: '1.5rem',
+          paddingRight: '0',
         }}
       >
         {/* Dock Backdrop */}
@@ -1295,7 +1255,6 @@ function PlaygroundInner() {
                       selectedModelId={chatModelId}
                       onSelectModel={setChatModelId}
                       githubToken={githubToken}
-                      onOpenTopics={() => setShowTopics(true)}
                       messages={chatMessages}
                       setMessages={setChatMessages}
                       autoMode={chatAutoMode}
@@ -1369,7 +1328,6 @@ function PlaygroundInner() {
                   speaking={speaking}
                   selectedCardIds={selectedCardIds}
                   setSelectedCardIds={setSelectedCardIds}
-                  setActiveInspectorId={setActiveInspectorId}
                   executionTimes={executionTimes}
                   failedModels={failedModels}
                   cardRefs={cardRefs}
@@ -1441,28 +1399,6 @@ function PlaygroundInner() {
       {/* Selection rectangle overlay - positioned relative to root container */}
       <SelectionOverlay rect={selectionRect} />
 
-      {
-        activeInspectorId && inspectorModels.length > 0 && (
-          <Suspense fallback={null}>
-            <ResponseInspector
-              models={inspectorModels}
-              activeId={activeInspectorId}
-              onSelect={setActiveInspectorId}
-              onClose={clearInspectorSelection}
-              speaking={speaking}
-              mode={mode}
-              moderatorId={moderator}
-              councilAggregateRankings={councilAggregateRankings}
-              councilAnonymousReviews={councilAnonymousReviews}
-              showCouncilReviewerNames={showCouncilReviewerNames}
-              discussionTurnsByModel={discussionTurnsByModel}
-              position={inspectorPosition}
-              onTogglePosition={() => setInspectorPosition(prev => prev === 'left' ? 'right' : 'left')}
-            />
-          </Suspense>
-        )
-      }
-
       {/* API Limit Toast Notification */}
       {apiLimitToast && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-bottom-4 fade-in duration-300">
@@ -1505,14 +1441,6 @@ function PlaygroundInner() {
         />
       </Suspense>
 
-      <Suspense fallback={null}>
-        <TopicsDrawer
-          open={showTopics}
-          onClose={() => setShowTopics(false)}
-          onSelectPrompt={handleSelectPrompt}
-        />
-      </Suspense>
-
       {/* Fixed Prompt Input for Compare, Council, Roundtable, and Personality Modes */}
       {
         (mode === 'compare' || mode === 'council' || mode === 'roundtable' || mode === 'personality') && (
@@ -1521,7 +1449,6 @@ function PlaygroundInner() {
             inputFocused={inputFocused}
             setInputFocused={setInputFocused}
             onSendMessage={sendMessage}
-            onOpenTopics={() => setShowTopics(true)}
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : mode === 'personality' ? "Ask the personas..." : "Steer the discussion..."}
@@ -1556,20 +1483,6 @@ function PlaygroundInner() {
             ) : contextMenu.modelId ? (
               // Model context menu - different options based on mode
               <>
-                {/* Open Inspector option */}
-                <button
-                  className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"
-                  onClick={() => {
-                    setActiveInspectorId(contextMenu.modelId!);
-                    setContextMenu(null);
-                  }}
-                >
-                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  Open
-                </button>
-
                 {/* Set as Orchestrator - only in Council/Roundtable modes and not already the orchestrator */}
                 {mode !== 'compare' && contextMenu.modelId !== moderator && (
                   <button

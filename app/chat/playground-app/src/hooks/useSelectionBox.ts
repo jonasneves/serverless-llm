@@ -28,7 +28,6 @@ interface UseSelectionBoxParams {
   cardRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   selectedCardIds: Set<string>;
   setSelectedCardIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  setActiveInspectorId: React.Dispatch<React.SetStateAction<string | null>>;
   suppressClickRef: ClickSuppressRef;
 }
 
@@ -57,7 +56,6 @@ export function useSelectionBox({
   cardRefs,
   selectedCardIds,
   setSelectedCardIds,
-  setActiveInspectorId,
   suppressClickRef,
 }: UseSelectionBoxParams) {
   const [dragSelection, setDragSelection] = useState<SelectionState | null>(null);
@@ -209,7 +207,6 @@ export function useSelectionBox({
     cardRefs,
     selectedCardIds,
     setSelectedCardIds,
-    setActiveInspectorId,
     suppressClickRef,
   ]);
 
