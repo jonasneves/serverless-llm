@@ -66,18 +66,18 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY nemotron-inference/inference_server.py .
 
 ENV MODEL_REPO=unsloth/Nemotron-3-Nano-30B-A3B-GGUF
-# Q3_K_M (~12GB) offers ~25-30% faster inference vs IQ2_M with better quality
-ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-Q3_K_M.gguf
+# IQ2_M (~8GB) is the smallest available quantization for this 30B model
+ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf
 ENV PORT=8000
-ENV N_CTX=2048
+ENV N_CTX=1024
 ENV N_THREADS=4
-ENV N_BATCH=1024
+ENV N_BATCH=512
 ENV MAX_CONCURRENT=1
 
 EXPOSE 8000
 
-# Health check - 30B model needs ~5 min to load, allow 6 min startup
-HEALTHCHECK --interval=30s --timeout=10s --start-period=360s --retries=3 \
+# Health check - 30B IQ2_M model needs up to 10 min to load with --no-mmap
+HEALTHCHECK --interval=60s --timeout=30s --start-period=600s --retries=5 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["python3", "inference_server.py"]

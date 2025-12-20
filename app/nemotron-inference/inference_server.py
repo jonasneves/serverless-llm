@@ -29,11 +29,12 @@ logger = logging.getLogger(__name__)
 
 # Configuration from environment
 MODEL_REPO = os.getenv("MODEL_REPO", "unsloth/Nemotron-3-Nano-30B-A3B-GGUF")
-MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-Q3_K_M.gguf")
+# IQ2_M (~8GB) is the smallest quantization - required for 16GB runners
+MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf")
 PORT = int(os.getenv("PORT", "8301"))
-N_CTX = int(os.getenv("N_CTX", "2048"))
+N_CTX = int(os.getenv("N_CTX", "1024"))
 N_THREADS = int(os.getenv("N_THREADS", "4"))
-N_BATCH = int(os.getenv("N_BATCH", "1024"))
+N_BATCH = int(os.getenv("N_BATCH", "512"))
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "1"))
 HF_TOKEN = os.getenv("HF_TOKEN")
 
@@ -87,9 +88,9 @@ def download_model() -> str:
 def start_llama_server(model_path: str) -> subprocess.Popen:
     """Start the llama-server process
     
-    Note: The 30B Q4_K_M model requires ~17GB memory for weights.
-    We use mmap (default) for efficient memory usage with swap.
-    The model will use swap for portions that don't fit in RAM.
+    Note: The IQ2_M model is ~8GB on disk. Using --no-mmap to load the model
+    fully into RAM (avoids memory-mapped file issues that can cause OOM on
+    memory-constrained runners). This may take 5-10 minutes on 4 vCPU ARM.
     """
     cmd = [
         "/usr/local/bin/llama-server",
@@ -100,9 +101,10 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
-        # CPU-focused optimizations (flash-attn is GPU-only)
-        "--cache-type-k", "q8_0",    # Quantize KV cache for faster access
-        "--cache-type-v", "q8_0",    # Quantize value cache too
+        # Memory-optimized settings for constrained environments
+        "--no-mmap",                 # Load model fully (avoids mmap memory spikes)
+        "--cache-type-k", "q8_0",    # Quantize KV cache
+        "--cache-type-v", "q8_0",    # Quantize value cache
         "--cont-batching",           # Efficient request batching
         "--log-disable",             # Reduce logging overhead
     ]
@@ -121,8 +123,8 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
     )
 
     # Wait for server to be ready
-    # 30B models can take 3-5 minutes to load into memory on CPU
-    max_wait = 300
+    # 30B models can take 5-8 minutes to load into memory on CPU
+    max_wait = 600
     start_time = time.time()
     check_count = 0
 

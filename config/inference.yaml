@@ -45,10 +45,10 @@ models:
     # Uses defaults - Nanbeige4-3B-Thinking is a small reasoning model
 
   nemotron:
-    # 30B MoE model with Q3_K_M quantization (~12GB)
-    # Optimized: reduced context, large batch, KV cache quantization
-    n_ctx: 2048
-    n_batch: 1024
+    # 30B MoE model with IQ2_M quantization (~8GB) - smallest available
+    # Memory-constrained: reduced context, --no-mmap for stable loading
+    n_ctx: 1024
+    n_batch: 512
     max_concurrent: 1
 
   rnj:
