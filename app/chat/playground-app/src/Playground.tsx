@@ -152,7 +152,7 @@ function PlaygroundInner() {
   // Chat mode state - persisted across mode switches
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatAutoMode, setChatAutoMode] = useState(true);
-  const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('api');
+  const [chatAutoModeScope, setChatAutoModeScope] = useState<ChatAutoModeScope>('local');
   const [chatCurrentResponse, setChatCurrentResponse] = useState('');
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);

@@ -84,7 +84,7 @@ jobs:
 
           if [ "$MODELS" = "all" ] || [ -z "$MODELS" ]; then
             # Build all services (inference servers + chat + cloudflared)
-            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","gemma-inference","mistral-inference","chat","cloudflared"]'
+            MATRIX='["deepseek-r1qwen-inference","qwen-inference","phi-inference","llama-inference","rnj-inference","nemotron-inference","gpt-oss-inference","gemma-inference","mistral-inference","chat","cloudflared"]'
           else
             # Build only specified models (use -c for compact output)
             MATRIX=$(echo "$MODELS" | jq -cR 'split(",") | map(select(length > 0))')
@@ -137,6 +137,9 @@ jobs:
           elif [ "${{ matrix.model }}" = "rnj-inference" ]; then
             # RNJ has its own Dockerfile (builds llama.cpp from source)
             DOCKERFILE="./app/rnj-inference/Dockerfile"
+          elif [ "${{ matrix.model }}" = "nemotron-inference" ]; then
+            # Nemotron has its own Dockerfile (builds llama.cpp from master for nemotron_h_moe)
+            DOCKERFILE="./app/nemotron-inference/Dockerfile"
           else
             # All other models use shared Dockerfile
             DOCKERFILE="./app/shared/Dockerfile.inference"
@@ -157,8 +160,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || matrix.model == 'chat' && '.' || './app' }}
-          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
-          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && format('MODEL_DIR={0}', matrix.model) || '' }}
+          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || matrix.model == 'nemotron-inference' && './app/nemotron-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
+          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && matrix.model != 'rnj-inference' && matrix.model != 'nemotron-inference' && format('MODEL_DIR={0}', matrix.model) || '' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

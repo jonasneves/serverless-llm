@@ -1,0 +1,10 @@
+# Nemotron-3-Nano-30B-A3B Inference Server dependencies
+# Note: We don't use llama-cpp-python here - we run llama-server directly
+# because nemotron_h_moe architecture requires llama.cpp master (PR #18058)
+# which has binding compatibility issues
+
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+huggingface-hub>=0.20.0
+pydantic>=2.0.0
+httpx>=0.25.0
