@@ -436,167 +436,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             {/* Blue Selection Rectangle */}
             <SelectionOverlay rect={selectionRect} />
 
-            {/* Model Selection Controls - Fixed at top */}
-            <div className="absolute top-0 left-0 right-0 z-20 flex justify-center pt-4 pb-2 pointer-events-none">
-                <div className="flex flex-col items-center gap-2 pointer-events-auto">
-                    {/* Unified Mode Toggle */}
-                    <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 backdrop-blur-sm">
-                        <button
-                            onClick={() => {
-                                setAutoMode(true);
-                                setAutoModeScope('local');
-                            }}
-                            className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                autoMode && autoModeScope === 'local'
-                                    ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
-                                    : 'text-slate-400 hover:text-slate-300'
-                            }`}
-                        >
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span>Local</span>
-                        </button>
-                        <button
-                            onClick={() => {
-                                setAutoMode(true);
-                                setAutoModeScope('api');
-                            }}
-                            className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                autoMode && autoModeScope === 'api'
-                                    ? 'bg-blue-500/20 text-blue-300 shadow-sm'
-                                    : 'text-slate-400 hover:text-slate-300'
-                            }`}
-                        >
-                            <div className="w-2 h-2 rounded-full bg-blue-500" />
-                            <span>API</span>
-                        </button>
-                        <button
-                            onClick={() => setAutoMode(false)}
-                            className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                !autoMode
-                                    ? 'bg-slate-600/40 text-slate-200 shadow-sm'
-                                    : 'text-slate-400 hover:text-slate-300'
-                            }`}
-                        >
-                            <Bot size={12} />
-                            <span>Manual</span>
-                        </button>
-                    </div>
-
-                    {/* Model Selector - only shown in Manual mode */}
-                    {!autoMode && (
-                        <div className="relative" ref={modelSelectorRef}>
-                            <button
-                                onClick={() => setShowModelSelector(!showModelSelector)}
-                                className="h-7 px-3 flex items-center gap-2 rounded-lg border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 backdrop-blur-sm transition-all active:scale-95 text-xs font-medium"
-                                disabled={isGenerating}
-                            >
-                                {selectedModel && (
-                                    <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-                                )}
-                                <span className="text-slate-200/80">{selectedModel ? selectedModel.name : 'Select a model'}</span>
-                                {!isGenerating && <ChevronDown size={12} className="text-slate-400" />}
-                            </button>
-
-                            {showModelSelector && !isGenerating && (
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                    {models.length === 0 ? (
-                                        <div className="px-3 py-4 text-xs text-slate-500 text-center">
-                                            No models available
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {models.filter(m => m.type === 'local').length > 0 && (
-                                                <div>
-                                                    <button
-                                                        onClick={() => setExpandedLocalModels(!expandedLocalModels)}
-                                                        className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors"
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                            <span>Local Models</span>
-                                                        </div>
-                                                        <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
-                                                    </button>
-                                                    {expandedLocalModels && (
-                                                        <div>
-                                                            {models.filter(m => m.type === 'local').map(model => (
-                                                                <button
-                                                                    key={model.id}
-                                                                    onClick={() => {
-                                                                        onSelectModel(model.id);
-                                                                        setShowModelSelector(false);
-                                                                    }}
-                                                                    className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
-                                                                        ? 'bg-emerald-500/20 text-slate-200'
-                                                                        : 'text-slate-300 hover:bg-slate-700/50'
-                                                                        }`}
-                                                                >
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="w-2 h-2 rounded-full bg-emerald-500/40" />
-                                                                            <span>{model.name}</span>
-                                                                        </div>
-                                                                        {selectedModelId === model.id && (
-                                                                            <span className="text-emerald-400">✓</span>
-                                                                        )}
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {models.filter(m => m.type === 'api').length > 0 && (
-                                                <div>
-                                                    <button
-                                                        onClick={() => setExpandedApiModels(!expandedApiModels)}
-                                                        className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors border-t border-slate-700/50"
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                            <span>API Models</span>
-                                                        </div>
-                                                        <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
-                                                    </button>
-                                                    {expandedApiModels && (
-                                                        <div>
-                                                            {models.filter(m => m.type === 'api').map(model => (
-                                                                <button
-                                                                    key={model.id}
-                                                                    onClick={() => {
-                                                                        onSelectModel(model.id);
-                                                                        setShowModelSelector(false);
-                                                                    }}
-                                                                    className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
-                                                                        ? 'bg-blue-500/20 text-slate-200'
-                                                                        : 'text-slate-300 hover:bg-slate-700/50'
-                                                                        }`}
-                                                                >
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="w-2 h-2 rounded-full bg-blue-500/40" />
-                                                                            <span>{model.name}</span>
-                                                                        </div>
-                                                                        {selectedModelId === model.id && (
-                                                                            <span className="text-blue-400">✓</span>
-                                                                        )}
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
             {/* Messages Area */}
             <div
                 ref={scrollRef}
@@ -609,10 +448,170 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     }
                 }}
             >
-                <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px', paddingTop: '80px' }}>
+                <div className="mx-auto w-full min-h-full flex flex-col space-y-6" style={{ maxWidth: '600px' }}>
                     {messages.length === 0 && (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 select-none pb-20 relative">
                             <Bot size={48} className="mb-4 opacity-50" />
+
+                            {/* Model Selection Controls */}
+                            <div className="flex flex-col items-center gap-2 mb-4 sticky top-4 z-30">
+                                {/* Unified Mode Toggle */}
+                                <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 backdrop-blur-sm">
+                                    <button
+                                        onClick={() => {
+                                            setAutoMode(true);
+                                            setAutoModeScope('local');
+                                        }}
+                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                                            autoMode && autoModeScope === 'local'
+                                                ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-300'
+                                        }`}
+                                    >
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        <span>Local</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setAutoMode(true);
+                                            setAutoModeScope('api');
+                                        }}
+                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                                            autoMode && autoModeScope === 'api'
+                                                ? 'bg-blue-500/20 text-blue-300 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-300'
+                                        }`}
+                                    >
+                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                        <span>API</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setAutoMode(false)}
+                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                                            !autoMode
+                                                ? 'bg-slate-600/40 text-slate-200 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-300'
+                                        }`}
+                                    >
+                                        <Bot size={12} />
+                                        <span>Manual</span>
+                                    </button>
+                                </div>
+
+                                {/* Model Selector - only shown in Manual mode */}
+                                {!autoMode && (
+                                    <div className="relative" ref={modelSelectorRef}>
+                                        <button
+                                            onClick={() => setShowModelSelector(!showModelSelector)}
+                                            className="h-7 px-3 flex items-center gap-2 rounded-lg border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 backdrop-blur-sm transition-all active:scale-95 text-xs font-medium"
+                                            disabled={isGenerating}
+                                        >
+                                            {selectedModel && (
+                                                <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                            )}
+                                            <span className="text-slate-200/80">{selectedModel ? selectedModel.name : 'Select a model'}</span>
+                                            {!isGenerating && <ChevronDown size={12} className="text-slate-400" />}
+                                        </button>
+
+                                        {showModelSelector && !isGenerating && (
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-64 max-h-[60vh] bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col">
+                                                {models.length === 0 ? (
+                                                    <div className="px-3 py-4 text-xs text-slate-500 text-center">
+                                                        No models available
+                                                    </div>
+                                                ) : (
+                                                    <div className="overflow-y-auto">
+                                                        {models.filter(m => m.type === 'local').length > 0 && (
+                                                            <div>
+                                                                <button
+                                                                    onClick={() => setExpandedLocalModels(!expandedLocalModels)}
+                                                                    className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors sticky top-0 bg-slate-800 z-10"
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                        <span>Local Models</span>
+                                                                    </div>
+                                                                    <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
+                                                                </button>
+                                                                {expandedLocalModels && (
+                                                                    <div>
+                                                                        {models.filter(m => m.type === 'local').map(model => (
+                                                                            <button
+                                                                                key={model.id}
+                                                                                onClick={() => {
+                                                                                    onSelectModel(model.id);
+                                                                                    setShowModelSelector(false);
+                                                                                }}
+                                                                                className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                                    ? 'bg-emerald-500/20 text-slate-200'
+                                                                                    : 'text-slate-300 hover:bg-slate-700/50'
+                                                                                    }`}
+                                                                            >
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className="w-2 h-2 rounded-full bg-emerald-500/40" />
+                                                                                        <span>{model.name}</span>
+                                                                                    </div>
+                                                                                    {selectedModelId === model.id && (
+                                                                                        <span className="text-emerald-400">✓</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {models.filter(m => m.type === 'api').length > 0 && (
+                                                            <div>
+                                                                <button
+                                                                    onClick={() => setExpandedApiModels(!expandedApiModels)}
+                                                                    className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors border-t border-slate-700/50 sticky top-0 bg-slate-800 z-10"
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                                                        <span>API Models</span>
+                                                                    </div>
+                                                                    <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
+                                                                </button>
+                                                                {expandedApiModels && (
+                                                                    <div>
+                                                                        {models.filter(m => m.type === 'api').map(model => (
+                                                                            <button
+                                                                                key={model.id}
+                                                                                onClick={() => {
+                                                                                    onSelectModel(model.id);
+                                                                                    setShowModelSelector(false);
+                                                                                }}
+                                                                                className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                                    ? 'bg-blue-500/20 text-slate-200'
+                                                                                    : 'text-slate-300 hover:bg-slate-700/50'
+                                                                                    }`}
+                                                                            >
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500/40" />
+                                                                                        <span>{model.name}</span>
+                                                                                    </div>
+                                                                                    {selectedModelId === model.id && (
+                                                                                        <span className="text-blue-400">✓</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {!githubToken && ((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs">
                                     <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
