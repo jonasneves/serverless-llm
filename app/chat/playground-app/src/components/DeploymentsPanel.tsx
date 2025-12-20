@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Rocket, RefreshCw, CheckCircle, XCircle, Clock, Play, ExternalLink, AlertCircle, WifiOff, Power, Terminal, Zap } from 'lucide-react';
+import { Rocket, RefreshCw, CheckCircle, XCircle, Clock, Play, ExternalLink, AlertCircle, WifiOff, Power, Terminal, Zap, ChevronDown, Package, Wrench } from 'lucide-react';
 
 interface WorkflowRun {
     id: number;
@@ -63,6 +63,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [buildBusy, setBuildBusy] = useState(false);
     const [buildLogTail, setBuildLogTail] = useState<string | null>(null);
     const [buildNativeError, setBuildNativeError] = useState<string | null>(null);
+    const [showBuildMenu, setShowBuildMenu] = useState(false);
     const [workflowNotice, setWorkflowNotice] = useState<{ text: string; url?: string } | null>(null);
     const [workflowError, setWorkflowError] = useState<string | null>(null);
     const refreshInFlight = useRef(false);
@@ -170,14 +171,26 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
         if (!resp?.ok && resp?.error) setBackendNativeError(resp.error);
     };
 
-    const buildPlayground = async () => {
+    const runBuild = async (target: 'playground' | 'extension' | 'both') => {
         setBuildBusy(true);
         setBuildLogTail(null);
         setBuildNativeError(null);
+        setShowBuildMenu(false);
 
-        const resp = await nativeRequest({ action: 'make', target: 'build-playground' });
-        if (resp?.logTail) setBuildLogTail(resp.logTail);
-        if (!resp?.ok && resp?.error) setBuildNativeError(resp.error);
+        const targets = target === 'both'
+            ? ['build-playground', 'build-extension']
+            : [`build-${target}`];
+
+        for (const t of targets) {
+            const resp = await nativeRequest({ action: 'make', target: t });
+            if (resp?.logTail) setBuildLogTail(prev => prev ? `${prev}\n\n--- ${t} ---\n${resp.logTail}` : resp.logTail);
+            if (!resp?.ok) {
+                setBuildNativeError(resp?.error || `${t} failed`);
+                setBuildBusy(false);
+                return;
+            }
+        }
+
         setBuildBusy(false);
     };
 
@@ -405,10 +418,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${backendHealth === 'ok'
-                                ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-                                : backendHealth === 'down'
-                                    ? 'bg-red-500/20 text-red-400'
-                                    : 'bg-blue-500/20 text-blue-400'
+                            ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                            : backendHealth === 'down'
+                                ? 'bg-red-500/20 text-red-400'
+                                : 'bg-blue-500/20 text-blue-400'
                             }`}>
                             {backendHealth === 'ok' && <CheckCircle className="w-5 h-5" />}
                             {backendHealth === 'down' && <XCircle className="w-5 h-5" />}
@@ -454,22 +467,53 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             <Terminal className="w-3 h-3" />
                             Logs
                         </button>
-                        <button
-                            onClick={buildPlayground}
-                            className="flex items-center gap-1 px-2 py-1 text-[11px] text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-colors"
-                            disabled={backendBusy || buildBusy}
-                            title="Run make build-playground"
-                        >
-                            <Zap className={`w-3 h-3 ${buildBusy ? 'animate-pulse' : ''}`} />
-                            Build
-                        </button>
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowBuildMenu(!showBuildMenu)}
+                                className="flex items-center gap-1 px-2 py-1 text-[11px] text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-colors"
+                                disabled={backendBusy || buildBusy}
+                            >
+                                <Zap className={`w-3 h-3 ${buildBusy ? 'animate-pulse' : ''}`} />
+                                Build
+                                <ChevronDown className={`w-3 h-3 transition-transform ${showBuildMenu ? 'rotate-180' : ''}`} />
+                            </button>
+                            {showBuildMenu && (
+                                <div className="absolute top-full left-0 mt-1 w-44 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-lg shadow-xl z-50 overflow-hidden">
+                                    <button
+                                        onClick={() => runBuild('playground')}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                                    >
+                                        <Package className="w-3.5 h-3.5 text-blue-400" />
+                                        <span>Playground</span>
+                                        <span className="ml-auto text-[9px] text-slate-500">Frontend</span>
+                                    </button>
+                                    <button
+                                        onClick={() => runBuild('extension')}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                                    >
+                                        <Wrench className="w-3.5 h-3.5 text-purple-400" />
+                                        <span>Extension</span>
+                                        <span className="ml-auto text-[9px] text-slate-500">DevOps</span>
+                                    </button>
+                                    <div className="border-t border-slate-700/50" />
+                                    <button
+                                        onClick={() => runBuild('both')}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                                    >
+                                        <Zap className="w-3.5 h-3.5 text-amber-400" />
+                                        <span>Build Both</span>
+                                        <span className="ml-auto text-[9px] text-slate-500">All</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         {backendProcess !== 'running' ? (
                             <button
                                 onClick={startBackend}
                                 disabled={backendBusy || !(chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1'))}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
-                                        ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-300 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/20'
-                                        : 'bg-slate-700/30 text-slate-500 cursor-not-allowed'
+                                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-300 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/20'
+                                    : 'bg-slate-700/30 text-slate-500 cursor-not-allowed'
                                     }`}
                                 title={
                                     chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1')
@@ -593,19 +637,19 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                 <div
                                     key={kw.name}
                                     className={`p-4 rounded-xl bg-slate-800/40 backdrop-blur-sm border transition-all ${isActive
-                                            ? 'border-blue-500/30 shadow-lg shadow-blue-500/5'
-                                            : 'border-slate-700/30 hover:border-slate-600/40'
+                                        ? 'border-blue-500/30 shadow-lg shadow-blue-500/5'
+                                        : 'border-slate-700/30 hover:border-slate-600/40'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${run?.conclusion === 'success'
-                                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                                    : run?.conclusion === 'failure'
-                                                        ? 'bg-red-500/20 text-red-400'
-                                                        : isActive
-                                                            ? 'bg-blue-500/20 text-blue-400'
-                                                            : 'bg-slate-700/50 text-slate-400'
+                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                : run?.conclusion === 'failure'
+                                                    ? 'bg-red-500/20 text-red-400'
+                                                    : isActive
+                                                        ? 'bg-blue-500/20 text-blue-400'
+                                                        : 'bg-slate-700/50 text-slate-400'
                                                 }`}>
                                                 {getStatusIcon(run ?? null)}
                                             </div>
@@ -632,8 +676,8 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                                 onClick={() => triggerWorkflow(kw.name)}
                                                 disabled={isTriggering || loading}
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${isTriggering
-                                                        ? 'bg-slate-700/50 text-slate-400'
-                                                        : 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 hover:from-blue-500/30 hover:to-purple-500/30 border border-blue-500/20'
+                                                    ? 'bg-slate-700/50 text-slate-400'
+                                                    : 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 hover:from-blue-500/30 hover:to-purple-500/30 border border-blue-500/20'
                                                     }`}
                                             >
                                                 {isTriggering ? (
