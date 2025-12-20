@@ -10,7 +10,7 @@ const GITHUB_MODELS_CATALOG_URL = 'https://models.github.ai/catalog/models';
 const LOCAL_MODELS = [
     { id: 'qwen3-4b', name: 'Qwen3 4B', type: 'local', priority: 1, context_length: 128000 },
     { id: 'deepseek-r1-distill-qwen-1.5b', name: 'DeepSeek R1 1.5B', type: 'local', priority: 2, context_length: 64000 },
-    { id: 'gemma-2-9b-instruct', name: 'Gemma 2 9B', type: 'local', priority: 3, context_length: 8192 },
+    { id: 'gemma-3-12b-it', name: 'Gemma 3 12B', type: 'local', priority: 3, context_length: 8192 },
     { id: 'mistral-7b-instruct-v0.3', name: 'Mistral 7B v0.3', type: 'local', priority: 4, context_length: 32768 },
     { id: 'phi-3-mini', name: 'Phi-3 Mini', type: 'local', priority: 5, context_length: 128000 },
     { id: 'rnj-1-instruct', name: 'RNJ-1 Instruct', type: 'local', priority: 6, context_length: 8192 },

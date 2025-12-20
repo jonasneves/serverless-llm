@@ -444,23 +444,24 @@ MISTRAL_7B_PROFILE = {
 
  
 
-GEMMA2_9B_PROFILE = {
-    "model_id": "gemma-2-9b-instruct",
-    "display_name": "Gemma 2 9B",
+GEMMA3_12B_PROFILE = {
+    "model_id": "gemma-3-12b-it",
+    "display_name": "Gemma 3 12B",
     "model_type": "local",
     "creator": "Google",
-    "size": "9B parameters",
+    "size": "12B parameters",
     "quantization": "Q4_K_M",
 
     "primary_strengths": ["reasoning", "instruction_following", "safety"],
 
     "benchmark_scores": {
-        "MMLU": 71.3,           # General knowledge
-        "HumanEval": 51.8,      # Code generation
-        "GSM8K": 68.6,          # Math word problems
-        "HellaSwag": 80.9,      # Common sense
-        "MMLU-Pro": 42.8,       # Advanced reasoning
-        "TruthfulQA": 76.2,     # Factual accuracy (strong!)
+        # Provisional: using Gemma 2 metrics until official Gemma 3 evals are published
+        "MMLU": 71.3,
+        "HumanEval": 51.8,
+        "GSM8K": 68.6,
+        "HellaSwag": 80.9,
+        "MMLU-Pro": 42.8,
+        "TruthfulQA": 76.2,
     },
 
     "expertise_domains": {
@@ -491,7 +492,7 @@ GEMMA2_9B_PROFILE = {
     ],
 
     "context_length": 8192,
-    "description": "Well-rounded 9B model with strong reasoning and safety guarantees",
+    "description": "Gemma 3 IT checkpoint with stronger instruction following and safety",
     "no_system_role": True,  # Gemma doesn't support system role in message format
 }
 
@@ -648,7 +649,7 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models (ranked by Dec 2025 benchmarks)
     "qwen3-4b": QWEN_PROFILE,                                  # Rank 1
     "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,  # Rank 2
-    "gemma-2-9b-instruct": GEMMA2_9B_PROFILE,                  # Rank 3
+    "gemma-3-12b-it": GEMMA3_12B_PROFILE,                      # Rank 3
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,            # Rank 4
     "phi-3-mini": PHI_PROFILE,                                 # Rank 5
     "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 6
@@ -785,7 +786,7 @@ __all__ = [
     # Local models (ranked by capability)
     "QWEN_PROFILE",
     "DEEPSEEK_R1_QWEN15B_PROFILE",
-    "GEMMA2_9B_PROFILE",
+    "GEMMA3_12B_PROFILE",
     "MISTRAL_7B_PROFILE",
     "PHI_PROFILE",
     "RNJ_1_PROFILE",

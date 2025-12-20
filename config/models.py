@@ -122,10 +122,10 @@ MODELS: dict[str, ModelConfig] = {
         port=8200,
         subdomain="gemma",
         category=ModelCategory.MEDIUM,
-        model_id="gemma-2-9b-instruct",
-        display_name="Gemma 2 9B",
+        model_id="gemma-3-12b-it",
+        display_name="Gemma 3 12B",
         inference_dir="gemma-inference",
-        description="MMLU 71.3%, 8K context, safety-aligned",
+        description="Gemma 3 IT, stronger instruction-following and safety with ~8K context",
         rank=4,
     ),
     "llama": ModelConfig(

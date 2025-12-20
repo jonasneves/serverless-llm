@@ -31,9 +31,9 @@ class ModelRouter:
             "description": "o1-preview level reasoning, 96.3% Codeforces, step-by-step"
         },
         "reasoner-3": {  # Rank 3
-            "name": "Gemma 2 9B",
+            "name": "Gemma 3 12B",
             "url_env": "GEMMA_API_URL",
-            "description": "Strong reasoning, safety-aligned, fact-checking"
+            "description": "Stronger instruction-following, safety-aligned, fact-checking"
         },
         "reasoner-4": {  # Rank 4
             "name": "Mistral 7B v0.3",
@@ -67,7 +67,7 @@ class ModelRouter:
             "description": "Thoughtful chain-of-thought answers"
         },
         "answer-3": {  # Rank 3
-            "name": "Gemma 2 9B",
+            "name": "Gemma 3 12B",
             "url_env": "GEMMA_API_URL",
             "description": "Balanced, safe responses"
         },

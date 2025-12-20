@@ -20,7 +20,8 @@ models:
     # Uses defaults - Llama 3.2 3B is lightweight
 
   gemma:
-    # Uses defaults - Gemma 2 9B runs well with standard settings
+    # Gemma 3 12B IT - bump context to 8K for better chat quality
+    n_ctx: 8192
 
   mistral:
     # Uses defaults - Mistral 7B is efficient

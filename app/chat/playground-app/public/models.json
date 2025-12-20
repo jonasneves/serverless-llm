@@ -15,8 +15,8 @@
       "context_length": 64000
     },
     {
-      "id": "gemma-2-9b-instruct",
-      "name": "Gemma 2 9B",
+      "id": "gemma-3-12b-it",
+      "name": "Gemma 3 12B",
       "type": "local",
       "priority": 3,
       "context_length": 8192
@@ -612,6 +612,6 @@
       ]
     }
   ],
-  "fetchedAt": "2025-12-20T05:57:59.788Z",
+  "fetchedAt": "2025-12-20T06:35:22.164Z",
   "source": "build-time"
 }
