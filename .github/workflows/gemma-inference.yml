@@ -1,6 +1,6 @@
-name: 🤖 Gemma 2 9B
+name: 🤖 Gemma 3 12B
 
-run-name: "Gemma 2 9B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
+run-name: "Gemma 3 12B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -39,9 +39,9 @@ jobs:
     with:
       model_name: "gemma"
       model_dir: "gemma-inference"
-      model_repo: "bartowski/gemma-2-9b-it-GGUF"
-      model_file: "gemma-2-9b-it-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-gemma-2-9b-q4"
+      model_repo: "unsloth/gemma-3-12b-it-GGUF"
+      model_file: "gemma-3-12b-it-Q4_K_M.gguf"
+      cache_key_prefix: "gguf-gemma-3-12b-q4"
       restart_event_type: "restart-gemma-inference"
       workflow_file: "gemma-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}

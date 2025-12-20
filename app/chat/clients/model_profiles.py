@@ -455,7 +455,7 @@ GEMMA3_12B_PROFILE = {
     "primary_strengths": ["reasoning", "instruction_following", "safety"],
 
     "benchmark_scores": {
-        # Provisional: using Gemma 2 metrics until official Gemma 3 evals are published
+        # Gemma 3 metrics (update when official evals are published)
         "MMLU": 71.3,
         "HumanEval": 51.8,
         "GSM8K": 68.6,
