@@ -5,17 +5,22 @@ export const MODEL_META: Record<string, { color: string; name?: string }> = {
   api: { color: '#3b82f6' },   // Blue for API models
 };
 
-// Model priority for auto mode (lower number = higher priority)
-// Separate lists allow fine-grained control over local vs API model preferences
-
-// Local models - typically preferred when available (no quota issues)
+// Local models - fallback priorities matching config/models.py rankings
+// These are used when dynamic priority isn't available (e.g., static JSON in extension mode)
 export const LOCAL_MODEL_PRIORITIES: Record<string, number> = {
-  'llama-3.3-70b': 1,
-  'llama-4-scout-17b-16e-instruct': 2,
-  'qwen': 3,
-  'phi': 4,
-  'mistral': 5,
-  'gemma': 6,
+  'nanbeige': 1,      // Nanbeige4-3B Thinking
+  'qwen': 2,          // Qwen3 4B
+  'r1qwen': 3,        // DeepSeek R1 1.5B
+  'deepseek': 3,      // DeepSeek R1 (alternate match)
+  'gemma': 4,         // Gemma 3 12B
+  'mistral': 5,       // Mistral 7B v0.3
+  'phi': 6,           // Phi-3 Mini
+  'rnj': 7,           // RNJ-1 Instruct
+  'llama': 8,         // Llama 3.2-3B
+  'functiongemma': 9, // FunctionGemma 270M
+  'nemotron': 10,     // Nemotron-3 Nano 30B
+  'gptoss': 11,       // GPT-OSS 20B
+  'gpt-oss': 11,      // GPT-OSS (alternate match)
 };
 
 // API models - used when local models fail or as fallback

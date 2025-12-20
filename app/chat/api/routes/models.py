@@ -28,6 +28,7 @@ async def list_models(
         return MODEL_PROFILES.get(model_id, {}).get("context_length", 0)
 
     # Build list of local models from MODEL_CONFIG
+    # Include priority (from rank) so frontend uses authoritative rankings
     local_models = [
         {
             "id": config["id"],
@@ -36,6 +37,7 @@ async def list_models(
             "endpoint": MODEL_ENDPOINTS.get(config["id"]),
             "default": config.get("default", False),
             "context_length": get_context_length(config["id"]),
+            "priority": config.get("rank", 99),  # Use rank from config/models.py
         }
         for config in MODEL_CONFIG
     ]
