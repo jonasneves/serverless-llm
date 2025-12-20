@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ExternalLink, Loader2 } from 'lucide-react';
 
 interface AppCardProps {
   id: string;
@@ -14,7 +14,6 @@ interface AppCardProps {
   deploymentUrl?: string;
   children?: React.ReactNode;
   defaultExpanded?: boolean;
-  activeMode?: 'build' | 'deploy' | 'observe';
 }
 
 const formatLatency = (latency?: number) => {
@@ -26,8 +25,38 @@ const formatLatency = (latency?: number) => {
 const getLatencyColor = (latency?: number) => {
   if (!latency) return 'text-slate-500';
   if (latency < 500) return 'text-emerald-400';
-  if (latency < 1500) return 'text-yellow-400';
+  if (latency < 1500) return 'text-amber-400';
   return 'text-red-400';
+};
+
+// Status dot with pulse for deploying
+const StatusDot: React.FC<{
+  status: 'ok' | 'down' | 'checking' | 'deploying' | 'running' | 'stopped' | 'building';
+  size?: 'sm' | 'md';
+  pulse?: boolean;
+}> = ({ status, size = 'sm', pulse }) => {
+  const sizeClasses = size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5';
+
+  const colorClasses = {
+    ok: 'bg-emerald-400',
+    running: 'bg-emerald-400',
+    down: 'bg-red-400',
+    stopped: 'bg-red-400',
+    checking: 'bg-amber-400',
+    building: 'bg-amber-400',
+    deploying: 'bg-blue-400',
+  }[status] || 'bg-slate-400';
+
+  const shouldPulse = pulse || status === 'checking' || status === 'deploying' || status === 'building';
+
+  return (
+    <span className="relative flex">
+      <span className={`${sizeClasses} rounded-full ${colorClasses}`} />
+      {shouldPulse && (
+        <span className={`absolute inset-0 ${sizeClasses} rounded-full ${colorClasses} animate-ping opacity-75`} />
+      )}
+    </span>
+  );
 };
 
 const AppCard: React.FC<AppCardProps> = ({
@@ -42,156 +71,81 @@ const AppCard: React.FC<AppCardProps> = ({
   deploymentUrl,
   children,
   defaultExpanded = false,
-  activeMode = 'observe',
 }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
-  const getStatusText = () => {
-    switch (status) {
-      case 'running':
-      case 'ok':
-        return 'Public Endpoint';
-      case 'stopped':
-        return 'Public Stopped';
-      case 'down':
-        return 'Public Down';
-      case 'building':
-        return 'Public Building';
-      case 'deploying':
-        return 'Public Deploying';
-      case 'checking':
-        return 'Public Checking';
-      default:
-        return 'Public Unknown';
-    }
+  const isDeploying = deploymentStatus === 'in_progress' || deploymentStatus === 'queued';
+  const isHealthy = status === 'running' || status === 'ok';
+  const isDown = status === 'stopped' || status === 'down';
+
+  // Get accent color based on status
+  const getAccentClass = () => {
+    if (isDeploying) return 'border-l-blue-500';
+    if (isHealthy) return 'border-l-emerald-500';
+    if (isDown) return 'border-l-red-400';
+    return 'border-l-amber-400';
   };
-
-  const statusBadge = endpointUrl ? (
-    <a
-      href={endpointUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 ${status === 'running' || status === 'ok'
-        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-        : status === 'stopped' || status === 'down'
-          ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-          : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-        }`}
-      title={endpointUrl || publicEndpoint}
-    >
-      {getStatusText()}
-    </a>
-  ) : (
-    <span
-      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium ${status === 'running' || status === 'ok'
-        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-        : status === 'stopped' || status === 'down'
-          ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-          : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-        }`}
-      title={publicEndpoint}
-    >
-      {getStatusText()}
-    </span>
-  );
-
-  const getDeploymentLabel = () => {
-    if (deploymentStatus === 'success') return 'Last Deploy';
-    if (deploymentStatus === 'failure') return 'Last Deploy Failed';
-    if (deploymentStatus === 'in_progress') return 'Deploying';
-    if (deploymentStatus === 'queued') return 'Deploy Queued';
-    return 'Last Deploy';
-  };
-
-  const getDeploymentClasses = () => {
-    if (deploymentStatus === 'success') return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-    if (deploymentStatus === 'failure') return 'bg-red-500/20 text-red-300 border border-red-500/30';
-    if (deploymentStatus === 'in_progress' || deploymentStatus === 'queued') return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
-    return 'bg-slate-900/50 text-slate-500 border border-slate-700/70';
-  };
-
-  const deploymentBadge = deploymentUrl ? (
-    <a
-      href={deploymentUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 ${getDeploymentClasses()}`}
-      title={deploymentUrl}
-    >
-      {getDeploymentLabel()}
-    </a>
-  ) : (
-    <span
-      className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium ${getDeploymentClasses()}`}
-      title={deploymentStatus && deploymentStatus !== 'unknown' ? 'No link available' : 'No recent deploy'}
-    >
-      {getDeploymentLabel()}
-    </span>
-  );
-
-  const localBadge = localStatus
-    ? localEndpointUrl ? (
-      <a
-        href={localEndpointUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium transition-all hover:opacity-80 border ${localStatus === 'ok'
-          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-          : localStatus === 'down'
-            ? 'bg-red-500/20 text-red-300 border-red-500/30'
-            : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-          }`}
-        title={localEndpointUrl}
-      >
-        Local Service
-      </a>
-    ) : (
-      <span
-        className={`inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium border ${localStatus === 'ok'
-          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-          : localStatus === 'down'
-            ? 'bg-red-500/20 text-red-300 border-red-500/30'
-            : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-          }`}
-        title="Local endpoint unavailable"
-      >
-        Local Service
-      </span>
-    )
-    : (
-      <span
-        className="inline-flex items-center justify-center px-2.5 py-1 min-h-[26px] rounded text-[10px] font-medium border border-slate-700/70 bg-slate-900/50 text-slate-500"
-        title="No local service configured"
-      >
-        Local Service
-      </span>
-    );
-
-  const renderSeparator = () => (
-    <span className="text-slate-600 text-[10px] leading-none px-0.5">→</span>
-  );
 
   return (
-    <div className="rounded-xl bg-slate-800/40 border border-slate-700/30 overflow-hidden">
+    <div
+      className={`
+        rounded-xl bg-slate-800/40 border border-slate-700/30 overflow-hidden
+        border-l-2 ${getAccentClass()}
+        transition-all duration-200 ease-out
+        hover:bg-slate-800/60 hover:border-slate-600/40
+        ${isDeploying ? 'ring-1 ring-blue-500/20' : ''}
+      `}
+    >
       {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-3 hover:bg-slate-700/20 transition-colors"
+        className="w-full flex items-center gap-3 px-3 py-2.5 transition-colors group"
       >
+        {/* Status Indicator */}
+        <div className="relative flex-shrink-0">
+          {isDeploying ? (
+            <div className="relative">
+              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+            </div>
+          ) : (
+            <StatusDot status={status} size="md" />
+          )}
+        </div>
+
+        {/* Name & Endpoint */}
         <div className="flex flex-col items-start min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-200">{name}</span>
-            {latency && (status === 'running' || status === 'ok') && (
-              <span className={`text-[10px] font-mono ${getLatencyColor(latency)}`} title="Response latency">
+            <span className="text-sm font-medium text-slate-100 group-hover:text-white transition-colors">
+              {name}
+            </span>
+            {latency && isHealthy && (
+              <span className={`text-[10px] font-mono tabular-nums ${getLatencyColor(latency)}`}>
                 {formatLatency(latency)}
               </span>
             )}
           </div>
-          <span className="text-[10px] text-slate-500 truncate max-w-full">{publicEndpoint}</span>
+          <span className="text-[10px] text-slate-500 truncate max-w-full">
+            {publicEndpoint}
+          </span>
         </div>
+
+        {/* Quick Actions */}
+        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {endpointUrl && (
+            <a
+              href={endpointUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              title="Open endpoint"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
+
+        {/* Expand Chevron */}
         <ChevronRight
           className={`w-4 h-4 text-slate-500 transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''
             }`}
@@ -199,23 +153,60 @@ const AppCard: React.FC<AppCardProps> = ({
       </button>
 
       {/* Expanded Content */}
-      {expanded && children && (
-        <div className="border-t border-slate-700/30 p-3">
-          {children}
-        </div>
-      )}
+      <div className={`
+        overflow-hidden transition-all duration-200 ease-out
+        ${expanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
+      `}>
+        {children && (
+          <div className="border-t border-slate-700/30 p-3">
+            {children}
+          </div>
+        )}
+      </div>
 
-      {/* Footer with Status Badges */}
-      <div
-        className="border-t border-slate-700/30 px-3 py-2.5 bg-slate-900/40 flex items-center gap-1.5 flex-wrap"
-        data-mode={activeMode}
-      >
-        {/* Local → Web Status → Deployment */}
-        {localBadge}
-        {localBadge && (statusBadge || deploymentBadge) && renderSeparator()}
-        {statusBadge}
-        {statusBadge && deploymentBadge && renderSeparator()}
-        {deploymentBadge}
+      {/* Compact Footer Status */}
+      <div className="border-t border-slate-700/30 px-3 py-2 bg-slate-900/40">
+        <div className="flex items-center gap-3 text-[10px]">
+          {/* Local Status */}
+          <div className="flex items-center gap-1.5" title={localEndpointUrl || 'Local endpoint'}>
+            <StatusDot status={localStatus || 'down'} size="sm" />
+            <span className="text-slate-500">Local</span>
+          </div>
+
+          <span className="text-slate-700">•</span>
+
+          {/* Public Status */}
+          <div className="flex items-center gap-1.5" title={endpointUrl || publicEndpoint}>
+            <StatusDot status={status} size="sm" />
+            <span className="text-slate-500">Public</span>
+          </div>
+
+          <span className="text-slate-700">•</span>
+
+          {/* Deploy Status */}
+          <a
+            href={deploymentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 hover:text-slate-300 transition-colors"
+            title="View deployment"
+          >
+            <StatusDot
+              status={
+                deploymentStatus === 'success' ? 'ok' :
+                  deploymentStatus === 'failure' ? 'down' :
+                    deploymentStatus === 'in_progress' ? 'deploying' :
+                      'checking'
+              }
+              size="sm"
+              pulse={isDeploying}
+            />
+            <span className="text-slate-500">
+              {isDeploying ? 'Deploying' : 'Deploy'}
+            </span>
+          </a>
+        </div>
       </div>
     </div>
   );

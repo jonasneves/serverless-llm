@@ -78,11 +78,10 @@ const ServerPanel: React.FC = () => {
               <button
                 key={tab}
                 onClick={() => setGlobalTab(tab)}
-                className={`px-3 py-1 text-[11px] font-medium rounded-full transition-all ${
-                  globalTab === tab
+                className={`px-3 py-1 text-[11px] font-medium rounded-full transition-all ${globalTab === tab
                     ? 'bg-gradient-to-r from-blue-500/30 to-blue-600/30 text-white shadow-inner shadow-blue-500/20'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -208,16 +207,16 @@ const ServerPanel: React.FC = () => {
         </div>
       ) : (
         <div className="relative z-10 overflow-y-auto px-4 pb-4 h-[calc(100vh-60px)]">
-      <DeploymentsPanel
-        githubToken={config.githubToken}
-        chatApiBaseUrl={config.chatApiBaseUrl}
-        modelsBaseDomain={config.modelsBaseDomain}
-        modelsUseHttps={config.modelsUseHttps}
-        globalTab={globalTab}
-        showOnlyBackend={false}
-        onBackendStatusChange={setBackendStatus}
-        onActiveDeploymentsChange={setActiveDeployments}
-      />
+          <DeploymentsPanel
+            githubToken={config.githubToken}
+            chatApiBaseUrl={config.chatApiBaseUrl}
+            modelsBaseDomain={config.modelsBaseDomain}
+            modelsUseHttps={config.modelsUseHttps}
+            globalTab={globalTab}
+            showOnlyBackend={false}
+            onBackendStatusChange={setBackendStatus}
+            onActiveDeploymentsChange={setActiveDeployments}
+          />
         </div>
       )}
     </div>

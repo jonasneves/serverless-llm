@@ -3,6 +3,8 @@ import AppCard from './AppCard';
 import BuildPanel from './BuildPanel';
 import DeployPanel from './DeployPanel';
 import ObservePanel from './ObservePanel';
+import StatusRing from './StatusRing';
+import CategoryHeader from './CategoryHeader';
 import {
     SERVICES,
     WORKFLOWS,
@@ -13,7 +15,6 @@ import {
     buildEndpoint,
     getServicesGroupedByCategory
 } from '../hooks/useExtensionConfig';
-import { ChevronDown, ChevronRight, Zap, RefreshCw, AlertCircle, CheckCircle, Clock, Loader2 } from 'lucide-react';
 
 interface WorkflowRun {
     id: number;
@@ -512,63 +513,28 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const groupedServices = getServicesGroupedByCategory();
 
     return (
-        <div className="space-y-3 pt-1">
-            {/* Aggregate Status Bar */}
-            <div className="flex items-center justify-between px-3 py-2 bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
-                <div className="flex items-center gap-4 text-[11px]">
-                    <div className="flex items-center gap-1.5">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400 font-medium">{stats.online}</span>
-                        <span className="text-slate-500">online</span>
-                    </div>
-                    {stats.deploying > 0 && (
-                        <div className="flex items-center gap-1.5">
-                            <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
-                            <span className="text-blue-400 font-medium">{stats.deploying}</span>
-                            <span className="text-slate-500">deploying</span>
-                        </div>
-                    )}
-                    {stats.down > 0 && (
-                        <div className="flex items-center gap-1.5">
-                            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
-                            <span className="text-red-400 font-medium">{stats.down}</span>
-                            <span className="text-slate-500">down</span>
-                        </div>
-                    )}
-                    {stats.checking > 0 && (
-                        <div className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-slate-400 font-medium">{stats.checking}</span>
-                            <span className="text-slate-500">checking</span>
-                        </div>
-                    )}
-                </div>
-                <button
-                    onClick={refresh}
-                    disabled={loading}
-                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-all"
-                    title="Refresh all (R)"
-                >
-                    <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline">Refresh</span>
-                </button>
-            </div>
+        <div className="space-y-4 pt-2">
+            {/* Visual Status Ring */}
+            <StatusRing
+                online={stats.online}
+                down={stats.down}
+                checking={stats.checking}
+                deploying={stats.deploying}
+                total={stats.total}
+                loading={loading}
+                onRefresh={refresh}
+            />
 
             {/* Core Services (Chat API) */}
             <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                    <button
-                        onClick={() => toggleCategory('core')}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors"
-                    >
-                        {collapsedCategories.has('core') ? (
-                            <ChevronRight className="w-3.5 h-3.5" />
-                        ) : (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                        )}
-                        Core Services
-                    </button>
-                </div>
+                <CategoryHeader
+                    id="core"
+                    name="Core Services"
+                    onlineCount={backendHealth.status === 'ok' ? 1 : 0}
+                    totalCount={1}
+                    isCollapsed={collapsedCategories.has('core')}
+                    onToggle={() => toggleCategory('core')}
+                />
 
                 {!collapsedCategories.has('core') && (
                     <AppCard
@@ -576,7 +542,6 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         id={chatApp.id}
                         name={chatApp.name}
                         status={chatApp.status}
-                        activeMode={globalTab}
                         deploymentStatus={chatApp.deploymentStatus}
                         localStatus={chatApp.localStatus}
                         latency={chatApp.latency}
@@ -664,33 +629,17 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
 
                 return (
                     <div key={category.id} className="space-y-2">
-                        <div className="flex items-center justify-between px-1">
-                            <button
-                                onClick={() => toggleCategory(category.id)}
-                                className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors"
-                            >
-                                {isCollapsed ? (
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                ) : (
-                                    <ChevronDown className="w-3.5 h-3.5" />
-                                )}
-                                {category.name}
-                                <span className="ml-1 text-[10px] text-slate-500 font-normal">
-                                    ({categoryOnline}/{services.length} online)
-                                </span>
-                            </button>
-
-                            {!isCollapsed && globalTab === 'deploy' && (
-                                <button
-                                    onClick={() => triggerCategoryWorkflows(category.id)}
-                                    disabled={!githubToken || !!triggering}
-                                    className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <Zap className="w-3 h-3" />
-                                    Deploy All
-                                </button>
-                            )}
-                        </div>
+                        <CategoryHeader
+                            id={category.id}
+                            name={category.name}
+                            onlineCount={categoryOnline}
+                            totalCount={services.length}
+                            isCollapsed={isCollapsed}
+                            onToggle={() => toggleCategory(category.id)}
+                            showDeployAll={globalTab === 'deploy'}
+                            onDeployAll={() => triggerCategoryWorkflows(category.id)}
+                            isDeploying={!!triggering}
+                        />
 
                         {!isCollapsed && services.map(service => {
                             const app = buildApp(service, service.key, service.name);
@@ -702,7 +651,6 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                     id={app.id}
                                     name={app.name}
                                     status={app.status}
-                                    activeMode={globalTab}
                                     deploymentStatus={app.deploymentStatus}
                                     localStatus={app.localStatus}
                                     latency={app.latency}
