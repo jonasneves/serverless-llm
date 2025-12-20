@@ -39,7 +39,7 @@ jobs:
     with:
       model_name: "llama"
       model_dir: "llama-inference"
-      model_repo: "bartowski/Llama-3.2-3B-Instruct-GGUF"
+      model_repo: "unsloth/Llama-3.2-3B-Instruct-GGUF"
       model_file: "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
       cache_key_prefix: "gguf-llama-3.2-3b-q4"
       restart_event_type: "restart-llama-inference"

@@ -39,7 +39,7 @@ jobs:
     with:
       model_name: "r1qwen"
       model_dir: "deepseek-r1qwen-inference"
-      model_repo: "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF"
+      model_repo: "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF"
       model_file: "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf"
       cache_key_prefix: "gguf-r1qwen15b-q4"
       restart_event_type: "restart-r1qwen-inference"

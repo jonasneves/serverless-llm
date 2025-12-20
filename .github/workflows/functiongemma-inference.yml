@@ -39,8 +39,8 @@ jobs:
     with:
       model_name: "functiongemma"
       model_dir: "functiongemma-inference"
-      model_repo: "ggml-org/functiongemma-270m-it-GGUF"
-      model_file: "functiongemma-270m-it-q8_0.gguf"
+      model_repo: "unsloth/functiongemma-270m-it-GGUF"
+      model_file: "functiongemma-270m-it-Q8_0.gguf"
       cache_key_prefix: "gguf-functiongemma-270m-q8"
       restart_event_type: "restart-functiongemma-inference"
       workflow_file: "functiongemma-inference.yml"
