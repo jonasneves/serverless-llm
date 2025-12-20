@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration from environment
 MODEL_REPO = os.getenv("MODEL_REPO", "unsloth/Nemotron-3-Nano-30B-A3B-GGUF")
-MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf")
+MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf")
 PORT = int(os.getenv("PORT", "8301"))
 N_CTX = int(os.getenv("N_CTX", "8192"))
 N_THREADS = int(os.getenv("N_THREADS", "2"))

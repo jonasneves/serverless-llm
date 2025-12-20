@@ -60,8 +60,8 @@ jobs:
       model_name: "nemotron"
       model_dir: "nemotron-inference"
       model_repo: "unsloth/Nemotron-3-Nano-30B-A3B-GGUF"
-      model_file: "Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-nemotron-30b-q4"
+      model_file: "Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf"
+      cache_key_prefix: "gguf-nemotron-30b-iq2m"
       restart_event_type: "restart-nemotron-inference"
       workflow_file: "nemotron-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}

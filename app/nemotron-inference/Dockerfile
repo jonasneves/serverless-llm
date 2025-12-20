@@ -65,7 +65,7 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY nemotron-inference/inference_server.py .
 
 ENV MODEL_REPO=unsloth/Nemotron-3-Nano-30B-A3B-GGUF
-ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf
+ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf
 ENV PORT=8000
 ENV N_CTX=8192
 ENV N_THREADS=2
