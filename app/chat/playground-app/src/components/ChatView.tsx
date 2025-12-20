@@ -53,6 +53,7 @@ interface ChatViewProps {
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
     selectedModelId,
+    onSelectModel,
     githubToken,
     onOpenTopics,
     messages,
@@ -70,6 +71,9 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 }, ref) => {
     const [inputFocused, setInputFocused] = useState(false);
     const [showAutoDropdown, setShowAutoDropdown] = useState(false);
+    const [showModelSelector, setShowModelSelector] = useState(false);
+    const [expandedLocalModels, setExpandedLocalModels] = useState(true);
+    const [expandedApiModels, setExpandedApiModels] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
     const [showTooltip, setShowTooltip] = useState(false);
@@ -78,6 +82,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const modelSelectorRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
     // Smart model selection hook
@@ -208,6 +213,9 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         const handleClickOutside = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
                 setShowAutoDropdown(false);
+            }
+            if (modelSelectorRef.current && !modelSelectorRef.current.contains(e.target as Node)) {
+                setShowModelSelector(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -552,11 +560,127 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-1.5">
-                                        <div className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 text-xs font-medium">
-                                            {selectedModel && (
-                                                <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                        <div className="relative" ref={modelSelectorRef}>
+                                            <button
+                                                onClick={() => setShowModelSelector(!showModelSelector)}
+                                                className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border bg-slate-700/40 hover:bg-slate-700/60 border-slate-600/40 transition-all active:scale-95 text-xs font-medium"
+                                                disabled={isGenerating}
+                                            >
+                                                {selectedModel && (
+                                                    <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                                )}
+                                                <span className="text-slate-200/60">{selectedModel ? selectedModel.name : 'Select a model'}</span>
+                                                {!isGenerating && <ChevronDown size={11} className="text-slate-200/60" />}
+                                            </button>
+
+                                            {showModelSelector && !isGenerating && (
+                                                <div className="absolute top-full left-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                                    {models.length === 0 ? (
+                                                        <div className="px-3 py-4 text-xs text-slate-500 text-center">
+                                                            No models available
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            {models.filter(m => m.type === 'local').length > 0 && (
+                                                                <div>
+                                                                    <button
+                                                                        onClick={() => setExpandedLocalModels(!expandedLocalModels)}
+                                                                        className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors"
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                            <span>Local Models</span>
+                                                                        </div>
+                                                                        <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
+                                                                    </button>
+                                                                    {expandedLocalModels && (
+                                                                        <div>
+                                                                            {models.filter(m => m.type === 'local').map(model => (
+                                                                                <button
+                                                                                    key={model.id}
+                                                                                    onClick={() => {
+                                                                                        onSelectModel(model.id);
+                                                                                        setShowModelSelector(false);
+                                                                                    }}
+                                                                                    className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                                        ? 'bg-emerald-500/20 text-slate-200'
+                                                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                                                        }`}
+                                                                                >
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <div className="w-2 h-2 rounded-full bg-emerald-500/40" />
+                                                                                            <span>{model.name}</span>
+                                                                                        </div>
+                                                                                        {selectedModelId === model.id && (
+                                                                                            <span className="text-emerald-400">✓</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {models.filter(m => m.type === 'api').length > 0 && (
+                                                                <div>
+                                                                    <button
+                                                                        onClick={() => setExpandedApiModels(!expandedApiModels)}
+                                                                        className="w-full px-3 py-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold hover:bg-slate-700/30 transition-colors border-t border-slate-700/50"
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                                                            <span>API Models</span>
+                                                                        </div>
+                                                                        <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
+                                                                    </button>
+                                                                    {expandedApiModels && (
+                                                                        <div>
+                                                                            {models.filter(m => m.type === 'api').map(model => (
+                                                                                <button
+                                                                                    key={model.id}
+                                                                                    onClick={() => {
+                                                                                        onSelectModel(model.id);
+                                                                                        setShowModelSelector(false);
+                                                                                    }}
+                                                                                    className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${selectedModelId === model.id
+                                                                                        ? 'bg-blue-500/20 text-slate-200'
+                                                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                                                        }`}
+                                                                                >
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <div className="w-2 h-2 rounded-full bg-blue-500/40" />
+                                                                                            <span>{model.name}</span>
+                                                                                        </div>
+                                                                                        {selectedModelId === model.id && (
+                                                                                            <span className="text-blue-400">✓</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            <div className="border-t border-slate-700">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setAutoMode(true);
+                                                                        setShowModelSelector(false);
+                                                                    }}
+                                                                    className="w-full px-3 py-2 text-left text-xs font-medium text-yellow-400 hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                                                                >
+                                                                    <Zap size={12} />
+                                                                    <span>Enable Auto Mode</span>
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
                                             )}
-                                            <span className="text-slate-200/60">{selectedModel ? selectedModel.name : 'Select a model from the header'}</span>
                                         </div>
 
                                         {selectedModel && (
