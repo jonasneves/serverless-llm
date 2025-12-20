@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Rocket, RefreshCw, ExternalLink, AlertCircle, Power, Terminal, Zap, Package, Wrench, Globe } from 'lucide-react';
+import { Globe, Terminal } from 'lucide-react';
+import AppCard from './AppCard';
+import BuildPanel from './BuildPanel';
+import DeployPanel from './DeployPanel';
+import ObservePanel from './ObservePanel';
+import { SERVICES, buildEndpoint } from '../hooks/useExtensionConfig';
 
 interface WorkflowRun {
     id: number;
@@ -21,6 +26,7 @@ interface DeploymentsPanelProps {
     githubToken: string;
     chatApiBaseUrl: string;
     modelsBaseDomain: string;
+    modelsUseHttps: boolean;
     showOnlyBackend?: boolean;
     onBackendStatusChange?: (status: { process: 'running' | 'stopped' | 'unknown'; mode: string | null }) => void;
     onActiveDeploymentsChange?: (count: number) => void;
@@ -32,13 +38,20 @@ const REPO_NAME = 'serverless-llm';
 const KEY_WORKFLOWS = [
     { name: 'Chat', path: 'chat.yml' },
     { name: 'Build Images', path: 'build-push-images.yml' },
+    { name: 'Qwen', path: 'qwen-inference.yml' },
+    { name: 'Phi', path: 'phi-inference.yml' },
+    { name: 'Llama', path: 'llama-inference.yml' },
+    { name: 'Mistral', path: 'mistral-inference.yml' },
+    { name: 'Gemma', path: 'gemma-inference.yml' },
+    { name: 'R1 Qwen', path: 'r1qwen-inference.yml' },
+    { name: 'RNJ', path: 'rnj-inference.yml' },
 ];
 
 function normalizeBaseUrl(url: string): string {
     return url.trim().replace(/\/+$/, '');
 }
 
-const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, showOnlyBackend = false, onBackendStatusChange, onActiveDeploymentsChange }) => {
+const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, modelsUseHttps, showOnlyBackend = false, onBackendStatusChange, onActiveDeploymentsChange }) => {
     const [workflows, setWorkflows] = useState<Map<string, WorkflowInfo>>(new Map());
     const [runs, setRuns] = useState<Map<string, WorkflowRun | null>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -50,6 +63,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     const [backendBusy, setBackendBusy] = useState(false);
     const [backendLogTail, setBackendLogTail] = useState<string | null>(null);
     const [backendNativeError, setBackendNativeError] = useState<string | null>(null);
+    const [modelHealthStatuses, setModelHealthStatuses] = useState<Map<string, 'ok' | 'down' | 'checking'>>(new Map());
     const [buildBusy, setBuildBusy] = useState(false);
     const [buildLogTail, setBuildLogTail] = useState<string | null>(null);
     const [buildNativeError, setBuildNativeError] = useState<string | null>(null);
@@ -78,6 +92,28 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             setBackendHealth('down');
         }
     }, [chatApiBaseUrl]);
+
+    const checkModelHealth = useCallback(async (serviceKey: string, endpoint: string) => {
+        try {
+            const response = await fetch(`${endpoint}/health`, {
+                method: 'GET',
+                mode: 'cors',
+                credentials: 'omit',
+                signal: AbortSignal.timeout(3000),
+            });
+            setModelHealthStatuses(prev => new Map(prev).set(serviceKey, response.ok ? 'ok' : 'down'));
+        } catch {
+            setModelHealthStatuses(prev => new Map(prev).set(serviceKey, 'down'));
+        }
+    }, []);
+
+    const checkAllModelsHealth = useCallback(async () => {
+        for (const service of SERVICES) {
+            const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
+            setModelHealthStatuses(prev => new Map(prev).set(service.key, 'checking'));
+            await checkModelHealth(service.key, endpoint);
+        }
+    }, [modelsBaseDomain, modelsUseHttps, checkModelHealth]);
 
     const isNativeAvailable = () =>
         typeof chrome !== 'undefined' && !!chrome.runtime?.sendMessage;
@@ -273,11 +309,12 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
     useEffect(() => {
         checkBackendHealth();
         refreshBackendStatus();
+        checkAllModelsHealth();
 
         if (!showOnlyBackend) {
             fetchWorkflows().then(() => fetchLatestRuns());
         }
-    }, [checkBackendHealth, refreshBackendStatus, fetchWorkflows, fetchLatestRuns, showOnlyBackend]);
+    }, [checkBackendHealth, refreshBackendStatus, checkAllModelsHealth, fetchWorkflows, fetchLatestRuns, showOnlyBackend]);
 
     useEffect(() => {
         if (showOnlyBackend) return;
@@ -286,12 +323,84 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
             if (!refreshInFlight.current) {
                 fetchLatestRuns();
             }
+            checkAllModelsHealth();
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [fetchLatestRuns, showOnlyBackend]);
+    }, [fetchLatestRuns, showOnlyBackend, checkAllModelsHealth]);
 
 
+
+    const defaultTabs: Record<string, 'build' | 'deploy' | 'observe'> = {
+        'chat-api': 'observe',
+    };
+    SERVICES.forEach(service => {
+        defaultTabs[service.key] = 'observe';
+    });
+
+    const [activeTabs, setActiveTabs] = useState<Record<string, 'build' | 'deploy' | 'observe'>>(defaultTabs);
+
+    const setActiveTab = (appId: string, tab: 'build' | 'deploy' | 'observe') => {
+        setActiveTabs(prev => ({ ...prev, [appId]: tab }));
+    };
+
+    const getDeploymentStatusForApp = (appId: string): 'success' | 'failure' | 'in_progress' | 'queued' | 'unknown' => {
+        let workflowName: string | null = null;
+        if (appId === 'chat-api') workflowName = 'Chat';
+        else if (appId === 'qwen') workflowName = 'Qwen';
+        else if (appId === 'phi') workflowName = 'Phi';
+        else if (appId === 'llama') workflowName = 'Llama';
+        else if (appId === 'mistral') workflowName = 'Mistral';
+        else if (appId === 'gemma') workflowName = 'Gemma';
+        else if (appId === 'r1qwen') workflowName = 'R1 Qwen';
+        else if (appId === 'rnj') workflowName = 'RNJ';
+
+        if (!workflowName) return 'unknown';
+
+        const run = runs.get(workflowName);
+        if (!run) return 'unknown';
+
+        if (run.status === 'in_progress') return 'in_progress';
+        if (run.status === 'queued') return 'queued';
+        if (run.conclusion === 'success') return 'success';
+        if (run.conclusion === 'failure') return 'failure';
+
+        return 'unknown';
+    };
+
+    const apps: Array<{
+        id: string;
+        name: string;
+        status: 'running' | 'stopped' | 'building' | 'deploying' | 'ok' | 'down' | 'checking';
+        deploymentStatus: 'success' | 'failure' | 'in_progress' | 'queued' | 'unknown';
+        endpoint?: string;
+        endpointUrl?: string;
+        deploymentUrl?: string;
+    }> = [
+        {
+            id: 'chat-api',
+            name: 'Chat API',
+            status: backendHealth === 'ok' ? 'running' : backendHealth === 'down' ? 'stopped' : 'checking',
+            deploymentStatus: getDeploymentStatusForApp('chat-api'),
+            endpoint: chatApiBaseUrl,
+            endpointUrl: `${normalizeBaseUrl(chatApiBaseUrl)}/health`,
+            deploymentUrl: runs.get('Chat')?.html_url,
+        },
+        ...SERVICES.map(service => {
+            const endpoint = buildEndpoint(service.key, service.localPort, modelsBaseDomain, modelsUseHttps);
+            const health = modelHealthStatuses.get(service.key) || 'checking';
+            const workflowName = service.name;
+            return {
+                id: service.key,
+                name: service.name,
+                status: health,
+                deploymentStatus: getDeploymentStatusForApp(service.key),
+                endpoint,
+                endpointUrl: `${endpoint}/health`,
+                deploymentUrl: runs.get(workflowName)?.html_url,
+            };
+        }),
+    ];
 
     return (
         <div className="space-y-2 pt-1">
@@ -319,158 +428,105 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                 </button>
             </div>
 
-            {/* Server Row */}
-            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/30">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${backendHealth === 'ok' ? 'bg-emerald-400'
-                        : backendHealth === 'down' ? 'bg-red-400'
-                            : 'bg-blue-400 animate-pulse'
-                        }`} />
-                    <span className="text-xs text-slate-300">Server</span>
-                    {backendProcess === 'running' && backendPid && (
-                        <span className="text-[10px] text-slate-500">PID {backendPid}</span>
-                    )}
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <button
-                        onClick={fetchBackendLogs}
-                        className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded transition-colors"
-                        disabled={backendBusy}
-                        title="Logs"
+            {/* App Cards */}
+            {apps.map((app) => {
+                const activeTab = activeTabs[app.id] || 'observe';
+                return (
+                    <AppCard
+                        key={app.id}
+                        id={app.id}
+                        name={app.name}
+                        status={app.status}
+                        deploymentStatus={app.deploymentStatus}
+                        endpoint={app.endpoint}
+                        endpointUrl={app.endpointUrl}
+                        deploymentUrl={app.deploymentUrl}
+                        defaultExpanded={app.id === 'qwen'}
                     >
-                        <Terminal className="w-3.5 h-3.5" />
-                    </button>
-                    {backendProcess !== 'running' ? (
-                        <button
-                            onClick={startBackend}
-                            disabled={backendBusy || !(chatApiBaseUrl.includes('localhost') || chatApiBaseUrl.includes('127.0.0.1'))}
-                            className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 rounded transition-all disabled:opacity-50"
-                        >
-                            <Power className="w-3 h-3" />
-                            Start
-                        </button>
-                    ) : (
-                        <button
-                            onClick={stopBackend}
-                            disabled={backendBusy}
-                            className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium text-red-300 bg-red-500/15 hover:bg-red-500/25 border border-red-500/20 rounded transition-all"
-                        >
-                            <Power className="w-3 h-3" />
-                            Stop
-                        </button>
-                    )}
-                </div>
-            </div>
+                        {/* Tab Bar */}
+                        <div className="flex gap-1 mb-3 bg-slate-900/40 p-1 rounded-lg">
+                            <button
+                                onClick={() => setActiveTab(app.id, 'build')}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                                    activeTab === 'build'
+                                        ? 'bg-slate-700/60 text-white'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                            >
+                                Build
+                            </button>
+                            <button
+                                onClick={() => setActiveTab(app.id, 'deploy')}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                                    activeTab === 'deploy'
+                                        ? 'bg-slate-700/60 text-white'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                            >
+                                Deploy
+                            </button>
+                            <button
+                                onClick={() => setActiveTab(app.id, 'observe')}
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                                    activeTab === 'observe'
+                                        ? 'bg-slate-700/60 text-white'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                            >
+                                Observe
+                            </button>
+                        </div>
 
-            {/* Build Row */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/30">
-                <span className="text-[10px] text-slate-500 mr-1">Build</span>
-                <button
-                    onClick={() => runBuild('playground')}
-                    disabled={buildBusy}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded transition-all disabled:opacity-50"
-                >
-                    <Package className="w-3 h-3 text-blue-400" />
-                    Frontend
-                </button>
-                <button
-                    onClick={() => runBuild('extension')}
-                    disabled={buildBusy}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded transition-all disabled:opacity-50"
-                >
-                    <Wrench className="w-3 h-3 text-purple-400" />
-                    Extension
-                </button>
-                <button
-                    onClick={() => runBuild('both')}
-                    disabled={buildBusy}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded transition-all disabled:opacity-50"
-                >
-                    <Zap className={`w-3 h-3 text-amber-400 ${buildBusy ? 'animate-pulse' : ''}`} />
-                    All
-                </button>
-            </div>
+                        {/* Tab Content */}
+                        {activeTab === 'build' && (
+                            <BuildPanel
+                                appId={app.id}
+                                buildBusy={buildBusy}
+                                buildLogTail={buildLogTail}
+                                onBuild={runBuild}
+                            />
+                        )}
+                        {activeTab === 'deploy' && (
+                            <DeployPanel
+                                appId={app.id}
+                                githubToken={githubToken}
+                                runs={runs}
+                                triggering={triggering}
+                                loading={loading}
+                                onDeploy={triggerWorkflow}
+                                onRefresh={refresh}
+                            />
+                        )}
+                        {activeTab === 'observe' && (
+                            <ObservePanel
+                                appId={app.id}
+                                backendHealth={backendHealth}
+                                backendProcess={backendProcess}
+                                backendPid={backendPid}
+                                backendBusy={backendBusy}
+                                backendLogTail={backendLogTail}
+                                backendNativeError={backendNativeError}
+                                chatApiBaseUrl={chatApiBaseUrl}
+                                onStart={startBackend}
+                                onStop={stopBackend}
+                                onFetchLogs={fetchBackendLogs}
+                            />
+                        )}
+                    </AppCard>
+                );
+            })}
 
-            {/* Deploy Row */}
-            {!showOnlyBackend && githubToken && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/30">
-                    <span className="text-[10px] text-slate-500 mr-1">Deploy</span>
-                    <button
-                        onClick={() => triggerWorkflow('Chat')}
-                        disabled={triggering === 'Chat' || loading}
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded transition-all disabled:opacity-50"
-                    >
-                        <Rocket className="w-3 h-3 text-emerald-400" />
-                        Chat
-                        {triggering === 'Chat' && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
-                    </button>
-                    <button
-                        onClick={() => triggerWorkflow('Build Images')}
-                        disabled={triggering === 'Build Images' || loading}
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400 hover:text-white bg-slate-700/30 hover:bg-slate-700/50 rounded transition-all disabled:opacity-50"
-                    >
-                        <RefreshCw className="w-3 h-3 text-purple-400" />
-                        Images
-                        {triggering === 'Build Images' && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
-                    </button>
-                    <button
-                        onClick={refresh}
-                        disabled={loading}
-                        className="ml-auto p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded transition-colors"
-                        title="Refresh workflow status"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                </div>
-            )}
-
-            {/* Log Output */}
-            {(backendLogTail || buildLogTail) && (
-                <pre className="max-h-24 overflow-auto text-[9px] leading-relaxed bg-slate-950/60 border border-slate-700/30 rounded-lg p-2 text-slate-400 whitespace-pre-wrap font-mono">
-                    {backendLogTail || buildLogTail}
-                </pre>
-            )}
-
-            {/* Error Messages */}
-            {(backendNativeError || buildNativeError || error) && (
+            {/* Build Error (global) */}
+            {buildNativeError && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                    <span className="text-[10px] text-amber-300">{backendNativeError || buildNativeError || error}</span>
+                    <span className="text-[10px] text-amber-300">{buildNativeError}</span>
                 </div>
             )}
 
-            {/* Workflow Status (compact dots) */}
-            {!showOnlyBackend && githubToken && KEY_WORKFLOWS.length > 0 && (
-                <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] text-slate-500">
-                    {KEY_WORKFLOWS.map(kw => {
-                        const run = runs.get(kw.name);
-                        const isSuccess = run?.conclusion === 'success';
-                        const isFailed = run?.conclusion === 'failure';
-                        const isActive = run?.status === 'in_progress' || run?.status === 'queued';
-                        return (
-                            <div key={kw.name} className="flex items-center gap-1" title={`${kw.name}: ${run?.conclusion || run?.status || 'unknown'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${isSuccess ? 'bg-emerald-400'
-                                    : isFailed ? 'bg-red-400'
-                                        : isActive ? 'bg-blue-400 animate-pulse'
-                                            : 'bg-slate-600'
-                                    }`} />
-                                <span>{kw.name}</span>
-                                {run && (
-                                    <a href={run.html_url} target="_blank" rel="noopener noreferrer" className="hover:text-slate-300">
-                                        <ExternalLink className="w-2.5 h-2.5" />
-                                    </a>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* No Token Warning */}
-            {!showOnlyBackend && !githubToken && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/40 border border-slate-700/30 rounded-lg">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-[10px] text-slate-400">Add GitHub token in Settings to enable Deploy</span>
+            {/* Deployment Error (global) */}
+            {error && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <span className="text-[10px] text-amber-300">{error}</span>
                 </div>
             )}
         </div>

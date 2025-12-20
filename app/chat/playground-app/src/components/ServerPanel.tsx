@@ -1,14 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, CheckCircle, Settings, RefreshCw, Globe, Eye, EyeOff, Sparkles, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, CheckCircle, Settings, Globe, Eye, EyeOff, Sparkles, ExternalLink } from 'lucide-react';
 import { SERVICES, buildEndpoint, EnvConfig, ProfileId, normalizeEnvConfig } from '../hooks/useExtensionConfig';
 import DeploymentsPanel from './DeploymentsPanel';
-
-interface ServiceHealth {
-  key: string;
-  name: string;
-  endpoint: string;
-  status: 'ok' | 'down' | 'checking';
-}
 
 const DEFAULT_CONFIG: EnvConfig = {
   githubToken: '',
@@ -30,69 +23,19 @@ function buildAllEndpoints(baseDomain: string, useHttps: boolean): Record<string
 }
 
 const ServerPanel: React.FC = () => {
-  const [services, setServices] = useState<ServiceHealth[]>([]);
   const [config, setConfig] = useState<EnvConfig>(DEFAULT_CONFIG);
   const [showConfig, setShowConfig] = useState(false);
   const [showToken, setShowToken] = useState(false);
-  const [lastCheck, setLastCheck] = useState<Date>(new Date());
   const [, setBackendStatus] = useState<{ process: 'running' | 'stopped' | 'unknown'; mode: string | null }>({ process: 'unknown', mode: null });
   const [, setActiveDeployments] = useState(0);
-
-  // Build services list from config
-  const buildServicesList = useCallback((cfg: EnvConfig): ServiceHealth[] => {
-    return SERVICES.map(service => ({
-      key: service.key,
-      name: service.name,
-      endpoint: buildEndpoint(service.key, service.localPort, cfg.modelsBaseDomain, cfg.modelsUseHttps),
-      status: 'checking' as const,
-    }));
-  }, []);
-
-  const checkHealth = useCallback(async (servicesList: ServiceHealth[]) => {
-    setLastCheck(new Date());
-    const results = await Promise.all(
-      servicesList.map(async (service) => {
-        try {
-          const response = await fetch(`${service.endpoint}/health`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(3000),
-          });
-          return { ...service, status: response.ok ? 'ok' : 'down' } as ServiceHealth;
-        } catch {
-          return { ...service, status: 'down' } as ServiceHealth;
-        }
-      })
-    );
-    setServices(results);
-  }, []);
 
   useEffect(() => {
     // Load saved config from chrome storage
     chrome.storage.local.get(['envConfig'], (result: { envConfig?: EnvConfig }) => {
       const loadedConfig = normalizeEnvConfig(result.envConfig || DEFAULT_CONFIG);
       setConfig(loadedConfig);
-
-      const servicesList = buildServicesList(loadedConfig);
-      setServices(servicesList);
-
-      // Initial health check after short delay
-      setTimeout(() => checkHealth(servicesList), 1000);
     });
-  }, [buildServicesList, checkHealth]);
-
-  // Set up periodic health checks
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setServices(current => {
-        if (current.length > 0) {
-          checkHealth(current);
-        }
-        return current;
-      });
-    }, 30000); // Check every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [checkHealth]);
+  }, []);
 
   const saveConfig = () => {
     const endpoints = buildAllEndpoints(config.modelsBaseDomain, config.modelsUseHttps);
@@ -108,14 +51,8 @@ const ServerPanel: React.FC = () => {
       rnjEndpoint: endpoints.rnj,
     };
 
-    chrome.storage.local.set({ envConfig: configToSave }, () => {
-      const servicesList = buildServicesList(config);
-      setServices(servicesList);
-      checkHealth(servicesList);
-    });
+    chrome.storage.local.set({ envConfig: configToSave });
   };
-
-  const healthyCount = services.filter(s => s.status === 'ok').length;
 
   const getProfileIndicatorStyle = () => {
     const profiles: ProfileId[] = ['local_chat_remote_models', 'remote_all'];
@@ -339,55 +276,16 @@ const ServerPanel: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="relative z-10 flex flex-col h-[calc(100vh-60px)]">
-          {/* Main Content - scrollable */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <DeploymentsPanel
-              githubToken={config.githubToken}
-              chatApiBaseUrl={config.chatApiBaseUrl}
-              modelsBaseDomain={config.modelsBaseDomain}
-              showOnlyBackend={false}
-              onBackendStatusChange={setBackendStatus}
-              onActiveDeploymentsChange={setActiveDeployments}
-            />
-          </div>
-
-          {/* Compact Status Bar - fixed at bottom */}
-          <div className="flex-shrink-0 px-4 py-2 bg-slate-900/80 backdrop-blur-xl border-t border-white/5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {services.slice(0, 6).map((service) => (
-                  <div
-                    key={service.key}
-                    className="flex items-center gap-1 px-2 py-0.5 bg-slate-800/40 rounded-full"
-                    title={`${service.name}: ${service.status}`}
-                  >
-                    <div className={`w-1.5 h-1.5 rounded-full ${service.status === 'ok' ? 'bg-emerald-400'
-                      : service.status === 'down' ? 'bg-red-400'
-                        : 'bg-blue-400 animate-pulse'
-                      }`} />
-                    <span className="text-[9px] text-slate-500">{service.name.split(' ')[0]}</span>
-                  </div>
-                ))}
-                {services.length > 6 && (
-                  <span className="text-[9px] text-slate-600">+{services.length - 6}</span>
-                )}
-              </div>
-              <button
-                onClick={() => checkHealth(services)}
-                className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
-                title={`Last check: ${lastCheck.toLocaleTimeString()}`}
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span className={`px-1 py-0.5 rounded text-[9px] font-medium ${healthyCount === services.length ? 'text-emerald-400'
-                  : healthyCount > 0 ? 'text-amber-400'
-                    : 'text-red-400'
-                  }`}>
-                  {healthyCount}/{services.length}
-                </span>
-              </button>
-            </div>
-          </div>
+        <div className="relative z-10 overflow-y-auto px-4 pb-4 h-[calc(100vh-60px)]">
+          <DeploymentsPanel
+            githubToken={config.githubToken}
+            chatApiBaseUrl={config.chatApiBaseUrl}
+            modelsBaseDomain={config.modelsBaseDomain}
+            modelsUseHttps={config.modelsUseHttps}
+            showOnlyBackend={false}
+            onBackendStatusChange={setBackendStatus}
+            onActiveDeploymentsChange={setActiveDeployments}
+          />
         </div>
       )}
     </div>
