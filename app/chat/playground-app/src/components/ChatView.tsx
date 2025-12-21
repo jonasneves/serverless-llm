@@ -534,7 +534,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     if (el) messageRefs.current.set(idx, el);
                                     else messageRefs.current.delete(idx);
                                 }}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : hasGestureOptions ? 'justify-start items-start gap-4' : 'justify-start'}`}
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : hasGestureOptions ? 'flex-col sm:flex-row justify-start items-start gap-4' : 'justify-start'}`}
                                 data-message={idx}
                                 onClick={(e) => {
                                     // Only handle direct clicks, not bubbled clicks from children
@@ -551,7 +551,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     }
                                 }}
                             >
-                                <div className={`${hasGestureOptions ? 'flex-1 max-w-[45%]' : 'max-w-[85%]'} rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
+                                <div className={`${hasGestureOptions ? 'w-full sm:flex-1 sm:max-w-[45%]' : 'max-w-[85%]'} rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
                                     ? 'ring-2 ring-blue-500 bg-blue-500/10'
                                     : ''
                                     } ${msg.role === 'user'
@@ -572,14 +572,15 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                                 {hasGestureOptions && (
                                     <>
-                                        {/* Connecting line */}
-                                        <div className="flex items-center self-stretch py-6">
+                                        {/* Mobile: horizontal separator, Desktop: vertical connecting line */}
+                                        <div className="w-full sm:hidden h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent my-3"></div>
+                                        <div className="hidden sm:flex items-center self-stretch py-6">
                                             <div className="h-full w-px bg-gradient-to-b from-transparent via-blue-500/30 to-transparent"></div>
                                             <div className="w-3 h-px bg-blue-500/30"></div>
                                         </div>
 
                                         {/* UI Build Options */}
-                                        <div className="flex-1 max-w-[40%]">
+                                        <div className="w-full sm:flex-1 sm:max-w-[40%]">
                                             <GestureOptions
                                                 content={msg.content}
                                                 onSelect={(value) => handleSend(value, true)}
