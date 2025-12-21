@@ -68,9 +68,10 @@ ENV MODEL_REPO=unsloth/Nemotron-3-Nano-30B-A3B-GGUF
 # IQ2_M (~8GB) is the smallest available quantization for this 30B model
 ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf
 ENV PORT=8000
-ENV N_CTX=1024
+# MINIMAL VIABLE CONFIG - 30B MoE too large for efficient CPU inference
+ENV N_CTX=512
 ENV N_THREADS=4
-ENV N_BATCH=512
+ENV N_BATCH=256
 ENV MAX_CONCURRENT=1
 
 EXPOSE 8000

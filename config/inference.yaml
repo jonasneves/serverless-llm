@@ -51,11 +51,11 @@ models:
     max_concurrent: 4    # Maximum parallel requests
 
   nemotron:
-    # 30B MoE model with IQ2_M quantization (~8GB) - smallest available
-    # Memory-constrained: reduced context, --no-mmap for stable loading
-    n_ctx: 1024
-    n_batch: 512
-    max_concurrent: 1
+    # 30B MoE model with IQ2_M quantization (~8GB) - MINIMAL CONFIG
+    # Model is too large for efficient CPU inference, absolute minimum settings
+    n_ctx: 512           # Minimal context to save memory
+    n_batch: 256         # Smaller batch to reduce peak memory
+    max_concurrent: 1    # Single request only
 
   rnj:
     # 8B model with unique architecture

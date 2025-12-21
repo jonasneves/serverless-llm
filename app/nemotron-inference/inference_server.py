@@ -27,14 +27,15 @@ from huggingface_hub import hf_hub_download
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration from environment
+# Configuration from environment - MINIMAL VIABLE CONFIG
+# 30B MoE model is too large for efficient CPU inference
 MODEL_REPO = os.getenv("MODEL_REPO", "unsloth/Nemotron-3-Nano-30B-A3B-GGUF")
 # IQ2_M (~8GB) is the smallest quantization - required for 16GB runners
 MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf")
 PORT = int(os.getenv("PORT", "8301"))
-N_CTX = int(os.getenv("N_CTX", "1024"))
+N_CTX = int(os.getenv("N_CTX", "512"))         # Minimal context
 N_THREADS = int(os.getenv("N_THREADS", "4"))
-N_BATCH = int(os.getenv("N_BATCH", "512"))
+N_BATCH = int(os.getenv("N_BATCH", "256"))     # Smaller batch
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "1"))
 HF_TOKEN = os.getenv("HF_TOKEN")
 
