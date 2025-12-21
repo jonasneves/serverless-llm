@@ -84,24 +84,30 @@ export default function GestureOptions({ content, onSelect, isInline = false }: 
 
   const containerClasses = isInline
     ? "w-full mt-3"
-    : "w-full px-4";
+    : "w-full";
 
   const gridClasses = isInline
     ? "grid grid-cols-2 gap-2"
-    : "flex flex-col gap-3 items-center";
+    : "flex flex-col gap-2.5";
 
   const buttonClasses = (isHovered: boolean) => isInline
     ? `relative overflow-hidden rounded-lg font-medium text-xs border transition-all duration-200 text-center min-h-[40px] flex items-center justify-center px-3 py-2 ${isHovered
       ? 'bg-blue-500/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10'
       : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800/80 hover:border-slate-700/80'
     }`
-    : `relative overflow-hidden rounded-xl font-medium text-sm border transition-all duration-200 w-[85%] max-w-[340px] text-left min-h-[44px] flex items-center px-5 py-3 ${isHovered
-      ? 'bg-blue-500/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10'
+    : `relative overflow-hidden rounded-xl font-medium text-sm border transition-all duration-200 w-full text-left min-h-[52px] flex items-center px-4 py-3 ${isHovered
+      ? 'bg-blue-500/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10 scale-[1.02]'
       : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800/80 hover:border-slate-700/80'
     }`;
 
   return (
     <div className={containerClasses}>
+      {!isInline && (
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Quick Actions</div>
+          <div className="flex-1 h-px bg-gradient-to-r from-slate-700/50 to-transparent"></div>
+        </div>
+      )}
       <div className={gridClasses}>
         {options.map((option) => {
           const progress = dwellProgress[option.id] || 0;

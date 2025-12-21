@@ -524,57 +524,73 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         </div>
                     )}
 
-                    {messages.map((msg, idx) => (
-                        <div
-                            key={idx}
-                            ref={(el) => {
-                                if (el) messageRefs.current.set(idx, el);
-                                else messageRefs.current.delete(idx);
-                            }}
-                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            data-message={idx}
-                            onClick={(e) => {
-                                // Only handle direct clicks, not bubbled clicks from children
-                                if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-message]') === e.currentTarget) {
-                                    setSelectedMessages(prev => {
-                                        const newSet = new Set(prev);
-                                        if (newSet.has(idx)) {
-                                            newSet.delete(idx);
-                                        } else {
-                                            newSet.add(idx);
-                                        }
-                                        return newSet;
-                                    });
-                                }
-                            }}
-                        >
-                            <div className={`max-w-[85%] rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
-                                ? 'ring-2 ring-blue-500 bg-blue-500/10'
-                                : ''
-                                } ${msg.role === 'user'
-                                    ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                                    : msg.error
-                                        ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                                        : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
-                                }`}>
-                                <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
-                                    {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                                    {msg.role === 'user' ? 'You' : (msg.modelName || 'Assistant')}
-                                    {msg.error && <AlertTriangle size={12} className="text-red-400" />}
+                    {messages.map((msg, idx) => {
+                        const hasGestureOptions = msg.role === 'assistant' && gesturesActive && msg.content.includes('```json');
+
+                        return (
+                            <div
+                                key={idx}
+                                ref={(el) => {
+                                    if (el) messageRefs.current.set(idx, el);
+                                    else messageRefs.current.delete(idx);
+                                }}
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : hasGestureOptions ? 'justify-start items-start gap-4' : 'justify-start'}`}
+                                data-message={idx}
+                                onClick={(e) => {
+                                    // Only handle direct clicks, not bubbled clicks from children
+                                    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-message]') === e.currentTarget) {
+                                        setSelectedMessages(prev => {
+                                            const newSet = new Set(prev);
+                                            if (newSet.has(idx)) {
+                                                newSet.delete(idx);
+                                            } else {
+                                                newSet.add(idx);
+                                            }
+                                            return newSet;
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className={`${hasGestureOptions ? 'flex-1 max-w-[45%]' : 'max-w-[85%]'} rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
+                                    ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                                    : ''
+                                    } ${msg.role === 'user'
+                                        ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
+                                        : msg.error
+                                            ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
+                                            : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
+                                    }`}>
+                                    <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
+                                        {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
+                                        {msg.role === 'user' ? 'You' : (msg.modelName || 'Assistant')}
+                                        {msg.error && <AlertTriangle size={12} className="text-red-400" />}
+                                    </div>
+                                    <div className="prose prose-invert prose-sm max-w-none">
+                                        <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
+                                    </div>
                                 </div>
-                                <div className="prose prose-invert prose-sm max-w-none">
-                                    <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
-                                </div>
-                                {msg.role === 'assistant' && gesturesActive && msg.content.includes('```json') && (
-                                    <GestureOptions
-                                        content={msg.content}
-                                        onSelect={(value) => handleSend(value, true)}
-                                        isInline={true}
-                                    />
+
+                                {hasGestureOptions && (
+                                    <>
+                                        {/* Connecting line */}
+                                        <div className="flex items-center self-stretch py-6">
+                                            <div className="h-full w-px bg-gradient-to-b from-transparent via-blue-500/30 to-transparent"></div>
+                                            <div className="w-3 h-px bg-blue-500/30"></div>
+                                        </div>
+
+                                        {/* UI Build Options */}
+                                        <div className="flex-1 max-w-[40%]">
+                                            <GestureOptions
+                                                content={msg.content}
+                                                onSelect={(value) => handleSend(value, true)}
+                                                isInline={false}
+                                            />
+                                        </div>
+                                    </>
                                 )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {isGenerating && (
                         <div className="flex justify-start">
