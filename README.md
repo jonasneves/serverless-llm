@@ -15,16 +15,32 @@
 
 ## Overview
 
-Serverless LLM inference on GitHub Actions free tier (unlimited minutes for public repos) with public access via Cloudflare Tunnels.
+Free 24/7 LLM APIs using GitHub Actions and Cloudflare Tunnels.
 
-Allows experimentation with multiple AI interaction patterns: side-by-side comparison, collaborative discussion, multi-agent orchestration, and output variations.
+I wanted to experiment with non-keyboard LLM interaction - the playground supports ASL fingerspelling and hand gesture navigation using webcam-based hand tracking. You can spell questions in American Sign Language or control the interface hands-free (scroll, stop generation, mode switching).
 
-- **Zero Infrastructure Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model Support**: 11 models ranked by capability (see table below)
-- **High Availability**: Run 1-3 parallel instances per model for zero-downtime restarts and load balancing
-- **Model Caching**: GGUF models cached between runs for fast restarts
-- **Continuous Availability**: Auto-restart with graceful handoff
-- **Public Access**: External connectivity via Cloudflare Tunnels
+Also runs 11 different models (270M to 12B parameters) with OpenAI-compatible API endpoints, all on free infrastructure.
+
+### Interaction Modes
+
+- **ASL Mode**: Fingerspell messages using American Sign Language
+  - Full A-Z alphabet recognition
+  - Control gestures: thumbs up (send), open palm (clear), pinch (backspace)
+  - Mode switching: peace sign (✌️) or "I love you" sign (🤟)
+- **Gesture Navigation**: Control UI hands-free
+  - Stop generation with hand gestures
+  - Scroll and pinch-to-zoom
+  - Hover simulation for UI interaction
+- **Traditional Input**: Standard text chat and model comparison views
+
+### Infrastructure
+
+- **Zero Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
+- **Multi-Model**: 11 models with different strengths (see table below)
+- **High Availability**: 1-3 parallel instances per model for load balancing
+- **Continuous Uptime**: Auto-restart before GitHub's 6-hour limit with graceful handoff
+- **Public Access**: Cloudflare Tunnels for external connectivity
+- **Fast Restarts**: GGUF models cached between runs
 
 ## Architecture
 
@@ -167,6 +183,7 @@ serverless-llm/
 | Tunneling | Cloudflare Zero Trust |
 | Caching | GitHub Actions Cache (models) |
 | Frontend | React + TypeScript |
+| Hand Tracking | MediaPipe + fingerpose (ASL recognition) |
 
 ## Configuration
 
