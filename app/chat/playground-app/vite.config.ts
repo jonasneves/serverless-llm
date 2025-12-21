@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import react from '@vitejs/plugin-react-swc'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
-  plugins: [react()],
+  plugins: [react({ tsDecorators: true })],
   server: {
     proxy: {
       '/api': {
@@ -12,9 +12,19 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
+  esbuild: {
+    target: 'es2022',
+  },
+  optimizeDeps: {
+    exclude: ['@mediapipe/tasks-vision'],
+    esbuildOptions: {
+      target: 'es2022',
+    },
+  },
   build: {
     outDir: '../static/playground',
     emptyOutDir: true,
+    assetsInlineLimit: 0,
     rollupOptions: {
       output: {
         manualChunks: (id) => {
