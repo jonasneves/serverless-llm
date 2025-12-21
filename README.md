@@ -17,7 +17,7 @@
 
 Free 24/7 LLM APIs using GitHub Actions and Cloudflare Tunnels.
 
-I wanted to experiment with non-keyboard LLM interaction - the playground supports ASL fingerspelling and hand gesture navigation using webcam-based hand tracking. You can spell questions in American Sign Language or control the interface hands-free (scroll, stop generation, mode switching).
+I wanted to experiment with non-keyboard LLM interaction - the playground supports ASL fingerspelling and hand gesture navigation using webcam-based hand tracking. You can spell questions in American Sign Language, and the AI can build interactive button interfaces that you select by pointing. Also supports emoji gesture responses (thumbs up, wave, etc.).
 
 Also runs 11 different models (270M to 12B parameters) with OpenAI-compatible API endpoints, all on free infrastructure.
 
@@ -25,12 +25,13 @@ Also runs 11 different models (270M to 12B parameters) with OpenAI-compatible AP
 
 - **ASL Mode**: Fingerspell messages using American Sign Language
   - Full A-Z alphabet recognition
-  - Control gestures: thumbs up (send), open palm (clear), pinch (backspace)
-  - Mode switching: peace sign (✌️) or "I love you" sign (🤟)
-- **Gesture Navigation**: Control UI hands-free
-  - Stop generation with hand gestures
-  - Scroll and pinch-to-zoom
-  - Hover simulation for UI interaction
+  - Control gestures: thumbs up (send), open palm (clear), flat hand (space), pinch (backspace)
+  - View switching: peace sign (✌️) or "I love you" sign (🤟) to cycle between chat/compare/council/roundtable layouts
+- **Gesture Navigation**: Respond with emoji and navigate hands-free
+  - Send emoji responses: 👍 👎 👋
+  - AI builds interactive button UIs (via JSON) that you select by pointing
+  - Dwell selection: hover over button for 1.8s to activate
+  - Scroll with closed fist, navigate with pointing finger
 - **Traditional Input**: Standard text chat and model comparison views
 
 ### Infrastructure
