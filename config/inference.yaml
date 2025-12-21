@@ -44,11 +44,11 @@ models:
 
   nanbeige:
     # Nanbeige4-3B-Thinking: SPEED-OPTIMIZED config
-    # Smaller context + Q4 quant + KV-cache quant = maximum throughput
+    # Smaller context + Q4 quant = maximum throughput
+    # Note: kv_cache_quant disabled - requires flash_attn which isn't in CPU build
     n_ctx: 2048          # Minimal context for speed
     n_batch: 512         # Fast prompt processing
     max_concurrent: 4    # Maximum parallel requests
-    kv_cache_quant: true # Reduces memory bandwidth
 
   nemotron:
     # 30B MoE model with IQ2_M quantization (~8GB) - smallest available

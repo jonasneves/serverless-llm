@@ -115,16 +115,19 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         
         # KV-cache quantization (Q8_0 = 8) reduces memory ~30% with minimal quality loss
         # Enable via KV_CACHE_QUANT=1 or KV_CACHE_QUANT=8 for Q8_0
+        # Note: KV-cache quantization requires flash_attn to be enabled
         kv_cache_quant = os.getenv("KV_CACHE_QUANT", "").strip().lower()
         type_k = None
         type_v = None
+        flash_attn = False
         if kv_cache_quant in {"1", "true", "yes", "on", "8", "q8"}:
             type_k = 8  # Q8_0
             type_v = 8  # Q8_0
+            flash_attn = True  # Required for KV-cache quantization
 
         print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}, max_concurrent={max_concurrent}")
         if type_k:
-            print(f"  KV-cache quantization enabled: type_k={type_k}, type_v={type_v}")
+            print(f"  KV-cache quantization enabled: type_k={type_k}, type_v={type_v}, flash_attn={flash_attn}")
         
         llama_kwargs = {
             "model_path": model_path,
@@ -137,10 +140,11 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             "verbose": True,
         }
         
-        # Add KV-cache quantization if enabled
+        # Add KV-cache quantization if enabled (requires flash_attn)
         if type_k is not None:
             llama_kwargs["type_k"] = type_k
             llama_kwargs["type_v"] = type_v
+            llama_kwargs["flash_attn"] = flash_attn
         
         llm = Llama(**llama_kwargs)
         print("Model loaded successfully!")
