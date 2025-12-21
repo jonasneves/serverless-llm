@@ -159,19 +159,11 @@ export default function HandBackground({
     const onErrorRef = useRef(onError);
     onErrorRef.current = onError;
 
-    // Performance tracking and adaptive frame rate
+    // Performance tracking
     const fpsRef = useRef({ frames: 0, lastTime: performance.now(), fps: 0 });
-    // Adaptive frame rate control
-    const adaptiveFrameRateRef = useRef({
-        baseInterval: 16, // ~60fps (1000ms/60 = 16.67ms)
-        currentInterval: 16, // Current interval in ms
-        lastFrameTime: 0,
-        gestureActivityCount: 0, // Count of recent gesture activity
-        activityThreshold: 500, // ms to consider gesture activity recent
-        lastActivityTime: 0
-    });
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    const downscaleCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const dotsCanvasRef = useRef<HTMLCanvasElement>(null);
     const [loaded, setLoaded] = useState(false);
@@ -338,7 +330,10 @@ const handStates = useRef<Map<number, {
                         delegate: "GPU"
                     },
                     runningMode: "VIDEO",
-                    numHands: 2
+                    numHands: 2,
+                    minHandDetectionConfidence: 0.5,
+                    minHandPresenceConfidence: 0.5,
+                    minTrackingConfidence: 0.5
                 });
                 gestureRecognizerRef.current = gestureRecognizer;
 
@@ -349,12 +344,43 @@ const handStates = useRef<Map<number, {
                         delegate: "GPU"
                     },
                     runningMode: "VIDEO",
-                    numHands: 2
+                    numHands: 2,
+                    minHandDetectionConfidence: 0.5,
+                    minHandPresenceConfidence: 0.5,
+                    minTrackingConfidence: 0.5
                 });
                 handLandmarkerRef.current = handLandmarker;
 
                 // Initialize fingerpose ASL estimator with letters + control gestures
                 aslEstimatorRef.current = new GestureEstimator(ASL_ALL_GESTURES);
+
+                // Create downscale canvas for performance (320x240)
+                const downscaleCanvas = document.createElement('canvas');
+                downscaleCanvas.width = 320;
+                downscaleCanvas.height = 240;
+                downscaleCanvasRef.current = downscaleCanvas;
+
+                // Warm-up processing: run a 1x1 pixel canvas through the models
+                const warmupCanvas = document.createElement('canvas');
+                warmupCanvas.width = 1;
+                warmupCanvas.height = 1;
+                const warmupCtx = warmupCanvas.getContext('2d');
+                if (warmupCtx) {
+                    warmupCtx.fillStyle = '#000';
+                    warmupCtx.fillRect(0, 0, 1, 1);
+                }
+
+                // Warm up both models
+                try {
+                    if (gestureRecognizer) {
+                        gestureRecognizer.recognizeForVideo(warmupCanvas, 0);
+                    }
+                    if (handLandmarker) {
+                        handLandmarker.detectForVideo(warmupCanvas, 0);
+                    }
+                } catch (e) {
+                    // Warm-up errors are expected and can be ignored
+                }
 
                 setLoaded(true);
             } catch (error) {
@@ -819,16 +845,19 @@ const handStates = useRef<Map<number, {
         }
 
         const now = performance.now();
-        const adaptiveState = adaptiveFrameRateRef.current;
-
-        // Adaptive frame rate: skip frames if we're within the current interval
-        if (now - adaptiveState.lastFrameTime < adaptiveState.currentInterval) {
-            requestRef.current = requestAnimationFrame(draw);
-            return;
-        }
-        adaptiveState.lastFrameTime = now;
-
         const startTimeMs = now;
+
+        // Downscale video for faster processing
+        const downscaleCanvas = downscaleCanvasRef.current;
+        if (downscaleCanvas) {
+            const downscaleCtx = downscaleCanvas.getContext('2d');
+            if (downscaleCtx) {
+                downscaleCtx.drawImage(video, 0, 0, downscaleCanvas.width, downscaleCanvas.height);
+            }
+        }
+
+        // Use downscaled canvas for detection, fallback to video if downscale not available
+        const detectionSource = downscaleCanvas || video;
 
         let landmarks: Array<Array<{ x: number; y: number; z: number }>> = [];
         let gesture: string | null = null;
@@ -836,7 +865,7 @@ const handStates = useRef<Map<number, {
 
         if (currentMode === 'navigation' && gestureRecognizerRef.current) {
             // Use GestureRecognizer for navigation
-            const result = gestureRecognizerRef.current.recognizeForVideo(video, startTimeMs);
+            const result = gestureRecognizerRef.current.recognizeForVideo(detectionSource, startTimeMs);
 
             if (result.landmarks) {
                 landmarks = result.landmarks.map(hand =>
@@ -863,7 +892,7 @@ const handStates = useRef<Map<number, {
             }
         } else if (currentMode === 'asl' && handLandmarkerRef.current) {
             // Use HandLandmarker + fingerpose for ASL
-            const result = handLandmarkerRef.current.detectForVideo(video, startTimeMs);
+            const result = handLandmarkerRef.current.detectForVideo(detectionSource, startTimeMs);
 
             if (result.landmarks) {
                 landmarks = result.landmarks.map(hand =>
@@ -887,26 +916,6 @@ const handStates = useRef<Map<number, {
                         handedness: handedness ?? null
                     });
                 }
-            }
-        }
-
-
-        // Adaptive frame rate: adjust based on gesture activity
-        const activityNow = performance.now();
-        if (gestureDetected) {
-            // When gesture is detected, maintain higher frame rate for responsiveness
-            adaptiveState.currentInterval = Math.max(10, adaptiveState.baseInterval * 0.7); // ~100fps
-            adaptiveState.lastActivityTime = activityNow;
-            adaptiveState.gestureActivityCount++;
-        } else {
-            // When no gesture activity, gradually reduce frame rate to save resources
-            const timeSinceLastActivity = activityNow - adaptiveState.lastActivityTime;
-            if (timeSinceLastActivity > 1000) { // No activity for 1 second
-                // Gradually increase interval (reduce frame rate)
-                adaptiveState.currentInterval = Math.min(50, adaptiveState.currentInterval * 1.05); // Max ~20fps
-            } else {
-                // Maintain moderate frame rate when hands are visible but no gesture detected
-                adaptiveState.currentInterval = Math.min(33, adaptiveState.baseInterval * 2); // ~30fps
             }
         }
 
