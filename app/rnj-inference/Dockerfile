@@ -71,8 +71,8 @@ COPY rnj-inference/inference_server.py .
 ENV MODEL_REPO=EssentialAI/rnj-1-instruct-GGUF
 ENV MODEL_FILE=rnj-1-8B-instruct-Q4_K_M.gguf
 ENV PORT=8000
-ENV N_CTX=2048
-ENV N_THREADS=4
+# Runtime config (N_CTX, N_THREADS, N_BATCH, MAX_CONCURRENT) is set
+# at runtime from config/inference.yaml via workflow environment variables
 
 EXPOSE 8000
 

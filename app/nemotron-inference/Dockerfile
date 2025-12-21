@@ -65,14 +65,10 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY nemotron-inference/inference_server.py .
 
 ENV MODEL_REPO=unsloth/Nemotron-3-Nano-30B-A3B-GGUF
-# IQ2_M (~8GB) is the smallest available quantization for this 30B model
 ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf
 ENV PORT=8000
-# ULTRA-MINIMAL CONFIG - 30B MoE too large for efficient CPU inference
-ENV N_CTX=256
-ENV N_THREADS=2
-ENV N_BATCH=128
-ENV MAX_CONCURRENT=1
+# Runtime config (N_CTX, N_THREADS, N_BATCH, MAX_CONCURRENT) is set
+# at runtime from config/inference.yaml via workflow environment variables
 
 EXPOSE 8000
 
