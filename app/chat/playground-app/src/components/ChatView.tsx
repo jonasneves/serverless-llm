@@ -224,18 +224,26 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     throw new DOMException('Aborted', 'AbortError');
                 }
 
-                if ((event.event === 'token' || event.content) && event.content) {
-                    responseContent += event.content;
-                    setCurrentResponse(prev => prev + event.content);
-                } else if (event.event === 'error' || event.error) {
-                    const errorMsg = String(event.error || 'Stream failed');
+                // IMPORTANT: Check for errors FIRST, before token content
+                // Error events can have 'content' field too, so we must check 'error' first
+                if (event.event === 'error' || event.error) {
+                    // Backend may send error in different formats:
+                    // 1. { error: true, content: 'message' } - from stream_multiple_models
+                    // 2. { event: 'error', error: 'message' } - from other handlers
+                    const errorMsg = typeof event.error === 'string'
+                        ? event.error
+                        : (event.content || 'Stream failed');
                     const isRateLimit = errorMsg.includes('429') ||
                         errorMsg.toLowerCase().includes('rate limit') ||
                         errorMsg.toLowerCase().includes('too many requests');
                     if (isRateLimit) {
                         recordRateLimit(modelId);
+                        console.log(`[Auto Mode] Rate limit detected for ${modelId}, trying next model...`);
                     }
                     throw new Error(errorMsg);
+                } else if ((event.event === 'token' || event.content) && event.content) {
+                    responseContent += event.content;
+                    setCurrentResponse(prev => prev + event.content);
                 }
             });
 
@@ -257,6 +265,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const handleSend = async (text: string, fromGesture: boolean = false) => {
         if (!text.trim() || isGenerating) return;
         if (!autoMode && !selectedModelId) return;
+
+        console.log(`[Chat] Sending message. autoMode=${autoMode}, autoModeScope=${autoModeScope}, selectedModelId=${selectedModelId}`);
 
         const userMessage: ChatMessage = { role: 'user', content: text };
         setMessages(prev => [...prev, userMessage]);
@@ -308,15 +318,20 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                 let lastError: string | null = null;
                 let triedFallback = false;
+                let rateLimitCount = 0;
+
+                console.log(`[Auto Mode] Starting with ${sortedPrimary.length} primary (${autoModeScope}) models, ${sortedFallback.length} fallback models`);
 
                 // Try primary models first
                 for (const model of sortedPrimary) {
+                    console.log(`[Auto Mode] Trying primary model: ${model.id}`);
                     setCurrentAutoModel(model.id);
                     setCurrentResponse('');
 
                     const result = await tryModelStream(model.id, apiMessages);
 
                     if (result.success) {
+                        console.log(`[Auto Mode] Success with ${model.id}`);
                         setMessages(prev => [...prev, {
                             role: 'assistant',
                             content: result.content,
@@ -329,19 +344,26 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         return;
                     }
 
+                    console.log(`[Auto Mode] Failed with ${model.id}: ${result.content?.substring(0, 100)}`);
+                    if (result.isRateLimit) {
+                        rateLimitCount++;
+                    }
                     lastError = result.content;
                 }
 
                 // If all primary models failed, try fallback models
                 if (sortedFallback.length > 0) {
+                    console.log(`[Auto Mode] All primary models failed, trying ${sortedFallback.length} fallback models`);
                     triedFallback = true;
                     for (const model of sortedFallback) {
+                        console.log(`[Auto Mode] Trying fallback model: ${model.id}`);
                         setCurrentAutoModel(model.id);
                         setCurrentResponse('');
 
                         const result = await tryModelStream(model.id, apiMessages);
 
                         if (result.success) {
+                            console.log(`[Auto Mode] Success with fallback ${model.id}`);
                             setMessages(prev => [...prev, {
                                 role: 'assistant',
                                 content: result.content,
@@ -354,13 +376,30 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             return;
                         }
 
+                        console.log(`[Auto Mode] Fallback failed with ${model.id}: ${result.content?.substring(0, 100)}`);
+                        if (result.isRateLimit) {
+                            rateLimitCount++;
+                        }
                         lastError = result.content;
                     }
+                } else {
+                    console.log(`[Auto Mode] No fallback models available`);
                 }
 
-                const errorMsg = triedFallback
-                    ? `All models failed to respond. Last error: ${lastError}`
-                    : `All ${autoModeScope} models failed to respond. Last error: ${lastError}`;
+                console.log(`[Auto Mode] All ${sortedPrimary.length + sortedFallback.length} models failed (${rateLimitCount} rate limited)`);
+
+                // Build a user-friendly error message
+                let errorMsg: string;
+                const totalModels = sortedPrimary.length + sortedFallback.length;
+                if (rateLimitCount > 0 && rateLimitCount >= totalModels) {
+                    errorMsg = `⏱️ All ${totalModels} models are currently rate limited. GitHub Models has strict free tier limits. Try again in a minute, or add your own GitHub token in Settings for higher quota.`;
+                } else if (rateLimitCount > 0) {
+                    errorMsg = `All models failed (${rateLimitCount} rate limited). Last error: ${lastError}`;
+                } else if (triedFallback) {
+                    errorMsg = `All models failed to respond. Last error: ${lastError}`;
+                } else {
+                    errorMsg = `All ${autoModeScope} models failed to respond. Last error: ${lastError}`;
+                }
 
                 setMessages(prev => [...prev, {
                     role: 'assistant',
@@ -468,11 +507,10 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                             setAutoMode(true);
                                             setAutoModeScope('local');
                                         }}
-                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                            autoMode && autoModeScope === 'local'
-                                                ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-300'
-                                        }`}
+                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${autoMode && autoModeScope === 'local'
+                                            ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
+                                            : 'text-slate-400 hover:text-slate-300'
+                                            }`}
                                     >
                                         <div className="w-2 h-2 rounded-full bg-emerald-500" />
                                         <span>Local</span>
@@ -482,22 +520,20 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                             setAutoMode(true);
                                             setAutoModeScope('api');
                                         }}
-                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                            autoMode && autoModeScope === 'api'
-                                                ? 'bg-blue-500/20 text-blue-300 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-300'
-                                        }`}
+                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${autoMode && autoModeScope === 'api'
+                                            ? 'bg-blue-500/20 text-blue-300 shadow-sm'
+                                            : 'text-slate-400 hover:text-slate-300'
+                                            }`}
                                     >
                                         <div className="w-2 h-2 rounded-full bg-blue-500" />
                                         <span>API</span>
                                     </button>
                                     <button
                                         onClick={() => setAutoMode(false)}
-                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                            !autoMode
-                                                ? 'bg-slate-600/40 text-slate-200 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-300'
-                                        }`}
+                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${!autoMode
+                                            ? 'bg-slate-600/40 text-slate-200 shadow-sm'
+                                            : 'text-slate-400 hover:text-slate-300'
+                                            }`}
                                     >
                                         <Bot size={12} />
                                         <span>Manual</span>

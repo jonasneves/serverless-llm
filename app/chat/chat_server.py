@@ -518,45 +518,12 @@ async def stream_multiple_models(
         for task in tasks:
             if not task.done():
                 task.cancel()
-
     # Send final done event
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
 
 
-@app.post("/api/chat/stream")
-async def interact(request: ChatRequest):
-    try:
-        messages = request.messages
-        model_id = request.model
-        temperature = request.temperature
-        max_tokens = request.max_tokens or 4096  # Default to 4k
-        
-        # Log the request details
-        logger.info(f"Received chat request for model: {model_id}")
-
-        # Initialize ModelClient
-        client = ModelClient(MODEL_ENDPOINTS)
-
-        async def generate():
-            try:
-                # Stream the response
-                async for chunk in client.stream_model(
-                    messages=messages,
-                    model_id=model_id,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    github_token=request.github_token
-                ):
-                    yield chunk
-            except Exception as e:
-                logger.error(f"Streaming error: {e}")
-                yield f"data: {json.dumps({'error': True, 'content': str(e)})}\n\n"
-
-        return StreamingResponse(generate(), media_type="text/event-stream")
-
-    except Exception as e:
-        logger.error(f"Error in chat endpoint: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# NOTE: /api/chat/stream endpoint is defined in api/routes/chat.py
+# It uses stream_multiple_models() which properly handles both local and API models
 
 
 async def stream_discussion_events(

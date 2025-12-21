@@ -153,11 +153,9 @@ export const streamSseEvents = async (
 ): Promise<void> => {
   try {
     for await (const event of eventStream) {
-      try {
-        onEvent(event);
-      } catch (e) {
-        console.error('Error handling event:', e);
-      }
+      // Don't catch errors from onEvent - let them propagate to the caller
+      // This is critical for error handling (e.g., rate limit detection triggering fallback)
+      onEvent(event);
     }
   } catch (e) {
     console.error('Stream error:', e);
