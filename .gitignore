@@ -67,3 +67,4 @@ temp/
 
 # Cloudflare tunnel configuration (contains tokens)
 tunnels.json
+.aider*
