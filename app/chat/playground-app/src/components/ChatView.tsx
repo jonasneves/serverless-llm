@@ -1120,12 +1120,16 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                 <div key={alt.modelId} className="flex items-center">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, altIdx + 1); }}
-                                                        className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${(msg.activeResponseIndex ?? 0) === altIdx + 1
-                                                            ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
-                                                            : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+                                                        className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${alt.loading
+                                                                ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40'
+                                                                : alt.error
+                                                                    ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'
+                                                                    : (msg.activeResponseIndex ?? 0) === altIdx + 1
+                                                                        ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
+                                                                        : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
                                                             }`}
                                                     >
-                                                        {alt.loading && <Loader2 size={8} className="animate-spin" />}
+                                                        {alt.loading && <Loader2 size={8} className="animate-spin text-amber-400" />}
                                                         {alt.error && <AlertTriangle size={8} className="text-red-400" />}
                                                         {alt.modelName}
                                                     </button>
