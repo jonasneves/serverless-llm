@@ -9,7 +9,7 @@ import SelectionOverlay from './SelectionOverlay';
 import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
 import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
-import ModelSelector from './ModelSelector';
+import ModelModeSelector from './ModelModeSelector';
 import { useGestureOptional } from '../context/GestureContext';
 
 
@@ -500,55 +500,16 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                             {/* Model Selection Controls */}
                             <div className="flex flex-col items-center gap-2 mb-4 sticky top-4 z-30">
-                                {/* Unified Mode Toggle */}
-                                <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 backdrop-blur-sm">
-                                    <button
-                                        onClick={() => {
-                                            setAutoMode(true);
-                                            setAutoModeScope('local');
-                                        }}
-                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${autoMode && autoModeScope === 'local'
-                                            ? 'bg-emerald-500/20 text-emerald-300 shadow-sm'
-                                            : 'text-slate-400 hover:text-slate-300'
-                                            }`}
-                                    >
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                        <span>Local</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setAutoMode(true);
-                                            setAutoModeScope('api');
-                                        }}
-                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${autoMode && autoModeScope === 'api'
-                                            ? 'bg-blue-500/20 text-blue-300 shadow-sm'
-                                            : 'text-slate-400 hover:text-slate-300'
-                                            }`}
-                                    >
-                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                        <span>API</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setAutoMode(false)}
-                                        className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${!autoMode
-                                            ? 'bg-slate-600/40 text-slate-200 shadow-sm'
-                                            : 'text-slate-400 hover:text-slate-300'
-                                            }`}
-                                    >
-                                        <Bot size={12} />
-                                        <span>Manual</span>
-                                    </button>
-                                </div>
-
-                                {/* Model Selector - only shown in Manual mode */}
-                                {!autoMode && (
-                                    <ModelSelector
-                                        models={models}
-                                        selectedModelId={selectedModelId}
-                                        onSelectModel={onSelectModel}
-                                        isGenerating={isGenerating}
-                                    />
-                                )}
+                                <ModelModeSelector
+                                    models={models}
+                                    selectedModelId={selectedModelId}
+                                    onSelectModel={onSelectModel}
+                                    autoMode={autoMode}
+                                    setAutoMode={setAutoMode}
+                                    autoModeScope={autoModeScope}
+                                    setAutoModeScope={setAutoModeScope}
+                                    isGenerating={isGenerating}
+                                />
                             </div>
 
                             {!githubToken && ((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
