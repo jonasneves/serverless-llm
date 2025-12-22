@@ -72,6 +72,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [inputFocused, setInputFocused] = useState(false);
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
+    const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -469,7 +470,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }
         if (userMessageIndex < 0) return;
 
-        const userMessage = messages[userMessageIndex];
         const newModel = models.find(m => m.id === newModelId);
         if (!newModel) return;
 
@@ -480,8 +480,22 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }));
 
         setIsGenerating(true);
-        setCurrentResponse('');
+        setRegeneratingIndex(messageIndex);
         setCurrentAutoModel(newModelId);
+
+        // Immediately update the message to show it's regenerating with new model name
+        setMessages(prev => prev.map((msg, idx) => {
+            if (idx === messageIndex) {
+                return {
+                    ...msg,
+                    content: '',
+                    modelName: newModel.name,
+                    modelId: newModelId,
+                    error: undefined
+                };
+            }
+            return msg;
+        }));
 
         abortControllerRef.current = new AbortController();
 
@@ -508,23 +522,18 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     throw new Error(errorMsg);
                 } else if ((event.event === 'token' || event.content) && event.content) {
                     responseContent += event.content;
-                    setCurrentResponse(prev => prev + event.content);
+                    // Update the message content in-place as we stream
+                    setMessages(prev => prev.map((msg, idx) => {
+                        if (idx === messageIndex) {
+                            return {
+                                ...msg,
+                                content: responseContent
+                            };
+                        }
+                        return msg;
+                    }));
                 }
             });
-
-            // Update the message at that index with the new response
-            setMessages(prev => prev.map((msg, idx) => {
-                if (idx === messageIndex) {
-                    return {
-                        ...msg,
-                        content: responseContent,
-                        modelName: newModel.name,
-                        modelId: newModelId,
-                        error: undefined
-                    };
-                }
-                return msg;
-            }));
 
             recordSuccess(newModelId);
             onModelUsed?.(newModelId);
@@ -536,8 +545,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         return {
                             ...msg,
                             content: error.message,
-                            modelName: newModel.name,
-                            modelId: newModelId,
                             error: true
                         };
                     }
@@ -546,8 +553,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             }
         } finally {
             setIsGenerating(false);
+            setRegeneratingIndex(null);
             setCurrentAutoModel(null);
-            setCurrentResponse('');
             abortControllerRef.current = null;
         }
     };
@@ -663,17 +670,60 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     }
                                 }}
                             >
-                                <div className={`${hasGestureOptions ? 'w-full sm:flex-1 sm:max-w-[45%]' : 'max-w-[85%]'} rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
-                                    ? 'ring-2 ring-blue-500 bg-blue-500/10'
-                                    : ''
-                                    } ${msg.role === 'user'
-                                        ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                                        : msg.error
-                                            ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                                            : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
-                                    }`}>
-                                    <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
-                                        {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
+                                <div
+                                    className={`${hasGestureOptions ? 'w-full sm:flex-1 sm:max-w-[45%]' : 'max-w-[85%]'} rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
+                                        ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                                        : ''
+                                        } ${msg.role === 'user'
+                                            ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
+                                            : regeneratingIndex === idx
+                                                ? 'rounded-tl-sm'
+                                                : msg.error
+                                                    ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
+                                                    : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
+                                        }`}
+                                    style={regeneratingIndex === idx ? {
+                                        background: 'rgba(30, 41, 59, 0.8)',
+                                        border: '1px solid rgba(251, 191, 36, 0.4)',
+                                        boxShadow: '0 0 20px rgba(251, 191, 36, 0.15), inset 0 0 30px rgba(251, 191, 36, 0.03)'
+                                    } : undefined}
+                                >
+                                    <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : regeneratingIndex === idx ? 'text-amber-400/80' : 'text-slate-400'}`}>
+                                        {msg.role === 'user' ? (
+                                            <User size={12} />
+                                        ) : regeneratingIndex === idx ? (
+                                            <div className="relative flex items-center justify-center" style={{ width: '14px', height: '14px' }}>
+                                                <svg
+                                                    width={14}
+                                                    height={14}
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    style={{
+                                                        filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.55))',
+                                                        animation: 'spin 0.6s linear infinite'
+                                                    }}
+                                                >
+                                                    <defs>
+                                                        <linearGradient id="regenSpinnerGradient" gradientUnits="userSpaceOnUse" x1="3" y1="12" x2="12" y2="3">
+                                                            <stop offset="0%" stopColor="#fbbf24" stopOpacity="1" />
+                                                            <stop offset="60%" stopColor="#fbbf24" stopOpacity="0.5" />
+                                                            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <circle
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="9"
+                                                        stroke="url(#regenSpinnerGradient)"
+                                                        strokeWidth="2.5"
+                                                        fill="none"
+                                                        strokeLinecap="round"
+                                                    />
+                                                </svg>
+                                            </div>
+                                        ) : (
+                                            <Bot size={12} />
+                                        )}
                                         {msg.role === 'user' ? (
                                             'You'
                                         ) : (
@@ -739,7 +789,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         );
                     })}
 
-                    {isGenerating && (
+                    {isGenerating && regeneratingIndex === null && (
                         <div className="flex justify-start">
                             <div
                                 className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 pt-3 pb-0 text-slate-200 relative"
