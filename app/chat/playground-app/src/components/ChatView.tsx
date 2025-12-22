@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, X, Check, Loader2 } from 'lucide-react';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
@@ -22,12 +22,23 @@ export interface ChatViewHandle {
 
 export type ChatAutoModeScope = 'local' | 'api';
 
+export interface ModelResponse {
+    modelId: string;
+    modelName: string;
+    content: string;
+    error?: boolean;
+    loading?: boolean;
+}
+
 export interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
     modelName?: string;
     modelId?: string;
     error?: boolean;
+    // Multi-model comparison support
+    alternateResponses?: ModelResponse[];
+    activeResponseIndex?: number; // 0 = primary, 1+ = alternates
 }
 
 interface ChatViewProps {
@@ -73,11 +84,16 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [currentAutoModel, setCurrentAutoModel] = useState<string | null>(null);
     const [selectedMessages, setSelectedMessages] = useState<Set<number>>(new Set());
     const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
+    // Compare mode state
+    const [compareMenuIndex, setCompareMenuIndex] = useState<number | null>(null);
+    const [compareSelectedModels, setCompareSelectedModels] = useState<Set<string>>(new Set());
+    const compareAbortRefs = useRef<Map<string, AbortController>>(new Map());
     const abortControllerRef = useRef<AbortController | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+    const compareMenuRef = useRef<HTMLDivElement>(null);
 
     // Gesture context for Easter egg
     const gestureCtx = useGestureOptional();
@@ -579,6 +595,188 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }
     };
 
+    // Compare mode functions
+    const openCompareMenu = (messageIndex: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (compareMenuIndex === messageIndex) {
+            setCompareMenuIndex(null);
+            setCompareSelectedModels(new Set());
+        } else {
+            setCompareMenuIndex(messageIndex);
+            setCompareSelectedModels(new Set());
+        }
+    };
+
+    const toggleCompareModel = (modelId: string) => {
+        setCompareSelectedModels(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(modelId)) {
+                newSet.delete(modelId);
+            } else {
+                newSet.add(modelId);
+            }
+            return newSet;
+        });
+    };
+
+    const startComparison = async (messageIndex: number) => {
+        if (compareSelectedModels.size === 0) return;
+
+        const targetMessage = messages[messageIndex];
+        if (targetMessage.role !== 'assistant') return;
+
+        // Find the user message that triggered this response
+        let userMessageIndex = messageIndex - 1;
+        while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
+            userMessageIndex--;
+        }
+        if (userMessageIndex < 0) return;
+
+        // Build conversation history up to (but not including) the target assistant message
+        const historyMessages = messages.slice(0, messageIndex).map(m => ({
+            role: m.role,
+            content: m.content
+        }));
+
+        // Initialize alternateResponses for selected models
+        const modelsToCompare = Array.from(compareSelectedModels);
+        const initialResponses: ModelResponse[] = modelsToCompare.map(modelId => {
+            const model = models.find(m => m.id === modelId);
+            return {
+                modelId,
+                modelName: model?.name || modelId,
+                content: '',
+                loading: true
+            };
+        });
+
+        // Update message with loading alternates
+        setMessages(prev => prev.map((msg, idx) => {
+            if (idx === messageIndex) {
+                return {
+                    ...msg,
+                    alternateResponses: [...(msg.alternateResponses || []), ...initialResponses]
+                };
+            }
+            return msg;
+        }));
+
+        setCompareMenuIndex(null);
+        setCompareSelectedModels(new Set());
+
+        // Generate responses in parallel
+        const generateForModel = async (modelId: string) => {
+            const model = models.find(m => m.id === modelId);
+            if (!model) return;
+
+            const abortController = new AbortController();
+            compareAbortRefs.current.set(modelId, abortController);
+
+            try {
+                const stream = await fetchChatStream({
+                    models: [modelId],
+                    messages: historyMessages,
+                    max_tokens: 4096,
+                    temperature: 0.7,
+                    github_token: githubToken
+                }, abortController.signal);
+
+                let responseContent = '';
+
+                await streamSseEvents(stream, (event) => {
+                    if (abortController.signal.aborted) {
+                        throw new DOMException('Aborted', 'AbortError');
+                    }
+
+                    if (event.event === 'error' || event.error) {
+                        const errorMsg = typeof event.error === 'string'
+                            ? event.error
+                            : (event.content || 'Stream failed');
+                        throw new Error(errorMsg);
+                    } else if ((event.event === 'token' || event.content) && event.content) {
+                        responseContent += event.content;
+                        // Update this specific alternate response
+                        setMessages(prev => prev.map((msg, idx) => {
+                            if (idx === messageIndex && msg.alternateResponses) {
+                                return {
+                                    ...msg,
+                                    alternateResponses: msg.alternateResponses.map(alt =>
+                                        alt.modelId === modelId
+                                            ? { ...alt, content: responseContent }
+                                            : alt
+                                    )
+                                };
+                            }
+                            return msg;
+                        }));
+                    }
+                });
+
+                // Mark as complete
+                setMessages(prev => prev.map((msg, idx) => {
+                    if (idx === messageIndex && msg.alternateResponses) {
+                        return {
+                            ...msg,
+                            alternateResponses: msg.alternateResponses.map(alt =>
+                                alt.modelId === modelId
+                                    ? { ...alt, loading: false }
+                                    : alt
+                            )
+                        };
+                    }
+                    return msg;
+                }));
+
+                recordSuccess(modelId);
+
+            } catch (error: any) {
+                if (error.name !== 'AbortError') {
+                    setMessages(prev => prev.map((msg, idx) => {
+                        if (idx === messageIndex && msg.alternateResponses) {
+                            return {
+                                ...msg,
+                                alternateResponses: msg.alternateResponses.map(alt =>
+                                    alt.modelId === modelId
+                                        ? { ...alt, content: error.message, error: true, loading: false }
+                                        : alt
+                                )
+                            };
+                        }
+                        return msg;
+                    }));
+                }
+            } finally {
+                compareAbortRefs.current.delete(modelId);
+            }
+        };
+
+        // Start all in parallel
+        modelsToCompare.forEach(modelId => generateForModel(modelId));
+    };
+
+    const setActiveResponse = (messageIndex: number, responseIndex: number) => {
+        setMessages(prev => prev.map((msg, idx) => {
+            if (idx === messageIndex) {
+                return { ...msg, activeResponseIndex: responseIndex };
+            }
+            return msg;
+        }));
+    };
+
+    // Close compare menu on click outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (compareMenuRef.current && !compareMenuRef.current.contains(e.target as Node)) {
+                setCompareMenuIndex(null);
+                setCompareSelectedModels(new Set());
+            }
+        };
+        if (compareMenuIndex !== null) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [compareMenuIndex]);
+
     const handleDeleteSelected = () => {
         if (selectedMessages.size === 0) return;
         setMessages(prev => prev.filter((_, index) => !selectedMessages.has(index)));
@@ -757,12 +955,126 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                 >
                                                     <ChevronRight size={10} />
                                                 </button>
+                                                {/* Compare button */}
+                                                <div className="relative ml-1">
+                                                    <button
+                                                        onClick={(e) => openCompareMenu(idx, e)}
+                                                        disabled={isGenerating}
+                                                        className="p-0.5 rounded hover:bg-slate-700/50 transition-colors disabled:opacity-30"
+                                                        title="Compare with other models"
+                                                    >
+                                                        <Plus size={10} />
+                                                    </button>
+                                                    {/* Compare menu dropdown */}
+                                                    {compareMenuIndex === idx && (
+                                                        <div
+                                                            ref={compareMenuRef}
+                                                            className="absolute top-full left-0 mt-1 w-64 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <div className="px-3 py-2 border-b border-slate-700/50 text-[10px] text-slate-400">
+                                                                Select models to compare
+                                                            </div>
+                                                            {/* Quick select buttons */}
+                                                            <div className="flex gap-1 p-2 border-b border-slate-700/50">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const localIds = models.filter(m => m.type === 'local' && m.id !== msg.modelId).map(m => m.id);
+                                                                        setCompareSelectedModels(new Set(localIds));
+                                                                    }}
+                                                                    className="flex-1 px-2 py-1 text-[10px] rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+                                                                >
+                                                                    All Local
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const apiIds = models.filter(m => m.type === 'api' && m.id !== msg.modelId).map(m => m.id);
+                                                                        setCompareSelectedModels(new Set(apiIds));
+                                                                    }}
+                                                                    className="flex-1 px-2 py-1 text-[10px] rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                                                                >
+                                                                    All API
+                                                                </button>
+                                                            </div>
+                                                            {/* Model list */}
+                                                            <div className="max-h-48 overflow-y-auto">
+                                                                {models.filter(m => m.id !== msg.modelId).map(model => (
+                                                                    <button
+                                                                        key={model.id}
+                                                                        onClick={() => toggleCompareModel(model.id)}
+                                                                        className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${compareSelectedModels.has(model.id)
+                                                                                ? 'bg-slate-700/50 text-white'
+                                                                                : 'text-slate-300 hover:bg-slate-700/30'
+                                                                            }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className={`w-2 h-2 rounded-full ${model.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                                                            <span>{model.name}</span>
+                                                                        </div>
+                                                                        {compareSelectedModels.has(model.id) && (
+                                                                            <Check size={12} className="text-emerald-400" />
+                                                                        )}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            {/* Start comparison button */}
+                                                            {compareSelectedModels.size > 0 && (
+                                                                <div className="p-2 border-t border-slate-700/50">
+                                                                    <button
+                                                                        onClick={() => startComparison(idx)}
+                                                                        className="w-full px-3 py-1.5 text-xs font-medium rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                                                                    >
+                                                                        Compare with {compareSelectedModels.size} model{compareSelectedModels.size > 1 ? 's' : ''}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                         {msg.error && <AlertTriangle size={12} className="text-red-400" />}
                                     </div>
+
+                                    {/* Tabs for alternate responses */}
+                                    {msg.alternateResponses && msg.alternateResponses.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mb-2 -mt-1">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, 0); }}
+                                                className={`px-2 py-0.5 text-[9px] rounded-full transition-colors ${(msg.activeResponseIndex ?? 0) === 0
+                                                        ? 'bg-slate-600/60 text-white'
+                                                        : 'bg-slate-700/30 text-slate-400 hover:text-slate-200'
+                                                    }`}
+                                            >
+                                                {msg.modelName || 'Primary'}
+                                            </button>
+                                            {msg.alternateResponses.map((alt, altIdx) => (
+                                                <button
+                                                    key={alt.modelId}
+                                                    onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, altIdx + 1); }}
+                                                    className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${(msg.activeResponseIndex ?? 0) === altIdx + 1
+                                                            ? 'bg-slate-600/60 text-white'
+                                                            : 'bg-slate-700/30 text-slate-400 hover:text-slate-200'
+                                                        }`}
+                                                >
+                                                    {alt.loading && <Loader2 size={8} className="animate-spin" />}
+                                                    {alt.modelName}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Content - show active response */}
                                     <div className="prose prose-invert prose-sm max-w-none">
-                                        <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
+                                        {(() => {
+                                            const activeIdx = msg.activeResponseIndex ?? 0;
+                                            if (activeIdx === 0 || !msg.alternateResponses) {
+                                                return <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />;
+                                            }
+                                            const alt = msg.alternateResponses[activeIdx - 1];
+                                            if (!alt) return <FormattedContent text={extractTextWithoutJSON(msg.content)} />;
+                                            return <FormattedContent text={extractTextWithoutJSON(alt.content)} />;
+                                        })()}
                                     </div>
                                 </div>
 
