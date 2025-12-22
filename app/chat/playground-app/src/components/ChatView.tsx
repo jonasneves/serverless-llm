@@ -1114,19 +1114,19 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
                                     {/* Model comparison tabs - only show if there are alternates */}
                                     {msg.alternateResponses && msg.alternateResponses.length > 0 && (
-                                        <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-slate-700/30">
+                                        <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 pb-2 mb-1 border-t border-slate-700/30">
                                             <span className="text-[9px] text-slate-500 uppercase tracking-wider mr-1">Compare:</span>
                                             {msg.alternateResponses.map((alt, altIdx) => (
                                                 <div key={alt.modelId} className="flex items-center">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, altIdx + 1); }}
                                                         className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${alt.loading
-                                                                ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40'
-                                                                : alt.error
-                                                                    ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'
-                                                                    : (msg.activeResponseIndex ?? 0) === altIdx + 1
-                                                                        ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
-                                                                        : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+                                                            ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40'
+                                                            : alt.error
+                                                                ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'
+                                                                : (msg.activeResponseIndex ?? 0) === altIdx + 1
+                                                                    ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
+                                                                    : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
                                                             }`}
                                                     >
                                                         {alt.loading && <Loader2 size={8} className="animate-spin text-amber-400" />}
@@ -1157,7 +1157,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     )}
 
                                     {/* Content area */}
-                                    <div className="prose prose-invert prose-sm max-w-none">
+                                    <div className="prose prose-invert prose-sm max-w-none mt-2">
                                         {(() => {
                                             const activeIdx = msg.activeResponseIndex ?? 0;
                                             if (activeIdx === 0 || !msg.alternateResponses) {
@@ -1176,7 +1176,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                 e.stopPropagation();
                                                 copyResponse(idx, msg.activeResponseIndex ?? 0);
                                             }}
-                                            className={`absolute top-2 right-2 p-1.5 rounded-md transition-all z-10 ${copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}`
+                                            className={`absolute bottom-2 right-2 p-1.5 rounded-md transition-all z-10 ${copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}`
                                                 ? 'bg-emerald-500/20 text-emerald-400'
                                                 : 'opacity-0 group-hover:opacity-100 bg-slate-700/70 hover:bg-slate-600/70 text-slate-400'
                                                 }`}
