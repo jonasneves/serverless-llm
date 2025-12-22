@@ -109,9 +109,6 @@ def generate_category_groups() -> list[dict]:
 
 
 def main():
-    output_dir = project_root / "app" / "chat" / "playground-app" / "src" / "data"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
     # Generate unified config
     config = {
         "services": generate_services_config(),
@@ -121,21 +118,31 @@ def main():
         "generatedAt": datetime.utcnow().isoformat() + "Z",
         "sourceFile": "config/models.py",
     }
-    
-    output_file = output_dir / "extension-config.json"
-    with open(output_file, "w") as f:
-        json.dump(config, f, indent=2)
-    
-    print(f"✓ Generated {output_file}")
+
+    # Write to both frontend and extension directories
+    output_dirs = [
+        project_root / "app" / "chat" / "frontend" / "src" / "data",
+        project_root / "extension" / "src" / "data",
+    ]
+
+    for output_dir in output_dirs:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write extension-config.json
+        output_file = output_dir / "extension-config.json"
+        with open(output_file, "w") as f:
+            json.dump(config, f, indent=2)
+
+        # Also update the raw services.json for backwards compat
+        services_file = output_dir / "services.json"
+        with open(services_file, "w") as f:
+            json.dump({"services": config["services"]}, f, indent=2)
+
+    print(f"✓ Generated extension-config.json and services.json")
     print(f"  - {len(config['services'])} services")
     print(f"  - {len(config['workflows'])} workflows")
     print(f"  - {len(config['categories'])} categories")
-    
-    # Also update the raw services.json for backwards compat
-    services_file = output_dir / "services.json"
-    with open(services_file, "w") as f:
-        json.dump({"services": config["services"]}, f, indent=2)
-    print(f"✓ Generated {services_file}")
+    print(f"  - Written to: app/chat/frontend/src/data/ and extension/src/data/")
 
 
 if __name__ == "__main__":

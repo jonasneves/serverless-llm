@@ -30,6 +30,7 @@ help:
 	@echo "  make build-chat      Build chat Docker image"
 	@echo "  make build-playground Build React app (runs generate-configs)"
 	@echo "  make build-extension Build Chrome extension (runs generate-configs)"
+	@echo "  make install-native-host Install native messaging host (EXT_ID=<id> BROWSER=chrome)"
 	@echo ""
 	@echo "Monitor:"
 	@echo "  make health          Check service health"
@@ -53,7 +54,7 @@ install:
 	fi
 	@[ -d venv ] || python3.11 -m venv venv
 	@./venv/bin/pip install -q --upgrade pip
-	@./venv/bin/pip install -q -r app/chat/requirements.txt
+	@./venv/bin/pip install -q -r app/chat/backend/requirements.txt
 	@./venv/bin/pip install -q -r app/shared/requirements.txt
 	@echo "Done. Activate: source venv/bin/activate"
 
@@ -63,7 +64,7 @@ install:
 
 dev-chat:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/chat && ../../venv/bin/python chat_server.py
+	cd app/chat/backend && PYTHONPATH=../../..:$$PYTHONPATH ../../../venv/bin/python chat_server.py
 
 dev-qwen:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
@@ -130,11 +131,19 @@ generate-configs:
 	python3 scripts/generate_extension_config.py
 
 build-playground: generate-configs
-	cd app/chat/playground-app && npm install && npm run build
+	cd app/chat/frontend && npm install && npm run build
 
 build-extension: generate-configs
-	cd app/chat/playground-app && npm install && npm run build:extension
-	@echo "Load in Chrome: chrome://extensions -> Load unpacked -> dist-extension/"
+	cd extension && npm install && npm run build:extension
+	@echo "Load in Chrome: chrome://extensions -> Load unpacked -> extension/dist/"
+
+install-native-host:
+	@if [ -z "$(EXT_ID)" ]; then \
+		echo "Usage: make install-native-host EXT_ID=<your-extension-id> [BROWSER=chrome|brave|arc|edge]"; \
+		echo "Find your extension ID at chrome://extensions with Developer mode enabled"; \
+		exit 1; \
+	fi
+	./extension/native-host/install-macos.sh $(EXT_ID) $(BROWSER)
 
 # =============================================================================
 # Tunnels
