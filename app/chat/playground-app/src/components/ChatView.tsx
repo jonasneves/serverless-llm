@@ -932,7 +932,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 }}
                             >
                                 <div
-                                    className={`${hasGestureOptions ? 'w-full sm:flex-1 sm:max-w-[45%]' : 'max-w-[85%]'} rounded-2xl px-4 pt-3 pb-0 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
+                                    className={`group relative ${hasGestureOptions ? 'w-full sm:flex-1 sm:max-w-[45%]' : 'max-w-[85%]'} rounded-2xl px-4 pt-3 pb-2 select-none transition-all cursor-pointer ${selectedMessages.has(idx)
                                         ? 'ring-2 ring-blue-500 bg-blue-500/10'
                                         : ''
                                         } ${msg.role === 'user'
@@ -1112,31 +1112,23 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                         {msg.error && <AlertTriangle size={12} className="text-red-400" />}
                                     </div>
 
-                                    {/* Tabs for alternate responses */}
+                                    {/* Model comparison tabs - only show if there are alternates */}
                                     {msg.alternateResponses && msg.alternateResponses.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-2 -mt-1">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, 0); }}
-                                                className={`px-2 py-0.5 text-[9px] rounded-full transition-colors ${(msg.activeResponseIndex ?? 0) === 0
-                                                    ? 'bg-slate-600/60 text-white'
-                                                    : 'bg-slate-700/30 text-slate-400 hover:text-slate-200'
-                                                    }`}
-                                            >
-                                                {msg.modelName || 'Primary'}
-                                            </button>
+                                        <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-slate-700/30">
+                                            <span className="text-[9px] text-slate-500 uppercase tracking-wider mr-1">Compare:</span>
                                             {msg.alternateResponses.map((alt, altIdx) => (
                                                 <div key={alt.modelId} className="flex items-center">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, altIdx + 1); }}
                                                         className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${(msg.activeResponseIndex ?? 0) === altIdx + 1
-                                                            ? 'bg-slate-600/60 text-white'
-                                                            : 'bg-slate-700/30 text-slate-400 hover:text-slate-200'
+                                                            ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
+                                                            : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
                                                             }`}
                                                     >
                                                         {alt.loading && <Loader2 size={8} className="animate-spin" />}
+                                                        {alt.error && <AlertTriangle size={8} className="text-red-400" />}
                                                         {alt.modelName}
                                                     </button>
-                                                    {/* Cancel button for loading tabs */}
                                                     {alt.loading && (
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); cancelComparison(idx, alt.modelId); }}
@@ -1148,11 +1140,20 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                     )}
                                                 </div>
                                             ))}
+                                            {/* Back to original button when viewing alternate */}
+                                            {(msg.activeResponseIndex ?? 0) > 0 && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, 0); }}
+                                                    className="px-2 py-0.5 text-[9px] rounded-full bg-slate-600/40 text-slate-300 hover:bg-slate-600/60 transition-colors"
+                                                >
+                                                    ← Back to {msg.modelName}
+                                                </button>
+                                            )}
                                         </div>
                                     )}
 
-                                    {/* Content - show active response with copy button */}
-                                    <div className="prose prose-invert prose-sm max-w-none relative group/content">
+                                    {/* Content area */}
+                                    <div className="prose prose-invert prose-sm max-w-none">
                                         {(() => {
                                             const activeIdx = msg.activeResponseIndex ?? 0;
                                             if (activeIdx === 0 || !msg.alternateResponses) {
@@ -1162,27 +1163,28 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                             if (!alt) return <FormattedContent text={extractTextWithoutJSON(msg.content)} />;
                                             return <FormattedContent text={extractTextWithoutJSON(alt.content)} />;
                                         })()}
-                                        {/* Copy button - visible on hover */}
-                                        {msg.role === 'assistant' && msg.content && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    copyResponse(idx, msg.activeResponseIndex ?? 0);
-                                                }}
-                                                className={`absolute top-0 right-0 p-1.5 rounded-md transition-all ${copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}`
-                                                        ? 'bg-emerald-500/20 text-emerald-400'
-                                                        : 'opacity-0 group-hover/content:opacity-100 bg-slate-700/50 hover:bg-slate-600/50 text-slate-400'
-                                                    }`}
-                                                title={copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}` ? 'Copied!' : 'Copy response'}
-                                            >
-                                                {copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}` ? (
-                                                    <Check size={12} />
-                                                ) : (
-                                                    <Copy size={12} />
-                                                )}
-                                            </button>
-                                        )}
                                     </div>
+
+                                    {/* Copy button - at message wrapper level, top right corner */}
+                                    {msg.role === 'assistant' && msg.content && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                copyResponse(idx, msg.activeResponseIndex ?? 0);
+                                            }}
+                                            className={`absolute top-2 right-2 p-1.5 rounded-md transition-all z-10 ${copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}`
+                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                : 'opacity-0 group-hover:opacity-100 bg-slate-700/70 hover:bg-slate-600/70 text-slate-400'
+                                                }`}
+                                            title={copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}` ? 'Copied!' : 'Copy response'}
+                                        >
+                                            {copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}` ? (
+                                                <Check size={12} />
+                                            ) : (
+                                                <Copy size={12} />
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
 
                                 {hasGestureOptions && (
