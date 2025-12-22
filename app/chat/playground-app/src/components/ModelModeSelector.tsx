@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Zap } from 'lucide-react';
+import { ChevronDown, Zap, Search } from 'lucide-react';
 import { Model } from '../types';
 import { ChatAutoModeScope } from './ChatView';
 
@@ -27,11 +27,23 @@ export default function ModelModeSelector({
     isGenerating
 }: ModelModeSelectorProps) {
     const [expandedDropdown, setExpandedDropdown] = useState<ExpandedDropdown>(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Memoize model filtering
     const localModels = useMemo(() => models.filter(m => m.type === 'local'), [models]);
     const apiModels = useMemo(() => models.filter(m => m.type === 'api'), [models]);
+
+    // Filtered models based on search
+    const filteredLocalModels = useMemo(() =>
+        localModels.filter(m => !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase())),
+        [localModels, searchQuery]
+    );
+    const filteredApiModels = useMemo(() =>
+        apiModels.filter(m => !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase())),
+        [apiModels, searchQuery]
+    );
 
     const selectedModel = models.find(m => m.id === selectedModelId);
 
@@ -61,17 +73,26 @@ export default function ModelModeSelector({
         setAutoMode(true);
         setAutoModeScope(scope);
         setExpandedDropdown(null);
+        setSearchQuery('');
     };
 
     const handleDropdownToggle = (scope: ChatAutoModeScope, e: React.MouseEvent) => {
         e.stopPropagation();
-        setExpandedDropdown(expandedDropdown === scope ? null : scope);
+        if (expandedDropdown === scope) {
+            setExpandedDropdown(null);
+            setSearchQuery('');
+        } else {
+            setExpandedDropdown(scope);
+            setSearchQuery('');
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
     };
 
     const handleModelSelect = (modelId: string) => {
         setAutoMode(false);
         onSelectModel(modelId);
         setExpandedDropdown(null);
+        setSearchQuery('');
     };
 
     // Determine button states
@@ -124,7 +145,23 @@ export default function ModelModeSelector({
 
                 {/* Local Models Dropdown */}
                 {expandedDropdown === 'local' && localModels.length > 0 && (
-                    <div className="absolute top-full left-0 mt-1 w-56 max-h-64 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute top-full left-0 mt-1 w-56 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                        {/* Search input */}
+                        {localModels.length > 5 && (
+                            <div className="px-2 py-2 border-b border-slate-700/50">
+                                <div className="relative">
+                                    <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder="Search..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-7 pr-2 py-1 text-xs bg-slate-700/50 border border-slate-600/50 rounded text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                                    />
+                                </div>
+                            </div>
+                        )}
                         {/* Auto option */}
                         <button
                             onClick={() => handleModeClick('local')}
@@ -138,25 +175,27 @@ export default function ModelModeSelector({
                             {isLocalActive && <span className="text-emerald-400">✓</span>}
                         </button>
                         <div className="border-t border-slate-700/50" />
-                        {/* Individual models */}
-                        {localModels.map(model => (
-                            <button
-                                key={model.id}
-                                onClick={() => handleModelSelect(model.id)}
-                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${!autoMode && selectedModelId === model.id
-                                    ? 'bg-emerald-500/20 text-slate-200'
-                                    : 'text-slate-300 hover:bg-slate-700/50'
-                                    }`}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500/50" />
-                                    <span>{model.name}</span>
-                                </div>
-                                {!autoMode && selectedModelId === model.id && (
-                                    <span className="text-emerald-400">✓</span>
-                                )}
-                            </button>
-                        ))}
+                        {/* Individual models - filtered */}
+                        <div className="max-h-48 overflow-y-auto">
+                            {filteredLocalModels.map(model => (
+                                <button
+                                    key={model.id}
+                                    onClick={() => handleModelSelect(model.id)}
+                                    className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${!autoMode && selectedModelId === model.id
+                                        ? 'bg-emerald-500/20 text-slate-200'
+                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500/50" />
+                                        <span>{model.name}</span>
+                                    </div>
+                                    {!autoMode && selectedModelId === model.id && (
+                                        <span className="text-emerald-400">✓</span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
@@ -194,7 +233,23 @@ export default function ModelModeSelector({
 
                 {/* API Models Dropdown */}
                 {expandedDropdown === 'api' && apiModels.length > 0 && (
-                    <div className="absolute top-full right-0 mt-1 w-64 max-h-64 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute top-full right-0 mt-1 w-64 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                        {/* Search input - only show if > 5 models */}
+                        {apiModels.length > 5 && (
+                            <div className="px-2 py-2 border-b border-slate-700/50">
+                                <div className="relative">
+                                    <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder="Search models..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-7 pr-2 py-1 text-xs bg-slate-700/50 border border-slate-600/50 rounded text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                                    />
+                                </div>
+                            </div>
+                        )}
                         {/* Auto option */}
                         <button
                             onClick={() => handleModeClick('api')}
@@ -208,25 +263,27 @@ export default function ModelModeSelector({
                             {isApiActive && <span className="text-blue-400">✓</span>}
                         </button>
                         <div className="border-t border-slate-700/50" />
-                        {/* Individual models */}
-                        {apiModels.map(model => (
-                            <button
-                                key={model.id}
-                                onClick={() => handleModelSelect(model.id)}
-                                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${!autoMode && selectedModelId === model.id
-                                    ? 'bg-blue-500/20 text-slate-200'
-                                    : 'text-slate-300 hover:bg-slate-700/50'
-                                    }`}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-blue-500/50" />
-                                    <span>{model.name}</span>
-                                </div>
-                                {!autoMode && selectedModelId === model.id && (
-                                    <span className="text-blue-400">✓</span>
-                                )}
-                            </button>
-                        ))}
+                        {/* Individual models - filtered */}
+                        <div className="max-h-48 overflow-y-auto">
+                            {filteredApiModels.map(model => (
+                                <button
+                                    key={model.id}
+                                    onClick={() => handleModelSelect(model.id)}
+                                    className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${!autoMode && selectedModelId === model.id
+                                        ? 'bg-blue-500/20 text-slate-200'
+                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500/50" />
+                                        <span>{model.name}</span>
+                                    </div>
+                                    {!autoMode && selectedModelId === model.id && (
+                                        <span className="text-blue-400">✓</span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

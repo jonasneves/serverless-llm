@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, X, Check, Loader2 } from 'lucide-react';
+import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, X, Check, Loader2, Copy, Search } from 'lucide-react';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
@@ -87,13 +87,17 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     // Compare mode state
     const [compareMenuIndex, setCompareMenuIndex] = useState<number | null>(null);
     const [compareSelectedModels, setCompareSelectedModels] = useState<Set<string>>(new Set());
+    const [compareSearchQuery, setCompareSearchQuery] = useState('');
+    const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const compareAbortRefs = useRef<Map<string, AbortController>>(new Map());
+    const streamBatchRef = useRef<Map<number, { content: string; timeout: number | null }>>(new Map());
     const abortControllerRef = useRef<AbortController | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const compareMenuRef = useRef<HTMLDivElement>(null);
+    const compareSearchRef = useRef<HTMLInputElement>(null);
 
     // Gesture context for Easter egg
     const gestureCtx = useGestureOptional();
@@ -601,11 +605,21 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         if (compareMenuIndex === messageIndex) {
             setCompareMenuIndex(null);
             setCompareSelectedModels(new Set());
+            setCompareSearchQuery('');
         } else {
             setCompareMenuIndex(messageIndex);
             setCompareSelectedModels(new Set());
+            setCompareSearchQuery('');
+            // Focus search input after menu opens
+            setTimeout(() => compareSearchRef.current?.focus(), 50);
         }
     };
+
+    const closeCompareMenu = useCallback(() => {
+        setCompareMenuIndex(null);
+        setCompareSelectedModels(new Set());
+        setCompareSearchQuery('');
+    }, []);
 
     const toggleCompareModel = (modelId: string) => {
         setCompareSelectedModels(prev => {
@@ -618,6 +632,47 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             return newSet;
         });
     };
+
+    // Cancel a specific model's comparison generation
+    const cancelComparison = useCallback((messageIndex: number, modelId: string) => {
+        const controller = compareAbortRefs.current.get(modelId);
+        if (controller) {
+            controller.abort();
+            compareAbortRefs.current.delete(modelId);
+        }
+        // Remove from alternateResponses
+        setMessages(prev => prev.map((msg, idx) => {
+            if (idx === messageIndex && msg.alternateResponses) {
+                return {
+                    ...msg,
+                    alternateResponses: msg.alternateResponses.filter(alt => alt.modelId !== modelId)
+                };
+            }
+            return msg;
+        }));
+    }, [setMessages]);
+
+    // Copy response to clipboard
+    const copyResponse = useCallback(async (messageIndex: number, responseIndex: number = 0) => {
+        const msg = messages[messageIndex];
+        if (!msg) return;
+
+        let content: string;
+        if (responseIndex === 0 || !msg.alternateResponses) {
+            content = msg.content;
+        } else {
+            content = msg.alternateResponses[responseIndex - 1]?.content || msg.content;
+        }
+
+        try {
+            await navigator.clipboard.writeText(content);
+            const id = `${messageIndex}-${responseIndex}`;
+            setCopiedMessageId(id);
+            setTimeout(() => setCopiedMessageId(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    }, [messages]);
 
     const startComparison = async (messageIndex: number) => {
         if (compareSelectedModels.size === 0) return;
@@ -763,19 +818,27 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }));
     };
 
-    // Close compare menu on click outside
+    // Close compare menu on click outside or Escape key
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (compareMenuRef.current && !compareMenuRef.current.contains(e.target as Node)) {
-                setCompareMenuIndex(null);
-                setCompareSelectedModels(new Set());
+                closeCompareMenu();
+            }
+        };
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                closeCompareMenu();
             }
         };
         if (compareMenuIndex !== null) {
             document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleEscape);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [compareMenuIndex]);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [compareMenuIndex, closeCompareMenu]);
 
     const handleDeleteSelected = () => {
         if (selectedMessages.size === 0) return;
@@ -972,8 +1035,18 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                             className="absolute top-full left-0 mt-1 w-64 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
-                                                            <div className="px-3 py-2 border-b border-slate-700/50 text-[10px] text-slate-400">
-                                                                Select models to compare
+                                                            <div className="px-3 py-2 border-b border-slate-700/50">
+                                                                <div className="relative">
+                                                                    <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                                                                    <input
+                                                                        ref={compareSearchRef}
+                                                                        type="text"
+                                                                        placeholder="Search models..."
+                                                                        value={compareSearchQuery}
+                                                                        onChange={(e) => setCompareSearchQuery(e.target.value)}
+                                                                        className="w-full pl-7 pr-2 py-1.5 text-xs bg-slate-700/50 border border-slate-600/50 rounded text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                                                                    />
+                                                                </div>
                                                             </div>
                                                             {/* Quick select buttons */}
                                                             <div className="flex gap-1 p-2 border-b border-slate-700/50">
@@ -996,26 +1069,29 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                                     All API
                                                                 </button>
                                                             </div>
-                                                            {/* Model list */}
+                                                            {/* Model list - filtered by search */}
                                                             <div className="max-h-48 overflow-y-auto">
-                                                                {models.filter(m => m.id !== msg.modelId).map(model => (
-                                                                    <button
-                                                                        key={model.id}
-                                                                        onClick={() => toggleCompareModel(model.id)}
-                                                                        className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${compareSelectedModels.has(model.id)
+                                                                {models
+                                                                    .filter(m => m.id !== msg.modelId)
+                                                                    .filter(m => !compareSearchQuery || m.name.toLowerCase().includes(compareSearchQuery.toLowerCase()) || m.id.toLowerCase().includes(compareSearchQuery.toLowerCase()))
+                                                                    .map(model => (
+                                                                        <button
+                                                                            key={model.id}
+                                                                            onClick={() => toggleCompareModel(model.id)}
+                                                                            className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${compareSelectedModels.has(model.id)
                                                                                 ? 'bg-slate-700/50 text-white'
                                                                                 : 'text-slate-300 hover:bg-slate-700/30'
-                                                                            }`}
-                                                                    >
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className={`w-2 h-2 rounded-full ${model.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-                                                                            <span>{model.name}</span>
-                                                                        </div>
-                                                                        {compareSelectedModels.has(model.id) && (
-                                                                            <Check size={12} className="text-emerald-400" />
-                                                                        )}
-                                                                    </button>
-                                                                ))}
+                                                                                }`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className={`w-2 h-2 rounded-full ${model.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                                                                <span>{model.name}</span>
+                                                                            </div>
+                                                                            {compareSelectedModels.has(model.id) && (
+                                                                                <Check size={12} className="text-emerald-400" />
+                                                                            )}
+                                                                        </button>
+                                                                    ))}
                                                             </div>
                                                             {/* Start comparison button */}
                                                             {compareSelectedModels.size > 0 && (
@@ -1042,30 +1118,41 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, 0); }}
                                                 className={`px-2 py-0.5 text-[9px] rounded-full transition-colors ${(msg.activeResponseIndex ?? 0) === 0
-                                                        ? 'bg-slate-600/60 text-white'
-                                                        : 'bg-slate-700/30 text-slate-400 hover:text-slate-200'
+                                                    ? 'bg-slate-600/60 text-white'
+                                                    : 'bg-slate-700/30 text-slate-400 hover:text-slate-200'
                                                     }`}
                                             >
                                                 {msg.modelName || 'Primary'}
                                             </button>
                                             {msg.alternateResponses.map((alt, altIdx) => (
-                                                <button
-                                                    key={alt.modelId}
-                                                    onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, altIdx + 1); }}
-                                                    className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${(msg.activeResponseIndex ?? 0) === altIdx + 1
+                                                <div key={alt.modelId} className="flex items-center">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, altIdx + 1); }}
+                                                        className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${(msg.activeResponseIndex ?? 0) === altIdx + 1
                                                             ? 'bg-slate-600/60 text-white'
                                                             : 'bg-slate-700/30 text-slate-400 hover:text-slate-200'
-                                                        }`}
-                                                >
-                                                    {alt.loading && <Loader2 size={8} className="animate-spin" />}
-                                                    {alt.modelName}
-                                                </button>
+                                                            }`}
+                                                    >
+                                                        {alt.loading && <Loader2 size={8} className="animate-spin" />}
+                                                        {alt.modelName}
+                                                    </button>
+                                                    {/* Cancel button for loading tabs */}
+                                                    {alt.loading && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); cancelComparison(idx, alt.modelId); }}
+                                                            className="ml-0.5 p-0.5 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
+                                                            title="Cancel"
+                                                        >
+                                                            <X size={8} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ))}
                                         </div>
                                     )}
 
-                                    {/* Content - show active response */}
-                                    <div className="prose prose-invert prose-sm max-w-none">
+                                    {/* Content - show active response with copy button */}
+                                    <div className="prose prose-invert prose-sm max-w-none relative group/content">
                                         {(() => {
                                             const activeIdx = msg.activeResponseIndex ?? 0;
                                             if (activeIdx === 0 || !msg.alternateResponses) {
@@ -1075,6 +1162,26 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                             if (!alt) return <FormattedContent text={extractTextWithoutJSON(msg.content)} />;
                                             return <FormattedContent text={extractTextWithoutJSON(alt.content)} />;
                                         })()}
+                                        {/* Copy button - visible on hover */}
+                                        {msg.role === 'assistant' && msg.content && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    copyResponse(idx, msg.activeResponseIndex ?? 0);
+                                                }}
+                                                className={`absolute top-0 right-0 p-1.5 rounded-md transition-all ${copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}`
+                                                        ? 'bg-emerald-500/20 text-emerald-400'
+                                                        : 'opacity-0 group-hover/content:opacity-100 bg-slate-700/50 hover:bg-slate-600/50 text-slate-400'
+                                                    }`}
+                                                title={copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}` ? 'Copied!' : 'Copy response'}
+                                            >
+                                                {copiedMessageId === `${idx}-${msg.activeResponseIndex ?? 0}` ? (
+                                                    <Check size={12} />
+                                                ) : (
+                                                    <Copy size={12} />
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
