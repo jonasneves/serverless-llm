@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User } from 'lucide-react';
+import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
@@ -455,7 +455,122 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }
     };
 
+    // Regenerate a specific message with a different model
+    const regenerateWithModel = async (messageIndex: number, newModelId: string) => {
+        if (isGenerating) return;
 
+        const targetMessage = messages[messageIndex];
+        if (targetMessage.role !== 'assistant') return;
+
+        // Find the user message that triggered this response
+        let userMessageIndex = messageIndex - 1;
+        while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
+            userMessageIndex--;
+        }
+        if (userMessageIndex < 0) return;
+
+        const userMessage = messages[userMessageIndex];
+        const newModel = models.find(m => m.id === newModelId);
+        if (!newModel) return;
+
+        // Build conversation history up to (but not including) the target assistant message
+        const historyMessages = messages.slice(0, messageIndex).map(m => ({
+            role: m.role,
+            content: m.content
+        }));
+
+        setIsGenerating(true);
+        setCurrentResponse('');
+        setCurrentAutoModel(newModelId);
+
+        abortControllerRef.current = new AbortController();
+
+        try {
+            const stream = await fetchChatStream({
+                models: [newModelId],
+                messages: historyMessages,
+                max_tokens: 4096,
+                temperature: 0.7,
+                github_token: githubToken
+            }, abortControllerRef.current.signal);
+
+            let responseContent = '';
+
+            await streamSseEvents(stream, (event) => {
+                if (abortControllerRef.current?.signal.aborted) {
+                    throw new DOMException('Aborted', 'AbortError');
+                }
+
+                if (event.event === 'error' || event.error) {
+                    const errorMsg = typeof event.error === 'string'
+                        ? event.error
+                        : (event.content || 'Stream failed');
+                    throw new Error(errorMsg);
+                } else if ((event.event === 'token' || event.content) && event.content) {
+                    responseContent += event.content;
+                    setCurrentResponse(prev => prev + event.content);
+                }
+            });
+
+            // Update the message at that index with the new response
+            setMessages(prev => prev.map((msg, idx) => {
+                if (idx === messageIndex) {
+                    return {
+                        ...msg,
+                        content: responseContent,
+                        modelName: newModel.name,
+                        modelId: newModelId,
+                        error: undefined
+                    };
+                }
+                return msg;
+            }));
+
+            recordSuccess(newModelId);
+            onModelUsed?.(newModelId);
+
+        } catch (error: any) {
+            if (error.name !== 'AbortError') {
+                setMessages(prev => prev.map((msg, idx) => {
+                    if (idx === messageIndex) {
+                        return {
+                            ...msg,
+                            content: error.message,
+                            modelName: newModel.name,
+                            modelId: newModelId,
+                            error: true
+                        };
+                    }
+                    return msg;
+                }));
+            }
+        } finally {
+            setIsGenerating(false);
+            setCurrentAutoModel(null);
+            setCurrentResponse('');
+            abortControllerRef.current = null;
+        }
+    };
+
+    // Get next/prev model for navigation
+    const getAdjacentModel = (currentModelId: string | undefined, direction: 'prev' | 'next'): Model | null => {
+        if (!currentModelId) return models[0] || null;
+
+        const currentModel = models.find(m => m.id === currentModelId);
+        const modelType = currentModel?.type || 'api';
+
+        // Get models of the same type for navigation
+        const sameTypeModels = models.filter(m => m.type === modelType);
+        const currentIndex = sameTypeModels.findIndex(m => m.id === currentModelId);
+
+        if (currentIndex === -1) return sameTypeModels[0] || null;
+
+        if (direction === 'prev') {
+            return currentIndex > 0 ? sameTypeModels[currentIndex - 1] : sameTypeModels[sameTypeModels.length - 1];
+        } else {
+            return currentIndex < sameTypeModels.length - 1 ? sameTypeModels[currentIndex + 1] : sameTypeModels[0];
+        }
+    };
 
     const handleDeleteSelected = () => {
         if (selectedMessages.size === 0) return;
@@ -559,7 +674,41 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     }`}>
                                     <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'}`}>
                                         {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                                        {msg.role === 'user' ? 'You' : (msg.modelName || 'Assistant')}
+                                        {msg.role === 'user' ? (
+                                            'You'
+                                        ) : (
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const prevModel = getAdjacentModel(msg.modelId, 'prev');
+                                                        if (prevModel && !isGenerating) {
+                                                            regenerateWithModel(idx, prevModel.id);
+                                                        }
+                                                    }}
+                                                    disabled={isGenerating}
+                                                    className="p-0.5 rounded hover:bg-slate-700/50 transition-colors disabled:opacity-30"
+                                                    title="Try previous model"
+                                                >
+                                                    <ChevronLeft size={10} />
+                                                </button>
+                                                <span className="px-1">{msg.modelName || 'Assistant'}</span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const nextModel = getAdjacentModel(msg.modelId, 'next');
+                                                        if (nextModel && !isGenerating) {
+                                                            regenerateWithModel(idx, nextModel.id);
+                                                        }
+                                                    }}
+                                                    disabled={isGenerating}
+                                                    className="p-0.5 rounded hover:bg-slate-700/50 transition-colors disabled:opacity-30"
+                                                    title="Try next model"
+                                                >
+                                                    <ChevronRight size={10} />
+                                                </button>
+                                            </div>
+                                        )}
                                         {msg.error && <AlertTriangle size={12} className="text-red-400" />}
                                     </div>
                                     <div className="prose prose-invert prose-sm max-w-none">
