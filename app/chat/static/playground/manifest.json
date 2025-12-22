@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "shipctl",
+  "version": "1.0.0",
+  "description": "shipctl side panel for Serverless LLM DevOps controls",
+  "icons": {
+    "16": "icon-16.svg",
+    "48": "icon-48.svg",
+    "128": "icon-128.svg"
+  },
+  "action": {
+    "default_title": "Open shipctl"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "https://models.github.ai/*",
+    "https://api.github.com/*",
+    "https://*.neevs.io/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

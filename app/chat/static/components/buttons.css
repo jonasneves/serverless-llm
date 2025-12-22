@@ -1,0 +1,292 @@
+/**
+ * Button Components
+ * All button styles with consistent sizing and touch targets
+ */
+
+/* Base button styles */
+.btn {
+    padding: var(--chip-padding-y) var(--chip-padding-x);
+    border: none;
+    border-radius: var(--radius-button);
+    font-size: var(--text-md);
+    font-weight: var(--font-semibold);
+    cursor: pointer;
+    transition: var(--transition-all);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: inherit;
+    min-height: var(--button-height);
+    justify-content: center;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Primary button */
+.btn-primary {
+    background: var(--accent-color);
+    color: var(--accent-text);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.2);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* Secondary button */
+.btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    transform: translateY(-1px);
+}
+
+.btn-secondary:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* Ghost button */
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    padding: var(--space-2) var(--space-3);
+}
+
+.btn-ghost:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Button sizes */
+.btn-small {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    min-height: var(--button-height-sm);
+}
+
+.btn-large {
+    padding: var(--space-4) var(--space-6);
+    font-size: var(--text-lg);
+    min-height: calc(var(--button-height) + var(--space-2));
+}
+
+/* Icon buttons */
+.icon-btn {
+    width: var(--desktop-target-min);
+    height: var(--desktop-target-min);
+    min-width: var(--desktop-target-min);
+    min-height: var(--desktop-target-min);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-all);
+    position: relative;
+    padding: 0;
+}
+
+.icon-btn svg {
+    width: var(--icon-md);
+    height: var(--icon-md);
+    stroke: white;
+    color: white;
+    display: block;
+}
+
+.icon-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.icon-btn.active {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+#settingsBtn.needs-attention::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    background: var(--warning-color);
+    border-radius: var(--radius-full);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Send button */
+.send-btn {
+    position: absolute;
+    right: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    width: var(--desktop-target-min);
+    height: var(--desktop-target-min);
+    min-width: var(--desktop-target-min);
+    min-height: var(--desktop-target-min);
+    background: var(--accent-color);
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-all);
+    padding: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-50%) scale(1.05);
+}
+
+.send-btn:active:not(:disabled) {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.send-btn:disabled {
+    background: var(--accent-color);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.send-btn:disabled:hover {
+    background: var(--accent-color);
+    transform: translateY(-50%);
+}
+
+.send-btn svg {
+    width: var(--icon-md);
+    height: var(--icon-md);
+}
+
+.send-btn svg path {
+    stroke: white;
+}
+
+/* Close button */
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--compact-target-min);
+    min-width: var(--compact-target-min);
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+/* Clear button */
+.clear-btn {
+    /* Reset browser default button styles */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+
+    /* Positioning */
+    margin-left: auto;
+
+    /* Styling */
+    padding: 5px var(--space-2);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: var(--transition-all);
+    min-height: 26px;
+    font-weight: var(--font-medium);
+    font-family: inherit;
+
+    /* Ensure consistent text rendering */
+    text-align: center;
+    line-height: normal;
+}
+
+.clear-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+}
+
+/* Loading spinner */
+.spinner {
+    display: inline-block;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: var(--radius-full);
+    animation: spin 0.6s linear infinite;
+    margin-right: var(--space-2);
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+
+    .icon-btn,
+    .send-btn {
+        width: var(--touch-target-min);
+        height: var(--touch-target-min);
+        min-width: var(--touch-target-min);
+        min-height: var(--touch-target-min);
+    }
+
+    .btn {
+        min-height: var(--touch-target-min);
+    }
+}
+
+@media (max-width: 768px) {
+    .send-btn {
+        width: var(--desktop-target-min);
+        height: var(--desktop-target-min);
+        padding: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .send-btn {
+        width: var(--desktop-target-min);
+        height: var(--desktop-target-min);
+        padding: 0;
+    }
+
+    .send-btn svg {
+        width: var(--icon-md);
+        height: var(--icon-md);
+    }
+}

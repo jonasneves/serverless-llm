@@ -23,7 +23,7 @@ venv/
 .venv/
 env/
 *.egg-info/
-# dist/
+dist/
 build/
 .eggs/
 *.egg

@@ -30,7 +30,7 @@ services:
   chat:
     build:
       context: .
-      dockerfile: app/chat/backend/Dockerfile
+      dockerfile: app/chat/Dockerfile
     ports:
       - "${CHAT_PORT:-8080}:8080"
     environment:

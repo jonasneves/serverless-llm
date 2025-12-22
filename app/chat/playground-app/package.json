@@ -1,0 +1,44 @@
+{
+  "name": "serverless-llm-playground",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:local": "tsc && vite build --base=/ --outDir dist",
+    "fetch-models": "node scripts/fetch-models.mjs",
+    "fetch-mediapipe": "node scripts/fetch-mediapipe.mjs",
+    "build:extension": "npm run fetch-models && npm run fetch-mediapipe && tsc && vite build --config vite.config.extension.ts",
+    "preview": "npm run build:local && vite preview --outDir dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mediapipe/drawing_utils": "^0.3.1675466124",
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
+    "fingerpose": "^0.1.0",
+    "highlight.js": "^11.11.1",
+    "katex": "^0.16.27",
+    "lucide-react": "^0.561.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/chrome": "^0.1.32",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react-swc": "^3.10.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

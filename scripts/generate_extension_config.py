@@ -109,7 +109,7 @@ def generate_category_groups() -> list[dict]:
 
 
 def main():
-    output_dir = project_root / "app" / "chat" / "frontend" / "src" / "data"
+    output_dir = project_root / "app" / "chat" / "playground-app" / "src" / "data"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate unified config
