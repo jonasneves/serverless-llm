@@ -1,21 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "Usage: $0 <extension-id> [browser]"
-  echo "Example: $0 abcdefghijklmnopqrstuvwxyzabcdef chrome"
-  echo ""
-  echo "Browser options: chrome | canary | chromium | brave | arc | edge"
-  exit 1
+# Get script directory and root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+EXT_DIR="$ROOT_DIR/extension"
+HOST_DIR="$EXT_DIR/native-host"
+
+# Read extension ID from .extension-id file if not provided
+if [[ $# -eq 0 ]]; then
+  if [[ -f "$EXT_DIR/.extension-id" ]]; then
+    EXT_ID="$(cat "$EXT_DIR/.extension-id" | tr -d '[:space:]')"
+    echo "Using extension ID from .extension-id: $EXT_ID"
+  else
+    echo "Usage: $0 [extension-id] [browser]"
+    echo ""
+    echo "No extension ID provided and .extension-id file not found."
+    echo "Run 'make build' first to generate the extension with stable ID."
+    exit 1
+  fi
+else
+  EXT_ID="$1"
 fi
 
-EXT_ID="$1"
-BROWSER="${2:-}"
+BROWSER="${2:-chrome}"
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
-HOST_DIR="$ROOT_DIR/extension/native-host"
 PY="$HOST_DIR/serverless_llm_native_host.py"
-WRAPPER="$HOST_DIR/serverless_llm_native_host.sh"
 
 pick_python() {
   if [[ -x "$ROOT_DIR/venv/bin/python" ]]; then
@@ -36,39 +46,36 @@ pick_python() {
 
 PYTHON_BIN="$(pick_python)"
 
+# Update shebang in Python file directly (the working approach)
 sed -i.bak "1s|.*|#!$PYTHON_BIN|" "$PY"
+rm -f "$PY.bak"
 chmod +x "$PY"
 
 pick_dest_dir() {
   local base="$HOME/Library/Application Support"
 
   case "$BROWSER" in
-    chrome|"")
+    chrome)
       echo "$base/Google/Chrome/NativeMessagingHosts"
-      return
       ;;
     canary)
       echo "$base/Google/Chrome Canary/NativeMessagingHosts"
-      return
       ;;
     chromium)
       echo "$base/Chromium/NativeMessagingHosts"
-      return
       ;;
     brave)
       echo "$base/BraveSoftware/Brave-Browser/NativeMessagingHosts"
-      return
       ;;
     arc)
       echo "$base/Arc/NativeMessagingHosts"
-      return
       ;;
     edge)
       echo "$base/Microsoft Edge/NativeMessagingHosts"
-      return
       ;;
     *)
       echo "Unknown browser: $BROWSER" >&2
+      echo "Options: chrome | canary | chromium | brave | arc | edge" >&2
       exit 1
       ;;
   esac
@@ -88,9 +95,11 @@ cat > "$MANIFEST_PATH" <<EOF
 }
 EOF
 
-echo "✓ Installed native host manifest:"
-echo "  $MANIFEST_PATH"
 echo ""
-echo "Next:"
+echo "✓ Installed native host for $BROWSER"
+echo "  Manifest: $MANIFEST_PATH"
+echo "  Extension ID: $EXT_ID"
+echo ""
+echo "Next steps:"
 echo "  1) Reload the extension in chrome://extensions"
 echo "  2) Open the side panel and use Backend controls"

@@ -1,19 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "Usage: $0 <extension-id> [browser]"
-  echo "Example: $0 abcdefghijklmnopqrstuvwxyzabcdef chrome"
-  echo ""
-  echo "Browser options: chrome | chromium | brave"
-  exit 1
+# Get script directory and root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+EXT_DIR="$ROOT_DIR/extension"
+HOST_DIR="$EXT_DIR/native-host"
+
+# Read extension ID from .extension-id file if not provided
+if [[ $# -eq 0 ]]; then
+  if [[ -f "$EXT_DIR/.extension-id" ]]; then
+    EXT_ID="$(cat "$EXT_DIR/.extension-id" | tr -d '[:space:]')"
+    echo "Using extension ID from .extension-id: $EXT_ID"
+  else
+    echo "Usage: $0 [extension-id] [browser]"
+    echo ""
+    echo "No extension ID provided and .extension-id file not found."
+    echo "Run 'make build' first to generate the extension with stable ID."
+    exit 1
+  fi
+else
+  EXT_ID="$1"
 fi
 
-EXT_ID="$1"
-BROWSER="${2:-}"
+BROWSER="${2:-chrome}"
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
-HOST_DIR="$ROOT_DIR/extension/native-host"
 PY="$HOST_DIR/serverless_llm_native_host.py"
 WRAPPER="$HOST_DIR/serverless_llm_native_host.sh"
 
@@ -36,29 +47,27 @@ pick_python() {
 
 PYTHON_BIN="$(pick_python)"
 
+# Create wrapper script that uses the correct Python
 cat > "$WRAPPER" <<EOF
 #!/usr/bin/env bash
 exec "$PYTHON_BIN" "$PY" "\$@"
 EOF
-
 chmod +x "$WRAPPER"
 
 pick_dest_dir() {
   case "$BROWSER" in
-    chrome|"")
+    chrome)
       echo "$HOME/.config/google-chrome/NativeMessagingHosts"
-      return
       ;;
     chromium)
       echo "$HOME/.config/chromium/NativeMessagingHosts"
-      return
       ;;
     brave)
       echo "$HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
-      return
       ;;
     *)
       echo "Unknown browser: $BROWSER" >&2
+      echo "Options: chrome | chromium | brave" >&2
       exit 1
       ;;
   esac
@@ -78,9 +87,11 @@ cat > "$MANIFEST_PATH" <<EOF
 }
 EOF
 
-echo "✓ Installed native host manifest:"
-echo "  $MANIFEST_PATH"
 echo ""
-echo "Next:"
+echo "✓ Installed native host for $BROWSER"
+echo "  Manifest: $MANIFEST_PATH"
+echo "  Extension ID: $EXT_ID"
+echo ""
+echo "Next steps:"
 echo "  1) Reload the extension"
 echo "  2) Open the side panel and use Backend controls"

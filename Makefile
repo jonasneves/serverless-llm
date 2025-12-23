@@ -30,7 +30,7 @@ help:
 	@echo "  make build-chat      Build chat Docker image"
 	@echo "  make build-playground Build React app (runs generate-configs)"
 	@echo "  make build-extension Build Chrome extension (runs generate-configs)"
-	@echo "  make install-native-host Install native messaging host (EXT_ID=<id> BROWSER=chrome)"
+	@echo "  (native host: cd extension && make help)"
 	@echo ""
 	@echo "Monitor:"
 	@echo "  make health          Check service health"
@@ -137,13 +137,6 @@ build-extension: generate-configs
 	cd extension && npm install && npm run build:extension
 	@echo "Load in Chrome: chrome://extensions -> Load unpacked -> extension/dist/"
 
-install-native-host:
-	@if [ -z "$(EXT_ID)" ]; then \
-		echo "Usage: make install-native-host EXT_ID=<your-extension-id> [BROWSER=chrome|brave|arc|edge]"; \
-		echo "Find your extension ID at chrome://extensions with Developer mode enabled"; \
-		exit 1; \
-	fi
-	./extension/native-host/install-macos.sh $(EXT_ID) $(BROWSER)
 
 # =============================================================================
 # Tunnels
