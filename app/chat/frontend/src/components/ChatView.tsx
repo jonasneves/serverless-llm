@@ -20,7 +20,7 @@ export interface ChatViewHandle {
     scroll: (deltaY: number) => void;
 }
 
-export type ChatAutoModeScope = 'local' | 'api';
+export type ChatAutoModeScope = 'local' | 'api' | 'external';
 
 export interface ModelResponse {
     modelId: string;

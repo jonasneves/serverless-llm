@@ -14,7 +14,7 @@ interface ModelModeSelectorProps {
     isGenerating: boolean;
 }
 
-type ExpandedDropdown = 'local' | 'api' | null;
+type ExpandedDropdown = 'local' | 'api' | 'external' | null;
 
 export default function ModelModeSelector({
     models,
@@ -33,7 +33,8 @@ export default function ModelModeSelector({
 
     // Memoize model filtering
     const localModels = useMemo(() => models.filter(m => m.type === 'self-hosted'), [models]);
-    const apiModels = useMemo(() => models.filter(m => m.type === 'github' || m.type === 'external'), [models]);
+    const apiModels = useMemo(() => models.filter(m => m.type === 'github'), [models]);
+    const externalModels = useMemo(() => models.filter(m => m.type === 'external'), [models]);
 
     // Filtered models based on search
     const filteredLocalModels = useMemo(() =>
@@ -43,6 +44,10 @@ export default function ModelModeSelector({
     const filteredApiModels = useMemo(() =>
         apiModels.filter(m => !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase())),
         [apiModels, searchQuery]
+    );
+    const filteredExternalModels = useMemo(() =>
+        externalModels.filter(m => !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase())),
+        [externalModels, searchQuery]
     );
 
     const selectedModel = models.find(m => m.id === selectedModelId);
@@ -98,18 +103,24 @@ export default function ModelModeSelector({
     // Determine button states
     const isLocalActive = autoMode && autoModeScope === 'local';
     const isApiActive = autoMode && autoModeScope === 'api';
+    const isExternalActive = autoMode && autoModeScope === 'external';
     const isManualLocal = !autoMode && selectedModel?.type === 'self-hosted';
-    const isManualApi = !autoMode && selectedModel?.type === 'github' || selectedModel?.type === 'external';
+    const isManualApi = !autoMode && selectedModel?.type === 'github';
+    const isManualExternal = !autoMode && selectedModel?.type === 'external';
 
-    const getButtonLabel = (type: 'local' | 'api') => {
+    const getButtonLabel = (type: 'local' | 'api' | 'external') => {
         if (type === 'local') {
             if (isLocalActive) return 'Self-Hosted Auto';
             if (isManualLocal) return selectedModel?.name || 'Self-Hosted';
             return 'Self-Hosted';
-        } else {
+        } else if (type === 'api') {
             if (isApiActive) return 'GitHub Auto';
             if (isManualApi) return selectedModel?.name || 'GitHub';
             return 'GitHub';
+        } else {
+            if (isExternalActive) return 'External Auto';
+            if (isManualExternal) return selectedModel?.name || 'External';
+            return 'External';
         }
     };
 
@@ -280,6 +291,94 @@ export default function ModelModeSelector({
                                     </div>
                                     {!autoMode && selectedModelId === model.id && (
                                         <span className="text-blue-400">✓</span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-slate-600/50" />
+
+            {/* External Button with Dropdown */}
+            <div className="relative flex items-center">
+                <button
+                    onClick={() => handleModeClick('external')}
+                    disabled={isGenerating}
+                    className={`h-7 pl-3 pr-1 flex items-center gap-1.5 rounded-l-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${isExternalActive || isManualExternal
+                        ? 'bg-purple-500/20 text-purple-300'
+                        : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
+                        }`}
+                >
+                    {isExternalActive ? (
+                        <Zap size={12} className="text-purple-400" />
+                    ) : (
+                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    )}
+                    <span className="max-w-[80px] truncate">{getButtonLabel('external')}</span>
+                </button>
+                <button
+                    onClick={(e) => handleDropdownToggle('external', e)}
+                    disabled={isGenerating}
+                    className={`h-7 px-1 flex items-center rounded-r-md transition-all ${isExternalActive || isManualExternal
+                        ? 'bg-purple-500/20 text-purple-400'
+                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/30'
+                        }`}
+                >
+                    <ChevronDown size={12} className={`transition-transform ${expandedDropdown === 'external' ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* External Models Dropdown */}
+                {expandedDropdown === 'external' && externalModels.length > 0 && (
+                    <div className="absolute top-full right-0 mt-1 w-64 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                        {/* Search input - only show if > 5 models */}
+                        {externalModels.length > 5 && (
+                            <div className="px-2 py-2 border-b border-slate-700/50">
+                                <div className="relative">
+                                    <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder="Search models..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-7 pr-2 py-1 text-xs bg-slate-700/50 border border-slate-600/50 rounded text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {/* Auto option */}
+                        <button
+                            onClick={() => handleModeClick('external')}
+                            className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${isExternalActive ? 'bg-purple-500/20 text-purple-300' : 'text-slate-300 hover:bg-slate-700/50'
+                                }`}
+                        >
+                            <div className="flex items-center gap-2">
+                                <Zap size={12} className="text-purple-400" />
+                                <span>Auto (Smart Fallback)</span>
+                            </div>
+                            {isExternalActive && <span className="text-purple-400">✓</span>}
+                        </button>
+                        <div className="border-t border-slate-700/50" />
+                        {/* Individual models - filtered */}
+                        <div className="max-h-48 overflow-y-auto">
+                            {filteredExternalModels.map(model => (
+                                <button
+                                    key={model.id}
+                                    onClick={() => handleModelSelect(model.id)}
+                                    className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${!autoMode && selectedModelId === model.id
+                                        ? 'bg-purple-500/20 text-slate-200'
+                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500/50" />
+                                        <span>{model.name}</span>
+                                    </div>
+                                    {!autoMode && selectedModelId === model.id && (
+                                        <span className="text-purple-400">✓</span>
                                     )}
                                 </button>
                             ))}
