@@ -99,17 +99,17 @@ export default function ModelModeSelector({
     const isLocalActive = autoMode && autoModeScope === 'local';
     const isApiActive = autoMode && autoModeScope === 'api';
     const isManualLocal = !autoMode && selectedModel?.type === 'self-hosted';
-    const isManualApi = !autoMode && selectedModel?.type === 'api';
+    const isManualApi = !autoMode && (selectedModel?.type === 'github' || selectedModel?.type === 'external');
 
     const getButtonLabel = (type: 'local' | 'api') => {
         if (type === 'local') {
-            if (isLocalActive) return 'Local Auto';
-            if (isManualLocal) return selectedModel?.name || 'Local';
-            return 'Local';
+            if (isLocalActive) return 'Self-Hosted Auto';
+            if (isManualLocal) return selectedModel?.name || 'Self-Hosted';
+            return 'Self-Hosted';
         } else {
-            if (isApiActive) return 'API Auto';
-            if (isManualApi) return selectedModel?.name || 'API';
-            return 'API';
+            if (isApiActive) return 'GitHub Auto';
+            if (isManualApi) return selectedModel?.name || 'GitHub';
+            return 'GitHub';
         }
     };
 
