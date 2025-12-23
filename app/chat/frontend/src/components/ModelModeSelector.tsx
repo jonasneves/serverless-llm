@@ -141,7 +141,7 @@ export default function ModelModeSelector({
                     ) : (
                         <div className="w-2 h-2 rounded-full bg-emerald-500" />
                     )}
-                    <span className="max-w-[80px] truncate">{getButtonLabel('local')}</span>
+                    <span className="max-w-[120px] truncate">{getButtonLabel('local')}</span>
                 </button>
                 <button
                     onClick={(e) => handleDropdownToggle('local', e)}
@@ -229,7 +229,7 @@ export default function ModelModeSelector({
                     ) : (
                         <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
-                    <span className="max-w-[80px] truncate">{getButtonLabel('api')}</span>
+                    <span className="max-w-[120px] truncate">{getButtonLabel('api')}</span>
                 </button>
                 <button
                     onClick={(e) => handleDropdownToggle('api', e)}
@@ -317,7 +317,7 @@ export default function ModelModeSelector({
                     ) : (
                         <div className="w-2 h-2 rounded-full bg-purple-500" />
                     )}
-                    <span className="max-w-[80px] truncate">{getButtonLabel('external')}</span>
+                    <span className="max-w-[120px] truncate">{getButtonLabel('external')}</span>
                 </button>
                 <button
                     onClick={(e) => handleDropdownToggle('external', e)}
