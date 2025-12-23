@@ -28,6 +28,7 @@ export interface ChatStreamPayload {
   max_tokens: number;
   temperature: number;
   github_token?: string | null;
+  openrouter_key?: string | null;
 }
 
 async function* streamFromBackend(
@@ -97,6 +98,7 @@ export const fetchChatStream = async (
     max_tokens: payload.max_tokens,
     temperature: payload.temperature,
     github_token: payload.github_token,
+    openrouter_key: payload.openrouter_key,
   }, signal);
 };
 

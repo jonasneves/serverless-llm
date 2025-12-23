@@ -98,6 +98,7 @@ export const fetchChatStream = async (
     max_tokens: payload.max_tokens,
     temperature: payload.temperature,
     github_token: payload.github_token,
+    openrouter_key: payload.openrouter_key,
   }, signal);
 };
 
