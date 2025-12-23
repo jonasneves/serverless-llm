@@ -19,7 +19,8 @@ async def stream_personality_events(
     query: str,
     participants: List[str],
     max_tokens: int,
-    github_token: Optional[str]
+    github_token: Optional[str],
+    openrouter_key: Optional[str]
 ) -> AsyncGenerator[str, None]:
     """
     Stream personality mode events as Server-Sent Events
@@ -42,7 +43,8 @@ async def stream_personality_events(
 
         engine = PersonalityEngine(
             model_endpoints=MODEL_ENDPOINTS,
-            github_token=token
+            github_token=token,
+            openrouter_key=openrouter_key
         )
 
         async for event in engine.run_personality_mode(
@@ -71,6 +73,7 @@ async def personality_stream(request: PersonalityRequest):
             query=request.query,
             participants=request.participants,
             max_tokens=request.max_tokens,
-            github_token=request.github_token
+            github_token=request.github_token,
+            openrouter_key=request.openrouter_key
         )
     )

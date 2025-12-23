@@ -610,6 +610,21 @@
         "reasoning",
         "streaming"
       ]
+    },
+    {
+      "id": "z-ai/glm-4.5-air:free",
+      "name": "GLM-4.5-Air (Free)",
+      "type": "external",
+      "priority": 42,
+      "context_length": 131072,
+      "publisher": "Z.AI",
+      "summary": "Lightweight MoE model with thinking mode for reasoning and tool use",
+      "capabilities": [
+        "reasoning",
+        "coding",
+        "tool-calling",
+        "streaming"
+      ]
     }
   ],
   "fetchedAt": "2025-12-20T23:43:46.448Z",

@@ -22,6 +22,7 @@ async def stream_council_events(
     chairman_model: Optional[str],
     max_tokens: int,
     github_token: Optional[str],
+    openrouter_key: Optional[str],
     completed_responses: Optional[Dict[str, str]],
     model_endpoints: Dict[str, str]
 ) -> AsyncGenerator[str, None]:
@@ -46,6 +47,7 @@ async def stream_council_events(
         engine = CouncilEngine(
             model_endpoints=model_endpoints,
             github_token=token,
+            openrouter_key=openrouter_key,
             timeout=120
         )
 
@@ -99,6 +101,7 @@ async def council_stream(request: CouncilRequest):
             chairman_model=request.chairman_model,
             max_tokens=request.max_tokens,
             github_token=request.github_token,
+            openrouter_key=request.openrouter_key,
             completed_responses=request.completed_responses,
             model_endpoints=MODEL_ENDPOINTS
         )

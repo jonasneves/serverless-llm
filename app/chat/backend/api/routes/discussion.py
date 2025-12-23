@@ -21,6 +21,7 @@ async def stream_discussion_events(
     temperature: float,
     orchestrator_model: Optional[str],
     github_token: Optional[str],
+    openrouter_key: Optional[str],
     turns: int,
     participants: Optional[List[str]]
 ) -> AsyncGenerator[str, None]:
@@ -70,6 +71,7 @@ async def stream_discussion_events(
 
             orchestrator = GitHubModelsOrchestrator(
                 github_token=token,
+                openrouter_key=openrouter_key,
                 model_id=selected_orchestrator
             )
         else:
@@ -120,6 +122,7 @@ async def discussion_stream(request: DiscussionRequest):
             temperature=request.temperature,
             orchestrator_model=request.orchestrator_model,
             github_token=request.github_token,
+            openrouter_key=request.openrouter_key,
             turns=request.turns,
             participants=request.participants
         )

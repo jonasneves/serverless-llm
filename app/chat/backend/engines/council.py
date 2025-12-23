@@ -81,6 +81,7 @@ class CouncilEngine:
         self,
         model_endpoints: Dict[str, str],
         github_token: str = None,
+        openrouter_key: str = None,
         timeout: int = 120
     ):
         """
@@ -89,18 +90,20 @@ class CouncilEngine:
         Args:
             model_endpoints: Dict mapping model_id -> API URL for local models
             github_token: GitHub token for API models
+            openrouter_key: OpenRouter API key
             timeout: Max seconds per stage
         """
         self.model_endpoints = model_endpoints
         self.github_token = github_token
+        self.openrouter_key = openrouter_key
         self.timeout = timeout
         self._quip_cache = {}  # Cache for generated quips
         self._last_quip_time = 0
         self._quip_cooldown = 8.0  # Seconds between quips (increased to reduce spam)
-        
+
         # Initialize unified model client
         from clients.model_client import ModelClient
-        self.client = ModelClient(github_token)
+        self.client = ModelClient(github_token, openrouter_key)
 
     def generate_quip(
         self,

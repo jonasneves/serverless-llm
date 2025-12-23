@@ -429,11 +429,12 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
 
 
 async def stream_multiple_models(
-    models: list, 
-    messages: list, 
-    max_tokens: int, 
+    models: list,
+    messages: list,
+    max_tokens: int,
     temperature: float,
-    github_token: Optional[str] = None
+    github_token: Optional[str] = None,
+    openrouter_key: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     """Stream responses from multiple models, yielding chunks in real-time as they arrive.
     Supports both local models and API models (via GitHub Models API).
@@ -442,13 +443,13 @@ async def stream_multiple_models(
     queue: asyncio.Queue = asyncio.Queue()
     active_streams = len(models)
     completed_streams = 0
-    
+
     if active_streams == 0:
         yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
         return
 
     # Client to use (ModelClient instances are lightweight)
-    request_client = ModelClient(github_token) # Passed token handles API auth
+    request_client = ModelClient(github_token, openrouter_key) # Passed tokens handle API auth
 
     async def stream_to_queue(model_id: str):
         """Stream from a model and put chunks into the shared queue"""

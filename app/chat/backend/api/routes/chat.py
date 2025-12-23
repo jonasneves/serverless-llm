@@ -78,6 +78,7 @@ async def chat_stream(request: MultiChatRequest):
 
     # Get GitHub token from request or environment
     github_token = request.github_token or get_default_github_token()
+    openrouter_key = request.openrouter_key
 
     return create_sse_response(
         stream_multiple_models(
@@ -85,7 +86,8 @@ async def chat_stream(request: MultiChatRequest):
             messages,
             request.max_tokens,
             request.temperature,
-            github_token
+            github_token,
+            openrouter_key
         )
     )
 

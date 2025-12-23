@@ -113,15 +113,17 @@ class GitHubModelsOrchestrator:
     def __init__(
         self,
         github_token: Optional[str] = None,
+        openrouter_key: Optional[str] = None,
         model_id: Optional[str] = None,
         api_url: str = None,
         max_tokens: int = 16384
     ):
         """
-        Initialize orchestrator with GitHub Models API credentials
+        Initialize orchestrator with API credentials
 
         Args:
             github_token: GitHub Personal Access Token (user_models:read permission)
+            openrouter_key: OpenRouter API key
             model_id: Model to use (env: ORCHESTRATOR_MODEL, default: gpt-4o)
             api_url: GitHub Models API endpoint (defaults to constant)
             max_tokens: Maximum tokens per response (includes reasoning tokens for GPT-5 models)
@@ -132,14 +134,15 @@ class GitHubModelsOrchestrator:
             or os.getenv("GH_TOKEN")
         )
         self.github_token = github_token or default_env_token
+        self.openrouter_key = openrouter_key or os.getenv("OPENROUTER_API_KEY")
         self._default_env_token = default_env_token
         self.model_id = model_id or os.getenv("ORCHESTRATOR_MODEL", "gpt-4o")
         self.api_url = api_url or GITHUB_MODELS_API_URL
         self.max_tokens = max_tokens
-        
+
         # Initialize unified model client
         from clients.model_client import ModelClient
-        self.client = ModelClient(self.github_token)
+        self.client = ModelClient(self.github_token, self.openrouter_key)
 
         if not self.github_token:
             raise ValueError(

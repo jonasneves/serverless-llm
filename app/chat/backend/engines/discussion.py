@@ -90,9 +90,9 @@ class DiscussionEngine:
         self.orchestrator = orchestrator
         self.model_endpoints = model_endpoints
         self.timeout_per_turn = timeout_per_turn
-        
+
         # Initialize unified model client
-        self.client = ModelClient(orchestrator.github_token)
+        self.client = ModelClient(orchestrator.github_token, orchestrator.openrouter_key)
 
     def _build_turn_prompt(
         self,

@@ -14,7 +14,7 @@ import httpx
 from clients.http_client import HTTPClient
 from clients.model_profiles import MODEL_PROFILES, get_display_name
 from core.config import MODEL_ENDPOINTS
-from constants import GITHUB_MODELS_API_URL
+from constants import GITHUB_MODELS_API_URL, OPENROUTER_API_URL
 from middleware.error_utils import sanitize_error_message
 from middleware.rate_limiter import get_rate_limiter
 from core.state import UNSUPPORTED_GITHUB_MODELS, record_successful_inference, mark_model_unsupported
@@ -22,9 +22,10 @@ from core.state import UNSUPPORTED_GITHUB_MODELS, record_successful_inference, m
 logger = logging.getLogger(__name__)
 
 class ModelClient:
-    def __init__(self, github_token: Optional[str] = None):
+    def __init__(self, github_token: Optional[str] = None, openrouter_key: Optional[str] = None):
         self.github_token = github_token or os.getenv("GH_MODELS_TOKEN") or os.getenv("GITHUB_TOKEN")
-        
+        self.openrouter_key = openrouter_key or os.getenv("OPENROUTER_API_KEY")
+
         # Use centralized cache from core.state
         self.unsupported_github_models = UNSUPPORTED_GITHUB_MODELS
 
@@ -44,6 +45,37 @@ class ModelClient:
             pass
 
         return False
+
+    def _get_api_config(self, model_id: str) -> tuple[str, dict]:
+        """
+        Get API endpoint URL and headers based on model provider.
+        Returns (url, headers) tuple.
+        """
+        profile = MODEL_PROFILES.get(model_id, {})
+        provider = profile.get("provider")
+
+        if provider == "openrouter":
+            if not self.openrouter_key:
+                raise Exception("OpenRouter API key required for this model")
+
+            url = OPENROUTER_API_URL
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.openrouter_key}",
+            }
+        else:
+            # Default to GitHub Models
+            if not self.github_token:
+                raise Exception("GitHub token required for API models")
+
+            url = GITHUB_MODELS_API_URL
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.github_token}",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+
+        return url, headers
 
     def _requires_system_conversion(self, model_id: str) -> bool:
         """Check if model doesn't support system role and needs conversion"""
@@ -178,15 +210,7 @@ class ModelClient:
             raise Exception(f"Connection refused for local model {model_id}")
 
     async def _call_api_model(self, model_id, messages, max_tokens, temperature, response_format):
-        if not self.github_token:
-            raise Exception("GitHub token required for API models")
-            
-        url = GITHUB_MODELS_API_URL
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.github_token}",
-            "X-GitHub-Api-Version": "2022-11-28"
-        }
+        url, headers = self._get_api_config(model_id)
         
         # O-series models restrictions
         is_restricted = any(pattern in model_id.lower() for pattern in ['o1', 'o3', 'o4', 'gpt-5'])
@@ -297,24 +321,19 @@ class ModelClient:
             yield {"type": "error", "error": str(e), "model_id": model_id}
 
     async def _stream_api_model(self, model_id, messages, max_tokens, temperature):
-        if not self.github_token:
-             yield {"type": "error", "error": "GitHub token required", "model_id": model_id}
-             return
-
         if model_id in self.unsupported_github_models:
              yield {"type": "error", "error": "Model not supported on API", "model_id": model_id}
              return
 
-        url = GITHUB_MODELS_API_URL
+        try:
+            url, headers = self._get_api_config(model_id)
+        except Exception as e:
+            yield {"type": "error", "error": str(e), "model_id": model_id}
+            return
+
         display_name = get_display_name(model_id)
         logger.info(f"Streaming from API model: {display_name}")
         yield {"type": "start", "model_id": model_id, "model_name": display_name}
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.github_token}",
-            "X-GitHub-Api-Version": "2022-11-28"
-        }
         
         is_restricted = any(pattern in model_id.lower() for pattern in ['o1', 'o3', 'o4', 'gpt-5'])
         payload = {

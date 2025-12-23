@@ -89,6 +89,11 @@ function PlaygroundInner() {
     deserialize: (stored, fallback) => stored ?? fallback,
   });
 
+  const [openrouterKey, setOpenrouterKey] = usePersistedSetting<string>('openrouter_api_key', '', {
+    serialize: value => value ? value : null,
+    deserialize: (stored, fallback) => stored ?? fallback,
+  });
+
   const [showCouncilReviewerNames, setShowCouncilReviewerNames] = usePersistedSetting<boolean>(
     'show_council_reviewer_names',
     false,
@@ -1434,6 +1439,8 @@ function PlaygroundInner() {
           onClose={() => setShowSettings(false)}
           token={githubToken}
           setToken={setGithubToken}
+          openrouterKey={openrouterKey}
+          setOpenrouterKey={setOpenrouterKey}
           showCouncilReviewerNames={showCouncilReviewerNames}
           setShowCouncilReviewerNames={setShowCouncilReviewerNames}
           bgStyle={bgStyle}
