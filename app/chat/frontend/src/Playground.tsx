@@ -1260,6 +1260,7 @@ function PlaygroundInner() {
                       selectedModelId={chatModelId}
                       onSelectModel={setChatModelId}
                       githubToken={githubToken}
+                      openrouterKey={openrouterKey}
                       messages={chatMessages}
                       setMessages={setChatMessages}
                       autoMode={chatAutoMode}

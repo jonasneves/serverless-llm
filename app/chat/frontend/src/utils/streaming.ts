@@ -28,6 +28,7 @@ export interface ChatStreamPayload {
   max_tokens: number;
   temperature: number;
   github_token?: string | null;
+  openrouter_key?: string | null;
 }
 
 async function* streamFromBackend(

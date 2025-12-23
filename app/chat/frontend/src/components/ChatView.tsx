@@ -46,6 +46,7 @@ interface ChatViewProps {
     selectedModelId: string | null;
     onSelectModel: (id: string) => void;
     githubToken?: string;
+    openrouterKey?: string;
     messages: ChatMessage[];
     setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
     autoMode: boolean;
@@ -67,6 +68,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     selectedModelId,
     onSelectModel,
     githubToken,
+    openrouterKey,
     messages,
     setMessages,
     autoMode,
@@ -235,6 +237,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 max_tokens: 2048,
                 temperature: 0.7,
                 github_token: githubToken || null,
+                openrouter_key: openrouterKey || null,
             }, abortControllerRef.current?.signal);
 
             let responseContent = '';
@@ -525,7 +528,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 messages: historyMessages,
                 max_tokens: 4096,
                 temperature: 0.7,
-                github_token: githubToken
+                github_token: githubToken,
+                openrouter_key: openrouterKey
             }, abortControllerRef.current.signal);
 
             let responseContent = '';
@@ -733,7 +737,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     messages: historyMessages,
                     max_tokens: 4096,
                     temperature: 0.7,
-                    github_token: githubToken
+                    github_token: githubToken,
+                    openrouter_key: openrouterKey
                 }, abortController.signal);
 
                 let responseContent = '';

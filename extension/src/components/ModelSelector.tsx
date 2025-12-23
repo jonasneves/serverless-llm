@@ -45,7 +45,7 @@ export default function ModelSelector({
                 disabled={isGenerating}
             >
                 {selectedModel && (
-                    <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                    <div className={`w-2 h-2 rounded-full ${selectedModel.type === 'self-hosted' ? 'bg-emerald-500' : selectedModel.type === 'external' ? 'bg-purple-500' : 'bg-blue-500'}`} />
                 )}
                 <span className="text-slate-200/80">{selectedModel ? selectedModel.name : 'Select a model'}</span>
                 {!isGenerating && <ChevronDown size={12} className="text-slate-400" />}

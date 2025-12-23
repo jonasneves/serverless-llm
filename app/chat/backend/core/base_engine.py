@@ -26,16 +26,19 @@ class BaseEngine(ABC):
     - Standardized error handling
     """
     
-    def __init__(self, github_token: Optional[str] = None):
+    def __init__(self, github_token: Optional[str] = None, openrouter_key: Optional[str] = None):
         """
         Initialize base engine with model client.
-        
+
         Args:
             github_token: Optional GitHub token for API models.
                          Falls back to environment variables if not provided.
+            openrouter_key: Optional OpenRouter API key for external models.
+                           Falls back to environment variables if not provided.
         """
         self.github_token = github_token or get_default_github_token()
-        self.client = ModelClient(self.github_token)
+        self.openrouter_key = openrouter_key
+        self.client = ModelClient(self.github_token, self.openrouter_key)
         logger.info(f"Initialized {self.__class__.__name__} with ModelClient")
     
     async def stream_response(
