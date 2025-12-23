@@ -26,7 +26,6 @@ fi
 BROWSER="${2:-chrome}"
 
 PY="$HOST_DIR/serverless_llm_native_host.py"
-WRAPPER="$HOST_DIR/serverless_llm_native_host.sh"
 
 pick_python() {
   if [[ -x "$ROOT_DIR/venv/bin/python" ]]; then
@@ -47,12 +46,10 @@ pick_python() {
 
 PYTHON_BIN="$(pick_python)"
 
-# Create wrapper script that uses the correct Python
-cat > "$WRAPPER" <<EOF
-#!/usr/bin/env bash
-exec "$PYTHON_BIN" "$PY" "\$@"
-EOF
-chmod +x "$WRAPPER"
+# Update shebang in Python file directly
+sed -i.bak "1s|.*|#!$PYTHON_BIN|" "$PY"
+rm -f "$PY.bak"
+chmod +x "$PY"
 
 pick_dest_dir() {
   case "$BROWSER" in
@@ -81,7 +78,7 @@ cat > "$MANIFEST_PATH" <<EOF
 {
   "name": "io.neevs.serverless_llm",
   "description": "Serverless LLM native host (start/stop local backend)",
-  "path": "$WRAPPER",
+  "path": "$PY",
   "type": "stdio",
   "allowed_origins": ["chrome-extension://$EXT_ID/"]
 }
