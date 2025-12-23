@@ -28,6 +28,9 @@ DEFAULT_REMOTE_ENDPOINTS = {
 # GitHub Models API endpoint
 GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
 
+# OpenRouter API endpoint
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
 # Generation defaults - keep in sync with playground-app/src/constants.ts
 GENERATION_DEFAULTS = {
     "max_tokens": 1024,

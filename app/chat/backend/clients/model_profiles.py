@@ -644,6 +644,32 @@ FUNCTIONGEMMA_270M_PROFILE = {
 }
 
 
+# OpenRouter GLM Models
+GLM_45_AIR_PROFILE = {
+    "model_id": "z-ai/glm-4.5-air:free",
+    "display_name": "GLM-4.5-Air (Free)",
+    "model_type": "external",
+    "creator": "Z.AI",
+    "provider": "openrouter",
+
+    "primary_strengths": ["reasoning", "coding", "agent_capabilities", "tool_use"],
+
+    "expertise_domains": {
+        "reasoning": 0.92,
+        "coding": 0.90,
+        "agent_capabilities": 0.95,
+        "tool_use": 0.93,
+        "mathematics": 0.88,
+        "logical_reasoning": 0.90,
+        "conversation": 0.85,
+        "instruction_following": 0.88,
+    },
+
+    "context_length": 131072,  # 131K tokens
+    "description": "Lightweight MoE model with thinking mode for reasoning and tool use",
+}
+
+
 # Aggregate profiles for easy access (ordered by capability rank)
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models (ranked by Dec 2025 benchmarks)
@@ -666,6 +692,8 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "meta/llama-3.3-70b-instruct": LLAMA_33_70B_PROFILE,
     "meta/llama-4-scout-17b-16e-instruct": LLAMA_4_SCOUT_PROFILE,
     "meta/meta-llama-3.1-405b-instruct": LLAMA_3_1_405B_PROFILE,
+    # OpenRouter models
+    "z-ai/glm-4.5-air:free": GLM_45_AIR_PROFILE,
 }
 
 

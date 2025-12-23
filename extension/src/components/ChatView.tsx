@@ -1057,7 +1057,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                                     }}
                                                                     className="flex-1 px-2 py-1 text-[10px] rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
                                                                 >
-                                                                    All Local
+                                                                    All Self-Hosted
                                                                 </button>
                                                                 <button
                                                                     onClick={() => {
@@ -1066,7 +1066,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                                     }}
                                                                     className="flex-1 px-2 py-1 text-[10px] rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
                                                                 >
-                                                                    All API
+                                                                    All GitHub
                                                                 </button>
                                                             </div>
                                                             {/* Model list - filtered by search */}
