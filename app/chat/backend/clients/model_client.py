@@ -29,10 +29,10 @@ class ModelClient:
         self.unsupported_github_models = UNSUPPORTED_GITHUB_MODELS
 
     def is_api_model(self, model_id: str) -> bool:
-        """Check if a model is an API model (uses GitHub Models API)"""
+        """Check if a model is an API model (uses GitHub Models or external APIs)"""
         # Check static profiles
         profile = MODEL_PROFILES.get(model_id)
-        if profile is not None and profile.get("model_type") == "api":
+        if profile is not None and profile.get("model_type") in ("github", "external"):
             return True
 
         # Check dynamic service

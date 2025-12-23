@@ -323,14 +323,14 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             if (autoMode) {
                 // Filter models based on scope, with fallback to other type
                 const primaryModels = models.filter(m => {
-                    if (autoModeScope === 'local') return m.type === 'local';
-                    if (autoModeScope === 'api') return m.type === 'api';
+                    if (autoModeScope === 'local') return m.type === 'self-hosted';
+                    if (autoModeScope === 'api') return m.type === 'github' || m.type === 'external';
                     return true;
                 });
 
                 const fallbackModels = models.filter(m => {
-                    if (autoModeScope === 'local') return m.type === 'api';
-                    if (autoModeScope === 'api') return m.type === 'local';
+                    if (autoModeScope === 'local') return m.type === 'github' || m.type === 'external';
+                    if (autoModeScope === 'api') return m.type === 'self-hosted';
                     return false;
                 });
 
@@ -895,7 +895,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 />
                             </div>
 
-                            {!githubToken && ((!autoMode && selectedModel?.type === 'api') || (autoMode && autoModeScope === 'api')) && (
+                            {!githubToken && ((!autoMode && selectedModel?.type === 'github' || selectedModel?.type === 'external') || (autoMode && autoModeScope === 'api')) && (
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs">
                                     <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
                                     <span>Add GitHub token in Settings for dedicated quota</span>
@@ -1052,7 +1052,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                             <div className="flex gap-1 p-2 border-b border-slate-700/50">
                                                                 <button
                                                                     onClick={() => {
-                                                                        const localIds = models.filter(m => m.type === 'local' && m.id !== msg.modelId).map(m => m.id);
+                                                                        const localIds = models.filter(m => m.type === 'self-hosted' && m.id !== msg.modelId).map(m => m.id);
                                                                         setCompareSelectedModels(new Set(localIds));
                                                                     }}
                                                                     className="flex-1 px-2 py-1 text-[10px] rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
@@ -1061,7 +1061,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                                 </button>
                                                                 <button
                                                                     onClick={() => {
-                                                                        const apiIds = models.filter(m => m.type === 'api' && m.id !== msg.modelId).map(m => m.id);
+                                                                        const apiIds = models.filter(m => m.type === 'github' || m.type === 'external' && m.id !== msg.modelId).map(m => m.id);
                                                                         setCompareSelectedModels(new Set(apiIds));
                                                                     }}
                                                                     className="flex-1 px-2 py-1 text-[10px] rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
@@ -1084,7 +1084,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                                                 }`}
                                                                         >
                                                                             <div className="flex items-center gap-2">
-                                                                                <div className={`w-2 h-2 rounded-full ${model.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                                                                <div className={`w-2 h-2 rounded-full ${model.type === 'self-hosted' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                                                                                 <span>{model.name}</span>
                                                                             </div>
                                                                             {compareSelectedModels.has(model.id) && (

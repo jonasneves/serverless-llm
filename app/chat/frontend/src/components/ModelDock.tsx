@@ -3,11 +3,11 @@ import { Model } from '../types';
 interface ModelDockProps {
   showDock: boolean;
   availableModels: Model[];
-  allSelectedByType: Record<'local' | 'api', boolean>;
-  totalModelsByType: Record<'local' | 'api', number>;
+  allSelectedByType: Record<'self-hosted' | 'github' | 'external', boolean>;
+  totalModelsByType: Record<'self-hosted' | 'github' | 'external', number>;
   handleDragStart: (e: React.DragEvent, modelId: string) => void;
   handleModelToggle: (modelId: string) => void;
-  handleAddGroup: (type: 'local' | 'api') => void;
+  handleAddGroup: (type: 'self-hosted' | 'github' | 'external') => void;
   dockRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -23,13 +23,13 @@ export default function ModelDock({
 }: ModelDockProps) {
   const sections = [
     {
-      type: 'local' as const,
-      title: 'Local Models',
+      type: 'self-hosted' as const,
+      title: 'Self-Hosted Models',
       accentColor: 'emerald',
     },
     {
-      type: 'api' as const,
-      title: 'API Models',
+      type: 'github' as const,
+      title: 'GitHub Models',
       accentColor: 'blue',
     },
   ];
@@ -77,7 +77,7 @@ export default function ModelDock({
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`w-2 h-2 rounded-full ${accentClasses.dot} ${section.type === 'local' ? 'glow-dot-emerald' : 'glow-dot-blue'}`}
+                    className={`w-2 h-2 rounded-full ${accentClasses.dot} ${section.type === 'self-hosted' ? 'glow-dot-emerald' : 'glow-dot-blue'}`}
                   />
                   <h3 className="text-[11px] font-semibold text-slate-300 uppercase tracking-wide">
                     {section.title}

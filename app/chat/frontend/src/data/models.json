@@ -3,108 +3,108 @@
     {
       "id": "nanbeige4-3b-thinking",
       "name": "Nanbeige4-3B Thinking",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 1
     },
     {
       "id": "qwen3-4b",
       "name": "Qwen3 4B",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 2
     },
     {
       "id": "deepseek-r1-distill-qwen-1.5b",
       "name": "DeepSeek R1 1.5B",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 3
     },
     {
       "id": "gemma-3-12b-it",
       "name": "Gemma 3 12B",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 4
     },
     {
       "id": "mistral-7b-instruct-v0.3",
       "name": "Mistral 7B v0.3",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 5
     },
     {
       "id": "phi-3-mini",
       "name": "Phi-3 Mini",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 6
     },
     {
       "id": "rnj-1-instruct",
       "name": "RNJ-1 Instruct",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 7
     },
     {
       "id": "llama-3.2-3b",
       "name": "Llama 3.2-3B",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 8
     },
     {
       "id": "functiongemma-270m-it",
       "name": "FunctionGemma 270M",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 9
     },
     {
       "id": "nemotron-3-nano-30b-a3b",
       "name": "Nemotron-3 Nano 30B",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 10
     },
     {
       "id": "gpt-oss-20b",
       "name": "GPT-OSS 20B",
-      "type": "local",
+      "type": "self-hosted",
       "priority": 11
     },
     {
       "id": "gpt-4o",
       "name": "GPT-4o",
-      "type": "api",
+      "type": "github",
       "priority": 1,
       "context_length": 128000
     },
     {
       "id": "gpt-4.1",
       "name": "GPT-4.1",
-      "type": "api",
+      "type": "github",
       "priority": 2,
       "context_length": 128000
     },
     {
       "id": "gpt-4o-mini",
       "name": "GPT-4o Mini",
-      "type": "api",
+      "type": "github",
       "priority": 3,
       "context_length": 128000
     },
     {
       "id": "deepseek-v3-0324",
       "name": "DeepSeek V3",
-      "type": "api",
+      "type": "github",
       "priority": 4,
       "context_length": 128000
     },
     {
       "id": "meta/llama-3.3-70b-instruct",
       "name": "Llama 3.3 70B",
-      "type": "api",
+      "type": "github",
       "priority": 5,
       "context_length": 128000
     },
     {
       "id": "mistral-large-2411",
       "name": "Mistral Large",
-      "type": "api",
+      "type": "github",
       "priority": 6,
       "context_length": 128000
     }

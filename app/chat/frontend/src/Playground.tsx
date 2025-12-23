@@ -126,10 +126,10 @@ function PlaygroundInner() {
     if (mode === 'chat') return true;
     // If they have a token, allow it
     if (githubToken) return true;
-    // Check if the model is an API model
+    // Check if the model is a github/external model
     const model = modelsData.find(m => m.id === modelId);
-    if (!model || model.type !== 'api') return true;
-    // No token + API model = blocked
+    if (!model || (model.type !== 'github' && model.type !== 'external')) return true;
+    // No token + github/external model = blocked
     return false;
   }, [mode, githubToken, modelsData]);
 
@@ -316,7 +316,7 @@ function PlaygroundInner() {
     }
   };
 
-  const handleAddGroup = (type: 'local' | 'api') => {
+  const handleAddGroup = (type: 'self-hosted' | 'github' | 'external') => {
     const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
     const isAllSelected = idsOfType.length > 0 && idsOfType.every(id => selected.includes(id));
 
@@ -326,8 +326,8 @@ function PlaygroundInner() {
       return;
     }
 
-    // Check API limit for multi-model modes when adding API group
-    if (type === 'api' && !canAddApiGroup()) {
+    // Check API limit for multi-model modes when adding github/external group
+    if ((type === 'github' || type === 'external') && !canAddApiGroup()) {
       showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
       return;
     }

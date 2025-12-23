@@ -23,8 +23,8 @@ export default function ModelSelector({
     const selectedModel = models.find(m => m.id === selectedModelId);
 
     // Memoize expensive model filtering
-    const localModels = useMemo(() => models.filter(m => m.type === 'local'), [models]);
-    const apiModels = useMemo(() => models.filter(m => m.type === 'api'), [models]);
+    const localModels = useMemo(() => models.filter(m => m.type === 'self-hosted'), [models]);
+    const apiModels = useMemo(() => models.filter(m => m.type === 'github' || m.type === 'external'), [models]);
 
     // Close model selector when clicking outside
     useEffect(() => {
@@ -72,7 +72,7 @@ export default function ModelSelector({
                                         >
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                <span>Local Models</span>
+                                                <span>Self-Hosted Models</span>
                                             </div>
                                             <ChevronDown size={12} className={`transition-transform ${expandedLocalModels ? '' : '-rotate-90'}`} />
                                         </button>
@@ -114,7 +114,7 @@ export default function ModelSelector({
                                         >
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                <span>API Models</span>
+                                                <span>GitHub Models</span>
                                             </div>
                                             <ChevronDown size={12} className={`transition-transform ${expandedApiModels ? '' : '-rotate-90'}`} />
                                         </button>

@@ -19,7 +19,7 @@ from typing import Dict, List, Any
 QWEN_PROFILE = {
     "model_id": "qwen3-4b",
     "display_name": "Qwen3 4B",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "Alibaba Cloud",
     "size": "4B parameters",
     "quantization": "Q4_K_M",
@@ -75,7 +75,7 @@ QWEN_PROFILE = {
 PHI_PROFILE = {
     "model_id": "phi-3-mini",
     "display_name": "Phi-3 Mini",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "Microsoft",
     "size": "3.8B parameters",
     "quantization": "Q4_K_M",
@@ -126,7 +126,7 @@ PHI_PROFILE = {
 LLAMA_PROFILE = {
     "model_id": "llama-3.2-3b",
     "display_name": "Llama 3.2-3B",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "Meta",
     "size": "3B parameters",
     "quantization": "Q4_K_M",
@@ -181,7 +181,7 @@ LLAMA_PROFILE = {
 GPT4_1_PROFILE = {
     "model_id": "openai/gpt-4.1",
     "display_name": "GPT-4.1",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "OpenAI",
     "size": "~1.76T parameters (estimated)",
     "quantization": None,
@@ -207,7 +207,7 @@ GPT4_1_PROFILE = {
 GPT4O_PROFILE = {
     "model_id": "openai/gpt-4o",
     "display_name": "GPT-4o",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "OpenAI",
     "size": "~200B parameters (estimated)",
     "quantization": None,
@@ -233,7 +233,7 @@ GPT4O_PROFILE = {
 GPT5_PROFILE = {
     "model_id": "openai/gpt-5",
     "display_name": "GPT-5",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "OpenAI",
     "size": "Unknown",
     "quantization": None,
@@ -253,7 +253,7 @@ GPT5_PROFILE = {
 GPT5_MINI_PROFILE = {
     "model_id": "openai/gpt-5-mini",
     "display_name": "GPT-5 Mini",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "OpenAI",
     "size": "Unknown",
     "quantization": None,
@@ -271,7 +271,7 @@ GPT5_MINI_PROFILE = {
 GPT5_NANO_PROFILE = {
     "model_id": "openai/gpt-5-nano",
     "display_name": "GPT-5 Nano",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "OpenAI",
     "size": "Unknown",
     "quantization": None,
@@ -288,7 +288,7 @@ GPT5_NANO_PROFILE = {
 COHERE_COMMAND_R_PLUS_PROFILE = {
     "model_id": "azureml-cohere/Cohere-command-r-plus-08-2024",
     "display_name": "Cohere Command R+",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "Cohere",
     "size": "104B",
     "quantization": None,
@@ -306,7 +306,7 @@ COHERE_COMMAND_R_PLUS_PROFILE = {
 LLAMA_4_SCOUT_PROFILE = {
     "model_id": "azureml-meta/Llama-4-Scout-17B-16E-Instruct",
     "display_name": "Llama 4 Scout 17B",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "Meta",
     "size": "17B",
     "quantization": None,
@@ -323,7 +323,7 @@ LLAMA_4_SCOUT_PROFILE = {
 LLAMA_3_1_405B_PROFILE = {
     "model_id": "azureml-meta/Llama-3.1-405B-Instruct",
     "display_name": "Llama 3.1 405B",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "Meta",
     "size": "405B",
     "quantization": None,
@@ -341,7 +341,7 @@ LLAMA_3_1_405B_PROFILE = {
 DEEPSEEK_V3_PROFILE = {
     "model_id": "deepseek/DeepSeek-V3-0324",  # GitHub Models uses {publisher}/{model} format
     "display_name": "DeepSeek V3",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "DeepSeek",
     "size": "671B parameters (MoE)",
     "quantization": None,
@@ -367,7 +367,7 @@ DEEPSEEK_V3_PROFILE = {
 LLAMA_33_70B_PROFILE = {
     "model_id": "azureml-meta/Llama-3.3-70B-Instruct",
     "display_name": "Llama 3.3 70B",
-    "model_type": "api",
+    "model_type": "github",
     "creator": "Meta",
     "size": "70B parameters",
     "quantization": None,
@@ -396,7 +396,7 @@ LLAMA_33_70B_PROFILE = {
 MISTRAL_7B_PROFILE = {
     "model_id": "mistral-7b-instruct-v0.3",
     "display_name": "Mistral 7B v0.3",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "Mistral AI",
     "size": "7B parameters",
     "quantization": "Q4_K_M",
@@ -447,7 +447,7 @@ MISTRAL_7B_PROFILE = {
 GEMMA3_12B_PROFILE = {
     "model_id": "gemma-3-12b-it",
     "display_name": "Gemma 3 12B",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "Google",
     "size": "12B parameters",
     "quantization": "Q4_K_M",
@@ -500,7 +500,7 @@ GEMMA3_12B_PROFILE = {
 DEEPSEEK_R1_QWEN15B_PROFILE = {
     "model_id": "deepseek-r1-distill-qwen-1.5b",
     "display_name": "DeepSeek R1 1.5B",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "DeepSeek x Alibaba",
     "size": "1.5B parameters",
     "quantization": "Q4_K_M",
@@ -550,7 +550,7 @@ DEEPSEEK_R1_QWEN15B_PROFILE = {
 RNJ_1_PROFILE = {
     "model_id": "rnj-1-instruct",
     "display_name": "RNJ-1 Instruct",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "Essential AI",
     "size": "8B parameters",
     "quantization": "Q4_K_M",
@@ -599,7 +599,7 @@ RNJ_1_PROFILE = {
 FUNCTIONGEMMA_270M_PROFILE = {
     "model_id": "functiongemma-270m-it",
     "display_name": "FunctionGemma 270M",
-    "model_type": "local",
+    "model_type": "self-hosted",
     "creator": "Google",
     "size": "270M parameters",
     "quantization": "Q8_0",

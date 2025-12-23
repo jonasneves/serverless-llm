@@ -32,8 +32,8 @@ export default function ModelModeSelector({
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Memoize model filtering
-    const localModels = useMemo(() => models.filter(m => m.type === 'local'), [models]);
-    const apiModels = useMemo(() => models.filter(m => m.type === 'api'), [models]);
+    const localModels = useMemo(() => models.filter(m => m.type === 'self-hosted'), [models]);
+    const apiModels = useMemo(() => models.filter(m => m.type === 'github' || m.type === 'external'), [models]);
 
     // Filtered models based on search
     const filteredLocalModels = useMemo(() =>
@@ -98,7 +98,7 @@ export default function ModelModeSelector({
     // Determine button states
     const isLocalActive = autoMode && autoModeScope === 'local';
     const isApiActive = autoMode && autoModeScope === 'api';
-    const isManualLocal = !autoMode && selectedModel?.type === 'local';
+    const isManualLocal = !autoMode && selectedModel?.type === 'self-hosted';
     const isManualApi = !autoMode && selectedModel?.type === 'api';
 
     const getButtonLabel = (type: 'local' | 'api') => {
@@ -143,7 +143,7 @@ export default function ModelModeSelector({
                     <ChevronDown size={12} className={`transition-transform ${expandedDropdown === 'local' ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Local Models Dropdown */}
+                {/* Self-Hosted Models Dropdown */}
                 {expandedDropdown === 'local' && localModels.length > 0 && (
                     <div className="absolute top-full left-0 mt-1 w-56 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
                         {/* Search input */}
@@ -231,7 +231,7 @@ export default function ModelModeSelector({
                     <ChevronDown size={12} className={`transition-transform ${expandedDropdown === 'api' ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* API Models Dropdown */}
+                {/* GitHub Models Dropdown */}
                 {expandedDropdown === 'api' && apiModels.length > 0 && (
                     <div className="absolute top-full right-0 mt-1 w-64 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
                         {/* Search input - only show if > 5 models */}

@@ -32,7 +32,7 @@ export function useSmartModelSelection() {
     const sortModels = (modelList: Model[]): Model[] => {
         const withMetadata: ModelWithMetadata[] = modelList.map(m => ({
             ...m,
-            priority: getModelPriority(m.id, m.type || 'local', m.priority),
+            priority: getModelPriority(m.id, m.type || 'self-hosted', m.priority),
             isRateLimited: isRecentlyRateLimited(m.id),
             isLastSuccessful: m.id === lastSuccessfulModel.current
         }));
@@ -50,7 +50,7 @@ export function useSmartModelSelection() {
                 return a.priority - b.priority;
             }
             if (a.type !== b.type) {
-                return a.type === 'local' ? -1 : 1;
+                return a.type === 'self-hosted' ? -1 : 1;
             }
             return a.id.localeCompare(b.id);
         });

@@ -4,7 +4,7 @@ export interface Model {
   color: string;
   response: string;
   thinking?: string;
-  type?: 'local' | 'api';
+  type?: 'self-hosted' | 'github' | 'external';
   error?: string;
   statusMessage?: string; // Temporary system messages (rate limiting, etc.) - not part of conversation history
   personaEmoji?: string; // Emoji representing the persona

@@ -1,13 +1,14 @@
 import { BackgroundStyle, Mode, TopicPack, TopicPrompt, TrendingTopic } from './types';
 
 export const MODEL_META: Record<string, { color: string; name?: string }> = {
-  local: { color: '#10b981' }, // Green for local models
-  api: { color: '#3b82f6' },   // Blue for API models
+  'self-hosted': { color: '#10b981' }, // Green for self-hosted models
+  'github': { color: '#3b82f6' },      // Blue for GitHub Models
+  'external': { color: '#8b5cf6' },    // Purple for external API models
 };
 
-// Local models - fallback priorities matching config/models.py rankings
+// Self-hosted models - fallback priorities matching config/models.py rankings
 // These are used when dynamic priority isn't available (e.g., static JSON in extension mode)
-export const LOCAL_MODEL_PRIORITIES: Record<string, number> = {
+export const SELF_HOSTED_MODEL_PRIORITIES: Record<string, number> = {
   'nanbeige': 1,      // Nanbeige4-3B Thinking
   'qwen': 2,          // Qwen3 4B
   'r1qwen': 3,        // DeepSeek R1 1.5B
@@ -23,8 +24,8 @@ export const LOCAL_MODEL_PRIORITIES: Record<string, number> = {
   'gpt-oss': 11,      // GPT-OSS (alternate match)
 };
 
-// API models - used when local models fail or as fallback
-export const API_MODEL_PRIORITIES: Record<string, number> = {
+// GitHub Models - from GitHub's model marketplace
+export const GITHUB_MODEL_PRIORITIES: Record<string, number> = {
   'gpt-4o': 1,
   'gpt-4.1': 2,
   'gpt-5': 3,
@@ -32,20 +33,42 @@ export const API_MODEL_PRIORITIES: Record<string, number> = {
   'gpt-5-nano': 5,
   'llama-3.3-70b': 6,
   'llama-4-scout-17b-16e-instruct': 7,
-  'deepseek-v3-0324': 8,
-  'mistral-large': 9,
-  'command-r-plus': 10,
+  'mistral-large': 8,
 };
 
-export const LOCAL_DEFAULT_PRIORITY = 50;
-export const API_DEFAULT_PRIORITY = 100;
+// External API models - third-party APIs (DeepSeek, GLM, etc.)
+export const EXTERNAL_MODEL_PRIORITIES: Record<string, number> = {
+  'deepseek-v3-0324': 1,
+  'glm-4.6': 2,
+  'command-r-plus': 3,
+};
 
-export function getModelPriority(modelId: string, modelType: 'local' | 'api', dynamicPriority?: number): number {
+export const SELF_HOSTED_DEFAULT_PRIORITY = 50;
+export const GITHUB_DEFAULT_PRIORITY = 100;
+export const EXTERNAL_DEFAULT_PRIORITY = 150;
+
+export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github' | 'external', dynamicPriority?: number): number {
   if (dynamicPriority !== undefined) {
     return dynamicPriority;
   }
-  const priorityMap = modelType === 'local' ? LOCAL_MODEL_PRIORITIES : API_MODEL_PRIORITIES;
-  const defaultPriority = modelType === 'local' ? LOCAL_DEFAULT_PRIORITY : API_DEFAULT_PRIORITY;
+
+  let priorityMap: Record<string, number>;
+  let defaultPriority: number;
+
+  switch (modelType) {
+    case 'self-hosted':
+      priorityMap = SELF_HOSTED_MODEL_PRIORITIES;
+      defaultPriority = SELF_HOSTED_DEFAULT_PRIORITY;
+      break;
+    case 'github':
+      priorityMap = GITHUB_MODEL_PRIORITIES;
+      defaultPriority = GITHUB_DEFAULT_PRIORITY;
+      break;
+    case 'external':
+      priorityMap = EXTERNAL_MODEL_PRIORITIES;
+      defaultPriority = EXTERNAL_DEFAULT_PRIORITY;
+      break;
+  }
 
   for (const [pattern, priority] of Object.entries(priorityMap)) {
     if (modelId.toLowerCase().includes(pattern.toLowerCase())) {

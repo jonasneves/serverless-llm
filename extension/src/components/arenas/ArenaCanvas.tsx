@@ -171,7 +171,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 : 'Ready';
         const processingColor = '#fbbf24';
         const errorColor = '#ef4444';
-        const typeColor = model.type === 'local' ? '#10b981' : '#3b82f6';
+        const typeColor = model.type === 'self-hosted' ? '#10b981' : '#3b82f6';
         const effectiveColor = hasError ? errorColor : typeColor;
         const isProcessing = isSpeaking && !hasError;
         const baseBackground = 'rgba(30, 41, 59, 0.85)';
@@ -328,12 +328,12 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span
-                        className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${model.type === 'local'
+                        className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${model.type === 'self-hosted'
                           ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
                           : 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
                           }`}
                       >
-                        {model.type === 'local' ? 'Local' : 'API'}
+                        {model.type === 'self-hosted' ? 'Local' : 'API'}
                       </span>
                     </div>
                   </div>
@@ -640,12 +640,12 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
                     Select Orchestrator
                   </div>
-                  {availableModels.filter(m => m.type === 'api').length > 0 && (
+                  {availableModels.filter(m => m.type === 'github' || m.type === 'external').length > 0 && (
                     <>
                       <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-600 font-semibold">
-                        API Models
+                        GitHub Models
                       </div>
-                      {availableModels.filter(m => m.type === 'api').map(model => (
+                      {availableModels.filter(m => m.type === 'github' || m.type === 'external').map(model => (
                         <button
                           key={model.id}
                           onClick={() => {
@@ -667,12 +667,12 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                       ))}
                     </>
                   )}
-                  {availableModels.filter(m => m.type === 'local').length > 0 && (
+                  {availableModels.filter(m => m.type === 'self-hosted').length > 0 && (
                     <>
                       <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-600 font-semibold border-t border-slate-700/50 mt-1">
-                        Local Models
+                        Self-Hosted Models
                       </div>
-                      {availableModels.filter(m => m.type === 'local').map(model => (
+                      {availableModels.filter(m => m.type === 'self-hosted').map(model => (
                         <button
                           key={model.id}
                           onClick={() => {

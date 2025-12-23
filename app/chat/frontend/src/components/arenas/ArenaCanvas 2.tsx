@@ -121,7 +121,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               : 'Ready';
         const processingColor = '#fbbf24';
         const errorColor = '#ef4444';
-        const typeColor = model.type === 'local' ? '#10b981' : '#3b82f6';
+        const typeColor = model.type === 'self-hosted' ? '#10b981' : '#3b82f6';
         const effectiveColor = hasError ? errorColor : typeColor;
         const isProcessing = isSpeaking && !hasError;
         const baseBackground = 'rgba(30, 41, 59, 0.85)';
@@ -290,12 +290,12 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span
-                        className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${model.type === 'local'
+                        className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${model.type === 'self-hosted'
                           ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
                           : 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
                           }`}
                       >
-                        {model.type === 'local' ? 'Local' : 'API'}
+                        {model.type === 'self-hosted' ? 'Local' : 'API'}
                       </span>
                     </div>
                   </div>

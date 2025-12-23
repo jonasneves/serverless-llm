@@ -89,7 +89,7 @@ export default function CompareMenu({
                             }`}
                     >
                         <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${model.type === 'local' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                            <div className={`w-2 h-2 rounded-full ${model.type === 'self-hosted' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                             <span>{model.name}</span>
                         </div>
                         {compareSelectedModels.has(model.id) && (

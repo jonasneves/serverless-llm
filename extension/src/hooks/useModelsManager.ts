@@ -65,7 +65,10 @@ export function useModelsManager() {
     // Helper to process models response
     const processModels = (data: ModelsApiResponse) => {
       const apiModels = data.models.map((model) => {
-        const modelType: 'local' | 'api' = model.type === 'api' ? 'api' : 'local';
+        const modelType: 'self-hosted' | 'github' | 'external' =
+          (model.type === 'self-hosted' || model.type === 'github' || model.type === 'external')
+            ? model.type
+            : 'self-hosted';
         const meta = MODEL_META[modelType];
         return {
           id: model.id,
@@ -84,20 +87,20 @@ export function useModelsManager() {
       setLoadError(null);
       setRetryCount(0);
 
-      // Initialize multi-model selection (for Compare, Council, etc.) with local models
+      // Initialize multi-model selection (for Compare, Council, etc.) with self-hosted models
       if (!isSelectionInitialized.current) {
-        setPersistedSelected(apiModels.filter(m => m.type === 'local').map(m => m.id));
+        setPersistedSelected(apiModels.filter(m => m.type === 'self-hosted').map(m => m.id));
         isSelectionInitialized.current = true;
       }
 
-      // Initialize chat model with first API model, fallback to local
+      // Initialize chat model with first github/external model, fallback to self-hosted
       if (!isChatModelInitialized.current) {
-        const firstApiModel = apiModels.find(m => m.type === 'api');
+        const firstApiModel = apiModels.find(m => m.type === 'github' || m.type === 'external');
         setChatModelId(firstApiModel?.id || apiModels[0]?.id || null);
         isChatModelInitialized.current = true;
       }
 
-      const apiModeratorCandidate = apiModels.find(m => m.type === 'api');
+      const apiModeratorCandidate = apiModels.find(m => m.type === 'github' || m.type === 'external');
       const fallbackModerator = apiModels[0]?.id || '';
       setModerator(apiModeratorCandidate?.id || fallbackModerator);
     };
@@ -192,20 +195,23 @@ export function useModelsManager() {
 
   const { totalModelsByType, allSelectedByType } = useMemo(() => {
     const total = {
-      local: modelsData.filter(m => m.type === 'local').length,
-      api: modelsData.filter(m => m.type === 'api').length,
+      'self-hosted': modelsData.filter(m => m.type === 'self-hosted').length,
+      github: modelsData.filter(m => m.type === 'github').length,
+      external: modelsData.filter(m => m.type === 'external').length,
     };
     const selectedCount = {
-      local: modelsData.filter(m => m.type === 'local' && selected.includes(m.id)).length,
-      api: modelsData.filter(m => m.type === 'api' && selected.includes(m.id)).length,
+      'self-hosted': modelsData.filter(m => m.type === 'self-hosted' && selected.includes(m.id)).length,
+      github: modelsData.filter(m => m.type === 'github' && selected.includes(m.id)).length,
+      external: modelsData.filter(m => m.type === 'external' && selected.includes(m.id)).length,
     };
 
     return {
       totalModelsByType: total,
       allSelectedByType: {
-        local: total.local > 0 && selectedCount.local === total.local,
-        api: total.api > 0 && selectedCount.api === total.api,
-      } as Record<'local' | 'api', boolean>,
+        'self-hosted': total['self-hosted'] > 0 && selectedCount['self-hosted'] === total['self-hosted'],
+        github: total.github > 0 && selectedCount.github === total.github,
+        external: total.external > 0 && selectedCount.external === total.external,
+      } as Record<'self-hosted' | 'github' | 'external', boolean>,
     };
   }, [modelsData, selected]);
 
