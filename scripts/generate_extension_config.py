@@ -119,10 +119,9 @@ def main():
         "sourceFile": "config/models.py",
     }
 
-    # Write to both frontend and extension directories
+    # Write to frontend directory
     output_dirs = [
         project_root / "app" / "chat" / "frontend" / "src" / "data",
-        project_root / "extension" / "src" / "data",
     ]
 
     for output_dir in output_dirs:
@@ -142,7 +141,7 @@ def main():
     print(f"  - {len(config['services'])} services")
     print(f"  - {len(config['workflows'])} workflows")
     print(f"  - {len(config['categories'])} categories")
-    print(f"  - Written to: app/chat/frontend/src/data/ and extension/src/data/")
+    print(f"  - Written to: app/chat/frontend/src/data/")
 
 
 if __name__ == "__main__":
