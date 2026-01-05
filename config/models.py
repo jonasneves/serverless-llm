@@ -102,7 +102,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="Phi-3 Mini",
         inference_dir="phi-inference",
         description="Compact reasoning, synthetic data efficiency",
-        rank=6,
+        rank=7,
     ),
     "functiongemma": ModelConfig(
         name="functiongemma",
@@ -113,7 +113,18 @@ MODELS: dict[str, ModelConfig] = {
         display_name="FunctionGemma 270M",
         inference_dir="functiongemma-inference",
         description="Function calling specialist, edge-optimized (50 t/s on Pixel 8)",
-        rank=9,
+        rank=10,
+    ),
+    "smollm3": ModelConfig(
+        name="smollm3",
+        port=8104,
+        subdomain="smollm3",
+        category=ModelCategory.SMALL,
+        model_id="smollm3-3b",
+        display_name="SmolLM3 3B",
+        inference_dir="smollm3-inference",
+        description="Hybrid reasoning (36.7% AIME), tool-calling (92.3% BFCL), 64K context",
+        rank=3,
     ),
     
     # Medium models (7B-30B params)
@@ -126,7 +137,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="Gemma 3 12B",
         inference_dir="gemma-inference",
         description="Gemma 3 IT, stronger instruction-following and safety with ~8K context",
-        rank=4,
+        rank=5,
     ),
     "llama": ModelConfig(
         name="llama",
@@ -137,7 +148,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="Llama 3.2-3B",
         inference_dir="llama-inference",
         description="MMLU 63.4%, 128K context, multilingual",
-        rank=8,
+        rank=9,
     ),
     "mistral": ModelConfig(
         name="mistral",
@@ -148,7 +159,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="Mistral 7B v0.3",
         inference_dir="mistral-inference",
         description="MMLU 63%, 32K context, native function calling",
-        rank=5,
+        rank=6,
     ),
     "rnj": ModelConfig(
         name="rnj",
@@ -159,7 +170,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="RNJ-1 Instruct",
         inference_dir="rnj-inference",
         description="Tool-calling, agentic (20.8% SWE-Bench Verified)",
-        rank=7,
+        rank=8,
     ),
     
     # Reasoning models
@@ -172,7 +183,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="DeepSeek R1 1.5B",
         inference_dir="deepseek-r1qwen-inference",
         description="Math reasoning (83.9% MATH-500), Codeforces 954 rating",
-        rank=3,
+        rank=4,
     ),
     "nanbeige": ModelConfig(
         name="nanbeige",
@@ -194,7 +205,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="Nemotron-3 Nano 30B",
         inference_dir="nemotron-inference",
         description="MoE hybrid (Mamba2+Transformer), 30B params / 3.5B active",
-        rank=10,
+        rank=11,
     ),
     "gptoss": ModelConfig(
         name="gptoss",
@@ -205,7 +216,7 @@ MODELS: dict[str, ModelConfig] = {
         display_name="GPT-OSS 20B",
         inference_dir="gpt-oss-inference",
         description="MoE (21B params / 3.6B active), function calling, agentic operations",
-        rank=11,
+        rank=12,
     ),
 }
 

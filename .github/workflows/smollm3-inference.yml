@@ -1,6 +1,6 @@
-name: 🤖 RNJ-1
+name: 🤖 SmolLM3 3B
 
-run-name: "RNJ-1 Instruct • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
+run-name: "SmolLM3 3B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ on:
         type: boolean
 
   repository_dispatch:
-    types: [restart-rnj-inference]
+    types: [restart-smollm3-inference]
 
 permissions:
   actions: write
@@ -37,13 +37,13 @@ jobs:
   inference:
     uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "rnj"
-      model_dir: "rnj-inference"
-      model_repo: "EssentialAI/rnj-1-instruct-GGUF"
-      model_file: "Rnj-1-Instruct-8B-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-rnj-1"
-      restart_event_type: "restart-rnj-inference"
-      workflow_file: "rnj-inference.yml"
+      model_name: "smollm3"
+      model_dir: "smollm3-inference"
+      model_repo: "unsloth/SmolLM3-3B-GGUF"
+      model_file: "SmolLM3-3B-Q4_K_M.gguf"
+      cache_key_prefix: "gguf-smollm3-3b-q4"
+      restart_event_type: "restart-smollm3-inference"
+      workflow_file: "smollm3-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
       auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
       instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}

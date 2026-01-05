@@ -9,6 +9,7 @@
 [![RNJ API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/rnj-1-instruct)](https://rnj.neevs.io/health)
 [![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
 [![FunctionGemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/functiongemma-270m-it)](https://functiongemma.neevs.io/health)
+[![SmolLM3 API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/smollm3-3b)](https://smollm3.neevs.io/health)
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
@@ -19,7 +20,7 @@ Free 24/7 LLM APIs using GitHub Actions and Cloudflare Tunnels.
 
 I wanted to experiment with non-keyboard LLM interaction - the playground supports ASL fingerspelling and hand gesture navigation using webcam-based hand tracking. You can spell questions in American Sign Language, and the AI can build interactive button interfaces that you select by pointing. Also supports emoji gesture responses (thumbs up, wave, etc.).
 
-Also runs 11 different models (270M to 12B parameters) with OpenAI-compatible API endpoints, all on free infrastructure.
+Also runs 12 different models (270M to 12B parameters) with OpenAI-compatible API endpoints, all on free infrastructure.
 
 ### Interaction Modes
 
@@ -37,7 +38,7 @@ Also runs 11 different models (270M to 12B parameters) with OpenAI-compatible AP
 ### Infrastructure
 
 - **Zero Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model**: 11 models with different strengths (see table below)
+- **Multi-Model**: 12 models with different strengths (see table below)
 - **High Availability**: 1-3 parallel instances per model for load balancing
 - **Continuous Uptime**: Auto-restart before GitHub's 6-hour limit with graceful handoff
 - **Public Access**: Cloudflare Tunnels for external connectivity
@@ -55,15 +56,16 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 |:-----|:------|:-----|:---------------|:---------|
 | 1 | **Nanbeige4-3B-Thinking** | 3B | AIME 2024: 90.4%, GPQA-Diamond: 82.2% (outperforms Qwen3-32B) | Step-by-step reasoning, complex math, competitive programming |
 | 2 | **Qwen3-4B-Instruct-2507** | 4B | MMLU-Pro: 69.6%, GPQA: 62.0%, 262K context, 119 languages | Multilingual tasks, long-context analysis, agent workflows |
-| 3 | **DeepSeek R1 1.5B** | 1.5B | AIME 2024: 28.9%, MATH-500: 83.9%, Codeforces: 954 rating | Math reasoning, algorithmic problems, code generation |
-| 4 | **Gemma 3 12B** | 12B | Safety-aligned IT checkpoint, stronger instruction following, ~8K context | Fact-checking, educational content, safe generation |
-| 5 | **Mistral 7B v0.3** | 7B | MMLU: 63%, 32K context, native function calling | JSON generation, tool use, structured output |
-| 6 | **Phi-3 Mini** | 3.8B | MMLU: 69%, 4K context, trained on 3.3T tokens | Logic puzzles, efficient inference, mobile deployment |
-| 7 | **RNJ-1 Instruct** | 8B | SWE-Bench Verified: 20.8%, strong tool-use (BFCL ranked) | Code automation, agentic workflows, tool calling |
-| 8 | **Llama 3.2 3B** | 3B | MMLU: 63.4%, 128K context, multilingual (8 languages) | Casual conversation, summarization, creative writing |
-| 9 | **FunctionGemma 270M** | 270M | Edge-optimized (50 t/s on Pixel 8), 240MB RAM (Q4), 32K context | Edge device agents, mobile actions, offline function calling |
-| 10 | **Nemotron-3 Nano 30B** | 30B MoE (~3.5B active) | Mamba2+Transformer hybrid, reasoning traces | Unique MoE architecture, experimental (slow on CPU) |
-| 11 | **GPT-OSS 20B** | 20B MoE (~3.6B active) | Function calling, agentic operations | Experimental MoE, agent operations (slow on CPU) |
+| 3 | **SmolLM3 3B** | 3B | AIME 2025: 36.7%, BFCL: 92.3%, 64K context, hybrid reasoning | Tool-calling, reasoning with /think mode, multilingual (6 langs) |
+| 4 | **DeepSeek R1 1.5B** | 1.5B | AIME 2024: 28.9%, MATH-500: 83.9%, Codeforces: 954 rating | Math reasoning, algorithmic problems, code generation |
+| 5 | **Gemma 3 12B** | 12B | Safety-aligned IT checkpoint, stronger instruction following, ~8K context | Fact-checking, educational content, safe generation |
+| 6 | **Mistral 7B v0.3** | 7B | MMLU: 63%, 32K context, native function calling | JSON generation, tool use, structured output |
+| 7 | **Phi-3 Mini** | 3.8B | MMLU: 69%, 4K context, trained on 3.3T tokens | Logic puzzles, efficient inference, mobile deployment |
+| 8 | **RNJ-1 Instruct** | 8B | SWE-Bench Verified: 20.8%, strong tool-use (BFCL ranked) | Code automation, agentic workflows, tool calling |
+| 9 | **Llama 3.2 3B** | 3B | MMLU: 63.4%, 128K context, multilingual (8 languages) | Casual conversation, summarization, creative writing |
+| 10 | **FunctionGemma 270M** | 270M | Edge-optimized (50 t/s on Pixel 8), 240MB RAM (Q4), 32K context | Edge device agents, mobile actions, offline function calling |
+| 11 | **Nemotron-3 Nano 30B** | 30B MoE (~3.5B active) | Mamba2+Transformer hybrid, reasoning traces | Unique MoE architecture, experimental (slow on CPU) |
+| 12 | **GPT-OSS 20B** | 20B MoE (~3.6B active) | Function calling, agentic operations | Experimental MoE, agent operations (slow on CPU) |
 
 ### Sources
 
@@ -71,6 +73,7 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 |:------|:-------|
 | Nanbeige4-3B-Thinking | [arXiv](https://arxiv.org/abs/2411.xxxxx), [Hugging Face](https://huggingface.co/Nanbeige/Nanbeige4-3B-Thinking-2511), [MarkTechPost](https://www.marktechpost.com/) |
 | Qwen3-4B-Instruct-2507 | [Hugging Face Model Card](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) |
+| SmolLM3 3B | [Hugging Face](https://huggingface.co/HuggingFaceTB/SmolLM3-3B), [Blog](https://hf.co/blog/smollm3) |
 | DeepSeek R1 1.5B | [OpenRouter](https://openrouter.ai/), [DataCamp](https://www.datacamp.com/) |
 | Gemma 3 12B | [Google Blog](https://blog.google/), [Unsloth](https://huggingface.co/unsloth/gemma-3-12b-it-GGUF) |
 | Mistral 7B v0.3 | [Mistral AI](https://mistral.ai/), [Hugging Face](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3) |
@@ -161,6 +164,7 @@ serverless-llm/
 │   ├── rnj-inference/          # RNJ-1 Instruct model server
 │   ├── llama-inference/        # Llama 3.2 3B model server
 │   ├── functiongemma-inference/ # FunctionGemma 270M model server
+│   ├── smollm3-inference/      # SmolLM3 3B model server
 │   ├── nemotron-inference/     # Nemotron-3 Nano 30B MoE model server
 │   ├── gpt-oss-inference/      # GPT-OSS 20B MoE model server
 │   └── chat/                   # Web interface + API proxy
@@ -221,7 +225,7 @@ For local development with multiple models on the same machine:
 | Range | Category | Models |
 |-------|----------|--------|
 | 8080 | Core | Chat Interface |
-| 81XX | Small (<7B) | qwen (8100), phi (8101), functiongemma (8103) |
+| 81XX | Small (<7B) | qwen (8100), phi (8101), functiongemma (8103), smollm3 (8104) |
 | 82XX | Medium (7B-30B) | gemma (8200), llama (8201), mistral (8202), rnj (8203) |
 | 83XX | Reasoning | r1qwen (8300), nanbeige (8301), nemotron (8302), gptoss (8303) |
 
