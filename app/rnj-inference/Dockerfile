@@ -24,11 +24,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /build
 
-# Build llama.cpp server binary directly from PR #17811
-# This bypasses Python binding compatibility issues
-RUN git clone https://github.com/ggml-org/llama.cpp.git . \
-    && git fetch origin pull/17811/head:rnj-pr \
-    && git checkout rnj-pr \
+# Build llama.cpp server binary from Essential-AI's RNJ-1 branch
+# This branch has native RNJ-1 architecture support
+RUN git clone --branch rnj-1 --depth 1 https://github.com/Essential-AI/llama.cpp.git . \
     && git submodule update --init --recursive \
     # Build with OpenBLAS + ARM NEON optimizations for maximum ARM performance
     # NEON provides SIMD acceleration on ARM (equivalent to AVX on x86)

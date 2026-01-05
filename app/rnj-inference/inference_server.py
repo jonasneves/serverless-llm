@@ -94,18 +94,16 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
-        "--log-disable",  # Disable internal logging to stdout (use stderr instead)
+        # Note: removed --log-disable to capture startup errors
     ]
     
     logger.info(f"Starting llama-server: {' '.join(cmd)}")
     
-    # Create log file for llama-server output
-    log_file = open("/tmp/llama-server.log", "w")
-    
+    # Use PIPE for stderr to capture early crash errors
     process = subprocess.Popen(
         cmd,
-        stdout=log_file,
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
     )
     
@@ -124,28 +122,28 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         
         # Check if process died
         if process.poll() is not None:
-            # Read the log file to get error output
-            log_file.flush()
-            try:
-                with open("/tmp/llama-server.log", "r") as f:
-                    output = f.read()
-                logger.error(f"llama-server died during startup. Exit code: {process.returncode}")
-                logger.error(f"Output:\n{output}")
-            except Exception as e:
-                logger.error(f"Could not read log file: {e}")
+            # Read stderr to get error output
+            stdout_output, stderr_output = process.communicate()
+            logger.error(f"llama-server died during startup. Exit code: {process.returncode}")
+            if stdout_output:
+                logger.error(f"stdout:\n{stdout_output}")
+            if stderr_output:
+                logger.error(f"stderr:\n{stderr_output}")
+            if not stdout_output and not stderr_output:
+                logger.error("No output captured - binary may have crashed immediately")
             
             raise RuntimeError(f"llama-server failed to start (exit code: {process.returncode})")
         
         time.sleep(1)
     
-    # If we timeout, read what we have
-    log_file.flush()
+    # If we timeout, try to get any output
+    stdout_output, stderr_output = "", ""
     try:
-        with open("/tmp/llama-server.log", "r") as f:
-            output = f.read()
-        logger.error(f"llama-server timeout. Output so far:\n{output}")
+        process.kill()
+        stdout_output, stderr_output = process.communicate(timeout=5)
     except Exception:
         pass
+    logger.error(f"llama-server timeout. stdout: {stdout_output}, stderr: {stderr_output}")
     
     raise RuntimeError("llama-server did not become healthy in time")
 
