@@ -25,10 +25,11 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /build
 
 # Build llama.cpp server binary with RNJ-1 support
-# NOTE: Using pre-refactor commit (e1b7d46) because current HF GGUF uses 'rnj1' architecture.
-# The merged PR refactored rnj1 -> gemma3, but Essential AI hasn't updated their GGUF yet.
+# Using final commit from PR #17811 (14c977a) which Essential AI tested with their GGUF.
+# Note: We fetch the PR head since this commit exists in the PR branch, not master.
 RUN git clone https://github.com/ggml-org/llama.cpp.git . \
-    && git checkout e1b7d46e8c3364cad6d3d17059e9748911726881 \
+    && git fetch origin pull/17811/head:rnj-pr \
+    && git checkout 14c977aadf10070f9f4ee1fd2aa8d92efbb1fecf \
     && git submodule update --init --recursive \
     # Build with OpenBLAS + ARM NEON optimizations for maximum ARM performance
     # NEON provides SIMD acceleration on ARM (equivalent to AVX on x86)
@@ -38,16 +39,14 @@ RUN git clone https://github.com/ggml-org/llama.cpp.git . \
         -DGGML_NATIVE=ON \
         -DGGML_NEON=ON \
         -DLLAMA_CURL=OFF \
+        -DLLAMA_BUILD_EXAMPLES=OFF \
         -DLLAMA_BUILD_TESTS=OFF \
         -DLLAMA_BUILD_SERVER=ON \
-    && cmake --build build -j$(nproc) \
-    # Find and copy llama-server binary (path varies by llama.cpp version)
-    && (cp build/bin/llama-server /usr/local/bin/ 2>/dev/null || \
-        cp build/llama-server /usr/local/bin/ 2>/dev/null || \
-        cp bin/llama-server /usr/local/bin/ 2>/dev/null || \
-        (find build -name "llama-server" -type f -executable -exec cp {} /usr/local/bin/ \;)) \
+        -DLLAMA_MTMD=OFF \
+    && cmake --build build --target llama-server -j$(nproc) \
+    # Copy binary and any shared libraries to standard locations
+    && cp build/bin/llama-server /usr/local/bin/ \
     && chmod +x /usr/local/bin/llama-server \
-    && ls -la /usr/local/bin/llama-server \
     && find build -name "*.so*" -exec cp -v {} /usr/local/lib/ \; || true \
     && ldconfig \
     # Cleanup build files
