@@ -24,10 +24,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /build
 
-# Build llama.cpp server binary with RNJ-1 support (merged via PR #17811)
-# Using explicit commit checkout for stability (merge commit: 1d2a1ab)
+# Build llama.cpp server binary with RNJ-1 support
+# NOTE: Using pre-refactor commit (e1b7d46) because current HF GGUF uses 'rnj1' architecture.
+# The merged PR refactored rnj1 -> gemma3, but Essential AI hasn't updated their GGUF yet.
 RUN git clone https://github.com/ggml-org/llama.cpp.git . \
-    && git checkout 1d2a1ab73d927644d58f44235209affab7e4043e \
+    && git checkout e1b7d46e8c3364cad6d3d17059e9748911726881 \
     && git submodule update --init --recursive \
     # Build with OpenBLAS + ARM NEON optimizations for maximum ARM performance
     # NEON provides SIMD acceleration on ARM (equivalent to AVX on x86)
