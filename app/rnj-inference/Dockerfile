@@ -38,14 +38,16 @@ RUN git clone https://github.com/ggml-org/llama.cpp.git . \
         -DGGML_NATIVE=ON \
         -DGGML_NEON=ON \
         -DLLAMA_CURL=OFF \
-        -DLLAMA_BUILD_EXAMPLES=OFF \
         -DLLAMA_BUILD_TESTS=OFF \
         -DLLAMA_BUILD_SERVER=ON \
-        -DLLAMA_MTMD=OFF \
-    && cmake --build build --target llama-server -j$(nproc) \
-    # Copy binary and any shared libraries to standard locations
-    && cp build/bin/llama-server /usr/local/bin/ \
+    && cmake --build build -j$(nproc) \
+    # Find and copy llama-server binary (path varies by llama.cpp version)
+    && (cp build/bin/llama-server /usr/local/bin/ 2>/dev/null || \
+        cp build/llama-server /usr/local/bin/ 2>/dev/null || \
+        cp bin/llama-server /usr/local/bin/ 2>/dev/null || \
+        (find build -name "llama-server" -type f -executable -exec cp {} /usr/local/bin/ \;)) \
     && chmod +x /usr/local/bin/llama-server \
+    && ls -la /usr/local/bin/llama-server \
     && find build -name "*.so*" -exec cp -v {} /usr/local/lib/ \; || true \
     && ldconfig \
     # Cleanup build files
