@@ -24,9 +24,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /build
 
-# Build llama.cpp server binary from Essential-AI's RNJ-1 branch
-# This branch has native RNJ-1 architecture support
-RUN git clone --branch rnj-1 --depth 1 https://github.com/Essential-AI/llama.cpp.git . \
+# Build llama.cpp server binary with RNJ-1 support (merged via PR #17811)
+# Using explicit commit checkout for stability (merge commit: 1d2a1ab)
+RUN git clone https://github.com/ggml-org/llama.cpp.git . \
+    && git checkout 1d2a1ab73d927644d58f44235209affab7e4043e \
     && git submodule update --init --recursive \
     # Build with OpenBLAS + ARM NEON optimizations for maximum ARM performance
     # NEON provides SIMD acceleration on ARM (equivalent to AVX on x86)
