@@ -55,6 +55,11 @@ class ModelRouter:
             "url_env": "LLAMA_API_URL",
             "description": "Lightweight, 131K context, creative writing"
         },
+        "reasoner-8": {  # Rank 8
+            "name": "LFM2 2.6B Exp",
+            "url_env": "LFM2_API_URL",
+            "description": "RL-tuned instruction following, strong multi-turn and extraction"
+        },
         # Answer models (same ranking)
         "answer-1": {  # Rank 1
             "name": "Qwen3 4B",
@@ -90,6 +95,11 @@ class ModelRouter:
             "name": "Llama 3.2 3B",
             "url_env": "LLAMA_API_URL",
             "description": "Conversational, creative writing"
+        },
+        "answer-8": {  # Rank 8
+            "name": "LFM2 2.6B Exp",
+            "url_env": "LFM2_API_URL",
+            "description": "RL-tuned instruction following, strong multi-turn and extraction"
         },
     }
 
