@@ -38,6 +38,10 @@ class ModelConfig:
     description: Optional[str] = None
     rank: int = 99  # Capability ranking (1 = best)
     default: bool = False  # Default model for auto-selection
+    # HuggingFace model source (for llama-cpp-python models)
+    hf_repo: Optional[str] = None  # e.g., "unsloth/Qwen3-4B-GGUF"
+    hf_file: Optional[str] = None  # e.g., "Qwen3-4B-Q4_K_M.gguf"
+    owned_by: Optional[str] = None  # e.g., "qwen", "microsoft"
     
     @property
     def service_url(self) -> str:
@@ -92,6 +96,9 @@ MODELS: dict[str, ModelConfig] = {
         description="Multilingual (119 langs), 262K context, reasoning, coding",
         rank=2,
         default=True,
+        hf_repo="unsloth/Qwen3-4B-GGUF",
+        hf_file="Qwen3-4B-Q4_K_M.gguf",
+        owned_by="qwen",
     ),
     "phi": ModelConfig(
         name="phi",
@@ -103,6 +110,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="phi-inference",
         description="Compact reasoning, synthetic data efficiency",
         rank=7,
+        hf_repo="microsoft/Phi-3-mini-4k-instruct-gguf",
+        hf_file="Phi-3-mini-4k-instruct-q4.gguf",
+        owned_by="microsoft",
     ),
     "functiongemma": ModelConfig(
         name="functiongemma",
@@ -114,6 +124,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="functiongemma-inference",
         description="Function calling specialist, edge-optimized (50 t/s on Pixel 8)",
         rank=10,
+        hf_repo="unsloth/functiongemma-2b-it-GGUF",
+        hf_file="functiongemma-2b-it-Q4_K_M.gguf",
+        owned_by="google",
     ),
     "smollm3": ModelConfig(
         name="smollm3",
@@ -125,6 +138,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="smollm3-inference",
         description="Hybrid reasoning (36.7% AIME), tool-calling (92.3% BFCL), 64K context",
         rank=3,
+        hf_repo="unsloth/SmolLM3-3B-GGUF",
+        hf_file="SmolLM3-3B-Q4_K_M.gguf",
+        owned_by="huggingfacetb",
     ),
     
     # Medium models (7B-30B params)
@@ -138,6 +154,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="gemma-inference",
         description="Gemma 3 IT, stronger instruction-following and safety with ~8K context",
         rank=5,
+        hf_repo="unsloth/gemma-3-12b-it-GGUF",
+        hf_file="gemma-3-12b-it-Q4_K_M.gguf",
+        owned_by="google",
     ),
     "llama": ModelConfig(
         name="llama",
@@ -149,6 +168,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="llama-inference",
         description="MMLU 63.4%, 128K context, multilingual",
         rank=9,
+        hf_repo="unsloth/Llama-3.2-3B-Instruct-GGUF",
+        hf_file="Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+        owned_by="meta",
     ),
     "mistral": ModelConfig(
         name="mistral",
@@ -160,6 +182,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="mistral-inference",
         description="MMLU 63%, 32K context, native function calling",
         rank=6,
+        hf_repo="bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+        hf_file="Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+        owned_by="mistralai",
     ),
     "rnj": ModelConfig(
         name="rnj",
@@ -171,6 +196,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="rnj-inference",
         description="Tool-calling, agentic (20.8% SWE-Bench Verified)",
         rank=8,
+        hf_repo="EssentialAI/rnj-1-instruct-GGUF",
+        hf_file="Rnj-1-Instruct-8B-Q4_K_M.gguf",
+        owned_by="essentialai",
     ),
     
     # Reasoning models
@@ -184,6 +212,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="deepseek-r1qwen-inference",
         description="Math reasoning (83.9% MATH-500), Codeforces 954 rating",
         rank=4,
+        hf_repo="unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+        hf_file="DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+        owned_by="deepseek",
     ),
     "nanbeige": ModelConfig(
         name="nanbeige",
@@ -195,6 +226,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="nanbeige-inference",
         description="AIME 90.4%, GPQA 82.2%, outperforms Qwen3-32B on reasoning",
         rank=1,
+        hf_repo="bartowski/Nanbeige_Nanbeige4-3B-Thinking-2511-GGUF",
+        hf_file="Nanbeige_Nanbeige4-3B-Thinking-2511-Q4_K_M.gguf",
+        owned_by="nanbeige",
     ),
     "nemotron": ModelConfig(
         name="nemotron",
@@ -206,6 +240,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="nemotron-inference",
         description="MoE hybrid (Mamba2+Transformer), 30B params / 3.5B active",
         rank=11,
+        hf_repo="unsloth/Nemotron-3-Nano-30B-A3B-GGUF",
+        hf_file="Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf",
+        owned_by="nvidia",
     ),
     "gptoss": ModelConfig(
         name="gptoss",
@@ -217,6 +254,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="gpt-oss-inference",
         description="MoE (21B params / 3.6B active), function calling, agentic operations",
         rank=12,
+        hf_repo="nvidia/GPT-OSS-20B-GGUF",
+        hf_file="GPT-OSS-20B-Q4_K_M.gguf",
+        owned_by="nvidia",
     ),
 }
 
