@@ -62,7 +62,7 @@
       "localPort": 8101,
       "category": "small",
       "modelId": "phi-3-mini",
-      "rank": 8
+      "rank": 9
     },
     {
       "key": "rnj",
@@ -86,7 +86,7 @@
       "localPort": 8103,
       "category": "small",
       "modelId": "functiongemma-270m-it",
-      "rank": 11
+      "rank": 12
     },
     {
       "key": "nemotron",
@@ -275,7 +275,7 @@
       "id": "phi-3-mini",
       "name": "Phi-3 Mini",
       "type": "local",
-      "priority": 8,
+      "priority": 9,
       "category": "small"
     },
     {
@@ -296,7 +296,7 @@
       "id": "functiongemma-270m-it",
       "name": "FunctionGemma 270M",
       "type": "local",
-      "priority": 11,
+      "priority": 12,
       "category": "small"
     },
     {
@@ -314,6 +314,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-06T18:04:27.629730Z",
+  "generatedAt": "2026-01-06T18:43:36.678928Z",
   "sourceFile": "config/models.py"
 }

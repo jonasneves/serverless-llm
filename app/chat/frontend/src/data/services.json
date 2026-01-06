@@ -62,7 +62,7 @@
       "localPort": 8101,
       "category": "small",
       "modelId": "phi-3-mini",
-      "rank": 8
+      "rank": 9
     },
     {
       "key": "rnj",
@@ -86,7 +86,7 @@
       "localPort": 8103,
       "category": "small",
       "modelId": "functiongemma-270m-it",
-      "rank": 11
+      "rank": 12
     },
     {
       "key": "nemotron",

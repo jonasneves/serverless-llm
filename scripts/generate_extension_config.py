@@ -48,12 +48,11 @@ def generate_workflows_config() -> list[dict]:
     ]
     
     for model in get_inference_models():
-        # Default to name-based workflow files (e.g., r1qwen-inference.yml)
-        # Handle exceptions where workflow filename diverges from model key
-        if model.name == "gptoss":
-             workflow_path = "gpt-oss-inference.yml"
+        # Use explicit workflow file if defined, otherwise default to name-based
+        if model.workflow_file:
+            workflow_path = model.workflow_file
         else:
-             workflow_path = f"{model.name}-inference.yml"
+            workflow_path = f"{model.name}-inference.yml"
 
         workflows.append({
             "name": model.display_name or model.name.title(),

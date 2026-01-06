@@ -43,6 +43,7 @@ class ModelConfig:
     hf_file: Optional[str] = None  # e.g., "Qwen3-4B-Q4_K_M.gguf"
     owned_by: Optional[str] = None  # e.g., "qwen", "microsoft"
     chat_format: Optional[str] = None  # llama-cpp chat format override (e.g., "llama-3")
+    workflow_file: Optional[str] = None  # GitHub workflow filename override (e.g. "my-workflow.yml")
     
     @property
     def service_url(self) -> str:
@@ -156,7 +157,9 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="LiquidAI/LFM2-2.6B-GGUF",
         hf_file="LFM2-2.6B-Q4_K_M.gguf",
         owned_by="liquidai",
+        chat_format="chatml",
     ),
+    
     
     # Medium models (7B-30B params)
     "gemma": ModelConfig(
@@ -231,6 +234,7 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
         hf_file="DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
         owned_by="deepseek",
+        workflow_file="r1qwen-inference.yml",
     ),
     "nanbeige": ModelConfig(
         name="nanbeige",
@@ -273,6 +277,7 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/gpt-oss-20b-GGUF",
         hf_file="gpt-oss-20b-Q6_K.gguf",
         owned_by="openai",
+        workflow_file="gpt-oss-inference.yml",
     ),
 }
 
