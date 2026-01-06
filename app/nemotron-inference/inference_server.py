@@ -110,7 +110,7 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--cache-type-v", "q8_0",
         # Performance optimizations  
         "--cont-batching",            # Continuous batching for better throughput
-        "--flash-attn",               # Faster attention (falls back if unsupported)
+        "--flash-attn", "auto",       # Faster attention (auto-detect support)
     ]
 
     logger.info(f"Starting llama-server: {' '.join(cmd)}")
