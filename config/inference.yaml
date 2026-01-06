@@ -12,7 +12,7 @@ defaults:
   n_threads: 4       # CPU threads - matches runner vCPU count
   n_batch: 256       # Batch size for prompt processing
   max_concurrent: 2  # Max parallel requests per instance
-  kv_cache_quant: false  # Q8_0 KV-cache quantization (reduces memory ~30%)
+  kv_cache_quant: true  # Q8_0 KV-cache quantization (reduces memory ~30%)
 
 # Model-specific overrides
 # Only specify values that differ from defaults
@@ -52,14 +52,13 @@ models:
   nanbeige:
     # Nanbeige4-3B-Thinking: SPEED-OPTIMIZED config
     # Smaller context + Q4 quant = maximum throughput
-    # Note: kv_cache_quant disabled - requires flash_attn which isn't in CPU build
     n_ctx: 2048          # Minimal context for speed
     n_batch: 512         # Fast prompt processing
     max_concurrent: 4    # Maximum parallel requests
 
   nemotron:
     # 30B MoE model with IQ2_M quantization (~8GB) - OPTIMIZED CPU CONFIG
-    # Uses mlock, q8_0 KV cache, cont-batching, flash-attn for best CPU performance
+    # Uses q8_0 KV cache, cont-batching, flash-attn for best CPU performance
     n_ctx: 512           # Small but usable context
     n_threads: 4         # Use all vCPUs
     n_batch: 256         # Larger batch for prompt processing
