@@ -8,6 +8,7 @@ interface ModelWithMetadata extends Model {
     priority: number;
     isRateLimited: boolean;
     isLastSuccessful: boolean;
+    isDefault: boolean;
 }
 
 export function useSmartModelSelection() {
@@ -34,7 +35,8 @@ export function useSmartModelSelection() {
             ...m,
             priority: getModelPriority(m.id, m.type || 'self-hosted', m.priority),
             isRateLimited: isRecentlyRateLimited(m.id),
-            isLastSuccessful: m.id === lastSuccessfulModel.current
+            isLastSuccessful: m.id === lastSuccessfulModel.current,
+            isDefault: Boolean(m.default)
         }));
 
         // Split into available and rate-limited
@@ -45,6 +47,9 @@ export function useSmartModelSelection() {
         const sortedAvailable = available.sort((a, b) => {
             if (a.isLastSuccessful !== b.isLastSuccessful) {
                 return a.isLastSuccessful ? -1 : 1;
+            }
+            if (a.isDefault !== b.isDefault) {
+                return a.isDefault ? -1 : 1;
             }
             if (a.priority !== b.priority) {
                 return a.priority - b.priority;
