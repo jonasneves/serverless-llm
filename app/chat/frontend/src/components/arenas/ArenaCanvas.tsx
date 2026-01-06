@@ -331,7 +331,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                           : 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
                           }`}
                       >
-                        {model.type === 'self-hosted' ? 'Local' : 'API'}
+                        {model.type === 'self-hosted' ? 'Self-hosted' : 'API'}
                       </span>
                     </div>
                   </div>
@@ -596,7 +596,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               {orchestratorAutoMode ? (
                 <>
                   <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
-                    Auto Mode: {orchestratorAutoScope.toUpperCase()}
+                    Auto Mode: {orchestratorAutoScope === 'local' ? 'SELF-HOSTED' : orchestratorAutoScope.toUpperCase()}
                   </div>
                   {(['all', 'local', 'api'] as OrchestratorAutoScope[]).map(scope => (
                     <button
@@ -611,10 +611,10 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                         }`}
                     >
                       {scope === 'all' && 'All'}
-                      {scope === 'local' && 'Local'}
+                      {scope === 'local' && 'Self-hosted'}
                       {scope === 'api' && 'API'}
                       <span className="text-[10px] text-slate-500 ml-1">
-                        {scope === 'all' && '(local → API)'}
+                        {scope === 'all' && '(self-hosted → API)'}
                         {scope === 'local' && '(no quota)'}
                         {scope === 'api' && '(cloud only)'}
                       </span>

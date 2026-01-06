@@ -47,7 +47,7 @@ CRITICAL JSON formatting rules:
 
 Guidelines:
 - Keep response concise
-- Use JSON UI when appropriate
+- Use JSON UI when appropriate, YOU MUST BUILD THE JSON UI
 - User can point at buttons with index finger"""
 
 # Gesture mode context for LOCAL models (when user is interacting hands-free)

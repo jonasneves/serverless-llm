@@ -167,10 +167,10 @@ const AppCard: React.FC<AppCardProps> = ({
       {/* Compact Footer Status */}
       <div className="border-t border-slate-700/30 px-3 py-2 bg-slate-900/40">
         <div className="flex items-center gap-3 text-[10px]">
-          {/* Local Status */}
-          <div className="flex items-center gap-1.5" title={localEndpointUrl || 'Local endpoint'}>
+          {/* Self-hosted Status */}
+          <div className="flex items-center gap-1.5" title={localEndpointUrl || 'Self-hosted endpoint'}>
             <StatusDot status={localStatus || 'down'} size="sm" />
-            <span className="text-slate-500">Local</span>
+            <span className="text-slate-500">Self-hosted</span>
           </div>
 
           <span className="text-slate-700">•</span>
