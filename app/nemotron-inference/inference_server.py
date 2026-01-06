@@ -90,9 +90,8 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
     """Start the llama-server process
     
     Optimizations applied:
-    - mlock: Lock model in RAM to prevent swapping
-    - cont-batching: Better request handling
     - cache-type-k/v q8_0: Quantized KV cache saves ~30% memory
+    - cont-batching: Better request handling
     - flash-attn: Faster attention computation (if supported)
     """
     cmd = [
@@ -104,8 +103,7 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
-        # Memory optimizations
-        "--mlock",                    # Lock model in RAM, prevent swapping
+        # Memory optimizations (no --mlock: slow startup + permission issues in containers)
         "--cache-type-k", "q8_0",     # Quantized KV cache (~30% less memory)
         "--cache-type-v", "q8_0",
         # Performance optimizations  
