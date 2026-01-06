@@ -156,7 +156,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="LiquidAI/LFM2-2.6B-GGUF",
         hf_file="LFM2-2.6B-Q4_K_M.gguf",
         owned_by="liquidai",
-        chat_format="chatml",
     ),
     "lfm2exp": ModelConfig(
         name="lfm2exp",
@@ -171,7 +170,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="LiquidAI/LFM2-2.6B-Exp-GGUF",
         hf_file="LFM2-2.6B-Exp-Q4_K_M.gguf",
         owned_by="liquidai",
-        chat_format="chatml",
     ),
     
     # Medium models (7B-30B params)

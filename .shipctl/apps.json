@@ -150,7 +150,7 @@
     },
     {
       "name": "LFM2 2.6B Exp",
-      "path": "lfm2exp-inference.yml",
+      "path": "lfm2-exp-inference.yml",
       "category": "small",
       "serviceKey": "lfm2exp"
     },
@@ -335,6 +335,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-06T17:50:10.645295Z",
+  "generatedAt": "2026-01-06T18:04:27.629730Z",
   "sourceFile": "config/models.py"
 }

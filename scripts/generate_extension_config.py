@@ -52,6 +52,8 @@ def generate_workflows_config() -> list[dict]:
         # Handle exceptions where workflow filename diverges from model key
         if model.name == "gptoss":
              workflow_path = "gpt-oss-inference.yml"
+        elif model.name == "lfm2exp":
+             workflow_path = "lfm2-exp-inference.yml"
         else:
              workflow_path = f"{model.name}-inference.yml"
 
