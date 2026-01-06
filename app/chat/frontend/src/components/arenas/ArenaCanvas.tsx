@@ -59,7 +59,6 @@ interface ArenaCanvasProps {
   orchestratorMenuRef: MutableRefObject<HTMLDivElement | null>;
   availableModels: Model[];
   setModerator: (id: string) => void;
-  councilWinnerId?: string; // ID of the top-ranked model in Analyze mode
 }
 
 const GRID_CARD_WIDTH = 256;
@@ -106,7 +105,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     orchestratorMenuRef,
     availableModels,
     setModerator,
-    councilWinnerId,
   } = props;
 
   const isCircleMode = mode !== 'compare';
@@ -149,7 +147,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         const isSelected = selectedCardIds.has(model.id);
         const hasError = failedModels.has(model.id);
         const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
-        // Show "waiting" for models in a roundtable session that haven't started their turn yet
+        // Show "waiting" for models in a debate session that haven't started their turn yet
         const isWaiting = !isSpeaking && !isDone && !hasError && isGenerating && mode === 'debate';
         const statusState: 'idle' | 'responding' | 'done' | 'waiting' | 'error' = hasError
           ? 'error'
@@ -388,23 +386,6 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 title={model.personaName ? `${model.personaName} - ${model.personaTrait}` : 'Persona'}
               >
                 {model.personaEmoji}
-              </div>
-            )}
-
-            {/* Analyze Winner Badge - Bottom Center */}
-            {mode === 'analyze' && isCircleMode && councilWinnerId === model.id && !isGenerating && !isSynthesizing && (
-              <div
-                className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none"
-                style={{
-                  bottom: '-12px',
-                  fontSize: '20px',
-                  zIndex: 100,
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 0 12px rgba(251, 191, 36, 0.4))',
-                  animation: 'pulse 2s ease-in-out infinite',
-                }}
-                title="Top Ranked Response"
-              >
-                🏆
               </div>
             )}
 

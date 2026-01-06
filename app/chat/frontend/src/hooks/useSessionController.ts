@@ -189,44 +189,6 @@ export function useSessionController(params: SessionControllerParams) {
         ? `${Math.round(value * 100)}%`
         : '—';
 
-    const buildRoundtableAnalysisSummary = (analysis: any) => {
-      if (!analysis) return '';
-      const domainWeights: Record<string, number> = analysis.domain_weights || {};
-      const expertise = analysis.model_expertise_scores || {};
-      const sortedDomains = Object.entries(domainWeights)
-        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
-        .map(([domain, weight]) => `${formatDomainLabel(domain)} ${formatPercentage(weight)}`)
-        .join(', ');
-
-      const participantOrder = sessionModelIds.length > 0
-        ? sessionModelIds
-        : Object.keys(expertise);
-      const participantSummary = participantOrder
-        .filter(Boolean)
-        .map(id => `${modelIdToName(id)} ${formatPercentage(expertise[id])}`)
-        .join(', ');
-
-      const leadName = analysis.discussion_lead
-        ? modelIdToName(analysis.discussion_lead)
-        : '—';
-      const plannedRounds = analysis.expected_turns ?? 2;
-      const reasoning = (analysis.reasoning || '').trim();
-
-      const lines = [
-        `ORCHESTRATOR • ${moderator ? modelIdToName(moderator) : 'Roundtable'}`,
-      ];
-      if (sortedDomains) lines.push(`Domains: ${sortedDomains}`);
-      lines.push(`Lead: ${leadName}`);
-      if (participantSummary) lines.push(`Participants: ${participantSummary}`);
-      lines.push(`Planned rounds: ${plannedRounds}`);
-      if (reasoning) {
-        lines.push('');
-        lines.push(reasoning);
-      }
-
-      return lines.join('\n').trim();
-    };
-
     const appendEventHistory = (content: string, kind: ChatHistoryEntry['kind']) => {
       const trimmed = content?.trim();
       if (!trimmed || skipHistory) return;

@@ -278,7 +278,7 @@ export const LAYOUT = {
   gapX: 24,             // Horizontal gap between cards (px)
   gapY: 24,             // Vertical gap between cards (px)
 
-  // Circle/Council layout
+  // Circle layout (analyze, debate modes)
   baseRadius: 160,      // Minimum radius for circle layouts (px)
   minRadius: 120,       // Starting point for radius calculation (px)
   radiusPerModel: 15,   // Additional radius per model to prevent overlap (px)
