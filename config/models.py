@@ -157,7 +157,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="LiquidAI/LFM2-2.6B-GGUF",
         hf_file="LFM2-2.6B-Q4_K_M.gguf",
         owned_by="liquidai",
-        chat_format="chatml",
     ),
     
     
