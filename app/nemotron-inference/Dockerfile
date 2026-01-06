@@ -61,7 +61,7 @@ RUN apt-get update && apt-get install -y \
 COPY app/shared/ ./shared/
 
 # Copy model-specific files and install Python dependencies
-COPY app/nemotron-inference/requirements.txt .
+COPY app/shared/requirements-llama-server.txt requirements.txt
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app/nemotron-inference/inference_server.py .

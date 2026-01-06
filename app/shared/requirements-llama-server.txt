@@ -1,0 +1,9 @@
+# Requirements for llama-server wrapper models (nemotron, rnj)
+# These models run llama-server directly instead of llama-cpp-python bindings
+# due to architecture-specific requirements (nemotron_h_moe, rnj1)
+
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+huggingface-hub>=0.20.0
+pydantic>=2.0.0
+httpx>=0.25.0
