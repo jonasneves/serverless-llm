@@ -1,5 +1,5 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-llama-cpp-python>=0.3.7
+llama-cpp-python @ git+https://github.com/abetlen/llama-cpp-python@main
 huggingface-hub>=0.23.2
 pydantic>=2.10.0
