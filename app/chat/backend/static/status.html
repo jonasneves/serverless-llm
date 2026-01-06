@@ -457,7 +457,7 @@
 
             // Filter to only local models (exclude API models) and sort by ID for consistency
             const localModels = data.models
-                .filter(m => m.type === 'local')
+                .filter(m => m.type === 'self-hosted')
                 .sort((a, b) => a.id.localeCompare(b.id));
 
             overallStatus.className = 'overall-status loading';
