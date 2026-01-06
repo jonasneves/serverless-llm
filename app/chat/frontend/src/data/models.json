@@ -31,46 +31,52 @@
       "priority": 5
     },
     {
+      "id": "lfm2-2.6b",
+      "name": "LFM2 2.6B",
+      "type": "self-hosted",
+      "priority": 6
+    },
+    {
       "id": "lfm2-2.6b-exp",
       "name": "LFM2 2.6B Exp",
       "type": "self-hosted",
-      "priority": 6
+      "priority": 7
     },
     {
       "id": "phi-3-mini",
       "name": "Phi-3 Mini",
       "type": "self-hosted",
-      "priority": 7
+      "priority": 8
     },
     {
       "id": "rnj-1-instruct",
       "name": "RNJ-1 Instruct",
       "type": "self-hosted",
-      "priority": 8
+      "priority": 9
     },
     {
       "id": "llama-3.2-3b",
       "name": "Llama 3.2-3B",
       "type": "self-hosted",
-      "priority": 9
+      "priority": 10
     },
     {
       "id": "functiongemma-270m-it",
       "name": "FunctionGemma 270M",
       "type": "self-hosted",
-      "priority": 10
+      "priority": 11
     },
     {
       "id": "nemotron-3-nano-30b-a3b",
       "name": "Nemotron-3 Nano 30B",
       "type": "self-hosted",
-      "priority": 11
+      "priority": 12
     },
     {
       "id": "gpt-oss-20b",
       "name": "GPT-OSS 20B",
       "type": "self-hosted",
-      "priority": 12
+      "priority": 13
     },
     {
       "id": "gpt-4o",

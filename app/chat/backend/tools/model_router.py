@@ -56,9 +56,14 @@ class ModelRouter:
             "description": "Lightweight, 131K context, creative writing"
         },
         "reasoner-8": {  # Rank 8
-            "name": "LFM2 2.6B Exp",
+            "name": "LFM2 2.6B",
             "url_env": "LFM2_API_URL",
-            "description": "RL-tuned instruction following, strong multi-turn and extraction"
+            "description": "Hybrid small model with strong instruction following"
+        },
+        "reasoner-9": {  # Rank 9
+            "name": "LFM2 2.6B Exp",
+            "url_env": "LFM2EXP_API_URL",
+            "description": "Experimental RL-tuned checkpoint with strong instruction following"
         },
         # Answer models (same ranking)
         "answer-1": {  # Rank 1
@@ -97,9 +102,14 @@ class ModelRouter:
             "description": "Conversational, creative writing"
         },
         "answer-8": {  # Rank 8
-            "name": "LFM2 2.6B Exp",
+            "name": "LFM2 2.6B",
             "url_env": "LFM2_API_URL",
-            "description": "RL-tuned instruction following, strong multi-turn and extraction"
+            "description": "Hybrid small model with strong instruction following"
+        },
+        "answer-9": {  # Rank 9
+            "name": "LFM2 2.6B Exp",
+            "url_env": "LFM2EXP_API_URL",
+            "description": "Experimental RL-tuned checkpoint with strong instruction following"
         },
     }
 

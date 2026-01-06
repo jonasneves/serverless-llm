@@ -1,6 +1,6 @@
-name: 🧪 LFM2 2.6B
+name: 🧪 LFM2 2.6B Exp
 
-run-name: "LFM2 2.6B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
+run-name: "LFM2 2.6B Exp • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ on:
         type: boolean
 
   repository_dispatch:
-    types: [restart-lfm2-inference]
+    types: [restart-lfm2-exp-inference]
 
 permissions:
   actions: write
@@ -37,13 +37,13 @@ jobs:
   inference:
     uses: ./.github/workflows/reusable-inference-containerized.yml
     with:
-      model_name: "lfm2"
-      model_dir: "lfm2-inference"
-      model_repo: "LiquidAI/LFM2-2.6B-GGUF"
-      model_file: "LFM2-2.6B-Q4_K_M.gguf"
-      cache_key_prefix: "gguf-lfm2-2.6b-q4km"
-      restart_event_type: "restart-lfm2-inference"
-      workflow_file: "lfm2-inference.yml"
+      model_name: "lfm2exp"
+      model_dir: "lfm2-exp-inference"
+      model_repo: "LiquidAI/LFM2-2.6B-Exp-GGUF"
+      model_file: "LFM2-2.6B-Exp-Q4_K_M.gguf"
+      cache_key_prefix: "gguf-lfm2-2.6b-exp-q4km"
+      restart_event_type: "restart-lfm2-exp-inference"
+      workflow_file: "lfm2-exp-inference.yml"
       duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
       auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true') || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
       instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}

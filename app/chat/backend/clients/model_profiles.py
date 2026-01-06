@@ -122,6 +122,43 @@ PHI_PROFILE = {
     "description": "Reasoning specialist with strong instruction following despite compact size"
 }
 
+LFM2_26B_PROFILE = {
+    "model_id": "lfm2-2.6b",
+    "display_name": "LFM2 2.6B",
+    "model_type": "self-hosted",
+    "creator": "Liquid AI",
+    "size": "2.6B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["instruction_following", "conversation", "data_extraction", "agentic_capabilities"],
+
+    "benchmark_scores": {},
+
+    "expertise_domains": {
+        "instruction_following": 0.80,
+        "conversation": 0.78,
+        "summarization": 0.72,
+        "creative_writing": 0.72,
+        "data_extraction": 0.78,
+        "agent_capabilities": 0.74,
+        "common_sense": 0.70,
+        "reasoning": 0.64,
+        "mathematics": 0.55,
+        "coding": 0.50,
+    },
+
+    "use_as_lead_for": [
+        "instruction-following tasks",
+        "multi-turn conversations",
+        "data extraction",
+        "lightweight agentic workflows",
+        "creative writing",
+    ],
+
+    "context_length": 32768,
+    "description": "Hybrid small model optimized for edge deployment with strong instruction following"
+}
+
 LFM2_26B_EXP_PROFILE = {
     "model_id": "lfm2-2.6b-exp",
     "display_name": "LFM2 2.6B Exp",
@@ -715,11 +752,12 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,  # Rank 2
     "gemma-3-12b-it": GEMMA3_12B_PROFILE,                      # Rank 3
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,            # Rank 4
-    "lfm2-2.6b-exp": LFM2_26B_EXP_PROFILE,                     # Rank 5
-    "phi-3-mini": PHI_PROFILE,                                 # Rank 6
-    "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 7
-    "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 8
-    "functiongemma-270m-it": FUNCTIONGEMMA_270M_PROFILE,       # Rank 9
+    "lfm2-2.6b": LFM2_26B_PROFILE,                             # Rank 5
+    "lfm2-2.6b-exp": LFM2_26B_EXP_PROFILE,                     # Rank 6
+    "phi-3-mini": PHI_PROFILE,                                 # Rank 7
+    "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 8
+    "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 9
+    "functiongemma-270m-it": FUNCTIONGEMMA_270M_PROFILE,       # Rank 10
     # API models
     "openai/gpt-4.1": GPT4_1_PROFILE,
     "openai/gpt-4o": GPT4O_PROFILE,
@@ -855,6 +893,7 @@ __all__ = [
     "DEEPSEEK_R1_QWEN15B_PROFILE",
     "GEMMA3_12B_PROFILE",
     "MISTRAL_7B_PROFILE",
+    "LFM2_26B_PROFILE",
     "LFM2_26B_EXP_PROFILE",
     "PHI_PROFILE",
     "RNJ_1_PROFILE",
