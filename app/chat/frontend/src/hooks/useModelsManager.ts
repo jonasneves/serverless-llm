@@ -93,16 +93,18 @@ export function useModelsManager() {
         isSelectionInitialized.current = true;
       }
 
-      // Initialize chat model with first github/external model, fallback to self-hosted
+      // Initialize chat model with first github/external model, fallback to default/local
       if (!isChatModelInitialized.current) {
+        const defaultModel = apiModels.find(m => m.default);
         const firstApiModel = apiModels.find(m => m.type === 'github' || m.type === 'external');
-        setChatModelId(firstApiModel?.id || apiModels[0]?.id || null);
+        setChatModelId(firstApiModel?.id || defaultModel?.id || apiModels[0]?.id || null);
         isChatModelInitialized.current = true;
       }
 
       const apiModeratorCandidate = apiModels.find(m => m.type === 'github' || m.type === 'external');
+      const defaultModerator = apiModels.find(m => m.default);
       const fallbackModerator = apiModels[0]?.id || '';
-      setModerator(apiModeratorCandidate?.id || fallbackModerator);
+      setModerator(apiModeratorCandidate?.id || defaultModerator?.id || fallbackModerator);
     };
 
     try {
