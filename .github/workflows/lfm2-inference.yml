@@ -1,4 +1,4 @@
-name: 🧪 LFM2 2.6B
+name: 🤖 LFM2 2.6B
 
 run-name: "LFM2 2.6B • ${{ inputs.duration_hours || '5' }}h × ${{ inputs.instances || '1' }}"
 
