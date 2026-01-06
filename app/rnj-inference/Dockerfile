@@ -36,6 +36,7 @@ RUN cmake -B build \
     -DGGML_BLAS=ON \
     -DGGML_BLAS_VENDOR=OpenBLAS \
     -DGGML_NATIVE=ON \
+    -DLLAMA_CURL=OFF \
     -DLLAMA_BUILD_SERVER=ON
 
 # Build all targets
