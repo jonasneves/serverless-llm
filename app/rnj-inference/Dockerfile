@@ -27,7 +27,7 @@ WORKDIR /build
 # Clone llama.cpp with RNJ-1 support from official repo
 # Essential AI's README recommends llama.cpp version b7328+ for RNJ-1 support
 # b7328 corresponds to merge commit 1d2a1ab (PR #17811 merge)
-RUN git clone --depth 100 https://github.com/ggml-org/llama.cpp.git . \
+RUN git clone https://github.com/ggml-org/llama.cpp.git . \
     && git checkout 1d2a1ab73d927644d58f44235209affab7e4043e \
     && git submodule update --init --recursive
 
