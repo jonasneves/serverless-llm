@@ -11,6 +11,7 @@ from typing import List, Dict, Any, AsyncGenerator
 import asyncio
 from clients.model_profiles import get_display_name
 from clients.model_client import ModelClient
+from prompts import ANALYZE_RESPONSE_SYSTEM
 
 
 class AnalyzeEngine:
@@ -158,7 +159,10 @@ class AnalyzeEngine:
 
         yield {"type": "analyze_start", "participants": participants}
 
-        messages = [{"role": "user", "content": query}]
+        messages = [
+            {"role": "system", "content": ANALYZE_RESPONSE_SYSTEM},
+            {"role": "user", "content": query}
+        ]
         model_responses = {model_id: "" for model_id in participants}
         results = []
 

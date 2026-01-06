@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from clients.model_profiles import MODEL_PROFILES, get_display_name
 from clients.model_client import ModelClient
+from prompts import DEBATE_TURN_SYSTEM
 
 
 @dataclass
@@ -163,7 +164,10 @@ Provide your response:"""
         start_time = asyncio.get_event_loop().time()
 
         try:
-            messages = [{"role": "user", "content": prompt}]
+            messages = [
+                {"role": "system", "content": DEBATE_TURN_SYSTEM},
+                {"role": "user", "content": prompt}
+            ]
 
             async for event in self.client.stream_model(model_id, messages, max_tokens, temperature):
                 if event["type"] == "chunk":

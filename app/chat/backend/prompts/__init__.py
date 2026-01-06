@@ -14,6 +14,14 @@ from .base_prompts import (
     GESTURE_MODE_CONTEXT_API
 )
 
+from .analyze_prompts import (
+    ANALYZE_RESPONSE_SYSTEM
+)
+
+from .debate_prompts import (
+    DEBATE_TURN_SYSTEM
+)
+
 from .council_prompts import (
     COUNCIL_STAGE1_SYSTEM,
     COUNCIL_STAGE2_SYSTEM,
@@ -39,6 +47,10 @@ __all__ = [
     'VERIFICATION_GUIDELINES',
     'GESTURE_MODE_CONTEXT_LOCAL',
     'GESTURE_MODE_CONTEXT_API',
+    # Analyze
+    'ANALYZE_RESPONSE_SYSTEM',
+    # Debate
+    'DEBATE_TURN_SYSTEM',
     # Council
     'COUNCIL_STAGE1_SYSTEM',
     'COUNCIL_STAGE2_SYSTEM',
