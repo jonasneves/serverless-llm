@@ -243,6 +243,28 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             ]
         }
 
+    def _is_lfm2_model() -> bool:
+        model_id = (config.openai_model_id or "").lower()
+        return model_id.startswith("lfm2-")
+
+    def _format_lfm2_chat(messages: list) -> str:
+        """Format messages using LFM2's ChatML-like template."""
+        system_content = ""
+        remaining = messages
+        if messages and messages[0].get("role") == "system":
+            system_content = messages[0].get("content", "")
+            remaining = messages[1:]
+
+        prompt = "<|startoftext|>"
+        if system_content:
+            prompt += f"<|im_start|>system\n{system_content}<|im_end|>\n"
+        for msg in remaining:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            prompt += f"<|im_start|>{role}\n{content}<|im_end|>\n"
+        prompt += "<|im_start|>assistant\n"
+        return prompt
+
     async def _generate_stream(
         messages: list,
         max_tokens: int,
@@ -257,32 +279,59 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             wait_start = time.perf_counter()
             async with inference_lock:
                 lock_acquired = time.perf_counter()
-                response = await asyncio.to_thread(
-                    llm.create_chat_completion,
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    top_p=top_p,
-                    stream=True,
-                )
+                if _is_lfm2_model():
+                    prompt = _format_lfm2_chat(messages)
+                    response = await asyncio.to_thread(
+                        llm.create_completion,
+                        prompt=prompt,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        stream=True,
+                        stop=["<|im_end|>"],
+                    )
+                else:
+                    response = await asyncio.to_thread(
+                        llm.create_chat_completion,
+                        messages=messages,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        stream=True,
+                    )
 
                 generated_text = ""
                 first_token_time: Optional[float] = None
                 for chunk in response:
                     if "choices" in chunk and len(chunk["choices"]) > 0:
-                        delta = chunk["choices"][0].get("delta", {})
-                        if "content" in delta:
-                            content = delta["content"]
-                            generated_text += content
-                            if first_token_time is None and content:
-                                first_token_time = time.perf_counter()
-                            yield f"data: {json.dumps(chunk)}\n\n"
-                            await asyncio.sleep(0)
+                        if _is_lfm2_model():
+                            content = chunk["choices"][0].get("text", "")
+                            if content:
+                                generated_text += content
+                                if first_token_time is None:
+                                    first_token_time = time.perf_counter()
+                                wrapped = {
+                                    "choices": [{"delta": {"content": content}, "finish_reason": None}],
+                                }
+                                yield f"data: {json.dumps(wrapped)}\n\n"
+                                await asyncio.sleep(0)
+                        else:
+                            delta = chunk["choices"][0].get("delta", {})
+                            if "content" in delta:
+                                content = delta["content"]
+                                generated_text += content
+                                if first_token_time is None and content:
+                                    first_token_time = time.perf_counter()
+                                yield f"data: {json.dumps(chunk)}\n\n"
+                                await asyncio.sleep(0)
 
                 generation_done = time.perf_counter()
 
                 # Compute token usage
-                prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+                if _is_lfm2_model():
+                    prompt_text = _format_lfm2_chat(messages)
+                else:
+                    prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
                 prompt_tokens = len(llm.tokenize(prompt_text.encode()))
                 completion_tokens = len(llm.tokenize(generated_text.encode()))
                 total_tokens = prompt_tokens + completion_tokens
@@ -365,22 +414,47 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             wait_start = time.perf_counter()
             async with inference_lock:
                 lock_acquired = time.perf_counter()
-                response = await asyncio.to_thread(
-                    llm.create_chat_completion,
-                    messages=messages,
-                    max_tokens=request.max_tokens,
-                    temperature=request.temperature,
-                    top_p=request.top_p,
-                )
+                if _is_lfm2_model():
+                    prompt = _format_lfm2_chat(messages)
+                    response = await asyncio.to_thread(
+                        llm.create_completion,
+                        prompt=prompt,
+                        max_tokens=request.max_tokens,
+                        temperature=request.temperature,
+                        top_p=request.top_p,
+                        stop=["<|im_end|>"],
+                    )
+                else:
+                    response = await asyncio.to_thread(
+                        llm.create_chat_completion,
+                        messages=messages,
+                        max_tokens=request.max_tokens,
+                        temperature=request.temperature,
+                        top_p=request.top_p,
+                    )
             done = time.perf_counter()
 
-            result = {
-                "id": f"chatcmpl-{config.openai_model_id}",
-                "object": "chat.completion",
-                "model": config.openai_model_id,
-                "choices": response["choices"],
-                "usage": response["usage"],
-            }
+            if _is_lfm2_model():
+                text = response["choices"][0].get("text", "")
+                result = {
+                    "id": f"chatcmpl-{config.openai_model_id}",
+                    "object": "chat.completion",
+                    "model": config.openai_model_id,
+                    "choices": [{
+                        "message": {"role": "assistant", "content": text},
+                        "finish_reason": response["choices"][0].get("finish_reason", "stop"),
+                        "index": 0,
+                    }],
+                    "usage": response.get("usage", {}),
+                }
+            else:
+                result = {
+                    "id": f"chatcmpl-{config.openai_model_id}",
+                    "object": "chat.completion",
+                    "model": config.openai_model_id,
+                    "choices": response["choices"],
+                    "usage": response["usage"],
+                }
 
             if include_perf:
                 queue_ms = int((lock_acquired - wait_start) * 1000)
