@@ -47,18 +47,18 @@
     --accent-text: #ffffff;
 
     /* Semantic Colors */
-    --danger-color: #ef4444;
-    /* red-500 */
-    --danger-bg: rgba(239, 68, 68, 0.1);
-    --warning-color: #f59e0b;
-    /* amber-500 */
-    --warning-bg: rgba(245, 158, 11, 0.1);
-    --success-color: #10b981;
-    /* emerald-500 */
-    --success-bg: rgba(16, 185, 129, 0.1);
-    --info-color: #3b82f6;
-    /* blue-500 */
-    --info-bg: rgba(59, 130, 246, 0.1);
+    --danger-color: #dc2626;
+    /* red-600 */
+    --danger-bg: rgba(220, 38, 38, 0.1);
+    --warning-color: #d97706;
+    /* amber-600 */
+    --warning-bg: rgba(217, 119, 6, 0.1);
+    --success-color: #059669;
+    /* emerald-600 */
+    --success-bg: rgba(5, 150, 105, 0.1);
+    --info-color: #2563eb;
+    /* blue-600 */
+    --info-bg: rgba(37, 99, 235, 0.1);
 
     /* Legacy aliases */
     --error-color: var(--danger-color);
