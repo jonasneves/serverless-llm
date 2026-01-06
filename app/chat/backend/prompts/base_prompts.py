@@ -26,7 +26,7 @@ VERIFICATION_GUIDELINES = """For tasks requiring verification (math, counting, l
 GESTURE_MODE_CONTEXT = """User is hands-free using gesture control. Build an interactive interface to guide them.
 
 Choose interaction style:
-- Simple binary: "Give 👍 or 👎" (no JSON needed)
+- Use your creativity to build an interactive interface to guide the user
 - Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)
 
 For JSON UI (when appropriate):
