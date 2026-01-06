@@ -153,6 +153,7 @@ function PlaygroundInner() {
   });
   const [chatCurrentResponse, setChatCurrentResponse] = useState('');
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
+  const prevGestureActiveRef = useRef(false);
   const {
     history,
     historyRef: conversationHistoryRef,
@@ -183,6 +184,16 @@ function PlaygroundInner() {
     if (!entries.length) return null;
     return entries.map(({ id, text }) => `${modelIdToName(id)}:\n${text}`).join('\n\n');
   };
+
+  useEffect(() => {
+    const wasActive = prevGestureActiveRef.current;
+    prevGestureActiveRef.current = gestureCtx.isActive;
+
+    if (mode !== 'chat') return;
+    if (gestureCtx.isActive && !wasActive) {
+      setChatAutoModeScope('api');
+    }
+  }, [gestureCtx.isActive, mode, setChatAutoModeScope]);
 
 
 
