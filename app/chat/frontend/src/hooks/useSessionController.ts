@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from 'react';
-import { GENERATION_DEFAULTS, isThinkingModel } from '../constants';
+import { GENERATION_DEFAULTS, isThinkingModel, isHarmonyFormatModel } from '../constants';
 import { fetchChatStream, fetchAnalyzeStream, fetchDebateStream, streamSseEvents } from '../utils/streaming';
 import { ChatHistoryEntry, Mode, Model } from '../types';
 import { ExecutionTimeData } from '../components/ExecutionTimeDisplay';
@@ -29,7 +29,7 @@ interface SessionControllerParams {
   currentDiscussionTurnRef: React.MutableRefObject<{ modelId: string; turnNumber: number } | null>;
   sessionModelIdsRef: React.MutableRefObject<string[]>;
   abortControllerRef: React.MutableRefObject<AbortController | null>;
-  thinkingStateRef: React.MutableRefObject<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean }>>;
+  thinkingStateRef: React.MutableRefObject<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean; harmonyFormat?: boolean }>>;
   conversationHistoryRef: React.MutableRefObject<ChatHistoryEntry[]>;
   pushHistoryEntries: (entries: ChatHistoryEntry[]) => void;
   historyToText: (history: ChatHistoryEntry[]) => string;
@@ -174,10 +174,13 @@ export function useSessionController(params: SessionControllerParams) {
     thinkingResetIds.forEach(modelId => {
       // Thinking models (DeepSeek R1, SmolLM3, etc.) start in thinking mode by default
       const startsInThinkingMode = isThinkingModel(modelId);
+      // Harmony format models (GPT-OSS) use channel markers instead of think tags
+      const usesHarmonyFormat = isHarmonyFormatModel(modelId);
       thinkingStateRef.current[modelId] = {
-        inThink: startsInThinkingMode,
+        inThink: startsInThinkingMode || usesHarmonyFormat, // Both start in "thinking" mode
         carry: '',
-        implicitThinking: startsInThinkingMode
+        implicitThinking: startsInThinkingMode,
+        harmonyFormat: usesHarmonyFormat,
       };
     });
 
@@ -222,6 +225,43 @@ export function useSessionController(params: SessionControllerParams) {
       let thinkingAdd = '';
       let answerAdd = '';
       let idx = 0;
+
+      // Handle Harmony format (GPT-OSS): <|channel|>analysis/final<|message|>
+      if (state.harmonyFormat) {
+        // Check for final channel marker - this switches from thinking to answer mode
+        const finalChannelMarker = '<|channel|>final<|message|>';
+        const finalIdx = textChunk.indexOf(finalChannelMarker);
+
+        if (finalIdx !== -1) {
+          // Everything before the final marker is thinking
+          if (state.inThink) {
+            thinkingAdd += textChunk.slice(0, finalIdx);
+          }
+          // Switch to answer mode
+          state.inThink = false;
+          // Everything after is answer (strip the marker)
+          answerAdd += textChunk.slice(finalIdx + finalChannelMarker.length);
+        } else if (state.inThink) {
+          // Still in analysis mode - all content is thinking
+          // Strip analysis channel markers
+          const cleanChunk = textChunk
+            .replace(/<\|channel\|>analysis<\|message\|>/gi, '')
+            .replace(/<\|end\|>/gi, '')
+            .replace(/<\|start\|>/gi, '')
+            .replace(/assistant/gi, ''); // Often appears as <|start|>assistant
+          thinkingAdd += cleanChunk;
+        } else {
+          // In answer mode - all content is answer
+          // Strip any remaining markers
+          const cleanChunk = textChunk.replace(/<\|end\|>/gi, '');
+          answerAdd += cleanChunk;
+        }
+
+        thinkingStateRef.current[modelId] = state;
+        if (answerAdd) recordResponse(modelId, answerAdd);
+        if (thinkingAdd || answerAdd) enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
+        return; // Skip the standard think tag parsing
+      }
 
       // Check for implicit thinking mode: if we haven't entered thinking mode yet but see a closing tag,
       // everything before it was implicit thinking (common with DeepSeek R1)

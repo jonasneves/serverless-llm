@@ -6,6 +6,19 @@ export interface ThinkingSplit {
 export const splitThinkingContent = (content: string): ThinkingSplit => {
   if (!content) return { thinking: null, answer: '' };
 
+  // Handle GPT-OSS Harmony format: <|channel|>analysis<|message|>...<|end|><|start|>assistant<|channel|>final<|message|>...
+  const harmonyAnalysisMatch = content.match(/<\|channel\|>analysis<\|message\|>([\s\S]*?)<\|end\|>/i);
+  const harmonyFinalMatch = content.match(/<\|channel\|>final<\|message\|>([\s\S]*?)(?:<\|end\|>|$)/i);
+
+  if (harmonyFinalMatch) {
+    const analysisContent = harmonyAnalysisMatch ? harmonyAnalysisMatch[1]?.trim() : null;
+    const finalContent = harmonyFinalMatch[1]?.trim() || '';
+    return {
+      thinking: analysisContent,
+      answer: finalContent,
+    };
+  }
+
   // Match <think>...</think> or <thinking>...</thinking> tags
   // The closing tag must match the opening tag type
   const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>\s*([\s\S]*)/i);
@@ -55,4 +68,3 @@ export const splitThinkingContent = (content: string): ThinkingSplit => {
 
   return { thinking: null, answer: content };
 };
-
