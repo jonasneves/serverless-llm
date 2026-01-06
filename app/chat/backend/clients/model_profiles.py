@@ -541,9 +541,9 @@ DEEPSEEK_R1_QWEN15B_PROFILE = {
         "proof verification",
     ],
 
-    \"context_length\": 32768,
-    \"description\": \"R1-distilled reasoning: o1-preview level math/logic, 96.3% Codeforces performance\",
-    \"outputs_thinking\": True,  # Model starts in thinking mode (no explicit <think> tag)
+    "context_length": 32768,
+    "description": "R1-distilled reasoning: o1-preview level math/logic, 96.3% Codeforces performance",
+    "outputs_thinking": True,  # Model starts in thinking mode (no explicit <think> tag)
 }
 
 
