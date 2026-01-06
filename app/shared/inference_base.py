@@ -84,6 +84,43 @@ def _download_model(default_repo: str, default_file: str) -> str:
     return model_path
 
 
+def create_app_for_model(model_name: str) -> FastAPI:
+    """Create an inference app for a model by reading config from config/models.py.
+    
+    This is the simplified factory function that eliminates boilerplate in
+    individual inference_server.py files. Just call:
+    
+        app = create_app_for_model("qwen")
+    
+    Instead of manually specifying all the ModelConfig fields.
+    """
+    # Import here to avoid circular imports
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+    from config.models import get_model
+    
+    model = get_model(model_name)
+    
+    if not model.hf_repo or not model.hf_file:
+        raise ValueError(f"Model '{model_name}' missing hf_repo or hf_file in config/models.py")
+    
+    config = ModelConfig(
+        title=f"{model.display_name} Inference API",
+        description=f"REST API for {model.display_name} model inference using GGUF",
+        model_name=model.display_name or model.name,
+        openai_model_id=model.model_id or model.name,
+        owned_by=model.owned_by or model.name,
+        default_repo=model.hf_repo,
+        default_file=model.hf_file,
+        # These will be overridden by env vars from config/inference.yaml at runtime
+        default_n_ctx=4096,
+        default_n_threads=4,
+        n_batch=256,
+    )
+    
+    return create_inference_app(config)
+
+
 def create_inference_app(config: ModelConfig) -> FastAPI:
     app = FastAPI(
         title=config.title,

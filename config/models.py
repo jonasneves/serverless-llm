@@ -254,9 +254,9 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="gpt-oss-inference",
         description="MoE (21B params / 3.6B active), function calling, agentic operations",
         rank=12,
-        hf_repo="nvidia/GPT-OSS-20B-GGUF",
-        hf_file="GPT-OSS-20B-Q4_K_M.gguf",
-        owned_by="nvidia",
+        hf_repo="unsloth/gpt-oss-20b-GGUF",
+        hf_file="gpt-oss-20b-Q6_K.gguf",
+        owned_by="openai",
     ),
 }
 
