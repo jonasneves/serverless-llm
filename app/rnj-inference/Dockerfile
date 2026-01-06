@@ -24,10 +24,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /build
 
-# Clone llama.cpp from Essential-AI fork with rnj1 architecture support
-# The GGUF on HuggingFace uses 'rnj1' architecture which only exists in commit e1b7d46.
-RUN git clone https://github.com/Essential-AI/llama.cpp.git . \
-    && git checkout e1b7d46e8c3364cad6d3d17059e9748911726881 \
+# Clone llama.cpp with RNJ-1 support from official repo
+# Essential AI's README recommends llama.cpp version b7328+ for RNJ-1 support
+# b7328 corresponds to merge commit 1d2a1ab (PR #17811 merge)
+RUN git clone --depth 100 https://github.com/ggml-org/llama.cpp.git . \
+    && git checkout 1d2a1ab73d927644d58f44235209affab7e4043e \
     && git submodule update --init --recursive
 
 # Configure cmake build
