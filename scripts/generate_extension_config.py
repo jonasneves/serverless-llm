@@ -125,21 +125,26 @@ def main():
         "sourceFile": "config/models.py",
     }
 
-    # Write to frontend directory
+    # Write to local frontend directory (internal consumption)
     output_dirs = [
         project_root / "app" / "chat" / "frontend" / "src" / "data",
     ]
     
-    # Check for sibling chrome-extensions repo
-    extension_dir = project_root.parent / "chrome-extensions" / "extensions" / "shipctl" / "src" / "data"
-    if extension_dir.exists():
-        output_dirs.append(extension_dir)
-        print(f"✓ Detected Chrome Extension at: {extension_dir}")
+    # Write to standard ShipCTL Manifest location
+    manifest_dir = project_root / ".shipctl"
+    manifest_dir.mkdir(exist_ok=True)
+    manifest_file = manifest_dir / "apps.json"
+    
+    # Generate Manifest
+    with open(manifest_file, "w") as f:
+        json.dump(config, f, indent=2)
+    print(f"✓ Generated Manifest: .shipctl/apps.json")
 
+    # Update local frontend configs
     for output_dir in output_dirs:
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Write extension-config.json
+        # Write extension-config.json (legacy name for internal usage)
         output_file = output_dir / "extension-config.json"
         with open(output_file, "w") as f:
             json.dump(config, f, indent=2)
@@ -149,11 +154,10 @@ def main():
         with open(services_file, "w") as f:
             json.dump({"services": config["services"]}, f, indent=2)
 
-    print(f"✓ Generated extension-config.json and services.json")
+    print(f"✓ Updated internal config locally")
     print(f"  - {len(config['services'])} services")
     print(f"  - {len(config['workflows'])} workflows")
-    print(f"  - {len(config['categories'])} categories")
-    print(f"  - Written to {len(output_dirs)} locations")
+    print(f"  - Written to: {', '.join(str(d) for d in output_dirs)}")
 
 
 if __name__ == "__main__":
