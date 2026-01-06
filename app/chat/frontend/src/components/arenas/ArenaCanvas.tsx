@@ -389,6 +389,22 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               </div>
             )}
 
+            {/* Thinking Badge - Bottom Center (shows when model is thinking but no response yet) */}
+            {isCircleMode && isSpeaking && model.thinking && model.thinking.trim().length > 0 && model.response.trim().length === 0 && (
+              <div
+                className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none animate-pulse"
+                style={{
+                  bottom: '-12px',
+                  fontSize: '18px',
+                  zIndex: 100,
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(168, 85, 247, 0.4))',
+                }}
+                title="Thinking..."
+              >
+                💭
+              </div>
+            )}
+
             {isCircleMode && hoveredCard === model.id && (
               <div
                 data-card
@@ -891,21 +907,32 @@ function renderPreviewContent({
   }
 
   if (isSpeaking) {
+    // While generating: show thinking progress if available
+    if (model.thinking && model.thinking.trim().length > 0) {
+      return (
+        <span>
+          <span className="text-purple-400/80 text-[10px] uppercase tracking-wider font-medium">💭 Thinking </span>
+          <span className="text-slate-400">{getTailSnippet(model.thinking.trim(), 260)}</span>
+        </span>
+      );
+    }
     if (model.response.trim().length > 0) {
       if (model.response.startsWith('<svg')) {
         return <span dangerouslySetInnerHTML={{ __html: model.response }} />;
       }
       return <Typewriter text={model.response} speed={20} />;
     }
-    if (model.thinking && model.thinking.trim().length > 0) {
-      return (
-        <span>
-          <span className="text-slate-500 italic">Thinking… </span>
-          {getTailSnippet(model.thinking.trim(), 280)}
-        </span>
-      );
-    }
     return <span className="text-slate-500 italic">Thinking…</span>;
+  }
+
+  // After generation complete: prioritize showing thinking if available
+  if (model.thinking && model.thinking.trim().length > 0) {
+    return (
+      <span>
+        <span className="text-purple-400/80 text-[10px] uppercase tracking-wider font-medium">💭 Reasoning </span>
+        <span className="text-slate-400">{getTailSnippet(model.thinking.trim(), 260)}</span>
+      </span>
+    );
   }
 
   if (model.response) {
