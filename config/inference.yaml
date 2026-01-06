@@ -58,12 +58,12 @@ models:
     max_concurrent: 4    # Maximum parallel requests
 
   nemotron:
-    # 30B MoE model with IQ2_M quantization (~8GB) - ULTRA-MINIMAL CONFIG
-    # Model is too large for efficient CPU inference, bare minimum settings
-    n_ctx: 256           # Bare minimum context
-    n_threads: 2         # Reduce memory contention (bottleneck is bandwidth)
-    n_batch: 128         # Smallest practical batch
-    max_concurrent: 1    # Single request only
+    # 30B MoE model with IQ2_M quantization (~8GB) - OPTIMIZED CPU CONFIG
+    # Uses mlock, q8_0 KV cache, cont-batching, flash-attn for best CPU performance
+    n_ctx: 512           # Small but usable context
+    n_threads: 4         # Use all vCPUs
+    n_batch: 256         # Larger batch for prompt processing
+    max_concurrent: 1    # Single request only (MoE overhead)
 
   rnj:
     # 8B model with unique architecture

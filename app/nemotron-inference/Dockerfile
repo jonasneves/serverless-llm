@@ -28,10 +28,12 @@ WORKDIR /build
 RUN git clone https://github.com/ggml-org/llama.cpp.git . \
     && git checkout master \
     && git submodule update --init --recursive \
-    # Build with OpenBLAS + ARM NEON optimizations for ARM performance
+    # Build with OpenBLAS + ARM NEON + OpenMP for maximum CPU performance
     && cmake -B build \
+        -DCMAKE_BUILD_TYPE=Release \
         -DGGML_BLAS=ON \
         -DGGML_BLAS_VENDOR=OpenBLAS \
+        -DGGML_OPENMP=ON \
         -DGGML_NATIVE=ON \
         -DGGML_NEON=ON \
         -DLLAMA_CURL=OFF \

@@ -27,15 +27,15 @@ from huggingface_hub import hf_hub_download
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration from environment - ULTRA-MINIMAL CONFIG
-# 30B MoE model is too large for efficient CPU inference
+# Configuration from environment - OPTIMIZED CPU CONFIG
+# 30B MoE model with aggressive optimizations for CPU inference
 MODEL_REPO = os.getenv("MODEL_REPO", "unsloth/Nemotron-3-Nano-30B-A3B-GGUF")
 # IQ2_M (~8GB) is the smallest quantization - required for 16GB runners
 MODEL_FILE = os.getenv("MODEL_FILE", "Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf")
 PORT = int(os.getenv("PORT", "8301"))
-N_CTX = int(os.getenv("N_CTX", "256"))         # Bare minimum context
-N_THREADS = int(os.getenv("N_THREADS", "2"))   # Reduce memory contention
-N_BATCH = int(os.getenv("N_BATCH", "128"))     # Smallest practical batch
+N_CTX = int(os.getenv("N_CTX", "512"))         # Small but usable context
+N_THREADS = int(os.getenv("N_THREADS", "4"))   # Use all vCPUs
+N_BATCH = int(os.getenv("N_BATCH", "256"))     # Larger batch for prompt processing
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "1"))
 HF_TOKEN = os.getenv("HF_TOKEN")
 
@@ -89,9 +89,11 @@ def download_model() -> str:
 def start_llama_server(model_path: str) -> subprocess.Popen:
     """Start the llama-server process
     
-    Note: The IQ2_M model is ~8GB on disk. Using --no-mmap to load the model
-    fully into RAM (avoids memory-mapped file issues that can cause OOM on
-    memory-constrained runners). This may take 5-10 minutes on 4 vCPU ARM.
+    Optimizations applied:
+    - mlock: Lock model in RAM to prevent swapping
+    - cont-batching: Better request handling
+    - cache-type-k/v q8_0: Quantized KV cache saves ~30% memory
+    - flash-attn: Faster attention computation (if supported)
     """
     cmd = [
         "/usr/local/bin/llama-server",
@@ -102,9 +104,13 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         "--threads", str(N_THREADS),
         "--batch-size", str(N_BATCH),
         "--parallel", str(MAX_CONCURRENT),
-        # Keeping it minimal - mmap is default and pages in on-demand
-        # No --no-mmap (causes large upfront allocation)
-        # No cache quantization (may cause issues)
+        # Memory optimizations
+        "--mlock",                    # Lock model in RAM, prevent swapping
+        "--cache-type-k", "q8_0",     # Quantized KV cache (~30% less memory)
+        "--cache-type-v", "q8_0",
+        # Performance optimizations  
+        "--cont-batching",            # Continuous batching for better throughput
+        "--flash-attn",               # Faster attention (falls back if unsupported)
     ]
 
     logger.info(f"Starting llama-server: {' '.join(cmd)}")
