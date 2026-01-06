@@ -6,8 +6,19 @@ export interface ThinkingSplit {
 export const splitThinkingContent = (content: string): ThinkingSplit => {
   if (!content) return { thinking: null, answer: '' };
 
-  // Match both <think> and <thinking> tags
-  const match = content.match(/<think(?:ing)?>([\s\S]*?)<\/think(?:ing)?>\s*([\s\S]*)/i);
+  // Match <think>...</think> or <thinking>...</thinking> tags
+  // The closing tag must match the opening tag type
+  const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>\s*([\s\S]*)/i);
+  const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>\s*([\s\S]*)/i);
+
+  // Use whichever match appears first in the content
+  let match = null;
+  if (thinkMatch && thinkingMatch) {
+    match = content.indexOf('<think>') < content.indexOf('<thinking>') ? thinkMatch : thinkingMatch;
+  } else {
+    match = thinkMatch || thinkingMatch;
+  }
+
   if (match) {
     const thinkingContent = match[1]?.trim();
     const answerContent = (match[2] || '').trim();
@@ -26,3 +37,4 @@ export const splitThinkingContent = (content: string): ThinkingSplit => {
 
   return { thinking: null, answer: content };
 };
+

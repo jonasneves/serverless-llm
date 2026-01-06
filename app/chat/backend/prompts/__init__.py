@@ -11,7 +11,8 @@ from .base_prompts import (
     CONCISE_REASONING_PRINCIPLES,
     VERIFICATION_GUIDELINES,
     GESTURE_MODE_CONTEXT_LOCAL,
-    GESTURE_MODE_CONTEXT_API
+    GESTURE_MODE_CONTEXT_API,
+    strip_thinking_tags
 )
 
 from .analyze_prompts import (
@@ -47,6 +48,7 @@ __all__ = [
     'VERIFICATION_GUIDELINES',
     'GESTURE_MODE_CONTEXT_LOCAL',
     'GESTURE_MODE_CONTEXT_API',
+    'strip_thinking_tags',
     # Analyze
     'ANALYZE_RESPONSE_SYSTEM',
     # Debate

@@ -200,10 +200,14 @@ export function useSessionController(params: SessionControllerParams) {
       let textChunk = state.carry + rawChunk;
       state.carry = '';
 
+      // Check for partial tags at the end (handle both <think> and <thinking>)
       const lastLt = textChunk.lastIndexOf('<');
-      if (lastLt !== -1 && textChunk.length - lastLt < 8) {
+      if (lastLt !== -1 && textChunk.length - lastLt < 12) {
         const tail = textChunk.slice(lastLt);
-        if ('<think>'.startsWith(tail) || '</think>'.startsWith(tail)) {
+        if (
+          '<think>'.startsWith(tail) || '</think>'.startsWith(tail) ||
+          '<thinking>'.startsWith(tail) || '</thinking>'.startsWith(tail)
+        ) {
           state.carry = tail;
           textChunk = textChunk.slice(0, lastLt);
         }
@@ -214,23 +218,49 @@ export function useSessionController(params: SessionControllerParams) {
       let idx = 0;
       while (idx < textChunk.length) {
         if (!state.inThink) {
-          const start = textChunk.indexOf('<think>', idx);
+          // Look for either <think> or <thinking>
+          const startThink = textChunk.indexOf('<think>', idx);
+          const startThinking = textChunk.indexOf('<thinking>', idx);
+
+          let start = -1;
+          let tagLen = 0;
+          if (startThink !== -1 && (startThinking === -1 || startThink < startThinking)) {
+            start = startThink;
+            tagLen = 7; // '<think>'.length
+          } else if (startThinking !== -1) {
+            start = startThinking;
+            tagLen = 10; // '<thinking>'.length
+          }
+
           if (start === -1) {
             answerAdd += textChunk.slice(idx);
             break;
           }
           answerAdd += textChunk.slice(idx, start);
           state.inThink = true;
-          idx = start + 7;
+          idx = start + tagLen;
         } else {
-          const end = textChunk.indexOf('</think>', idx);
+          // Look for either </think> or </thinking>
+          const endThink = textChunk.indexOf('</think>', idx);
+          const endThinking = textChunk.indexOf('</thinking>', idx);
+
+          let end = -1;
+          let tagLen = 0;
+          if (endThink !== -1 && (endThinking === -1 || endThink < endThinking)) {
+            end = endThink;
+            tagLen = 8; // '</think>'.length
+          } else if (endThinking !== -1) {
+            end = endThinking;
+            tagLen = 11; // '</thinking>'.length
+          }
+
           if (end === -1) {
             thinkingAdd += textChunk.slice(idx);
             break;
           }
           thinkingAdd += textChunk.slice(idx, end);
           state.inThink = false;
-          idx = end + 8;
+          idx = end + tagLen;
         }
       }
 
@@ -244,6 +274,7 @@ export function useSessionController(params: SessionControllerParams) {
         enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
       }
     };
+
 
     const addIconToMessage = (message: string): string => {
       const lowerMsg = message.toLowerCase();

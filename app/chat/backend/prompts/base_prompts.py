@@ -67,3 +67,22 @@ GESTURE_MODE_CONTEXT_LOCAL = GESTURE_MODE_CONTEXT
 
 # Gesture mode context for API models (smart UI builder)
 GESTURE_MODE_CONTEXT_API = GESTURE_MODE_CONTEXT
+
+
+import re
+
+def strip_thinking_tags(content: str) -> str:
+    """
+    Strip <think>...</think> and <thinking>...</thinking> blocks from content.
+    Returns only the final response part.
+    """
+    if not content:
+        return ""
+    
+    # Remove <think>...</think> blocks
+    content = re.sub(r'<think>[\s\S]*?</think>\s*', '', content, flags=re.IGNORECASE)
+    # Remove <thinking>...</thinking> blocks
+    content = re.sub(r'<thinking>[\s\S]*?</thinking>\s*', '', content, flags=re.IGNORECASE)
+    
+    return content.strip()
+

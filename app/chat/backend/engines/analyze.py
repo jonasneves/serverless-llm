@@ -196,7 +196,10 @@ class AnalyzeEngine:
                         "full_response": event["full_response"]
                     }
                 elif event.get("complete"):
-                    final_response = event["full_response"]
+                    raw_response = event["full_response"]
+                    # Strip thinking tags from final response
+                    from prompts import strip_thinking_tags
+                    final_response = strip_thinking_tags(raw_response)
                     model_responses[model_id] = final_response
                     results.append({
                         "model_id": model_id,

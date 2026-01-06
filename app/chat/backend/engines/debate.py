@@ -197,12 +197,16 @@ Provide your response:"""
 
         response_time_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
+        # Strip thinking tags from final response
+        from prompts import strip_thinking_tags
+        clean_response = strip_thinking_tags(full_response)
+
         turn = DebateTurn(
             turn_number=turn_number,
             round_number=round_number,
             model_id=model_id,
             model_name=model_name,
-            response=full_response,
+            response=clean_response,
             response_time_ms=response_time_ms
         )
 
@@ -212,7 +216,7 @@ Provide your response:"""
             "round_number": round_number,
             "model_id": model_id,
             "model_name": model_name,
-            "response": full_response,
+            "response": clean_response,
             "response_time_ms": response_time_ms
         }
 
