@@ -9,6 +9,7 @@ interface ModelsApiModel {
   type?: string;
   priority?: number;
   context_length?: number;
+  default?: boolean;
 }
 
 interface ModelsApiResponse {
@@ -77,7 +78,8 @@ export function useModelsManager() {
           type: modelType,
           response: 'Ready to generate...',
           priority: model.priority,
-          context_length: model.context_length
+          context_length: model.context_length,
+          default: model.default
         };
       });
 

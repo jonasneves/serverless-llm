@@ -14,6 +14,7 @@ export interface Model {
   // Metadata from backend
   priority?: number;
   context_length?: number;
+  default?: boolean;
 }
 
 export type Mode = 'compare' | 'analyze' | 'debate' | 'chat';
