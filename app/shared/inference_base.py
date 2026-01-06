@@ -44,6 +44,7 @@ class ModelConfig:
     # Default HF repo + file (can be overridden via env)
     default_repo: str
     default_file: str
+    chat_format: Optional[str] = None
 
     # llama.cpp tuning - 4 threads matches GitHub Actions ARM runner vCPUs
     default_n_ctx: int = 4096
@@ -112,6 +113,7 @@ def create_app_for_model(model_name: str) -> FastAPI:
         owned_by=model.owned_by or model.name,
         default_repo=model.hf_repo,
         default_file=model.hf_file,
+        chat_format=model.chat_format,
         # These will be overridden by env vars from config/inference.yaml at runtime
         default_n_ctx=4096,
         default_n_threads=4,
@@ -176,6 +178,8 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             "last_n_tokens_size": config.last_n_tokens_size,
             "verbose": True,
         }
+        if config.chat_format:
+            llama_kwargs["chat_format"] = config.chat_format
         
         # Add KV-cache quantization if enabled (requires flash_attn)
         if type_k is not None:

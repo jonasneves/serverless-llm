@@ -49,6 +49,10 @@ models:
     n_batch: 512         # Good prompt processing
     max_concurrent: 3    # Can handle multiple requests
 
+  lfm2:
+    # LFM2 2.6B Exp: ChatML-like template, 32K native context
+    n_ctx: 8192
+
   nanbeige:
     # Nanbeige4-3B-Thinking: SPEED-OPTIMIZED config
     # Smaller context + Q4 quant = maximum throughput

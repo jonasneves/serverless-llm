@@ -42,6 +42,7 @@ class ModelConfig:
     hf_repo: Optional[str] = None  # e.g., "unsloth/Qwen3-4B-GGUF"
     hf_file: Optional[str] = None  # e.g., "Qwen3-4B-Q4_K_M.gguf"
     owned_by: Optional[str] = None  # e.g., "qwen", "microsoft"
+    chat_format: Optional[str] = None  # llama-cpp chat format override (e.g., "llama-3")
     
     @property
     def service_url(self) -> str:
@@ -142,6 +143,21 @@ MODELS: dict[str, ModelConfig] = {
         hf_file="SmolLM3-3B-Q4_K_M.gguf",
         owned_by="huggingfacetb",
     ),
+    "lfm2": ModelConfig(
+        name="lfm2",
+        port=8105,
+        subdomain="lfm2",
+        category=ModelCategory.SMALL,
+        model_id="lfm2-2.6b-exp",
+        display_name="LFM2 2.6B Exp",
+        inference_dir="lfm2-inference",
+        description="Instruction-following tuned via RL; strong small-model performance, 32K context",
+        rank=4,
+        hf_repo="LiquidAI/LFM2-2.6B-Exp-GGUF",
+        hf_file="LFM2-2.6B-Exp-Q4_K_M.gguf",
+        owned_by="liquidai",
+        chat_format="chatml",
+    ),
     
     # Medium models (7B-30B params)
     "gemma": ModelConfig(
@@ -171,6 +187,7 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/Llama-3.2-3B-Instruct-GGUF",
         hf_file="Llama-3.2-3B-Instruct-Q4_K_M.gguf",
         owned_by="meta",
+        chat_format="llama-3",
     ),
     "mistral": ModelConfig(
         name="mistral",

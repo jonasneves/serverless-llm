@@ -48,11 +48,17 @@ def generate_workflows_config() -> list[dict]:
     ]
     
     for model in get_inference_models():
-        # Workflow files are named after the model key (e.g., r1qwen-inference.yml)
-        # not the inference directory (e.g., deepseek-r1qwen-inference)
+        # Use inference_dir to determine workflow file if available, otherwise fallback to name
+        # This fixes issues like 'gptoss' vs 'gpt-oss-inference.yml'
+        if model.inference_dir:
+            # inference_dir="gpt-oss-inference" -> "gpt-oss-inference.yml"
+            workflow_path = f"{model.inference_dir}.yml"
+        else:
+            workflow_path = f"{model.name}-inference.yml"
+
         workflows.append({
             "name": model.display_name or model.name.title(),
-            "path": f"{model.name}-inference.yml",
+            "path": workflow_path,
             "category": model.category.value,
             "serviceKey": model.name,
         })
@@ -123,6 +129,12 @@ def main():
     output_dirs = [
         project_root / "app" / "chat" / "frontend" / "src" / "data",
     ]
+    
+    # Check for sibling chrome-extensions repo
+    extension_dir = project_root.parent / "chrome-extensions" / "extensions" / "shipctl" / "src" / "data"
+    if extension_dir.exists():
+        output_dirs.append(extension_dir)
+        print(f"✓ Detected Chrome Extension at: {extension_dir}")
 
     for output_dir in output_dirs:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -141,7 +153,7 @@ def main():
     print(f"  - {len(config['services'])} services")
     print(f"  - {len(config['workflows'])} workflows")
     print(f"  - {len(config['categories'])} categories")
-    print(f"  - Written to: app/chat/frontend/src/data/")
+    print(f"  - Written to {len(output_dirs)} locations")
 
 
 if __name__ == "__main__":
