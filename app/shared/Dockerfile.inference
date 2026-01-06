@@ -33,7 +33,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy shared requirements (all models use the same dependencies)
-COPY shared/requirements.txt .
+COPY app/shared/requirements.txt .
 
 # Install with OpenBLAS, OpenMP, and ARM NEON optimizations
 # - OpenBLAS: BLAS acceleration for matrix operations
@@ -66,11 +66,14 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy shared inference base module
-COPY --chown=appuser:appuser shared/ ./shared/
+COPY --chown=appuser:appuser app/shared/ ./shared/
+
+# Copy centralized config (models.py, inference.yaml)
+COPY --chown=appuser:appuser config/ ./config/
 
 # Copy model-specific inference server configuration
 ARG MODEL_DIR
-COPY --chown=appuser:appuser ${MODEL_DIR}/inference_server.py .
+COPY --chown=appuser:appuser app/${MODEL_DIR}/inference_server.py .
 
 # Ensure appuser owns /app directory for cache creation
 RUN chown -R appuser:appuser /app

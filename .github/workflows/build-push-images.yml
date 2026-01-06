@@ -159,7 +159,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || matrix.model == 'chat' && '.' || './app' }}
+          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || '.' }}
           file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/backend/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || matrix.model == 'nemotron-inference' && './app/nemotron-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
           build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && matrix.model != 'rnj-inference' && matrix.model != 'nemotron-inference' && format('MODEL_DIR={0}', matrix.model) || '' }}
           push: true

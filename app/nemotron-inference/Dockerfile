@@ -58,13 +58,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy shared module
-COPY shared/ ./shared/
+COPY app/shared/ ./shared/
 
 # Copy model-specific files and install Python dependencies
-COPY nemotron-inference/requirements.txt .
+COPY app/nemotron-inference/requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-COPY nemotron-inference/inference_server.py .
+COPY app/nemotron-inference/inference_server.py .
 
 ENV MODEL_REPO=unsloth/Nemotron-3-Nano-30B-A3B-GGUF
 ENV MODEL_FILE=Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf
