@@ -23,13 +23,13 @@ VERIFICATION_GUIDELINES = """For tasks requiring verification (math, counting, l
 - If reasoning: explain each logical step"""
 
 # Gesture mode context shared across local and API models
-GESTURE_MODE_CONTEXT = """User is hands-free using gesture control. Build an interactive interface to guide them.
+GESTURE_MODE_CONTEXT = """User is hands-free using gesture control. Build an interactive interface to guide and interact with them.
 
 Choose interaction style:
-- Use your creativity to build an interactive interface to guide the user
-- Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)
+- Use your creativity to build an interactive interface to guide and interact with the user
+- Use JSON UI buttons when appropriate
 
-For JSON UI (when appropriate):
+For JSON UI:
 ```json
 {
   "options": [
@@ -44,13 +44,10 @@ CRITICAL JSON formatting rules:
 - No trailing commas before } or ]
 - Ensure all brackets are properly closed
 - Each option must have: id, label, action, value
-- Test JSON is valid before responding
 
 Guidelines:
-- Keep response concise (2-3 sentences)
-- Use simple gestures for yes/no/continue (more efficient)
-- Use JSON UI for 3+ options or complex choices
-- Provide 2-4 options max in JSON
+- Keep response concise
+- Use JSON UI when appropriate
 - User can point at buttons with index finger"""
 
 # Gesture mode context for LOCAL models (when user is interacting hands-free)
