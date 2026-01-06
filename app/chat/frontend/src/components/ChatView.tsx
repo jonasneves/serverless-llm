@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallba
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, X, Check, Loader2, Copy, Search } from 'lucide-react';
+import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, X, Check, Loader2, Copy, Search, Volume2, VolumeX } from 'lucide-react';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
@@ -91,6 +91,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [compareSelectedModels, setCompareSelectedModels] = useState<Set<string>>(new Set());
     const [compareSearchQuery, setCompareSearchQuery] = useState('');
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+    const [mutedParallelModels, setMutedParallelModels] = useState<Set<string>>(new Set());
     const compareAbortRefs = useRef<Map<string, AbortController>>(new Map());
     const streamBatchRef = useRef<Map<number, { content: string; timeout: number | null }>>(new Map());
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -823,6 +824,58 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }));
     };
 
+    const removeParallelResponse = (messageIndex: number, modelId: string) => {
+        if (compareAbortRefs.current.has(modelId)) {
+            cancelComparison(messageIndex, modelId);
+            return;
+        }
+        setMessages(prev => prev.map((msg, idx) => {
+            if (idx !== messageIndex || !msg.alternateResponses) return msg;
+            const nextAlternates = msg.alternateResponses.filter(alt => alt.modelId !== modelId);
+            if (nextAlternates.length === msg.alternateResponses.length) return msg;
+
+            const activeIndex = msg.activeResponseIndex ?? 0;
+            const activeModelId = activeIndex === 0 ? msg.modelId : msg.alternateResponses[activeIndex - 1]?.modelId;
+            const nextActiveIndex = activeModelId === modelId ? 0 : activeIndex;
+
+            return {
+                ...msg,
+                alternateResponses: nextAlternates,
+                activeResponseIndex: nextActiveIndex,
+            };
+        }));
+    };
+
+    const toggleMuteModel = (modelId: string) => {
+        setMutedParallelModels(prev => {
+            const next = new Set(prev);
+            if (next.has(modelId)) {
+                next.delete(modelId);
+            } else {
+                next.add(modelId);
+            }
+            return next;
+        });
+    };
+
+    useEffect(() => {
+        if (mutedParallelModels.size === 0) return;
+        setMessages(prev => prev.map((msg) => {
+            if (!msg.alternateResponses || msg.alternateResponses.length === 0) return msg;
+            const activeIndex = msg.activeResponseIndex ?? 0;
+            const activeModelId = activeIndex === 0 ? msg.modelId : msg.alternateResponses[activeIndex - 1]?.modelId;
+            if (!activeModelId || !mutedParallelModels.has(activeModelId)) return msg;
+
+            if (msg.modelId && !mutedParallelModels.has(msg.modelId)) {
+                return { ...msg, activeResponseIndex: 0 };
+            }
+
+            const nextAltIndex = msg.alternateResponses.findIndex(alt => !mutedParallelModels.has(alt.modelId));
+            if (nextAltIndex === -1) return msg;
+            return { ...msg, activeResponseIndex: nextAltIndex + 1 };
+        }));
+    }, [mutedParallelModels, setMessages]);
+
     // Close compare menu on click outside or Escape key
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -855,11 +908,88 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const displayModel = autoMode && currentAutoModel
         ? models.find(m => m.id === currentAutoModel)
         : selectedModel;
+    const latestParallelMessage = useMemo(() => {
+        for (let i = messages.length - 1; i >= 0; i -= 1) {
+            const msg = messages[i];
+            if (msg.role === 'assistant' && msg.alternateResponses && msg.alternateResponses.length > 0) {
+                return { msg, index: i };
+            }
+        }
+        return null;
+    }, [messages]);
+
+    const parallelRoster = useMemo(() => {
+        if (!latestParallelMessage) return [];
+        const { msg } = latestParallelMessage;
+        const entries: Array<{ modelId: string; modelName: string; isPrimary: boolean }> = [];
+        if (msg.modelId) {
+            entries.push({
+                modelId: msg.modelId,
+                modelName: msg.modelName || msg.modelId,
+                isPrimary: true,
+            });
+        }
+        msg.alternateResponses?.forEach(alt => {
+            if (alt.modelId && !entries.find(entry => entry.modelId === alt.modelId)) {
+                entries.push({
+                    modelId: alt.modelId,
+                    modelName: alt.modelName || alt.modelId,
+                    isPrimary: false,
+                });
+            }
+        });
+        return entries;
+    }, [latestParallelMessage]);
 
     return (
         <div ref={containerRef} className="flex flex-col h-full relative isolate z-[10]">
             {/* Blue Selection Rectangle */}
             <SelectionOverlay rect={selectionRect} />
+
+            {/* Parallel Mode Bar */}
+            {latestParallelMessage && parallelRoster.length > 1 && (
+                <div className="mx-auto w-full px-4 pt-2 pb-1" style={{ maxWidth: '680px' }}>
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-900/60 px-3 py-2 text-[11px] text-slate-300">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 uppercase tracking-wider text-[9px]">
+                            Parallel Mode
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {parallelRoster.map(entry => {
+                                const isMuted = mutedParallelModels.has(entry.modelId);
+                                return (
+                                    <div
+                                        key={entry.modelId}
+                                        className={`flex items-center gap-1 rounded-full border px-2 py-0.5 ${isMuted
+                                            ? 'border-slate-700/60 bg-slate-800/40 text-slate-500'
+                                            : entry.isPrimary
+                                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                                : 'border-slate-700/60 bg-slate-800/60 text-slate-300'
+                                            }`}
+                                    >
+                                        <span className="text-[10px] font-medium">{entry.modelName}</span>
+                                        <button
+                                            onClick={() => toggleMuteModel(entry.modelId)}
+                                            className="p-0.5 rounded-full hover:bg-slate-700/60 transition-colors"
+                                            title={isMuted ? 'Unmute' : 'Mute'}
+                                        >
+                                            {isMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                                        </button>
+                                        {!entry.isPrimary && (
+                                            <button
+                                                onClick={() => removeParallelResponse(latestParallelMessage.index, entry.modelId)}
+                                                className="p-0.5 rounded-full hover:bg-red-500/20 text-slate-400 hover:text-red-300 transition-colors"
+                                                title="Remove"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Messages Area */}
             <div
@@ -1023,13 +1153,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                 >
                                                     <ChevronRight size={10} />
                                                 </button>
-                                                {/* Compare button */}
+                                                {/* Parallel button */}
                                                 <div className="relative ml-1">
                                                     <button
                                                         onClick={(e) => openCompareMenu(idx, e)}
                                                         disabled={isGenerating}
                                                         className="p-0.5 rounded hover:bg-slate-700/50 transition-colors disabled:opacity-30"
-                                                        title="Compare with other models"
+                                                        title="Add parallel replies"
                                                     >
                                                         <Plus size={10} />
                                                     </button>
@@ -1105,7 +1235,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                                         onClick={() => startComparison(idx)}
                                                                         className="w-full px-3 py-1.5 text-xs font-medium rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
                                                                     >
-                                                                        Compare with {compareSelectedModels.size} model{compareSelectedModels.size > 1 ? 's' : ''}
+                                                                        Run parallel with {compareSelectedModels.size} model{compareSelectedModels.size > 1 ? 's' : ''}
                                                                     </button>
                                                                 </div>
                                                             )}
@@ -1120,19 +1250,43 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     {/* Model comparison tabs - only show if there are alternates */}
                                     {msg.alternateResponses && msg.alternateResponses.length > 0 && (
                                         <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 pb-2 mb-1 border-t border-slate-700/30">
-                                            <span className="text-[9px] text-slate-500 uppercase tracking-wider mr-1">Compare:</span>
+                                            <span className="text-[9px] text-slate-500 uppercase tracking-wider mr-1">Parallel:</span>
+                                            <div className="flex items-center">
+                                                {msg.modelId && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, 0); }}
+                                                        className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${mutedParallelModels.has(msg.modelId)
+                                                            ? 'bg-slate-800/60 text-slate-500 ring-1 ring-slate-700/50'
+                                                            : (msg.activeResponseIndex ?? 0) === 0
+                                                                ? 'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/50'
+                                                                : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+                                                            }`}
+                                                        title={mutedParallelModels.has(msg.modelId) ? 'Muted' : 'Primary response'}
+                                                    >
+                                                        {msg.modelName || 'Assistant'}
+                                                    </button>
+                                                )}
+                                            </div>
                                             {msg.alternateResponses.map((alt, altIdx) => (
                                                 <div key={alt.modelId} className="flex items-center">
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, altIdx + 1); }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (!mutedParallelModels.has(alt.modelId)) {
+                                                                setActiveResponse(idx, altIdx + 1);
+                                                            }
+                                                        }}
                                                         className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${alt.loading
                                                             ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40'
                                                             : alt.error
                                                                 ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'
-                                                                : (msg.activeResponseIndex ?? 0) === altIdx + 1
-                                                                    ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
-                                                                    : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+                                                                : mutedParallelModels.has(alt.modelId)
+                                                                    ? 'bg-slate-800/60 text-slate-500 ring-1 ring-slate-700/50'
+                                                                    : (msg.activeResponseIndex ?? 0) === altIdx + 1
+                                                                        ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
+                                                                        : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
                                                             }`}
+                                                        title={mutedParallelModels.has(alt.modelId) ? 'Muted' : 'Parallel response'}
                                                     >
                                                         {alt.loading && <Loader2 size={8} className="animate-spin text-amber-400" />}
                                                         {alt.error && <AlertTriangle size={8} className="text-red-400" />}
@@ -1147,17 +1301,20 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                             <X size={8} />
                                                         </button>
                                                     )}
+                                                    {!alt.loading && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                removeParallelResponse(idx, alt.modelId);
+                                                            }}
+                                                            className="ml-0.5 p-0.5 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
+                                                            title="Remove"
+                                                        >
+                                                            <X size={8} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             ))}
-                                            {/* Back to original button when viewing alternate */}
-                                            {(msg.activeResponseIndex ?? 0) > 0 && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, 0); }}
-                                                    className="px-2 py-0.5 text-[9px] rounded-full bg-slate-600/40 text-slate-300 hover:bg-slate-600/60 transition-colors"
-                                                >
-                                                    ← Back to {msg.modelName}
-                                                </button>
-                                            )}
                                         </div>
                                     )}
 
