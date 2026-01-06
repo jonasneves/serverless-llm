@@ -24,28 +24,45 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /build
 
-# Build llama.cpp server binary with RNJ-1 support
+# Clone llama.cpp from Essential-AI fork with rnj1 architecture support
 # The GGUF on HuggingFace uses 'rnj1' architecture which only exists in commit e1b7d46.
-# Later commits refactored to gemma3, but Essential AI's GGUF wasn't updated.
-# Clone from Essential-AI fork which has the rnj1 support commit.
 RUN git clone https://github.com/Essential-AI/llama.cpp.git . \
     && git checkout e1b7d46e8c3364cad6d3d17059e9748911726881 \
-    && git submodule update --init --recursive \
-    # Build with OpenBLAS for CPU acceleration
-    # Using minimal cmake flags compatible with this older codebase (Nov 2025)
-    && cmake -B build \
-        -DGGML_BLAS=ON \
-        -DGGML_BLAS_VENDOR=OpenBLAS \
-        -DGGML_NATIVE=ON \
-        -DLLAMA_BUILD_SERVER=ON \
-    && cmake --build build -j$(nproc) \
-    # Find and copy llama-server binary (check multiple possible paths)
-    && ls -la build/bin/ || true \
-    && (cp build/bin/llama-server /usr/local/bin/ 2>/dev/null || \
-        find build -name "llama-server" -type f -exec cp {} /usr/local/bin/ \;) \
-    && chmod +x /usr/local/bin/llama-server \
-    && /usr/local/bin/llama-server --version || echo "Server binary ready" \
-    && find build -name "*.so*" -exec cp -v {} /usr/local/lib/ \; 2>/dev/null || true \
+    && git submodule update --init --recursive
+
+# Configure cmake build
+RUN cmake -B build \
+    -DGGML_BLAS=ON \
+    -DGGML_BLAS_VENDOR=OpenBLAS \
+    -DGGML_NATIVE=ON \
+    -DLLAMA_BUILD_SERVER=ON
+
+# Build all targets
+RUN cmake --build build -j$(nproc)
+
+# Debug: Show what was built
+RUN echo "=== Contents of build directory ===" \
+    && find build -name "llama*" -type f 2>/dev/null || true \
+    && echo "=== Contents of build/bin ===" \
+    && ls -la build/bin/ 2>/dev/null || echo "No build/bin directory"
+
+# Copy llama-server to system path - MUST succeed or build fails
+RUN if [ -f build/bin/llama-server ]; then \
+        cp build/bin/llama-server /usr/local/bin/; \
+    elif [ -f build/llama-server ]; then \
+        cp build/llama-server /usr/local/bin/; \
+    else \
+        echo "ERROR: llama-server binary not found!"; \
+        find build -type f -name "*server*" || true; \
+        exit 1; \
+    fi \
+    && chmod +x /usr/local/bin/llama-server
+
+# Verify the binary works
+RUN /usr/local/bin/llama-server --help | head -5 || echo "Binary exists but --help failed"
+
+# Copy shared libraries and cleanup
+RUN find build -name "*.so*" -exec cp -v {} /usr/local/lib/ \; 2>/dev/null || true \
     && ldconfig \
     && rm -rf /build
 
