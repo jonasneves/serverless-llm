@@ -21,19 +21,17 @@ import uvicorn
 import pathlib
 from urllib.parse import urlparse
 
-from clients.http_client import HTTPClient
 from clients.model_client import ModelClient
 from clients.model_profiles import MODEL_PROFILES
-from constants import DEFAULT_LOCAL_ENDPOINTS
 from services.health_service import fetch_model_capacity
-import asyncio
-from core.state import MODEL_CAPACITIES, LIVE_CONTEXT_LENGTHS
 from core.config import (
     MODEL_CONFIG,
     MODEL_ENDPOINTS,
     MODEL_DISPLAY_NAMES,
     DEFAULT_MODEL_ID,
-    get_endpoint
+    DEFAULT_LOCAL_ENDPOINTS,
+    DEFAULT_MODEL_CAPACITY,
+    get_endpoint,
 )
 from middleware.error_utils import sanitize_error_message
 from middleware.rate_limiter import get_rate_limiter
@@ -47,10 +45,12 @@ model_client = ModelClient()
 # Cache of GitHub Models that returned "unknown_model".
 # Prevents repeated network calls/log spam for invalid IDs.
 from core.state import (
-    MODEL_SEMAPHORES,
-    MODEL_CAPACITIES,
     LIVE_CONTEXT_LENGTHS,
-    UNSUPPORTED_GITHUB_MODELS
+    MODEL_CAPACITIES,
+    MODEL_SEMAPHORES,
+    UNSUPPORTED_GITHUB_MODELS,
+    close_http_client,
+    get_http_client,
 )
 
 # Import GitHub token utility
@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan (startup and shutdown)."""
     # Startup
     validate_environment()
-    HTTPClient.get_client()
+    get_http_client()
 
     # Log configured model endpoints
     model_env_vars = {
@@ -92,13 +92,13 @@ async def lifespan(app: FastAPI):
     # Initialize model semaphores with default capacity during startup for immediate availability
     logger.info("Initializing model semaphores with default capacity...")
     for model_id, endpoint in MODEL_ENDPOINTS.items():
-        # Initialize with default capacity of 1 to allow immediate server startup
-        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(1)
-        MODEL_CAPACITIES[model_id] = 1
+        # Initialize with default capacity to allow immediate server startup
+        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(DEFAULT_MODEL_CAPACITY)
+        MODEL_CAPACITIES[model_id] = DEFAULT_MODEL_CAPACITY
 
         # Also fetch context length during startup with default
         try:
-            client = HTTPClient.get_client()
+            client = get_http_client()
             details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
             if details_response.status_code == 200:
                 details_data = details_response.json()
@@ -122,7 +122,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    await HTTPClient.close_client()
+    await close_http_client()
 
 
 async def update_model_capacities_async():
@@ -160,7 +160,7 @@ async def _update_single_model_capacity(model_id: str, endpoint: str):
 
         # Also fetch context length in the background
         try:
-            client = HTTPClient.get_client()
+            client = get_http_client()
             details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
             if details_response.status_code == 200:
                 details_data = details_response.json()
@@ -434,22 +434,20 @@ async def stream_multiple_models(
     Supports both local models and API models (via GitHub Models API).
     """
     # Use a queue to collect chunks from all models in real-time
-    queue: asyncio.Queue = asyncio.Queue()
-    active_streams = len(models)
-    completed_streams = 0
-
-    if active_streams == 0:
+    if not models:
         yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
         return
 
-    # Client to use (ModelClient instances are lightweight)
-    request_client = ModelClient(github_token, openrouter_key) # Passed tokens handle API auth
+    queue: asyncio.Queue = asyncio.Queue()
+    done_sentinel = object()
 
-    async def stream_to_queue(model_id: str):
-        """Stream from a model and put chunks into the shared queue"""
-        nonlocal completed_streams
+    # Client to use (ModelClient instances are lightweight)
+    request_client = ModelClient(github_token, openrouter_key)  # Passed tokens handle API auth
+
+    async def stream_to_queue(model_id: str) -> None:
+        """Stream from a model and put chunks into the shared queue."""
         display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
-        
+
         # Semaphore for local concurrency
         semaphore = MODEL_SEMAPHORES.get(model_id)
         if not semaphore:
@@ -460,60 +458,49 @@ async def stream_multiple_models(
             async with semaphore:
                 async for event in request_client.stream_model(model_id, messages, max_tokens, temperature):
                     if event["type"] == "start":
-                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
-                    
+                        await queue.put(
+                            f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'start'})}\n\n"
+                        )
                     elif event["type"] == "chunk":
-                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': event['content'], 'event': 'token'})}\n\n"
-                    
+                        await queue.put(
+                            f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'content': event['content'], 'event': 'token'})}\n\n"
+                        )
                     elif event["type"] == "done":
                         # Estimate usage if not provided
                         usage = event.get("usage")
                         total_content = event.get("full_content", "")
                         token_count = usage.get("total_tokens") if usage else len(total_content.split()) * 1.3
-                        
-                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': 0, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage})}\n\n"
-                    
+
+                        await queue.put(
+                            f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'event': 'done', 'time': 0, 'total_content': total_content, 'token_estimate': int(token_count), 'usage': usage})}\n\n"
+                        )
                     elif event["type"] == "error":
-                         # Only yield errors as data events so frontend can display them
-                        yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': event['error']})}\n\n"
-                        
+                        # Only yield errors as data events so frontend can display them
+                        await queue.put(
+                            f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': event['error']})}\n\n"
+                        )
         except Exception as e:
-             yield f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': str(e)})}\n\n"
+            await queue.put(
+                f"data: {json.dumps({'model': display_name, 'model_id': model_id, 'error': True, 'content': str(e)})}\n\n"
+            )
         finally:
-            # We need to signal completion to the main loop
-            # But since we are yielding to a bridge, we can't easily put to queue here if we use generator
-            pass
+            await queue.put(done_sentinel)
 
-    async def bridge_stream_to_queue(model_id: str):
-         nonlocal completed_streams
-         try:
-             async for item in stream_to_queue(model_id):
-                 await queue.put(item)
-         finally:
-             completed_streams += 1
-             if completed_streams >= active_streams:
-                await queue.put(None)
+    tasks = [asyncio.create_task(stream_to_queue(m)) for m in models]
 
-    # Re-create tasks with bridge
-    tasks = [asyncio.create_task(bridge_stream_to_queue(m)) for m in models]
-
-    if not tasks:
-        yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
-        return
-
-    # Yield chunks as they arrive from any model
+    completed = 0
     try:
-        while True:
-            chunk = await queue.get()
-            if chunk is None:  # Sentinel - all streams completed
-                break
-            yield chunk
+        while completed < len(tasks):
+            item = await queue.get()
+            if item is done_sentinel:
+                completed += 1
+                continue
+            yield item
     finally:
-        # Ensure all tasks are cleaned up
         for task in tasks:
             if not task.done():
                 task.cancel()
-    # Send final done event
+
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
 
 

@@ -28,4 +28,4 @@ line-length = 100
 "__init__.py" = ["F401"]  # Ignore unused imports in init files
 
 [tool.ruff.isort]
-known-first-party = ["api", "core", "services", "utils", "constants", "http_client"]
+known-first-party = ["api", "core", "services", "utils"]

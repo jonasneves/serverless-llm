@@ -2,19 +2,15 @@
 Model listing and health check API routes
 """
 
-from typing import Dict
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from api.models import ModelStatus
-from core.dependencies import get_live_context_lengths
+from core.state import LIVE_CONTEXT_LENGTHS, get_http_client
 
 router = APIRouter(prefix="/api/models", tags=["models"])
 
 
 @router.get("")
-async def list_models(
-    live_context_lengths: Dict[str, int] = Depends(get_live_context_lengths)
-):
+async def list_models():
     """
     List all available models (local and API)
     """
@@ -23,8 +19,8 @@ async def list_models(
 
     def get_context_length(model_id: str) -> int:
         """Get context length: prefer live value from server, fall back to profile."""
-        if model_id in live_context_lengths:
-            return live_context_lengths[model_id]
+        if model_id in LIVE_CONTEXT_LENGTHS:
+            return LIVE_CONTEXT_LENGTHS[model_id]
         return MODEL_PROFILES.get(model_id, {}).get("context_length", 0)
 
     # Build list of self-hosted models from MODEL_CONFIG
@@ -115,8 +111,6 @@ async def model_status(model_id: str, detailed: bool = False):
     """
     from chat_server import get_model_endpoint_or_error
     from services.health_service import check_model_health
-    from clients.http_client import HTTPClient
-
     endpoint = get_model_endpoint_or_error(model_id, status_code=404)
 
     if detailed:
@@ -124,7 +118,7 @@ async def model_status(model_id: str, detailed: bool = False):
         return health_data
     else:
         # Quick status check
-        client = HTTPClient.get_client()
+        client = get_http_client()
         try:
             response = await client.get(f"{endpoint}/health", timeout=3.0)
             return {

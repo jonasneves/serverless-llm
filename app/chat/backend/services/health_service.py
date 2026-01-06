@@ -4,8 +4,8 @@ import httpx
 import logging
 from typing import Dict, Any
 
-from clients.http_client import HTTPClient
-from core.config import MODEL_ENDPOINTS, MODEL_DISPLAY_NAMES
+from core.state import get_http_client
+from core.config import DEFAULT_MODEL_CAPACITY, MODEL_DISPLAY_NAMES, MODEL_ENDPOINTS
 from core.state import LIVE_CONTEXT_LENGTHS, is_inference_fresh, get_last_inference_age
 
 logger = logging.getLogger(__name__)
@@ -16,26 +16,30 @@ async def fetch_model_capacity(model_id: str, endpoint: str) -> int:
     Returns the model's reported capacity, or a default of 1 if unavailable.
     """
     try:
-        client = HTTPClient.get_client()
+        client = get_http_client()
         response = await client.get(f"{endpoint}/health/details", timeout=5.0)
         if response.status_code == 200:
             data = response.json()
-            capacity = data.get("max_concurrent", 1)
+            capacity = data.get("max_concurrent", DEFAULT_MODEL_CAPACITY)
             logger.info(f"✓ {model_id}: max_concurrent={capacity}")
             return capacity
         else:
-            logger.warning(f"⚠️  {model_id}: health check returned {response.status_code}, using default capacity=1")
-            return 1
+            logger.warning(
+                f"⚠️  {model_id}: health check returned {response.status_code}, using default capacity={DEFAULT_MODEL_CAPACITY}"
+            )
+            return DEFAULT_MODEL_CAPACITY
     except Exception as e:
-        logger.warning(f"⚠️  {model_id}: failed to fetch capacity ({e}), using default capacity=1")
-        return 1
+        logger.warning(
+            f"⚠️  {model_id}: failed to fetch capacity ({e}), using default capacity={DEFAULT_MODEL_CAPACITY}"
+        )
+        return DEFAULT_MODEL_CAPACITY
 
 async def check_model_health(model_id: str, endpoint: str) -> Dict[str, Any]:
     """
     Perform a detailed health check on a single model, including inference test.
     Also fetches and caches the live context length from /health/details.
     """
-    client = HTTPClient.get_client()
+    client = get_http_client()
     start_time = time.time()
     
     try:
@@ -127,7 +131,7 @@ async def check_model_health(model_id: str, endpoint: str) -> Dict[str, Any]:
 
 async def quick_model_health_check(timeout: float = 3.0) -> Dict[str, str]:
     """Lightweight /health checks for badge endpoints."""
-    client = HTTPClient.get_client()
+    client = get_http_client()
 
     async def check_model(model_id: str, endpoint: str):
         try:
@@ -156,7 +160,7 @@ async def check_single_model_status(model_id: str) -> Dict[str, Any]:
     display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
 
     try:
-        client = HTTPClient.get_client()
+        client = get_http_client()
         response = await client.get(f"{endpoint}/health", timeout=5.0)
 
         if response.status_code == 200:

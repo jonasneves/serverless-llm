@@ -7,7 +7,8 @@ import logging
 import json
 from typing import Dict, Any
 import httpx
-from clients.http_client import HTTPClient
+
+from core.state import get_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class WebSearchTool:
             Dict with search results
         """
         try:
-            client = HTTPClient.get_client()
+            client = get_http_client()
             params = {
                 "q": query,
                 "format": "json",

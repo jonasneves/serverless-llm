@@ -6,43 +6,6 @@ export const MODEL_META: Record<string, { color: string; name?: string }> = {
   'external': { color: '#8b5cf6' },    // Purple for external API models
 };
 
-// Self-hosted models - fallback priorities matching config/models.py rankings
-// These are used when dynamic priority isn't available (e.g., static JSON in extension mode)
-export const SELF_HOSTED_MODEL_PRIORITIES: Record<string, number> = {
-  'nanbeige': 1,      // Nanbeige4-3B Thinking
-  'qwen': 2,          // Qwen3 4B
-  'r1qwen': 3,        // DeepSeek R1 1.5B
-  'deepseek': 3,      // DeepSeek R1 (alternate match)
-  'gemma': 4,         // Gemma 3 12B
-  'mistral': 5,       // Mistral 7B v0.3
-  'phi': 6,           // Phi-3 Mini
-  'rnj': 7,           // RNJ-1 Instruct
-  'llama': 8,         // Llama 3.2-3B
-  'functiongemma': 9, // FunctionGemma 270M
-  'nemotron': 10,     // Nemotron-3 Nano 30B
-  'gptoss': 11,       // GPT-OSS 20B
-  'gpt-oss': 11,      // GPT-OSS (alternate match)
-};
-
-// GitHub Models - from GitHub's model marketplace
-export const GITHUB_MODEL_PRIORITIES: Record<string, number> = {
-  'gpt-4o': 1,
-  'gpt-4.1': 2,
-  'gpt-5': 3,
-  'gpt-5-mini': 4,
-  'gpt-5-nano': 5,
-  'llama-3.3-70b': 6,
-  'llama-4-scout-17b-16e-instruct': 7,
-  'mistral-large': 8,
-};
-
-// External API models - third-party APIs (DeepSeek, GLM, etc.)
-export const EXTERNAL_MODEL_PRIORITIES: Record<string, number> = {
-  'deepseek-v3-0324': 1,
-  'glm-4.6': 2,
-  'command-r-plus': 3,
-};
-
 export const SELF_HOSTED_DEFAULT_PRIORITY = 50;
 export const GITHUB_DEFAULT_PRIORITY = 100;
 export const EXTERNAL_DEFAULT_PRIORITY = 150;
@@ -81,28 +44,18 @@ export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'gi
     return dynamicPriority;
   }
 
-  let priorityMap: Record<string, number>;
   let defaultPriority: number;
 
   switch (modelType) {
     case 'self-hosted':
-      priorityMap = SELF_HOSTED_MODEL_PRIORITIES;
       defaultPriority = SELF_HOSTED_DEFAULT_PRIORITY;
       break;
     case 'github':
-      priorityMap = GITHUB_MODEL_PRIORITIES;
       defaultPriority = GITHUB_DEFAULT_PRIORITY;
       break;
     case 'external':
-      priorityMap = EXTERNAL_MODEL_PRIORITIES;
       defaultPriority = EXTERNAL_DEFAULT_PRIORITY;
       break;
-  }
-
-  for (const [pattern, priority] of Object.entries(priorityMap)) {
-    if (modelId.toLowerCase().includes(pattern.toLowerCase())) {
-      return priority;
-    }
   }
 
   return defaultPriority;

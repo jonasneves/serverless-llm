@@ -10,14 +10,16 @@ import asyncio
 import os
 from typing import List, Dict, Any, AsyncGenerator, Optional
 import httpx
-
-from clients.http_client import HTTPClient
 from clients.model_profiles import MODEL_PROFILES, get_display_name
-from core.config import MODEL_ENDPOINTS
-from constants import GITHUB_MODELS_API_URL, OPENROUTER_API_URL
+from core.config import GITHUB_MODELS_API_URL, MODEL_ENDPOINTS, OPENROUTER_API_URL
 from middleware.error_utils import sanitize_error_message
 from middleware.rate_limiter import get_rate_limiter
-from core.state import UNSUPPORTED_GITHUB_MODELS, record_successful_inference, mark_model_unsupported
+from core.state import (
+    UNSUPPORTED_GITHUB_MODELS,
+    get_http_client,
+    mark_model_unsupported,
+    record_successful_inference,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +182,7 @@ class ModelClient:
         if response_format:
             payload["response_format"] = response_format
 
-        client = HTTPClient.get_client()
+        client = get_http_client()
         try:
             response = await client.post(url, json=payload, timeout=120.0)
             
@@ -228,7 +230,7 @@ class ModelClient:
         if response_format:
              payload["response_format"] = response_format
 
-        client = HTTPClient.get_client()
+        client = get_http_client()
         rate_limiter = await get_rate_limiter(url, self.github_token, model_id=model_id)
         
         async with await rate_limiter.acquire():
@@ -275,7 +277,7 @@ class ModelClient:
             "stream_options": {"include_usage": True}
         }
         
-        client = HTTPClient.get_client()
+        client = get_http_client()
         full_content = ""
         final_usage = None
         
@@ -348,7 +350,7 @@ class ModelClient:
              payload["max_tokens"] = max_tokens
              payload["temperature"] = temperature
 
-        client = HTTPClient.get_client()
+        client = get_http_client()
         rate_limiter = await get_rate_limiter(url, self.github_token, model_id=model_id)
         
         async with await rate_limiter.acquire():

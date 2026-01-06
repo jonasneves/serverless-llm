@@ -24,7 +24,7 @@ async def chat(request: ChatRequest):
         serialize_messages,
         build_completion_payload
     )
-    from clients.http_client import HTTPClient
+    from core.state import get_http_client
 
     endpoint = get_model_endpoint_or_error(request.model)
     full_url = f"{endpoint}/v1/chat/completions"
@@ -33,7 +33,7 @@ async def chat(request: ChatRequest):
 
     logger.info(f"Calling {request.model} at {full_url}")
 
-    client = HTTPClient.get_client()
+    client = get_http_client()
 
     try:
         response = await client.post(full_url, json=payload)
@@ -101,11 +101,11 @@ async def chat_multi(request: MultiChatRequest):
         serialize_messages,
         query_model
     )
-    from clients.http_client import HTTPClient
+    from core.state import get_http_client
 
     messages = serialize_messages(request.messages)
 
-    client = HTTPClient.get_client()
+    client = get_http_client()
 
     # Query all models in parallel
     tasks = [

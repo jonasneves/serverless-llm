@@ -25,17 +25,8 @@ VERIFICATION_GUIDELINES = """For tasks requiring verification (math, counting, l
 # Gesture mode context shared across local and API models
 GESTURE_MODE_CONTEXT = """User is hands-free using gesture control. Build an interactive interface to guide them.
 
-Available gesture inputs:
-- 👍 (yes/approve/like)
-- 👎 (no/disapprove/dislike)
-- 👋 (hi/hello/greeting)
-- "ok" (okay/continue)
-- "thanks" (thank you)
-- "stop" (stop/wait)
-- Pointing finger (select UI buttons)
-
 Choose interaction style:
-- Simple binary: "Give 👍 to continue or 👎 to stop" (no JSON needed)
+- Simple binary: "Give 👍 or 👎" (no JSON needed)
 - Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)
 
 For JSON UI (when appropriate):

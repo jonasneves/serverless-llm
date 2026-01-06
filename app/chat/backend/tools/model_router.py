@@ -7,8 +7,9 @@ import os
 import logging
 import httpx
 from typing import Dict, Any, Optional
-from clients.http_client import HTTPClient
-from constants import DEFAULT_REMOTE_ENDPOINTS
+
+from core.state import get_http_client
+from core.config import DEFAULT_REMOTE_ENDPOINTS
 from middleware.error_utils import sanitize_error_message
 
 logger = logging.getLogger(__name__)
@@ -153,7 +154,7 @@ class ModelRouter:
         messages.append({"role": "user", "content": prompt})
 
         # Call the model via OpenAI-compatible API
-        client = HTTPClient.get_client()
+        client = get_http_client()
         payload = {
             "messages": messages,
             "max_tokens": max_tokens,
