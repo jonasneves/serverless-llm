@@ -74,15 +74,22 @@ import re
 def strip_thinking_tags(content: str) -> str:
     """
     Strip <think>...</think> and <thinking>...</thinking> blocks from content.
-    Returns only the final response part.
+    Also handles implicit thinking where content starts with thinking but has no opening tag
+    (common with DeepSeek R1 which outputs: "thinking content... </think>\n\nactual response")
     """
     if not content:
         return ""
     
-    # Remove <think>...</think> blocks
+    # First, handle proper <think>...</think> blocks
     content = re.sub(r'<think>[\s\S]*?</think>\s*', '', content, flags=re.IGNORECASE)
-    # Remove <thinking>...</thinking> blocks
+    # Handle proper <thinking>...</thinking> blocks
     content = re.sub(r'<thinking>[\s\S]*?</thinking>\s*', '', content, flags=re.IGNORECASE)
     
+    # Handle implicit thinking: content ends with </think> or </thinking> but no opening tag
+    # This catches: "thinking content...</think>\n\nactual response"
+    content = re.sub(r'^[\s\S]*?</think>\s*', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'^[\s\S]*?</thinking>\s*', '', content, flags=re.IGNORECASE)
+    
     return content.strip()
+
 

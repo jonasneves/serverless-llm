@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from 'react';
-import { GENERATION_DEFAULTS } from '../constants';
+import { GENERATION_DEFAULTS, isThinkingModel } from '../constants';
 import { fetchChatStream, fetchAnalyzeStream, fetchDebateStream, streamSseEvents } from '../utils/streaming';
 import { ChatHistoryEntry, Mode, Model } from '../types';
 import { ExecutionTimeData } from '../components/ExecutionTimeDisplay';
@@ -29,7 +29,7 @@ interface SessionControllerParams {
   currentDiscussionTurnRef: React.MutableRefObject<{ modelId: string; turnNumber: number } | null>;
   sessionModelIdsRef: React.MutableRefObject<string[]>;
   abortControllerRef: React.MutableRefObject<AbortController | null>;
-  thinkingStateRef: React.MutableRefObject<Record<string, { inThink: boolean; carry: string }>>;
+  thinkingStateRef: React.MutableRefObject<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean }>>;
   conversationHistoryRef: React.MutableRefObject<ChatHistoryEntry[]>;
   pushHistoryEntries: (entries: ChatHistoryEntry[]) => void;
   historyToText: (history: ChatHistoryEntry[]) => string;
@@ -172,7 +172,13 @@ export function useSessionController(params: SessionControllerParams) {
     const thinkingResetIds = new Set(sessionModelIds);
     if (moderator) thinkingResetIds.add(moderator);
     thinkingResetIds.forEach(modelId => {
-      thinkingStateRef.current[modelId] = { inThink: false, carry: '' };
+      // Thinking models (DeepSeek R1, SmolLM3, etc.) start in thinking mode by default
+      const startsInThinkingMode = isThinkingModel(modelId);
+      thinkingStateRef.current[modelId] = {
+        inThink: startsInThinkingMode,
+        carry: '',
+        implicitThinking: startsInThinkingMode
+      };
     });
 
     const firstTokenReceived = new Set<string>();
@@ -196,7 +202,7 @@ export function useSessionController(params: SessionControllerParams) {
     };
 
     const applyThinkingChunk = (modelId: string, rawChunk: string) => {
-      const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '' };
+      const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '', implicitThinking: false };
       let textChunk = state.carry + rawChunk;
       state.carry = '';
 
@@ -216,6 +222,22 @@ export function useSessionController(params: SessionControllerParams) {
       let thinkingAdd = '';
       let answerAdd = '';
       let idx = 0;
+
+      // Check for implicit thinking mode: if we haven't entered thinking mode yet but see a closing tag,
+      // everything before it was implicit thinking (common with DeepSeek R1)
+      if (!state.inThink && !state.implicitThinking) {
+        const closeThink = textChunk.indexOf('</think>');
+        const closeThinking = textChunk.indexOf('</thinking>');
+        const hasCloseTag = closeThink !== -1 || closeThinking !== -1;
+        const hasOpenTag = textChunk.indexOf('<think>') !== -1 || textChunk.indexOf('<thinking>') !== -1;
+
+        // If we have a close tag but no open tag, enable implicit thinking mode
+        if (hasCloseTag && !hasOpenTag) {
+          state.implicitThinking = true;
+          state.inThink = true; // Treat everything as thinking until we see the close tag
+        }
+      }
+
       while (idx < textChunk.length) {
         if (!state.inThink) {
           // Look for either <think> or <thinking>
@@ -260,6 +282,7 @@ export function useSessionController(params: SessionControllerParams) {
           }
           thinkingAdd += textChunk.slice(idx, end);
           state.inThink = false;
+          state.implicitThinking = false; // Reset implicit mode after closing tag
           idx = end + tagLen;
         }
       }
@@ -274,6 +297,7 @@ export function useSessionController(params: SessionControllerParams) {
         enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
       }
     };
+
 
 
     const addIconToMessage = (message: string): string => {

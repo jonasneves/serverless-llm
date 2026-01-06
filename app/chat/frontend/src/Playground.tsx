@@ -407,7 +407,7 @@ function PlaygroundInner() {
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const lastSelectedCardRef = useRef<string | null>(null);
   const suppressClickRef = useRef({ card: false, background: false });
-  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string }>>({});
+  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
   const {
     enqueueStreamDelta,

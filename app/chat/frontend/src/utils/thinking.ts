@@ -35,6 +35,24 @@ export const splitThinkingContent = (content: string): ThinkingSplit => {
     return { thinking: null, answer: answerContent };
   }
 
+  // Handle implicit thinking: content ends with </think> or </thinking> but has no opening tag
+  // Common with DeepSeek R1: "thinking content... </think>\n\nactual response"
+  const implicitThinkMatch = content.match(/^([\s\S]*?)<\/think>\s*([\s\S]*)/i);
+  const implicitThinkingMatch = content.match(/^([\s\S]*?)<\/thinking>\s*([\s\S]*)/i);
+
+  const implicitMatch = implicitThinkMatch || implicitThinkingMatch;
+  if (implicitMatch) {
+    const thinkingContent = implicitMatch[1]?.trim();
+    const answerContent = (implicitMatch[2] || '').trim();
+
+    if (thinkingContent && thinkingContent.length > 0 && answerContent.length > 0) {
+      return {
+        thinking: thinkingContent,
+        answer: answerContent,
+      };
+    }
+  }
+
   return { thinking: null, answer: content };
 };
 

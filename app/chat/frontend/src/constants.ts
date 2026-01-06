@@ -47,6 +47,22 @@ export const SELF_HOSTED_DEFAULT_PRIORITY = 50;
 export const GITHUB_DEFAULT_PRIORITY = 100;
 export const EXTERNAL_DEFAULT_PRIORITY = 150;
 
+// Models that output thinking content by default (without explicit <think> tags)
+// These models start in "thinking mode" and we treat all content as thinking until </think>
+export const THINKING_MODELS: string[] = [
+  'deepseek-r1-distill-qwen-1.5b',
+  'r1qwen',           // Alternate match
+  'smollm3',          // SmolLM3 uses <think> tags
+  'nanbeige',         // Nanbeige4-3B Thinking
+];
+
+// Check if a model ID matches any thinking model pattern
+export const isThinkingModel = (modelId: string): boolean => {
+  const lower = modelId.toLowerCase();
+  return THINKING_MODELS.some(pattern => lower.includes(pattern.toLowerCase()));
+};
+
+
 export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github' | 'external', dynamicPriority?: number): number {
   if (dynamicPriority !== undefined) {
     return dynamicPriority;
