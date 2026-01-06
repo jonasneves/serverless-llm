@@ -53,9 +53,6 @@ models:
     # LFM2 2.6B: ChatML-like template, 32K native context
     n_ctx: 8192
 
-  lfm2exp:
-    # LFM2 2.6B Exp: RL-tuned checkpoint
-    n_ctx: 8192
 
   nanbeige:
     # Nanbeige4-3B-Thinking: SPEED-OPTIMIZED config

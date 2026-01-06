@@ -36,31 +36,24 @@
       "context_length": 32768
     },
     {
-      "id": "lfm2-2.6b-exp",
-      "name": "LFM2 2.6B Exp",
-      "type": "self-hosted",
-      "priority": 6,
-      "context_length": 32768
-    },
-    {
       "id": "phi-3-mini",
       "name": "Phi-3 Mini",
       "type": "self-hosted",
-      "priority": 7,
+      "priority": 6,
       "context_length": 128000
     },
     {
       "id": "rnj-1-instruct",
       "name": "RNJ-1 Instruct",
       "type": "self-hosted",
-      "priority": 8,
+      "priority": 7,
       "context_length": 8192
     },
     {
       "id": "llama-3.2-3b",
       "name": "Llama 3.2-3B",
       "type": "self-hosted",
-      "priority": 9,
+      "priority": 8,
       "context_length": 128000
     },
     {

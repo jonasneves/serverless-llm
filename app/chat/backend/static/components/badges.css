@@ -86,10 +86,6 @@
     color: white;
 }
 
-.model-badge.lfm2exp {
-    background: var(--lfm2-color);
-    color: white;
-}
 
 /* Compliance pills */
 .compliance-pill {

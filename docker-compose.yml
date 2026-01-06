@@ -7,7 +7,7 @@
 #   docker-compose --profile qwen up       # Start chat + qwen
 #   docker-compose --profile qwen --profile phi up  # Start chat + qwen + phi
 #
-# Available profiles: all, qwen, phi, llama, mistral, gemma, r1qwen, rnj, lfm2, lfm2exp
+# Available profiles: all, qwen, phi, llama, mistral, gemma, r1qwen, rnj, lfm2
 # =============================================================================
 
 version: '3.8'
@@ -40,7 +40,6 @@ services:
       QWEN_API_URL: http://qwen:8000
       PHI_API_URL: http://phi:8000
       LFM2_API_URL: http://lfm2:8000
-      LFM2EXP_API_URL: http://lfm2exp:8000
       LLAMA_API_URL: http://llama:8000
       MISTRAL_API_URL: http://mistral:8000
       GEMMA_API_URL: http://gemma:8000
@@ -104,23 +103,6 @@ services:
     ports:
       - "${LFM2_PORT:-8105}:8000"
     profiles: ["all", "lfm2"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
-
-  lfm2exp:
-    <<: *inference-common
-    build:
-      context: ./app
-      dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: lfm2-exp-inference
-    ports:
-      - "${LFM2EXP_PORT:-8106}:8000"
-    profiles: ["all", "lfm2exp"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

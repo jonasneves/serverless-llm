@@ -9,8 +9,8 @@
         "properties": {
           "model": {
             "type": "string",
-            "enum": ["reasoner-1", "reasoner-2", "reasoner-3", "reasoner-4", "reasoner-5", "reasoner-6", "reasoner-7", "reasoner-8", "reasoner-9"],
-            "description": "The reasoning model to use (ranked by Dec 2025 benchmarks):\n- reasoner-1 (Qwen3 4B): Best overall - multilingual (119 langs), 1M context, exceptional reasoning/coding. Best for: complex logic, code, agent tasks.\n- reasoner-2 (DeepSeek R1 1.5B): o1-preview level reasoning, 96.3% Codeforces. Best for: math, step-by-step thinking, algorithms.\n- reasoner-3 (Gemma 3 12B): Stronger instruction-following + safety. Best for: fact-checking, educational content.\n- reasoner-4 (Mistral 7B): Fast instruction-following, structured output. Best for: JSON generation, tool use.\n- reasoner-5 (Phi-3 Mini): Compact but capable reasoning. Best for: moderate difficulty tasks.\n- reasoner-6 (RNJ-1 Instruct): 70% SWE-Bench, strong tool-calling. Best for: automation workflows.\n- reasoner-7 (Llama 3.2 3B): Lightweight, 131K context. Best for: simple tasks, creative writing.\n- reasoner-8 (LFM2 2.6B): Hybrid small model with strong instruction following.\n- reasoner-9 (LFM2 2.6B Exp): Experimental RL-tuned checkpoint with strong instruction following."
+            "enum": ["reasoner-1", "reasoner-2", "reasoner-3", "reasoner-4", "reasoner-5", "reasoner-6", "reasoner-7", "reasoner-8"],
+            "description": "The reasoning model to use (ranked by Dec 2025 benchmarks):\n- reasoner-1 (Qwen3 4B): Best overall - multilingual (119 langs), 1M context, exceptional reasoning/coding. Best for: complex logic, code, agent tasks.\n- reasoner-2 (DeepSeek R1 1.5B): o1-preview level reasoning, 96.3% Codeforces. Best for: math, step-by-step thinking, algorithms.\n- reasoner-3 (Gemma 3 12B): Stronger instruction-following + safety. Best for: fact-checking, educational content.\n- reasoner-4 (Mistral 7B): Fast instruction-following, structured output. Best for: JSON generation, tool use.\n- reasoner-5 (Phi-3 Mini): Compact but capable reasoning. Best for: moderate difficulty tasks.\n- reasoner-6 (RNJ-1 Instruct): 70% SWE-Bench, strong tool-calling. Best for: automation workflows.\n- reasoner-7 (Llama 3.2 3B): Lightweight, 131K context. Best for: simple tasks, creative writing.\n- reasoner-8 (LFM2 2.6B): Hybrid small model with strong instruction following."
           },
           "reasoning_focus": {
             "type": "string",
@@ -31,8 +31,8 @@
         "properties": {
           "model": {
             "type": "string",
-            "enum": ["answer-1", "answer-2", "answer-3", "answer-4", "answer-5", "answer-6", "answer-7", "answer-8", "answer-9"],
-            "description": "The answer model to use (ranked by Dec 2025 benchmarks):\n- answer-1 (Qwen3 4B): Best overall - multilingual, comprehensive answers, code explanations.\n- answer-2 (DeepSeek R1 1.5B): Thoughtful chain-of-thought answers, math/coding focused.\n- answer-3 (Gemma 3 12B): Balanced, safe responses, fact-checking.\n- answer-4 (Mistral 7B): Fast, structured responses.\n- answer-5 (Phi-3 Mini): Concise, instruction-following answers.\n- answer-6 (RNJ-1 Instruct): Technical answers, code-focused.\n- answer-7 (Llama 3.2 3B): Conversational, creative writing.\n- answer-8 (LFM2 2.6B): Hybrid small model with strong instruction following.\n- answer-9 (LFM2 2.6B Exp): Experimental RL-tuned checkpoint with strong instruction following."
+            "enum": ["answer-1", "answer-2", "answer-3", "answer-4", "answer-5", "answer-6", "answer-7", "answer-8"],
+            "description": "The answer model to use (ranked by Dec 2025 benchmarks):\n- answer-1 (Qwen3 4B): Best overall - multilingual, comprehensive answers, code explanations.\n- answer-2 (DeepSeek R1 1.5B): Thoughtful chain-of-thought answers, math/coding focused.\n- answer-3 (Gemma 3 12B): Balanced, safe responses, fact-checking.\n- answer-4 (Mistral 7B): Fast, structured responses.\n- answer-5 (Phi-3 Mini): Concise, instruction-following answers.\n- answer-6 (RNJ-1 Instruct): Technical answers, code-focused.\n- answer-7 (Llama 3.2 3B): Conversational, creative writing.\n- answer-8 (LFM2 2.6B): Hybrid small model with strong instruction following."
           }
         },
         "required": ["model"]

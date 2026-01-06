@@ -60,11 +60,6 @@ class ModelRouter:
             "url_env": "LFM2_API_URL",
             "description": "Hybrid small model with strong instruction following"
         },
-        "reasoner-9": {  # Rank 9
-            "name": "LFM2 2.6B Exp",
-            "url_env": "LFM2EXP_API_URL",
-            "description": "Experimental RL-tuned checkpoint with strong instruction following"
-        },
         # Answer models (same ranking)
         "answer-1": {  # Rank 1
             "name": "Qwen3 4B",
@@ -105,11 +100,6 @@ class ModelRouter:
             "name": "LFM2 2.6B",
             "url_env": "LFM2_API_URL",
             "description": "Hybrid small model with strong instruction following"
-        },
-        "answer-9": {  # Rank 9
-            "name": "LFM2 2.6B Exp",
-            "url_env": "LFM2EXP_API_URL",
-            "description": "Experimental RL-tuned checkpoint with strong instruction following"
         },
     }
 
