@@ -65,7 +65,7 @@ function PlaygroundInner() {
     {
       serialize: value => value,
       deserialize: (stored, fallback) => {
-        const validModes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
+        const validModes: Mode[] = ['chat', 'compare', 'analyze', 'debate'];
         return validModes.includes(stored as Mode) ? (stored as Mode) : fallback;
       },
     },
@@ -94,14 +94,6 @@ function PlaygroundInner() {
     deserialize: (stored, fallback) => stored ?? fallback,
   });
 
-  const [showCouncilReviewerNames, setShowCouncilReviewerNames] = usePersistedSetting<boolean>(
-    'show_council_reviewer_names',
-    false,
-    {
-      serialize: value => String(value),
-      deserialize: stored => stored === 'true',
-    },
-  );
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
@@ -204,7 +196,7 @@ function PlaygroundInner() {
 
 
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
-    if (currentMode === 'council') {
+    if (currentMode === 'analyze') {
       const startAngle = 250;
       const endAngle = 470;
       const angleRange = endAngle - startAngle;
@@ -294,11 +286,11 @@ function PlaygroundInner() {
           });
         }
 
-        // Restart if we have enough participants (Council needs 2+)
-        if (mode === 'council' && remainingIds.length < 2) {
+        // Restart if we have enough participants (multi-model modes need 2+)
+        if ((mode === 'analyze' || mode === 'debate') && remainingIds.length < 2) {
           setIsGenerating(false);
           setIsSynthesizing(false);
-          setModeratorSynthesis('Council requires at least 2 participants.');
+          setModeratorSynthesis('This mode requires at least 2 participants.');
           setPhaseLabel('Error');
           return;
         }
@@ -542,7 +534,7 @@ function PlaygroundInner() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
 
-  // Reset session state for a new round (Council, Roundtable, Personality)
+  // Reset session state for a new round (Analyze, Debate)
   const handleNewSession = useCallback(() => {
     // Clear conversation history
     clearHistory();
@@ -551,9 +543,7 @@ function PlaygroundInner() {
     setIsSynthesizing(false);
     setModeratorSynthesis('');
     setPhaseLabel(null);
-    // Reset council-specific state
-    setCouncilAggregateRankings(null);
-    setCouncilAnonymousReviews([]);
+    // Reset discussion state
     setDiscussionTurnsByModel({});
     // Reset model responses
     setModelsData(prev => prev.map(model => ({
@@ -601,18 +591,6 @@ function PlaygroundInner() {
   }, [showOrchestratorMenu]);
 
   const [phaseLabel, setPhaseLabel] = useState<string | null>(null);
-  const [councilAggregateRankings, setCouncilAggregateRankings] = useState<Array<{
-    model_id: string;
-    model_name: string;
-    average_rank: number;
-    votes_count: number;
-  }> | null>(null);
-  const [, setCouncilAnonymousReviews] = useState<Array<{
-    reviewer_model_id: string;
-    reviewer_model_name: string;
-    text: string;
-    error?: boolean;
-  }>>([]);
   const [, setDiscussionTurnsByModel] = useState<Record<string, Array<{
     turn_number: number;
     response: string;
@@ -652,8 +630,6 @@ function PlaygroundInner() {
     setHoveredCard,
     setPhaseLabel,
     setModeratorSynthesis,
-    setCouncilAggregateRankings,
-    setCouncilAnonymousReviews,
     setDiscussionTurnsByModel,
     resetFailedModels,
     markModelFailed,
@@ -677,7 +653,7 @@ function PlaygroundInner() {
     resetPendingStream,
   });
 
-  // Council/Roundtable synthesis is handled by backend streams.
+  // Analyze/Debate synthesis is handled by backend streams.
 
   // Handle Escape key to close dock and Delete/Backspace to remove selected models
   useEffect(() => {
@@ -732,7 +708,7 @@ function PlaygroundInner() {
 
       if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
         event.preventDefault();
-        const order: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
+        const order: Mode[] = ['chat', 'compare', 'analyze', 'debate'];
         const currentIndex = order.indexOf(mode);
         if (currentIndex !== -1) {
           const delta = event.key === 'ArrowRight' ? 1 : -1;
@@ -944,7 +920,7 @@ function PlaygroundInner() {
       const viz = visualizationAreaRef.current.getBoundingClientRect();
       if (rect && viz.width > 0 && viz.height > 0) {
         const targetX = viz.left + viz.width / 2;
-        const verticalOffset = mode === 'council' ? layoutRadius - 64 : 0;
+        const verticalOffset = mode === 'analyze' ? layoutRadius - 64 : 0;
         const targetY = viz.top + (viz.height * 0.5 + verticalOffset);
         const offsetX = rect.left + rect.width / 2 - targetX;
         const offsetY = rect.top + rect.height / 2 - targetY;
@@ -1078,7 +1054,7 @@ function PlaygroundInner() {
                 // Don't populate input box for gesture-triggered messages - just send directly
                 const activeIds = mode === 'compare'
                   ? selected
-                  : mode === 'council' || mode === 'roundtable' || mode === 'personality'
+                  : mode === 'analyze' || mode === 'debate'
                     ? selected
                     : [];
 
@@ -1110,7 +1086,7 @@ function PlaygroundInner() {
                     const relativeX = hoverX - rect.left;
                     const trackWidth = rect.width;
                     const modeIndex = Math.floor((relativeX / trackWidth) * 5); // 5 modes
-                    const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
+                    const modes: Mode[] = ['chat', 'compare', 'analyze', 'debate'];
                     const targetMode = modes[Math.max(0, Math.min(4, modeIndex))];
 
                     if (targetMode && targetMode !== mode) {
@@ -1203,7 +1179,7 @@ function PlaygroundInner() {
                 }
               }}
               onModeChange={(direction) => {
-                const modes: Mode[] = ['chat', 'compare', 'council', 'roundtable', 'personality'];
+                const modes: Mode[] = ['chat', 'compare', 'analyze', 'debate'];
                 const currentIndex = modes.indexOf(mode);
                 let nextIndex: number;
                 if (direction === 'next') {
@@ -1300,7 +1276,7 @@ function PlaygroundInner() {
                   alignItems: mode === 'compare' ? 'flex-start' : 'center',
                   justifyContent: 'center',
                   ['--arena-offset-y' as any]: `${arenaOffsetYRef.current}px`,
-                  transform: mode === 'council' || mode === 'roundtable' || mode === 'personality'
+                  transform: mode === 'analyze' || mode === 'debate'
                     ? `translateY(calc(var(--arena-offset-y) - 50px)) scale(${isDraggingOver ? 1.02 : 1})`
                     : `translateY(var(--arena-offset-y)) scale(${isDraggingOver ? 1.02 : 1})`,
                   willChange: 'transform',
@@ -1312,10 +1288,10 @@ function PlaygroundInner() {
                   ...(mode === 'compare' ? {
                     minHeight: '300px', // Minimum height to ensure clickable background
                     paddingBottom: '120px', // Extra space at bottom for right-click menu access
-                  } : mode === 'council' || mode === 'roundtable' || mode === 'personality' ? {
+                  } : mode === 'analyze' || mode === 'debate' ? {
                     height: '100%',
                     minHeight: '100%',
-                    overflow: 'hidden', // Prevent scroll in arena for council
+                    overflow: 'hidden', // Prevent scroll in arena for multi-model modes
                   } : {
                     height: '100%',
                     minHeight: '100%',
@@ -1367,12 +1343,11 @@ function PlaygroundInner() {
                   orchestratorMenuRef={orchestratorMenuRef}
                   availableModels={availableModels}
                   setModerator={setModerator}
-                  councilWinnerId={councilAggregateRankings?.[0]?.model_id}
                 />
               </div>
             </div>
 
-            {/* Right Panel: Transcript (Council, Roundtable, Personality modes only) */}
+            {/* Right Panel: Transcript (Analyze, Debate modes only) */}
             {mode !== 'compare' && (
               <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
                 <Suspense fallback={null}>
@@ -1442,16 +1417,14 @@ function PlaygroundInner() {
           setToken={setGithubToken}
           openrouterKey={openrouterKey}
           setOpenrouterKey={setOpenrouterKey}
-          showCouncilReviewerNames={showCouncilReviewerNames}
-          setShowCouncilReviewerNames={setShowCouncilReviewerNames}
           bgStyle={bgStyle}
           setBgStyle={setBgStyle}
         />
       </Suspense>
 
-      {/* Fixed Prompt Input for Compare, Council, Roundtable, and Personality Modes */}
+      {/* Fixed Prompt Input for Compare, Analyze, and Debate Modes */}
       {
-        (mode === 'compare' || mode === 'council' || mode === 'roundtable' || mode === 'personality') && (
+        (mode === 'compare' || mode === 'analyze' || mode === 'debate') && (
           <PromptInput
             inputRef={inputRef}
             inputFocused={inputFocused}
@@ -1459,7 +1432,7 @@ function PlaygroundInner() {
             onSendMessage={sendMessage}
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
-            placeholder={mode === 'compare' ? undefined : mode === 'personality' ? "Ask the personas..." : "Steer the discussion..."}
+            placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
             className={`fixed bottom-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300 ${mode === 'compare' ? 'right-0' : 'right-[400px] xl:right-[480px]'}`}
             style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           />
@@ -1491,7 +1464,7 @@ function PlaygroundInner() {
             ) : contextMenu.modelId ? (
               // Model context menu - different options based on mode
               <>
-                {/* Set as Orchestrator - only in Council/Roundtable modes and not already the orchestrator */}
+                {/* Set as first responder - only in multi-model modes and not already set */}
                 {mode !== 'compare' && contextMenu.modelId !== moderator && (
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-2"

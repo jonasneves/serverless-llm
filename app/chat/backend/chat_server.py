@@ -35,8 +35,6 @@ from core.config import (
     DEFAULT_MODEL_ID,
     get_endpoint
 )
-from engines.orchestrator import GitHubModelsOrchestrator
-from engines.discussion import DiscussionEngine
 from middleware.error_utils import sanitize_error_message
 from middleware.rate_limiter import get_rate_limiter
 
@@ -241,14 +239,13 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(static_dir))
 
 # Include API routers
-from api.routes import chat, models, discussion, council, health, personality
+from api.routes import chat, models, debate, analyze, health
 
 app.include_router(chat.router)
 app.include_router(models.router)
-app.include_router(discussion.router)
-app.include_router(council.router)
+app.include_router(debate.router)
+app.include_router(analyze.router)
 app.include_router(health.router)
-app.include_router(personality.router)
 
 # Cache file versions based on content hash for automatic cache busting
 FILE_VERSIONS = {}
@@ -314,9 +311,6 @@ from api.models import (
     ChatRequest,
     MultiChatRequest,
     ModelStatus,
-    CouncilRequest,
-    DiscussionRequest,
-    PersonalityRequest,
 )
 
 
@@ -525,148 +519,6 @@ async def stream_multiple_models(
 
 # NOTE: /api/chat/stream endpoint is defined in api/routes/chat.py
 # It uses stream_multiple_models() which properly handles both local and API models
-
-
-async def stream_discussion_events(
-    query: str,
-    max_tokens: int,
-    temperature: float = 0.7,
-    orchestrator_model: Optional[str] = None,
-    github_token: Optional[str] = None,
-    turns: int = 2,
-    participants: Optional[List[str]] = None
-) -> AsyncGenerator[str, None]:
-    """
-    Stream discussion events as Server-Sent Events
-
-    Events:
-    - analysis_start: Orchestrator begins analyzing query
-    - analysis_complete: Query analysis results with domain weights
-    - turn_start: Model begins responding
-    - turn_chunk: Streaming response content
-    - turn_complete: Turn finished with evaluation
-    - synthesis_start: Begin creating final response
-    - synthesis_complete: Synthesis plan ready
-    - discussion_complete: Full discussion finished
-    - error: Error occurred
-    """
-    try:
-        # Determine
-        api_models = [
-            'openai/gpt-4.1', 'openai/gpt-4o',
-            'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano',
-            'deepseek/deepseek-v3-0324', 'cohere/cohere-command-r-plus-08-2024',
-            'meta/llama-3.3-70b-instruct', 'meta/llama-4-scout-17b-16e-instruct', 'meta/meta-llama-3.1-405b-instruct'
-        ]
-        local_models = list(MODEL_ENDPOINTS.keys())
-
-        selected_orchestrator = orchestrator_model or 'openai/gpt-4o'
-        is_api_model = selected_orchestrator in api_models
-
-        if is_api_model:
-            # Initialize GitHub Models API orchestrator
-            # Use user-provided token if available, otherwise fall back to server env var
-            token = github_token or get_default_github_token()
-            if not token:
-                yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for API orchestrator. Please provide your token or contact the server admin.'})}\n\n"
-                return
-
-            # Warn if using server's default token
-            if not github_token and get_default_github_token():
-                yield f"data: {json.dumps({'event': 'info', 'message': 'Using default GitHub Models token. Configure your own for dedicated quota.'})}\n\n"
-
-            orchestrator = GitHubModelsOrchestrator(
-                github_token=token,
-                model_id=selected_orchestrator
-            )
-        elif selected_orchestrator in local_models:
-            # Initialize local model orchestrator
-            local_endpoint = MODEL_ENDPOINTS[selected_orchestrator]
-            orchestrator = GitHubModelsOrchestrator(
-                github_token="local",  # Placeholder, won't be used
-                model_id=selected_orchestrator,
-                api_url=f"{local_endpoint}/v1/chat/completions"
-            )
-        else:
-            yield f"data: {json.dumps({'event': 'error', 'error': f'Unknown orchestrator model: {selected_orchestrator}'})}\n\n"
-            return
-
-        # Initialize discussion engine
-        engine = DiscussionEngine(
-            orchestrator=orchestrator,
-            model_endpoints=MODEL_ENDPOINTS,
-            timeout_per_turn=60
-        )
-
-        # Run discussion with streaming events
-        async for event in engine.run_discussion(
-            query=query,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            turns=turns,
-            participants=participants
-        ):
-            # Forward all events to client
-            yield f"data: {json.dumps({'event': event['type'], **event})}\n\n"
-
-    except Exception as e:
-        logger.error(f"Discussion error: {e}", exc_info=True)
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
-
-
-# Council Mode Endpoint
-
-async def stream_council_events(
-    query: str,
-    participants: List[str],
-    chairman_model: Optional[str] = None,
-    max_tokens: int = 2048,
-    github_token: Optional[str] = None,
-    completed_responses: Optional[Dict[str, str]] = None
-) -> AsyncGenerator[str, None]:
-    """
-    Stream council events as Server-Sent Events
-
-    3-stage process:
-    - Stage 1: All models respond independently (with streaming)
-    - Stage 2: Models rank responses anonymously
-    - Stage 3: Chairman synthesizes final answer
-    """
-    try:
-        from council_engine import CouncilEngine
-
-        # Get GitHub token
-        token = github_token or get_default_github_token()
-        if not token:
-            yield f"data: {json.dumps({'event': 'error', 'error': 'GitHub token required for Council mode'})}\n\n"
-            return
-
-        # Initialize council engine
-        engine = CouncilEngine(
-            model_endpoints=MODEL_ENDPOINTS,
-            github_token=token,
-            timeout=120
-        )
-
-        # Run council process with streaming
-        async for event in engine.run_council(query, participants, chairman_model, max_tokens, completed_responses=completed_responses):
-            # Normalize event name for clients (council_engine emits "type"; UI expects "event")
-            if "event" not in event and "type" in event:
-                event = {"event": event["type"], **event}
-            yield f"data: {json.dumps(event)}\n\n"
-
-    except Exception as e:
-        logger.error(f"Council Error: {e}")
-        yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
-
-
-
-# ===== VERBALIZED SAMPLING MODE =====
-# Removed
-
-
-# ===== CONFESSIONS MODE =====
-# Removed
 
 
 if __name__ == "__main__":

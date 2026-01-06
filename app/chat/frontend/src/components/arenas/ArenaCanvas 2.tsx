@@ -85,7 +85,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
   } = props;
 
   const isCircleMode = mode !== 'compare';
-  const orchestratorYOffset = mode === 'council' ? layoutRadius - 64 : 0;
+  const orchestratorYOffset = mode === 'analyze' ? layoutRadius - 64 : 0;
   const orchestratorStatusLabel =
     orchestratorStatus === 'responding'
       ? 'Responding'
@@ -377,7 +377,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             opacity: 1,
             transform: orchestratorTransform,
             left: '50%',
-            top: mode === 'council' ? `calc(50% + ${layoutRadius}px - 64px)` : '50%',
+            top: mode === 'analyze' ? `calc(50% + ${layoutRadius}px - 64px)` : '50%',
           }}
           onClick={(e) => {
             e.stopPropagation();

@@ -68,30 +68,17 @@ export default function DiscussionTranscript({
         }
 
         // Handle Assistant / System messages based on 'kind'
-        const isChairman = entry.kind === 'council_chairman'
-            || entry.kind === 'council_synthesis'
-            || entry.kind === 'council_ranking'
-            || entry.kind === 'roundtable_synthesis'
-            || entry.kind === 'roundtable_analysis'
+        const isChairman = entry.kind === 'analyze_synthesis'
             || entry.kind === 'compare_summary';
 
         if (isChairman) {
-            // Parse content if it has "Name: " prefix (like chairman quips)
-            let name = 'Chairman';
+            let name = 'Analysis';
             let text = entry.content;
 
-            const colonIdx = entry.content.indexOf(':');
-            if (entry.kind === 'council_chairman' && colonIdx !== -1 && colonIdx < 30) {
-                name = entry.content.slice(0, colonIdx).trim();
-                text = entry.content.slice(colonIdx + 1).trim();
-            } else if (entry.kind === 'compare_summary') {
+            if (entry.kind === 'compare_summary') {
                 name = 'Summary';
-            } else if (entry.kind === 'council_ranking') {
-                name = 'Council Vote Results';
-                // Remove prefix if present
-                if (text.startsWith('Anonymous Rankings:\n')) {
-                    text = text.replace('Anonymous Rankings:\n', '');
-                }
+            } else if (entry.kind === 'analyze_synthesis') {
+                name = 'Analysis';
             }
 
             return (
@@ -112,7 +99,7 @@ export default function DiscussionTranscript({
         }
 
         // Handle Model Turns (Name:\nContent)
-        if (entry.kind === 'council_turn' || entry.kind === 'roundtable_turn') {
+        if (entry.kind === 'analyze_response' || entry.kind === 'debate_turn') {
             // Expected format: "Name [· Round X]:\nContent"
             const firstLineEnd = entry.content.indexOf('\n');
             let header = 'Model';

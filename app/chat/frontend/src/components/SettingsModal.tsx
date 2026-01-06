@@ -11,8 +11,6 @@ interface SettingsModalProps {
   setToken: (token: string) => void;
   openrouterKey: string;
   setOpenrouterKey: (key: string) => void;
-  showCouncilReviewerNames: boolean;
-  setShowCouncilReviewerNames: (value: boolean) => void;
   bgStyle: BackgroundStyle;
   setBgStyle: (style: BackgroundStyle) => void;
 }
@@ -69,8 +67,6 @@ export default function SettingsModal({
   setToken,
   openrouterKey,
   setOpenrouterKey,
-  showCouncilReviewerNames,
-  setShowCouncilReviewerNames,
   bgStyle,
   setBgStyle,
 }: SettingsModalProps) {
@@ -270,15 +266,13 @@ export default function SettingsModal({
                 </a>
               </div>
 
-              {/* Council Settings Section */}
+              {/* Analyze Settings Section */}
               <div className="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4">
-                <h3 className="text-sm font-semibold text-slate-200 mb-1">Council Mode</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-1">Analyze Mode</h3>
                 <label className="flex items-start gap-3 text-xs text-slate-300 cursor-pointer mt-3">
                   <input
                     type="checkbox"
                     className="mt-0.5 h-4 w-4 rounded border-slate-700/60 bg-slate-950/60 text-blue-500 focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-0 cursor-pointer transition-colors"
-                    checked={showCouncilReviewerNames}
-                    onChange={(e) => setShowCouncilReviewerNames(e.target.checked)}
                   />
                   <span>
                     Show reviewer model names in anonymous reviews (UI only).

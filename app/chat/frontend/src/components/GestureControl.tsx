@@ -11,7 +11,7 @@ const DEBUG_CONFIG_KEY = 'gesture-debug-config';
 const MODE_STORAGE_KEY = 'gesture-mode';
 
 // Context for which mode the gestures should work with
-export type AppContext = 'chat' | 'compare' | 'council' | 'roundtable' | 'personality';
+export type AppContext = 'chat' | 'compare' | 'analyze' | 'debate';
 
 interface GestureControlProps {
   onStopGeneration?: () => void;

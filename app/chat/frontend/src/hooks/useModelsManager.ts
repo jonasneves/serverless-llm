@@ -26,7 +26,7 @@ export function useModelsManager() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Multi-model selection (for Compare, Council, Roundtable, Personalities)
+  // Multi-model selection (for Compare, Analyze, Debate, Personalities)
   const [persistedSelected, setPersistedSelected] = usePersistedSetting<string[] | null>('playground_selected_models', null);
   const isSelectionInitialized = useRef(persistedSelected !== null);
 
@@ -87,7 +87,7 @@ export function useModelsManager() {
       setLoadError(null);
       setRetryCount(0);
 
-      // Initialize multi-model selection (for Compare, Council, etc.) with self-hosted models
+      // Initialize multi-model selection (for Compare, Analyze, etc.) with self-hosted models
       if (!isSelectionInitialized.current) {
         setPersistedSelected(apiModels.filter(m => m.type === 'self-hosted').map(m => m.id));
         isSelectionInitialized.current = true;

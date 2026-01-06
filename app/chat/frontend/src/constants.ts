@@ -86,7 +86,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'EU AI Act Enforcement Wave',
     prompt: "The EU AI Act enters enforcement; high-risk systems must prove data provenance, evals, and risk controls. Outline compliance gaps for a frontier model API and tradeoffs between speed and alignment.",
     category: 'Policy',
-    modes: ['council', 'roundtable'],
+    modes: ['analyze', 'debate'],
     tags: ['governance', 'compliance'],
   },
   {
@@ -94,7 +94,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'Export Controls Tighten',
     prompt: "U.S. export rules tighten again on AI accelerators; Blackwell-class parts face new caps and cloud checks. Map the impact on training roadmaps, costs, and on-device strategies.",
     category: 'Infra',
-    modes: ['compare', 'roundtable'],
+    modes: ['compare', 'debate'],
     tags: ['chips', 'supply-chain'],
   },
   {
@@ -102,7 +102,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'Major Weights Leak',
     prompt: "A commercial frontier model checkpoint leaks. Assess risks (misuse, impersonation, jailbreak diffusion), legal exposure, and whether open red-team releases mitigate or worsen safety.",
     category: 'Security',
-    modes: ['council', 'roundtable'],
+    modes: ['analyze', 'debate'],
     tags: ['safety', 'open-weights'],
   },
   {
@@ -110,7 +110,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'On-Device LLM Race',
     prompt: "Phone OEMs ship 3nm NPUs and 20B-parameter on-device assistants. What actually moves the needle for UX, privacy, and cost vs. cloud? Where do hybrid (edge + cloud) designs win?",
     category: 'Infra',
-    modes: ['compare', 'roundtable'],
+    modes: ['compare', 'debate'],
     tags: ['edge', 'latency'],
   },
   {
@@ -118,7 +118,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'Signed App Prompt Injection',
     prompt: "A popular signed desktop app shipped with hardcoded system prompts; attackers use supply chain updates to exfiltrate data. How should vendors audit, sandbox, and attest LLM apps?",
     category: 'Security',
-    modes: ['compare', 'council'],
+    modes: ['compare', 'analyze'],
     tags: ['supply-chain', 'prompt-injection'],
   },
   {
@@ -126,7 +126,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'Safety Eval Standard',
     prompt: "NIST-style safety eval suites gain traction (jailbreak, autonomy, bio). How should vendors report scores, and what gaps remain for frontier vs. small models?",
     category: 'Policy',
-    modes: ['compare', 'roundtable'],
+    modes: ['compare', 'debate'],
     tags: ['evaluation', 'safety'],
   },
   {
@@ -134,7 +134,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'Publisher Licensing Standoff',
     prompt: "Major news publishers pause AI licensing talks and sue over training. What remedies (revenue share, opt-out registries, model removal) are realistic, and how do they ripple to open models?",
     category: 'Data',
-    modes: ['council', 'roundtable'],
+    modes: ['analyze', 'debate'],
     tags: ['licensing', 'copyright'],
   },
   {
@@ -142,7 +142,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'SBOM for LLM Pipelines',
     prompt: "Regulators push SBOMs and signed artifacts for AI stacks. Draft what should appear in an LLM pipeline SBOM (data, weights, evals, guardrails) and how to verify it at runtime.",
     category: 'Security',
-    modes: ['compare', 'council'],
+    modes: ['compare', 'analyze'],
     tags: ['sbom', 'supply-chain'],
   },
   {
@@ -150,7 +150,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'Data Poisoning Campaign',
     prompt: "Researchers find coordinated data poisoning in popular open corpora. How should model hosts detect and mitigate poisoning post-hoc, and what retraining tradeoffs are acceptable?",
     category: 'Security',
-    modes: ['compare', 'roundtable'],
+    modes: ['compare', 'debate'],
     tags: ['data', 'poisoning'],
   },
   {
@@ -158,7 +158,7 @@ export const CURATED_TOPICS: TopicPrompt[] = [
     label: 'Copyright Settlement Sets Precedent',
     prompt: "A major copyright suit settles with dataset disclosure and per-output watermarking. Predict how this precedent affects future training sets and open-weight releases.",
     category: 'Policy',
-    modes: ['roundtable'],
+    modes: ['debate'],
     tags: ['copyright', 'watermarking'],
   },
 ];
@@ -166,20 +166,15 @@ export const CURATED_TOPICS: TopicPrompt[] = [
 // Mode-specific example prompts for "try an example" (hardcoded, not in ticker)
 // Designed for demo brevity: built-in constraints, opinionated/fun, quick to read
 export const MODE_EXAMPLE_PROMPTS: Record<Mode, string[]> = {
-  council: [
-    "Tabs or spaces? Give your verdict in under 50 words.",
-    "Rock, paper, scissors—which is objectively the best opening move?",
-    "In one sentence: should AI be allowed to write its own code?",
+  analyze: [
+    "What's the most important programming principle?",
+    "Should code comments explain 'what' or 'why'?",
+    "Is TypeScript worth the extra complexity?",
   ],
-  roundtable: [
-    "Write a two-sentence horror story where the second sentence recontextualizes the first.",
-    "Complete this thought: 'AI will never be able to...'",
-    "Pitch a startup in one sentence. No buzzwords allowed.",
-  ],
-  personality: [
-    "Coffee or tea? Defend your choice.",
-    "Hot take: pineapple on pizza.",
-    "What's the most overrated thing everyone pretends to like?",
+  debate: [
+    "Tabs or spaces? Give your verdict.",
+    "Should AI be allowed to write its own code?",
+    "What will never be automated by AI?",
   ],
   compare: [],
   chat: [],
@@ -262,10 +257,9 @@ const BASE_BACKGROUND = '#0f172a'; // Unified playground background tone
 
 export const MODE_COLORS: Record<Mode, string> = {
   compare: BASE_BACKGROUND,
-  council: BASE_BACKGROUND,
-  roundtable: BASE_BACKGROUND,
+  analyze: BASE_BACKGROUND,
+  debate: BASE_BACKGROUND,
   chat: BASE_BACKGROUND,
-  personality: BASE_BACKGROUND,
 };
 
 // Generation defaults - centralized for easy maintenance

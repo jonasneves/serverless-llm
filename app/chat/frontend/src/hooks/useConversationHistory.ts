@@ -31,7 +31,7 @@ export function useConversationHistory() {
       .reverse()
       .find(entry =>
         entry.role === 'assistant'
-        && (entry.kind === 'council_synthesis' || entry.kind === 'roundtable_synthesis')
+        && entry.kind === 'analyze_synthesis'
         && entry.content.trim().length > 0
       );
 

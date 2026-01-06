@@ -59,7 +59,7 @@ interface ArenaCanvasProps {
   orchestratorMenuRef: MutableRefObject<HTMLDivElement | null>;
   availableModels: Model[];
   setModerator: (id: string) => void;
-  councilWinnerId?: string; // ID of the top-ranked model in Council mode
+  councilWinnerId?: string; // ID of the top-ranked model in Analyze mode
 }
 
 const GRID_CARD_WIDTH = 256;
@@ -110,7 +110,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
   } = props;
 
   const isCircleMode = mode !== 'compare';
-  const orchestratorYOffset = mode === 'council' ? layoutRadius - 64 : 0;
+  const orchestratorYOffset = mode === 'analyze' ? layoutRadius - 64 : 0;
   const orchestratorStatusLabel =
     orchestratorStatus === 'responding'
       ? 'Responding'
@@ -150,7 +150,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         const hasError = failedModels.has(model.id);
         const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
         // Show "waiting" for models in a roundtable session that haven't started their turn yet
-        const isWaiting = !isSpeaking && !isDone && !hasError && isGenerating && mode === 'roundtable';
+        const isWaiting = !isSpeaking && !isDone && !hasError && isGenerating && mode === 'debate';
         const statusState: 'idle' | 'responding' | 'done' | 'waiting' | 'error' = hasError
           ? 'error'
           : isSpeaking
@@ -374,7 +374,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             </div>
 
             {/* Persona Badge - Bottom Center */}
-            {mode === 'personality' && isCircleMode && model.personaEmoji && (
+            {mode === 'analyze' && isCircleMode && model.personaEmoji && (
               <div
                 className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none"
                 style={{
@@ -391,8 +391,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               </div>
             )}
 
-            {/* Council Winner Badge - Bottom Center */}
-            {mode === 'council' && isCircleMode && councilWinnerId === model.id && !isGenerating && !isSynthesizing && (
+            {/* Analyze Winner Badge - Bottom Center */}
+            {mode === 'analyze' && isCircleMode && councilWinnerId === model.id && !isGenerating && !isSynthesizing && (
               <div
                 className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none"
                 style={{
@@ -430,7 +430,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   <div className="w-2 h-2 rounded-full" style={{ background: effectiveColor }} />
                   <span className="text-xs font-semibold text-slate-300">{model.name}</span>
                 </div>
-                {mode === 'personality' && model.personaEmoji && model.personaName && (
+                {mode === 'analyze' && model.personaEmoji && model.personaName && (
                   <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700/50">
                     <span className="text-base">{model.personaEmoji}</span>
                     <div className="flex-1">
@@ -461,7 +461,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
             opacity: 1,
             transform: orchestratorTransform,
             left: '50%',
-            top: mode === 'council' ? `calc(50% + ${layoutRadius}px - 64px)` : '50%',
+            top: mode === 'analyze' ? `calc(50% + ${layoutRadius}px - 64px)` : '50%',
           }}
           onClick={(e) => {
             e.stopPropagation();

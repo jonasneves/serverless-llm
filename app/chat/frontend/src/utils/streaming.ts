@@ -102,25 +102,22 @@ export const fetchChatStream = async (
   }, signal);
 };
 
-export interface CouncilStreamPayload {
+export interface AnalyzeStreamPayload {
   query: string;
   participants: string[];
-  chairman_model?: string | null;
   max_tokens: number;
   github_token?: string | null;
-  completed_responses?: Record<string, string> | null;
 }
 
-export const fetchCouncilStream = async (
-  payload: CouncilStreamPayload,
+export const fetchAnalyzeStream = async (
+  payload: AnalyzeStreamPayload,
   signal?: AbortSignal
 ): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/chat/council/stream', payload, signal);
+  return streamFromBackend('/api/chat/analyze/stream', payload, signal);
 };
 
-export interface DiscussionStreamPayload {
+export interface DebateStreamPayload {
   query: string;
-  orchestrator_model?: string | null;
   participants?: string[] | null;
   turns?: number;
   max_tokens: number;
@@ -128,25 +125,11 @@ export interface DiscussionStreamPayload {
   github_token?: string | null;
 }
 
-export const fetchDiscussionStream = async (
-  payload: DiscussionStreamPayload,
+export const fetchDebateStream = async (
+  payload: DebateStreamPayload,
   signal?: AbortSignal
 ): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/chat/discussion/stream', payload, signal);
-};
-
-export interface PersonalityStreamPayload {
-  query: string;
-  participants: string[];
-  max_tokens: number;
-  github_token?: string | null;
-}
-
-export const fetchPersonalityStream = async (
-  payload: PersonalityStreamPayload,
-  signal?: AbortSignal
-): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/chat/personality/stream', payload, signal);
+  return streamFromBackend('/api/chat/debate/stream', payload, signal);
 };
 
 export const streamSseEvents = async (

@@ -14,7 +14,7 @@ import { createContext, useContext, useState, useCallback, ReactNode, useRef } f
 
 // Re-export types from HandBackground for convenience
 export type GestureMode = 'navigation' | 'asl';
-export type AppContext = 'chat' | 'compare' | 'council' | 'roundtable' | 'personality';
+export type AppContext = 'chat' | 'compare' | 'analyze' | 'debate';
 
 export interface GestureConfig {
   twoFingerTapWindow: number;

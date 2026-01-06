@@ -16,7 +16,7 @@ export interface Model {
   context_length?: number;
 }
 
-export type Mode = 'compare' | 'council' | 'roundtable' | 'chat' | 'personality';
+export type Mode = 'compare' | 'analyze' | 'debate' | 'chat';
 
 export interface Position {
   x: number;
@@ -56,12 +56,7 @@ export type ChatHistoryEntry = {
   role: 'user' | 'assistant';
   content: string;
   kind?: 'compare_summary'
-  | 'council_synthesis'
-  | 'council_turn'
-  | 'council_chairman'
-  | 'council_ranking'
-  | 'roundtable_synthesis'
-  | 'roundtable_analysis'
-  | 'roundtable_turn'
-  | 'personality_response';
+  | 'analyze_synthesis'
+  | 'analyze_response'
+  | 'debate_turn';
 };

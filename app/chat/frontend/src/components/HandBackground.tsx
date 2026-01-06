@@ -67,7 +67,7 @@ interface HandBackgroundProps {
     onLandmarkData?: (data: LandmarkData) => void;
     onPerformance?: (metrics: PerformanceMetrics) => void;
     mode?: GestureMode;
-    appContext?: 'chat' | 'compare' | 'council' | 'roundtable' | 'personality';
+    appContext?: 'chat' | 'compare' | 'analyze' | 'debate';
     // Restrict message gestures (thumbs up/down, etc.) to only work within this area
     // Values are normalized 0-1 representing screen position
     gestureActiveArea?: { minX: number; maxX: number; minY: number; maxY: number };
@@ -246,9 +246,8 @@ const handStates = useRef<Map<number, {
             case 'compare':
                 // In compare mode, focus on navigation gestures, limit ASL
                 return !gestureName.startsWith('ASL');
-            case 'council':
-            case 'roundtable':
-            case 'personality':
+            case 'analyze':
+            case 'debate':
                 // In discussion modes, allow navigation and key control gestures
                 return true;  // Allow all for now, can be refined based on specific needs
             default:
