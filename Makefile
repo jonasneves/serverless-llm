@@ -15,8 +15,9 @@ help:
 	@echo "  make install         Install Python dependencies (venv)"
 	@echo ""
 	@echo "Development:"
-	@echo "  make dev-chat        Run chat interface (uses remote models if BASE_DOMAIN set)"
-	@echo "  make dev-MODEL       Run model locally (qwen|phi|llama|mistral|gemma|r1qwen|rnj|functiongemma|smollm3|lfm2|nanbeige|nemotron|gptoss)"
+	@echo "  make dev-chat            Run chat interface (uses remote models if BASE_DOMAIN set)"
+	@echo "  make dev-interface-local Run chat interface (local models only)"
+	@echo "  make dev-MODEL           Run model locally (qwen|phi|llama|mistral|gemma|r1qwen|rnj|functiongemma|smollm3|lfm2|nanbeige|nemotron|gptoss)"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make start MODEL=x   Start chat + model in Docker"
@@ -63,6 +64,10 @@ install:
 dev-chat:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
 	cd app/chat/backend && PYTHONPATH=../../..:$$PYTHONPATH ../../../venv/bin/python chat_server.py
+
+dev-interface-local:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/chat/backend && BASE_DOMAIN= PYTHONPATH=../../..:$$PYTHONPATH ../../../venv/bin/python chat_server.py
 
 dev-qwen:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
@@ -150,7 +155,6 @@ generate-configs:
 
 build-playground: generate-configs
 	cd app/chat/frontend && npm install && npm run build
-
 
 # =============================================================================
 # Tunnels
