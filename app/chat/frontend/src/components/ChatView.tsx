@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallba
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, X, Check, Loader2, Copy, Search } from 'lucide-react';
+import { Bot, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, X, Check, Loader2, Copy, Search, Volume2, VolumeX } from 'lucide-react';
 import { useListSelectionBox } from '../hooks/useListSelectionBox';
 import { useSmartModelSelection } from '../hooks/useSmartModelSelection';
 import SelectionOverlay from './SelectionOverlay';
@@ -39,7 +39,6 @@ export interface ChatMessage {
     // Multi-model comparison support
     alternateResponses?: ModelResponse[];
     activeResponseIndex?: number; // 0 = primary, 1+ = alternates
-    parallelGroup?: boolean;
 }
 
 interface ChatViewProps {
@@ -92,7 +91,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [compareSelectedModels, setCompareSelectedModels] = useState<Set<string>>(new Set());
     const [compareSearchQuery, setCompareSearchQuery] = useState('');
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-    const [autoTargetModels, setAutoTargetModels] = useState<Set<string>>(new Set());
+    const [mutedParallelModels, setMutedParallelModels] = useState<Set<string>>(new Set());
     const compareAbortRefs = useRef<Map<string, AbortController>>(new Map());
     const streamBatchRef = useRef<Map<number, { content: string; timeout: number | null }>>(new Map());
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -199,16 +198,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    useEffect(() => {
-        if (!autoMode) {
-            setAutoTargetModels(new Set());
-        }
-    }, [autoMode]);
-
-    useEffect(() => {
-        setAutoTargetModels(new Set());
-    }, [autoModeScope]);
-
     // Handle keyboard shortcuts (Delete/Backspace, Escape, Cmd+A)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -305,6 +294,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         console.log(`[Chat] Sending message. autoMode=${autoMode}, autoModeScope=${autoModeScope}, selectedModelId=${selectedModelId}`);
 
         const userMessage: ChatMessage = { role: 'user', content: text };
+        setMessages(prev => [...prev, userMessage]);
         setIsGenerating(true);
         setCurrentResponse('');
 
@@ -334,120 +324,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 ...baseMessages
             ];
 
-            if (autoMode && autoTargetModels.size > 0) {
-                const targetIds = Array.from(autoTargetModels);
-                const targetModels = targetIds
-                    .map(id => models.find(m => m.id === id))
-                    .filter((m): m is Model => Boolean(m));
-
-                const assistantIndex = messages.length + 1;
-                const initialResponses: ModelResponse[] = targetModels.map(model => ({
-                    modelId: model.id,
-                    modelName: model.name,
-                    content: '',
-                    loading: true
-                }));
-
-                setMessages(prev => [
-                    ...prev,
-                    userMessage,
-                    {
-                        role: 'assistant',
-                        content: '',
-                        alternateResponses: initialResponses,
-                        activeResponseIndex: initialResponses.length > 0 ? 1 : 0,
-                        parallelGroup: true
-                    }
-                ]);
-
-                const stream = await fetchChatStream({
-                    models: targetIds,
-                    messages: apiMessages.map(m => ({ role: m.role, content: m.content })),
-                    max_tokens: 2048,
-                    temperature: 0.7,
-                    github_token: githubToken || null,
-                    openrouter_key: openrouterKey || null,
-                }, abortControllerRef.current.signal);
-
-                const pending = new Set(targetIds);
-
-                await streamSseEvents(stream, (event) => {
-                    const modelId = typeof event.model_id === 'string'
-                        ? event.model_id
-                        : typeof event.modelId === 'string'
-                            ? event.modelId
-                            : null;
-                    if (!modelId) return;
-
-                    if (event.event === 'error' || event.error) {
-                        const errorMsg = typeof event.error === 'string'
-                            ? event.error
-                            : (event.content || 'Stream failed');
-                        setMessages(prev => prev.map((msg, idx) => {
-                            if (idx !== assistantIndex || !msg.alternateResponses) return msg;
-                            return {
-                                ...msg,
-                                alternateResponses: msg.alternateResponses.map(alt =>
-                                    alt.modelId === modelId
-                                        ? { ...alt, content: errorMsg, error: true, loading: false }
-                                        : alt
-                                )
-                            };
-                        }));
-                        pending.delete(modelId);
-                        return;
-                    }
-
-                    if ((event.event === 'token' || event.content) && event.content) {
-                        setMessages(prev => prev.map((msg, idx) => {
-                            if (idx !== assistantIndex || !msg.alternateResponses) return msg;
-                            return {
-                                ...msg,
-                                alternateResponses: msg.alternateResponses.map(alt =>
-                                    alt.modelId === modelId
-                                        ? { ...alt, content: alt.content + event.content }
-                                        : alt
-                                )
-                            };
-                        }));
-                    }
-
-                    if (event.event === 'done') {
-                        setMessages(prev => prev.map((msg, idx) => {
-                            if (idx !== assistantIndex || !msg.alternateResponses) return msg;
-                            return {
-                                ...msg,
-                                alternateResponses: msg.alternateResponses.map(alt =>
-                                    alt.modelId === modelId
-                                        ? { ...alt, loading: false }
-                                        : alt
-                                )
-                            };
-                        }));
-                        pending.delete(modelId);
-                    }
-                });
-
-                if (pending.size > 0) {
-                    setMessages(prev => prev.map((msg, idx) => {
-                        if (idx !== assistantIndex || !msg.alternateResponses) return msg;
-                        return {
-                            ...msg,
-                            alternateResponses: msg.alternateResponses.map(alt =>
-                                pending.has(alt.modelId) ? { ...alt, loading: false } : alt
-                            )
-                        };
-                    }));
-                }
-
-                setIsGenerating(false);
-                setCurrentAutoModel(null);
-                abortControllerRef.current = null;
-                return;
-            }
-
             if (autoMode) {
-                setMessages(prev => [...prev, userMessage]);
                 // Filter models based on scope, with fallback to other type
                 const primaryModels = models.filter(m => {
                     if (autoModeScope === 'local') return m.type === 'self-hosted';
@@ -556,7 +433,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 }]);
                 setCurrentAutoModel(null);
             } else {
-                setMessages(prev => [...prev, userMessage]);
                 if (!selectedModelId) return;
                 const model = models.find(m => m.id === selectedModelId);
                 const result = await tryModelStream(selectedModelId, apiMessages);
@@ -970,6 +846,35 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }));
     };
 
+    const toggleMuteModel = (modelId: string) => {
+        setMutedParallelModels(prev => {
+            const next = new Set(prev);
+            if (next.has(modelId)) {
+                next.delete(modelId);
+            } else {
+                next.add(modelId);
+            }
+            return next;
+        });
+    };
+
+    useEffect(() => {
+        if (mutedParallelModels.size === 0) return;
+        setMessages(prev => prev.map((msg) => {
+            if (!msg.alternateResponses || msg.alternateResponses.length === 0) return msg;
+            const activeIndex = msg.activeResponseIndex ?? 0;
+            const activeModelId = activeIndex === 0 ? msg.modelId : msg.alternateResponses[activeIndex - 1]?.modelId;
+            if (!activeModelId || !mutedParallelModels.has(activeModelId)) return msg;
+
+            if (msg.modelId && !mutedParallelModels.has(msg.modelId)) {
+                return { ...msg, activeResponseIndex: 0 };
+            }
+
+            const nextAltIndex = msg.alternateResponses.findIndex(alt => !mutedParallelModels.has(alt.modelId));
+            if (nextAltIndex === -1) return msg;
+            return { ...msg, activeResponseIndex: nextAltIndex + 1 };
+        }));
+    }, [mutedParallelModels, setMessages]);
 
     // Close compare menu on click outside or Escape key
     useEffect(() => {
@@ -1003,23 +908,88 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const displayModel = autoMode && currentAutoModel
         ? models.find(m => m.id === currentAutoModel)
         : selectedModel;
-    const autoSelectionActive = autoTargetModels.size > 0;
-    const toggleAutoTarget = (modelId: string) => {
-        setAutoTargetModels(prev => {
-            const next = new Set(prev);
-            if (next.has(modelId)) {
-                next.delete(modelId);
-            } else {
-                next.add(modelId);
+    const latestParallelMessage = useMemo(() => {
+        for (let i = messages.length - 1; i >= 0; i -= 1) {
+            const msg = messages[i];
+            if (msg.role === 'assistant' && msg.alternateResponses && msg.alternateResponses.length > 0) {
+                return { msg, index: i };
             }
-            return next;
+        }
+        return null;
+    }, [messages]);
+
+    const parallelRoster = useMemo(() => {
+        if (!latestParallelMessage) return [];
+        const { msg } = latestParallelMessage;
+        const entries: Array<{ modelId: string; modelName: string; isPrimary: boolean }> = [];
+        if (msg.modelId) {
+            entries.push({
+                modelId: msg.modelId,
+                modelName: msg.modelName || msg.modelId,
+                isPrimary: true,
+            });
+        }
+        msg.alternateResponses?.forEach(alt => {
+            if (alt.modelId && !entries.find(entry => entry.modelId === alt.modelId)) {
+                entries.push({
+                    modelId: alt.modelId,
+                    modelName: alt.modelName || alt.modelId,
+                    isPrimary: false,
+                });
+            }
         });
-    };
+        return entries;
+    }, [latestParallelMessage]);
 
     return (
         <div ref={containerRef} className="flex flex-col h-full relative isolate z-[10]">
             {/* Blue Selection Rectangle */}
             <SelectionOverlay rect={selectionRect} />
+
+            {/* Parallel Mode Bar */}
+            {latestParallelMessage && parallelRoster.length > 1 && (
+                <div className="mx-auto w-full px-4 pt-2 pb-1" style={{ maxWidth: '680px' }}>
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-900/60 px-3 py-2 text-[11px] text-slate-300">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 uppercase tracking-wider text-[9px]">
+                            Parallel Mode
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {parallelRoster.map(entry => {
+                                const isMuted = mutedParallelModels.has(entry.modelId);
+                                return (
+                                    <div
+                                        key={entry.modelId}
+                                        className={`flex items-center gap-1 rounded-full border px-2 py-0.5 ${isMuted
+                                            ? 'border-slate-700/60 bg-slate-800/40 text-slate-500'
+                                            : entry.isPrimary
+                                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                                : 'border-slate-700/60 bg-slate-800/60 text-slate-300'
+                                            }`}
+                                    >
+                                        <span className="text-[10px] font-medium">{entry.modelName}</span>
+                                        <button
+                                            onClick={() => toggleMuteModel(entry.modelId)}
+                                            className="p-0.5 rounded-full hover:bg-slate-700/60 transition-colors"
+                                            title={isMuted ? 'Unmute' : 'Mute'}
+                                        >
+                                            {isMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                                        </button>
+                                        {!entry.isPrimary && (
+                                            <button
+                                                onClick={() => removeParallelResponse(latestParallelMessage.index, entry.modelId)}
+                                                className="p-0.5 rounded-full hover:bg-red-500/20 text-slate-400 hover:text-red-300 transition-colors"
+                                                title="Remove"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Messages Area */}
             <div
@@ -1169,123 +1139,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                                     <ChevronLeft size={10} />
                                                 </button>
                                                 <span className="px-1">{msg.modelName || 'Assistant'}</span>
-                                                {(autoMode || (msg.alternateResponses && msg.alternateResponses.length > 0)) && (
-                                                    <div
-                                                        className="ml-1 flex items-center gap-1 flex-nowrap overflow-x-auto max-w-[360px]"
-                                                        style={{ scrollbarWidth: 'none' }}
-                                                    >
-                                                        {(() => {
-                                                            const activeIndex = msg.activeResponseIndex ?? 0;
-                                                            const groupModels = autoMode
-                                                                ? models.filter(m => {
-                                                                    if (autoModeScope === 'local') return m.type === 'self-hosted';
-                                                                    if (autoModeScope === 'api') return m.type === 'github' || m.type === 'external';
-                                                                    return true;
-                                                                })
-                                                                : [];
-
-                                                            const alternatesById = new Map(
-                                                                (msg.alternateResponses || []).map((alt, altIdx) => [alt.modelId, { alt, altIdx }])
-                                                            );
-
-                                                            const pills: Array<{ id: string; name?: string }> = autoMode
-                                                                ? groupModels.map(m => ({ id: m.id, name: m.name }))
-                                                                : [];
-                                                            if (!autoMode && msg.modelId) {
-                                                                pills.push({
-                                                                    id: msg.modelId,
-                                                                    name: msg.modelName || msg.modelId,
-                                                                });
-                                                            }
-
-                                                            if (!autoMode) {
-                                                                (msg.alternateResponses || []).forEach(alt => {
-                                                                    pills.push({
-                                                                        id: alt.modelId,
-                                                                        name: alt.modelName,
-                                                                    });
-                                                                });
-                                                            }
-
-                                                            return pills.map((pill, pillIndex) => {
-                                                                const isPrimary = msg.modelId === pill.id;
-                                                                const altEntry = alternatesById.get(pill.id);
-                                                                const alt = altEntry?.alt;
-                                                                const altIdx = altEntry?.altIdx ?? 0;
-                                                                const hasResponse = isPrimary || Boolean(alt);
-                                                                const isActive = isPrimary
-                                                                    ? activeIndex === 0
-                                                                    : alt ? activeIndex === altIdx + 1 : false;
-
-                                                                const pillLabel = pill.name || pill.id;
-
-                                                                const isSelectedAuto = autoMode && autoTargetModels.has(pill.id);
-                                                                const pillClass = alt?.loading
-                                                                    ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40'
-                                                                    : alt?.error
-                                                                        ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'
-                                                                        : autoMode
-                                                                            ? autoSelectionActive
-                                                                                ? isSelectedAuto
-                                                                                    ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
-                                                                                    : 'bg-slate-800/50 text-slate-500 ring-1 ring-slate-700/50'
-                                                                                : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
-                                                                            : !hasResponse
-                                                                                ? 'bg-slate-800/50 text-slate-500 ring-1 ring-slate-700/50'
-                                                                                : isPrimary && isActive
-                                                                                    ? 'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/50'
-                                                                                    : isActive
-                                                                                        ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
-                                                                                        : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60';
-
-                                                                return (
-                                                                    <span key={`${pill.id}-${pillIndex}`} className="flex items-center flex-shrink-0">
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                if (autoMode) {
-                                                                                    toggleAutoTarget(pill.id);
-                                                                                    return;
-                                                                                }
-                                                                                if (!hasResponse) return;
-                                                                                if (isPrimary) {
-                                                                                    setActiveResponse(idx, 0);
-                                                                                } else if (alt) {
-                                                                                    setActiveResponse(idx, altIdx + 1);
-                                                                                }
-                                                                            }}
-                                                                            className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${pillClass}`}
-                                                                            title={autoMode ? 'Select for next reply' : (hasResponse ? 'Response' : 'Not in this reply')}
-                                                                        >
-                                                                            {alt?.loading && <Loader2 size={8} className="animate-spin text-amber-400" />}
-                                                                            {alt?.error && <AlertTriangle size={8} className="text-red-400" />}
-                                                                            {pillLabel}
-                                                                        </button>
-                                                                        {alt ? (
-                                                                            alt.loading ? (
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); cancelComparison(idx, alt.modelId); }}
-                                                                                    className="ml-0.5 p-0.5 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
-                                                                                    title="Cancel"
-                                                                                >
-                                                                                    <X size={8} />
-                                                                                </button>
-                                                                            ) : (
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); removeParallelResponse(idx, alt.modelId); }}
-                                                                                    className="ml-0.5 p-0.5 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
-                                                                                    title="Remove"
-                                                                                >
-                                                                                    <X size={8} />
-                                                                                </button>
-                                                                            )
-                                                                        ) : null}
-                                                                    </span>
-                                                                );
-                                                            });
-                                                        })()}
-                                                    </div>
-                                                )}
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1395,6 +1248,75 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                     </div>
 
                                     {/* Model comparison tabs - only show if there are alternates */}
+                                    {msg.alternateResponses && msg.alternateResponses.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 pb-2 mb-1 border-t border-slate-700/30">
+                                            <span className="text-[9px] text-slate-500 uppercase tracking-wider mr-1">Parallel:</span>
+                                            <div className="flex items-center">
+                                                {msg.modelId && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setActiveResponse(idx, 0); }}
+                                                        className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${mutedParallelModels.has(msg.modelId)
+                                                            ? 'bg-slate-800/60 text-slate-500 ring-1 ring-slate-700/50'
+                                                            : (msg.activeResponseIndex ?? 0) === 0
+                                                                ? 'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/50'
+                                                                : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+                                                            }`}
+                                                        title={mutedParallelModels.has(msg.modelId) ? 'Muted' : 'Primary response'}
+                                                    >
+                                                        {msg.modelName || 'Assistant'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {msg.alternateResponses.map((alt, altIdx) => (
+                                                <div key={alt.modelId} className="flex items-center">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (!mutedParallelModels.has(alt.modelId)) {
+                                                                setActiveResponse(idx, altIdx + 1);
+                                                            }
+                                                        }}
+                                                        className={`px-2 py-0.5 text-[9px] rounded-full transition-colors flex items-center gap-1 ${alt.loading
+                                                            ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40'
+                                                            : alt.error
+                                                                ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'
+                                                                : mutedParallelModels.has(alt.modelId)
+                                                                    ? 'bg-slate-800/60 text-slate-500 ring-1 ring-slate-700/50'
+                                                                    : (msg.activeResponseIndex ?? 0) === altIdx + 1
+                                                                        ? 'bg-blue-500/30 text-blue-200 ring-1 ring-blue-500/50'
+                                                                        : 'bg-slate-700/40 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+                                                            }`}
+                                                        title={mutedParallelModels.has(alt.modelId) ? 'Muted' : 'Parallel response'}
+                                                    >
+                                                        {alt.loading && <Loader2 size={8} className="animate-spin text-amber-400" />}
+                                                        {alt.error && <AlertTriangle size={8} className="text-red-400" />}
+                                                        {alt.modelName}
+                                                    </button>
+                                                    {alt.loading && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); cancelComparison(idx, alt.modelId); }}
+                                                            className="ml-0.5 p-0.5 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
+                                                            title="Cancel"
+                                                        >
+                                                            <X size={8} />
+                                                        </button>
+                                                    )}
+                                                    {!alt.loading && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                removeParallelResponse(idx, alt.modelId);
+                                                            }}
+                                                            className="ml-0.5 p-0.5 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
+                                                            title="Remove"
+                                                        >
+                                                            <X size={8} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     {/* Content area */}
                                     <div className="prose prose-invert prose-sm max-w-none mt-2">
