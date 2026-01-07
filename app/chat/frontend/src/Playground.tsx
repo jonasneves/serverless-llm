@@ -1230,6 +1230,15 @@ function PlaygroundInner() {
           handleModelToggle={handleModelToggle}
           handleAddGroup={handleAddGroup}
           dockRef={dockRef}
+          mode={mode}
+          allModels={modelsData}
+          chatModelId={chatModelId}
+          setChatModelId={setChatModelId}
+          chatAutoMode={chatAutoMode}
+          setChatAutoMode={setChatAutoMode}
+          chatAutoModeScope={chatAutoModeScope}
+          setChatAutoModeScope={setChatAutoModeScope}
+          setShowDock={setShowDock}
         />
 
 
