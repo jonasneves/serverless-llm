@@ -16,7 +16,7 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev-chat        Run chat interface (uses remote models if BASE_DOMAIN set)"
-	@echo "  make dev-MODEL       Run model locally (qwen|phi|gemma|llama|mistral|r1qwen)"
+	@echo "  make dev-MODEL       Run model locally (qwen|phi|llama|mistral|gemma|r1qwen|rnj|functiongemma|smollm3|lfm2|nanbeige|nemotron|gptoss)"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make start MODEL=x   Start chat + model in Docker"
@@ -96,13 +96,33 @@ dev-functiongemma:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
 	cd app/functiongemma-inference && PORT=8103 ../../venv/bin/python inference_server.py
 
+dev-smollm3:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/smollm3-inference && PORT=8104 ../../venv/bin/python inference_server.py
+
+dev-lfm2:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/lfm2-inference && PORT=8105 ../../venv/bin/python inference_server.py
+
+dev-nanbeige:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/nanbeige-inference && PORT=8301 ../../venv/bin/python inference_server.py
+
+dev-nemotron:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/nemotron-inference && PORT=8302 ../../venv/bin/python inference_server.py
+
+dev-gptoss:
+	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
+	cd app/gpt-oss-inference && PORT=8303 ../../venv/bin/python inference_server.py
+
 # =============================================================================
 # Docker
 # =============================================================================
 
 start:
 ifndef MODEL
-	@echo "Usage: make start MODEL=qwen|phi|gemma|llama|mistral|rnj|r1qwen"
+	@echo "Usage: make start MODEL=qwen|phi|llama|mistral|gemma|r1qwen|rnj|functiongemma|smollm3|lfm2|nanbeige|nemotron|gptoss"
 else
 	docker-compose --profile $(MODEL) up -d
 endif

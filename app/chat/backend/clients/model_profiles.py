@@ -682,6 +682,194 @@ FUNCTIONGEMMA_270M_PROFILE = {
 }
 
 
+# SmolLM3 3B (local, GGUF)
+SMOLLM3_3B_PROFILE = {
+    "model_id": "smollm3-3b",
+    "display_name": "SmolLM3 3B",
+    "model_type": "self-hosted",
+    "creator": "Hugging Face",
+    "size": "3B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["reasoning", "tool_calling", "function_calling", "long_context"],
+
+    # Dec 2025 benchmarks - Rank 3
+    "benchmark_scores": {
+        "AIME": 36.7,            # Strong reasoning
+        "BFCL": 92.3,            # Exceptional function calling
+        "HumanEval": 68.0,       # Good code generation
+        "MMLU": 65.0,            # Moderate general knowledge
+    },
+
+    "expertise_domains": {
+        "function_calling": 0.92,       # Exceptional - 92.3% BFCL
+        "tool_use": 0.90,               # Exceptional
+        "reasoning": 0.85,              # Strong - hybrid reasoning mode
+        "long_context": 0.88,           # Strong - 64K context
+        "mathematics": 0.75,            # Good - 36.7% AIME
+        "coding": 0.80,                 # Strong
+        "instruction_following": 0.82,  # Strong
+        "agent_capabilities": 0.88,     # Strong
+        "logical_reasoning": 0.83,      # Strong
+        "conversation": 0.70,           # Good
+        "creative_writing": 0.65,       # Moderate
+        "summarization": 0.75,          # Good
+        "common_sense": 0.70,           # Good
+    },
+
+    "use_as_lead_for": [
+        "function calling",
+        "tool orchestration",
+        "mathematical reasoning",
+        "hybrid reasoning tasks",
+        "long context tasks",
+        "API integrations",
+    ],
+
+    "context_length": 65536,  # 64K tokens
+    "description": "Hybrid reasoning (36.7% AIME), tool-calling (92.3% BFCL), 64K context",
+}
+
+
+# Nanbeige4-3B Thinking (local, GGUF)
+NANBEIGE_4_3B_THINKING_PROFILE = {
+    "model_id": "nanbeige4-3b-thinking",
+    "display_name": "Nanbeige4-3B Thinking",
+    "model_type": "self-hosted",
+    "creator": "Nanbeige",
+    "size": "3B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["reasoning", "mathematics", "science", "competitive_programming"],
+
+    # Dec 2025 benchmarks - Rank 1
+    "benchmark_scores": {
+        "AIME": 90.4,            # Exceptional - outperforms Qwen3-32B
+        "GPQA": 82.2,            # Exceptional graduate-level science
+        "MATH-500": 85.0,        # Exceptional mathematical reasoning
+        "HumanEval": 75.0,       # Strong code generation
+    },
+
+    "expertise_domains": {
+        "mathematics": 0.98,            # Exceptional - 90.4% AIME
+        "reasoning": 0.96,              # Exceptional
+        "scientific_knowledge": 0.95,   # Exceptional - 82.2% GPQA
+        "logical_reasoning": 0.94,      # Exceptional
+        "problem_solving": 0.96,        # Exceptional
+        "coding": 0.85,                 # Strong
+        "technical_writing": 0.82,      # Strong
+        "instruction_following": 0.80,  # Strong
+        "creative_writing": 0.70,       # Good
+        "conversation": 0.75,           # Good
+        "summarization": 0.78,          # Good
+        "common_sense": 0.80,           # Strong
+    },
+
+    "use_as_lead_for": [
+        "advanced mathematics",
+        "competitive programming",
+        "scientific research",
+        "graduate-level problems",
+        "complex reasoning",
+        "step-by-step problem solving",
+        "STEM education",
+    ],
+
+    "context_length": 4096,
+    "description": "AIME 90.4%, GPQA 82.2%, outperforms Qwen3-32B on reasoning",
+}
+
+
+# Nemotron-3 Nano 30B (local, GGUF)
+NEMOTRON_3_NANO_30B_PROFILE = {
+    "model_id": "nemotron-3-nano-30b-a3b",
+    "display_name": "Nemotron-3 Nano 30B",
+    "model_type": "self-hosted",
+    "creator": "NVIDIA",
+    "size": "30B parameters / 3.5B active",
+    "quantization": "IQ2_M",
+
+    "primary_strengths": ["reasoning", "efficiency", "moe_architecture"],
+
+    # MoE hybrid architecture - Mamba2+Transformer
+    "benchmark_scores": {
+        "MMLU": 58.0,            # Moderate general knowledge
+        "HumanEval": 52.0,       # Moderate code generation
+        "GSM8K": 48.0,           # Moderate math
+    },
+
+    "expertise_domains": {
+        "reasoning": 0.72,              # Good - hybrid architecture
+        "efficiency": 0.92,             # Exceptional - only 3.5B active
+        "instruction_following": 0.70,  # Good
+        "conversation": 0.68,           # Moderate
+        "coding": 0.65,                 # Moderate
+        "mathematics": 0.62,            # Moderate
+        "logical_reasoning": 0.68,      # Moderate
+        "creative_writing": 0.65,       # Moderate
+        "summarization": 0.70,          # Good
+        "common_sense": 0.65,           # Moderate
+    },
+
+    "use_as_lead_for": [
+        "resource-constrained reasoning",
+        "efficient inference",
+        "general assistance",
+    ],
+
+    "context_length": 4096,
+    "description": "MoE hybrid (Mamba2+Transformer), 30B params / 3.5B active",
+}
+
+
+# GPT-OSS 20B (local, GGUF)
+GPT_OSS_20B_PROFILE = {
+    "model_id": "gpt-oss-20b",
+    "display_name": "GPT-OSS 20B",
+    "model_type": "self-hosted",
+    "creator": "OpenAI",
+    "size": "21B parameters / 3.6B active",
+    "quantization": "Q6_K",
+
+    "primary_strengths": ["function_calling", "agentic_capabilities", "moe_architecture"],
+
+    # MoE architecture benchmarks
+    "benchmark_scores": {
+        "Function Calling": 75.0,    # Strong function calling
+        "Agent Tasks": 70.0,         # Strong agentic performance
+        "MMLU": 62.0,                # Moderate general knowledge
+        "HumanEval": 58.0,           # Moderate code generation
+    },
+
+    "expertise_domains": {
+        "function_calling": 0.88,       # Strong
+        "agentic_capabilities": 0.85,   # Strong
+        "tool_use": 0.82,               # Strong
+        "efficiency": 0.90,             # Exceptional - only 3.6B active
+        "reasoning": 0.70,              # Good
+        "coding": 0.68,                 # Moderate
+        "instruction_following": 0.75,  # Good
+        "conversation": 0.72,           # Good
+        "mathematics": 0.65,            # Moderate
+        "logical_reasoning": 0.70,      # Good
+        "creative_writing": 0.68,       # Moderate
+        "summarization": 0.72,          # Good
+        "common_sense": 0.70,           # Good
+    },
+
+    "use_as_lead_for": [
+        "function calling",
+        "agentic operations",
+        "tool orchestration",
+        "API integrations",
+        "automation workflows",
+    ],
+
+    "context_length": 4096,
+    "description": "MoE (21B params / 3.6B active), function calling, agentic operations",
+}
+
+
 # OpenRouter GLM Models
 GLM_45_AIR_PROFILE = {
     "model_id": "z-ai/glm-4.5-air:free",
@@ -711,15 +899,19 @@ GLM_45_AIR_PROFILE = {
 # Aggregate profiles for easy access (ordered by capability rank)
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models (ranked by Dec 2025 benchmarks)
-    "qwen3-4b": QWEN_PROFILE,                                  # Rank 1
-    "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,  # Rank 2
-    "gemma-3-12b-it": GEMMA3_12B_PROFILE,                      # Rank 3
-    "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,            # Rank 4
-    "lfm2-2.6b": LFM2_26B_PROFILE,                             # Rank 5
-    "phi-3-mini": PHI_PROFILE,                                 # Rank 6
-    "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 7
-    "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 8
-    "functiongemma-270m-it": FUNCTIONGEMMA_270M_PROFILE,       # Rank 9
+    "nanbeige4-3b-thinking": NANBEIGE_4_3B_THINKING_PROFILE,   # Rank 1
+    "qwen3-4b": QWEN_PROFILE,                                  # Rank 2
+    "smollm3-3b": SMOLLM3_3B_PROFILE,                          # Rank 3
+    "lfm2-2.6b": LFM2_26B_PROFILE,                             # Rank 4
+    "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,  # Rank 5
+    "gemma-3-12b-it": GEMMA3_12B_PROFILE,                      # Rank 6
+    "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,            # Rank 7
+    "phi-3-mini": PHI_PROFILE,                                 # Rank 9
+    "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 9
+    "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 10
+    "functiongemma-270m-it": FUNCTIONGEMMA_270M_PROFILE,       # Rank 12
+    "nemotron-3-nano-30b-a3b": NEMOTRON_3_NANO_30B_PROFILE,    # Rank 12
+    "gpt-oss-20b": GPT_OSS_20B_PROFILE,                        # Rank 13
     # API models
     "openai/gpt-4.1": GPT4_1_PROFILE,
     "openai/gpt-4o": GPT4O_PROFILE,

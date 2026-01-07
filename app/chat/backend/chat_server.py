@@ -64,15 +64,12 @@ async def lifespan(app: FastAPI):
     validate_environment()
     get_http_client()
 
-    # Log configured model endpoints
+    # Log configured model endpoints - dynamically from config
+    from config.models import get_inference_models
+
     model_env_vars = {
-        "QWEN": os.getenv("QWEN_API_URL"),
-        "PHI": os.getenv("PHI_API_URL"),
-        "LLAMA": os.getenv("LLAMA_API_URL"),
-        "MISTRAL": os.getenv("MISTRAL_API_URL"),
-        "GEMMA": os.getenv("GEMMA_API_URL"),
-        "R1QWEN": os.getenv("R1QWEN_API_URL"),
-        "RNJ": os.getenv("RNJ_API_URL"),
+        model.name.upper(): os.getenv(model.env_var)
+        for model in get_inference_models()
     }
 
     configured = [k for k, v in model_env_vars.items() if v]

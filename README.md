@@ -39,7 +39,7 @@ Also runs 13 different models (270M to 12B parameters) with OpenAI-compatible AP
 ### Infrastructure
 
 - **Zero Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model**: 12 models with different strengths (see table below)
+- **Multi-Model**: 13 models with different strengths (see table below)
 - **High Availability**: 1-3 parallel instances per model for load balancing
 - **Continuous Uptime**: Auto-restart before GitHub's 6-hour limit with graceful handoff
 - **Public Access**: Cloudflare Tunnels for external connectivity

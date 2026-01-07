@@ -83,8 +83,15 @@ jobs:
           MODELS="${{ steps.detect.outputs.models }}"
 
           if [ "$MODELS" = "all" ] || [ -z "$MODELS" ]; then
-            # Build all services (inference servers + chat + cloudflared)
-            MATRIX='["nanbeige-inference","deepseek-r1qwen-inference","functiongemma-inference","qwen-inference","phi-inference","lfm2-inference","llama-inference","rnj-inference","nemotron-inference","gpt-oss-inference","gemma-inference","mistral-inference","smollm3-inference","chat","cloudflared"]'
+            # Install yq for YAML parsing
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64
+            sudo chmod +x /usr/local/bin/yq
+
+            # Build all services - dynamically read from config/inference.yaml
+            INFERENCE_MODELS=$(yq '.models | keys | map(. + "-inference") | @json' -o=json config/inference.yaml)
+
+            # Combine inference models with core services
+            MATRIX=$(echo "$INFERENCE_MODELS" | jq -c '. + ["chat", "cloudflared"]')
           else
             # Build only specified models (use -c for compact output)
             MATRIX=$(echo "$MODELS" | jq -cR 'split(",") | map(select(length > 0))')
