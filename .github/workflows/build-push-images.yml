@@ -88,7 +88,7 @@ jobs:
             sudo chmod +x /usr/local/bin/yq
 
             # Build all services - dynamically read from config/inference.yaml
-            INFERENCE_MODELS=$(yq '.models | keys | map(. + "-inference") | @json' -o=json config/inference.yaml)
+            INFERENCE_MODELS=$(yq '.models | keys | map(. + "-inference")' -o=json config/inference.yaml)
 
             # Combine inference models with core services
             MATRIX=$(echo "$INFERENCE_MODELS" | jq -c '. + ["chat", "cloudflared"]')
