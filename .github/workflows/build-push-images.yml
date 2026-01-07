@@ -87,8 +87,9 @@ jobs:
             sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64
             sudo chmod +x /usr/local/bin/yq
 
-            # Build all services - dynamically read from config/inference.yaml
-            INFERENCE_MODELS=$(yq '.models | keys | map(. + "-inference")' -o=json config/inference.yaml)
+            # Build all services - read model_dir from config/inference.yaml
+            # Use model_dir (not key + "-inference") to handle special cases like gpt-oss-inference
+            INFERENCE_MODELS=$(yq '.models | to_entries | map(.value.model_dir)' -o=json config/inference.yaml)
 
             # Combine inference models with core services
             MATRIX=$(echo "$INFERENCE_MODELS" | jq -c '. + ["chat", "cloudflared"]')
