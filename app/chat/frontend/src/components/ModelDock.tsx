@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Search, Zap, X, Check } from 'lucide-react';
 import { Model, Mode } from '../types';
 import { ChatAutoModeScope } from './ChatView';
@@ -43,26 +43,46 @@ export default function ModelDock({
   setShowDock,
 }: ModelDockProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [isKeyboardNav, setIsKeyboardNav] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  const sections = [
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  type SectionType = 'self-hosted' | 'github' | 'external';
+  type AccentColor = 'emerald' | 'blue' | 'purple';
+
+  const sections: Array<{
+    type: SectionType;
+    title: string;
+    accentColor: AccentColor;
+    chatAutoScope: ChatAutoModeScope;
+  }> = [
     {
-      type: 'self-hosted' as const,
+      type: 'self-hosted',
       title: 'Self-Hosted Models',
       accentColor: 'emerald',
-      chatAutoScope: 'self-hosted' as ChatAutoModeScope,
+      chatAutoScope: 'self-hosted',
     },
     {
-      type: 'github' as const,
+      type: 'github',
       title: 'GitHub Models',
       accentColor: 'blue',
-      chatAutoScope: 'api' as ChatAutoModeScope,
+      chatAutoScope: 'api',
     },
     {
-      type: 'external' as const,
+      type: 'external',
       title: 'External Models',
       accentColor: 'purple',
-      chatAutoScope: 'external' as ChatAutoModeScope,
+      chatAutoScope: 'external',
     },
   ];
 
@@ -70,28 +90,20 @@ export default function ModelDock({
   const modelsToShow = isInChatMode ? allModels : availableModels;
 
   const filteredModels = useMemo(() => {
-    if (!searchQuery) return modelsToShow;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedSearchQuery) return modelsToShow;
+    const query = debouncedSearchQuery.toLowerCase();
     return modelsToShow.filter(m => m.name.toLowerCase().includes(query));
-  }, [modelsToShow, searchQuery]);
+  }, [modelsToShow, debouncedSearchQuery]);
 
-  useEffect(() => {
-    if (showDock) {
-      setTimeout(() => searchInputRef.current?.focus(), 100);
-    } else {
-      setSearchQuery('');
-    }
-  }, [showDock]);
-
-  const handleAutoModeClick = (scope: ChatAutoModeScope) => {
+  const handleAutoModeClick = useCallback((scope: ChatAutoModeScope) => {
     if (isInChatMode) {
       setChatAutoMode(true);
       setChatAutoModeScope(scope);
       setShowDock(false);
     }
-  };
+  }, [isInChatMode, setChatAutoMode, setChatAutoModeScope, setShowDock]);
 
-  const handleModelClick = (modelId: string) => {
+  const handleModelClick = useCallback((modelId: string) => {
     if (isInChatMode) {
       setChatAutoMode(false);
       setChatModelId(modelId);
@@ -99,7 +111,70 @@ export default function ModelDock({
     } else {
       handleModelToggle(modelId);
     }
-  };
+  }, [isInChatMode, setChatAutoMode, setChatModelId, setShowDock, handleModelToggle]);
+
+  useEffect(() => {
+    if (showDock) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+      setFocusedIndex(-1);
+    } else {
+      setSearchQuery('');
+      setFocusedIndex(-1);
+    }
+  }, [showDock]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!showDock) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Get all selectable items (auto buttons + models)
+      const allItems: Array<{ type: 'auto' | 'model', scope?: ChatAutoModeScope, modelId?: string }> = [];
+
+      sections.forEach(section => {
+        const sectionModels = filteredModels.filter(m => m.type === section.type);
+        if (sectionModels.length > 0 && isInChatMode) {
+          allItems.push({ type: 'auto', scope: section.chatAutoScope });
+        }
+        sectionModels.forEach(model => {
+          allItems.push({ type: 'model', modelId: model.id });
+        });
+      });
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setIsKeyboardNav(true);
+        setFocusedIndex(prev => Math.min(prev + 1, allItems.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setIsKeyboardNav(true);
+        setFocusedIndex(prev => Math.max(prev - 1, -1));
+        if (focusedIndex === 0) {
+          searchInputRef.current?.focus();
+        }
+      } else if (e.key === 'Enter' && focusedIndex >= 0 && focusedIndex < allItems.length) {
+        e.preventDefault();
+        const item = allItems[focusedIndex];
+        if (item.type === 'auto' && item.scope) {
+          handleAutoModeClick(item.scope);
+        } else if (item.type === 'model' && item.modelId) {
+          handleModelClick(item.modelId);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowDock(false);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        // Trap focus within modal
+        if (focusedIndex === -1) {
+          setFocusedIndex(0);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showDock, focusedIndex, filteredModels, isInChatMode, sections, handleAutoModeClick, handleModelClick, setShowDock]);
 
   const isModelSelected = (modelId: string) => {
     if (isInChatMode) {
@@ -110,6 +185,54 @@ export default function ModelDock({
 
   const isAutoModeActive = (scope: ChatAutoModeScope) => {
     return isInChatMode && chatAutoMode && chatAutoModeScope === scope;
+  };
+
+  const getAccentClasses = (color: AccentColor) => {
+    const classMap = {
+      emerald: {
+        button: 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10',
+        autoActive: 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20',
+        autoInactive: 'hover:bg-white/5 text-slate-400 hover:text-slate-200 border-transparent',
+        dot: 'bg-emerald-500',
+        textColor: 'text-emerald-500',
+        modelActive: 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20',
+        focus: 'ring-2 ring-emerald-500/50',
+      },
+      blue: {
+        button: 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10',
+        autoActive: 'text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20',
+        autoInactive: 'hover:bg-white/5 text-slate-400 hover:text-slate-200 border-transparent',
+        dot: 'bg-blue-500',
+        textColor: 'text-blue-500',
+        modelActive: 'text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20',
+        focus: 'ring-2 ring-blue-500/50',
+      },
+      purple: {
+        button: 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10',
+        autoActive: 'text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20',
+        autoInactive: 'hover:bg-white/5 text-slate-400 hover:text-slate-200 border-transparent',
+        dot: 'bg-purple-500',
+        textColor: 'text-purple-500',
+        modelActive: 'text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20',
+        focus: 'ring-2 ring-purple-500/50',
+      },
+    };
+    return classMap[color];
+  };
+
+  // Calculate global index for keyboard navigation
+  const getItemGlobalIndex = (sectionIndex: number, itemIndex: number, isAuto: boolean): number => {
+    let globalIndex = 0;
+    for (let i = 0; i < sectionIndex; i++) {
+      const sect = sections[i];
+      const models = filteredModels.filter(m => m.type === sect.type);
+      if (models.length > 0) {
+        if (isInChatMode) globalIndex++; // auto button
+        globalIndex += models.length;
+      }
+    }
+    if (isAuto) return globalIndex;
+    return globalIndex + (isInChatMode ? 1 : 0) + itemIndex;
   };
 
   return (
@@ -155,33 +278,18 @@ export default function ModelDock({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 bg-slate-800/95 backdrop-blur-md">
-        {sections.map(section => {
+        {sections.map((section, sectionIndex) => {
           const modelsForSection = filteredModels.filter(m => m.type === section.type);
           const allModelsForSection = availableModels.filter(m => m.type === section.type);
           const allSelected = allSelectedByType[section.type];
           const hasAny = totalModelsByType[section.type] > 0;
-          const accentClasses = {
-            emerald: {
-              button: 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10',
-              auto: 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20',
-              dot: 'bg-emerald-500',
-              border: 'hover:border-emerald-500/40',
-            },
-            blue: {
-              button: 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10',
-              auto: 'text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20',
-              dot: 'bg-blue-500',
-              border: 'hover:border-blue-500/40',
-            },
-            purple: {
-              button: 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10',
-              auto: 'text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20',
-              dot: 'bg-purple-500',
-              border: 'hover:border-purple-500/40',
-            },
-          }[section.accentColor as 'emerald' | 'blue' | 'purple']!;
+          const accentClasses = getAccentClasses(section.accentColor);
+          const isAutoActive = isAutoModeActive(section.chatAutoScope);
 
           if (allModelsForSection.length === 0) return null;
+
+          const autoButtonIndex = getItemGlobalIndex(sectionIndex, 0, true);
+          const isAutoFocused = focusedIndex === autoButtonIndex;
 
           return (
             <div key={section.type} className="flex flex-col gap-2">
@@ -201,7 +309,7 @@ export default function ModelDock({
                 {!isInChatMode && (
                   <button
                     onClick={() => handleAddGroup(section.type)}
-                    className={`text-[10px] font-medium px-2 py-1 rounded transition-all active:scale-95 ${accentClasses.button} ${!hasAny ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    className={`text-[10px] font-medium px-2 py-1 rounded transition-colors duration-150 ${accentClasses.button} ${!hasAny ? 'opacity-40 cursor-not-allowed' : ''}`}
                     disabled={!hasAny}
                   >
                     {allSelected ? '− Remove All' : '+ Add All'}
@@ -213,40 +321,48 @@ export default function ModelDock({
               {isInChatMode && (
                 <button
                   onClick={() => handleAutoModeClick(section.chatAutoScope)}
-                  className={`group flex items-center justify-between gap-2 px-3 py-2 rounded-lg transition-all border border-transparent active:scale-95 ${
-                    isAutoModeActive(section.chatAutoScope)
-                      ? accentClasses.auto + ' border-' + section.accentColor + '-500/40'
-                      : 'hover:bg-white/5 text-slate-400 hover:text-slate-200'
-                  }`}
+                  onMouseEnter={() => {
+                    setIsKeyboardNav(false);
+                    setFocusedIndex(autoButtonIndex);
+                  }}
+                  className={`group flex items-center justify-between gap-2 px-3 py-2 rounded-lg transition-[background-color,border-color,box-shadow] duration-150 border ${
+                    isAutoActive ? accentClasses.autoActive : accentClasses.autoInactive
+                  } ${isAutoFocused && isKeyboardNav ? accentClasses.focus : ''}`}
                   title="Auto mode with smart fallback"
                 >
                   <div className="flex items-center gap-2">
-                    <Zap size={14} className={isAutoModeActive(section.chatAutoScope) ? accentClasses.dot.replace('bg-', 'text-') : 'text-slate-500'} />
+                    <Zap size={14} className={isAutoActive ? accentClasses.textColor : 'text-slate-500'} />
                     <span className="text-xs font-medium">
                       Auto (Smart Fallback)
                     </span>
                   </div>
-                  {isAutoModeActive(section.chatAutoScope) && (
-                    <Check size={14} className={accentClasses.dot.replace('bg-', 'text-')} />
+                  {isAutoActive && (
+                    <Check size={14} className={accentClasses.textColor} />
                   )}
                 </button>
               )}
 
               {/* Model list */}
               <div className="flex flex-col gap-1">
-                {modelsForSection.map(model => {
+                {modelsForSection.map((model, modelIndex) => {
                   const isSelected = isModelSelected(model.id);
+                  const itemGlobalIndex = getItemGlobalIndex(sectionIndex, modelIndex, false);
+                  const isFocused = focusedIndex === itemGlobalIndex;
                   return (
                     <div
                       key={model.id}
                       draggable={!isInChatMode}
                       onDragStart={!isInChatMode ? (e) => handleDragStart(e, model.id) : undefined}
                       onClick={() => handleModelClick(model.id)}
-                      className={`group flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all border border-transparent active:scale-95 ${
+                      onMouseEnter={() => {
+                        setIsKeyboardNav(false);
+                        setFocusedIndex(itemGlobalIndex);
+                      }}
+                      className={`group flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-[background-color,border-color,box-shadow] duration-150 border ${
                         isInChatMode
-                          ? `cursor-pointer ${isSelected ? accentClasses.auto + ' border-' + section.accentColor + '-500/40' : 'hover:bg-white/5'}`
-                          : `cursor-grab active:cursor-grabbing hover:bg-white/5 ${accentClasses.border}`
-                      }`}
+                          ? `cursor-pointer ${isSelected ? accentClasses.modelActive : 'hover:bg-white/5 border-transparent'}`
+                          : `cursor-grab active:cursor-grabbing hover:bg-white/5 border-transparent`
+                      } ${isFocused && isKeyboardNav ? accentClasses.focus : ''}`}
                     >
                       <div className="flex items-center gap-3">
                         <div
@@ -257,7 +373,7 @@ export default function ModelDock({
                         </span>
                       </div>
                       {isSelected && (
-                        <Check size={14} className={accentClasses.dot.replace('bg-', 'text-')} />
+                        <Check size={14} className={accentClasses.textColor} />
                       )}
                     </div>
                   );
