@@ -118,79 +118,79 @@
     },
     {
       "name": "Nanbeige4-3B Thinking",
-      "path": "nanbeige-inference.yml",
+      "path": "inference.yml",
       "category": "reasoning",
       "serviceKey": "nanbeige"
     },
     {
       "name": "Qwen3 4B",
-      "path": "qwen-inference.yml",
+      "path": "inference.yml",
       "category": "small",
       "serviceKey": "qwen"
     },
     {
       "name": "SmolLM3 3B",
-      "path": "smollm3-inference.yml",
+      "path": "inference.yml",
       "category": "small",
       "serviceKey": "smollm3"
     },
     {
       "name": "LFM2 2.6B",
-      "path": "lfm2-inference.yml",
+      "path": "inference.yml",
       "category": "small",
       "serviceKey": "lfm2"
     },
     {
       "name": "DeepSeek R1 1.5B",
-      "path": "r1qwen-inference.yml",
+      "path": "inference.yml",
       "category": "reasoning",
       "serviceKey": "r1qwen"
     },
     {
       "name": "Gemma 3 12B",
-      "path": "gemma-inference.yml",
+      "path": "inference.yml",
       "category": "medium",
       "serviceKey": "gemma"
     },
     {
       "name": "Mistral 7B v0.3",
-      "path": "mistral-inference.yml",
+      "path": "inference.yml",
       "category": "medium",
       "serviceKey": "mistral"
     },
     {
       "name": "Phi-3 Mini",
-      "path": "phi-inference.yml",
+      "path": "inference.yml",
       "category": "small",
       "serviceKey": "phi"
     },
     {
       "name": "RNJ-1 Instruct",
-      "path": "rnj-inference.yml",
+      "path": "inference.yml",
       "category": "medium",
       "serviceKey": "rnj"
     },
     {
       "name": "Llama 3.2-3B",
-      "path": "llama-inference.yml",
+      "path": "inference.yml",
       "category": "medium",
       "serviceKey": "llama"
     },
     {
       "name": "FunctionGemma 270M",
-      "path": "functiongemma-inference.yml",
+      "path": "inference.yml",
       "category": "small",
       "serviceKey": "functiongemma"
     },
     {
       "name": "Nemotron-3 Nano 30B",
-      "path": "nemotron-inference.yml",
+      "path": "inference.yml",
       "category": "reasoning",
       "serviceKey": "nemotron"
     },
     {
       "name": "GPT-OSS 20B",
-      "path": "gpt-oss-inference.yml",
+      "path": "inference.yml",
       "category": "reasoning",
       "serviceKey": "gptoss"
     }
@@ -314,6 +314,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-07T16:19:23.164857Z",
+  "generatedAt": "2026-01-07T16:37:30.393868Z",
   "sourceFile": "config/models.py"
 }

@@ -46,13 +46,10 @@ def generate_workflows_config() -> list[dict]:
         {"name": "Chat", "path": "chat.yml", "category": "core"},
         {"name": "Build Images", "path": "build-push-images.yml", "category": "core"},
     ]
-    
+
     for model in get_inference_models():
-        # Use explicit workflow file if defined, otherwise default to name-based
-        if model.workflow_file:
-            workflow_path = model.workflow_file
-        else:
-            workflow_path = f"{model.name}-inference.yml"
+        # All inference models now use the single dynamic workflow
+        workflow_path = model.workflow_file or "inference.yml"
 
         workflows.append({
             "name": model.display_name or model.name.title(),
@@ -60,7 +57,7 @@ def generate_workflows_config() -> list[dict]:
             "category": model.category.value,
             "serviceKey": model.name,
         })
-    
+
     return workflows
 
 

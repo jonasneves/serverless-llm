@@ -234,7 +234,7 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
         hf_file="DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
         owned_by="deepseek",
-        workflow_file="r1qwen-inference.yml",
+        workflow_file="inference.yml",
     ),
     "nanbeige": ModelConfig(
         name="nanbeige",
@@ -277,7 +277,7 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/gpt-oss-20b-GGUF",
         hf_file="gpt-oss-20b-Q6_K.gguf",
         owned_by="openai",
-        workflow_file="gpt-oss-inference.yml",
+        workflow_file="inference.yml",
     ),
 }
 

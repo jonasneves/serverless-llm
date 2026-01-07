@@ -18,62 +18,95 @@ defaults:
 # Only specify values that differ from defaults
 models:
   llama:
-    # Uses defaults - Llama 3.2 3B is lightweight
+    display_name: "Llama 3.2-3B"
+    model_dir: "llama-inference"
+    model_repo: "unsloth/Llama-3.2-3B-Instruct-GGUF"
+    model_file: "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 
   gemma:
-    # Gemma 3 12B IT - bump context to 8K for better chat quality
+    display_name: "Gemma 3 12B"
+    model_dir: "gemma-inference"
+    model_repo: "unsloth/gemma-3-12b-it-GGUF"
+    model_file: "gemma-3-12b-it-Q4_K_M.gguf"
     n_ctx: 8192
 
   mistral:
-    # Uses defaults - Mistral 7B is efficient
+    display_name: "Mistral 7B"
+    model_dir: "mistral-inference"
+    model_repo: "bartowski/Mistral-7B-Instruct-v0.3-GGUF"
+    model_file: "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf"
 
   phi:
-    # Uses defaults - Phi-3.5 Mini is small and fast
+    display_name: "Phi-3 Mini"
+    model_dir: "phi-inference"
+    model_repo: "bartowski/Phi-3-mini-4k-instruct-GGUF"
+    model_file: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
 
   qwen:
-    # Uses defaults - Qwen 2.5 7B is well-optimized
+    display_name: "Qwen 3-4B"
+    model_dir: "qwen-inference"
+    model_repo: "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+    model_file: "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
 
-  gpt-oss:
-    # Uses defaults - GPT-2 is tiny
+  gptoss:
+    display_name: "GPT-OSS 20B"
+    model_dir: "gpt-oss-inference"
+    model_repo: "unsloth/gpt-oss-20b-GGUF"
+    model_file: "gpt-oss-20b-Q6_K.gguf"
 
-  deepseek-r1qwen:
-    # Uses defaults - 7B distilled model
+  r1qwen:
+    display_name: "DeepSeek R1 1.5B"
+    model_dir: "deepseek-r1qwen-inference"
+    model_repo: "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF"
+    model_file: "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf"
 
   functiongemma:
-    # Uses defaults - 270M parameter model, very fast
+    display_name: "FunctionGemma 270M"
+    model_dir: "functiongemma-inference"
+    model_repo: "unsloth/functiongemma-270m-it-GGUF"
+    model_file: "functiongemma-270m-it-Q8_0.gguf"
 
   smollm3:
-    # SmolLM3-3B: Supports /think and /no_think reasoning modes
-    # Small and fast with strong benchmarks
-    n_ctx: 4096          # Default context, can extend to 64K
-    n_batch: 512         # Good prompt processing
-    max_concurrent: 3    # Can handle multiple requests
+    display_name: "SmolLM3 3B"
+    model_dir: "smollm3-inference"
+    model_repo: "unsloth/SmolLM3-3B-GGUF"
+    model_file: "SmolLM3-3B-Q4_K_M.gguf"
+    n_ctx: 4096
+    n_batch: 512
+    max_concurrent: 3
 
   lfm2:
-    # LFM2 2.6B: ChatML-like template, 32K native context
-    # max_concurrent=1 workaround for KV cache bug (llama.cpp #16278)
-    # Reduced n_ctx to 2048 to avoid decode errors on limited hardware
+    display_name: "LFM2 2.6B"
+    model_dir: "lfm2-inference"
+    model_repo: "LiquidAI/LFM2-2.6B-GGUF"
+    model_file: "LFM2-2.6B-Q4_K_M.gguf"
     n_ctx: 2048
     max_concurrent: 1
 
-
   nanbeige:
-    # Nanbeige4-3B-Thinking: SPEED-OPTIMIZED config
-    # Smaller context + Q4 quant = maximum throughput
-    n_ctx: 2048          # Minimal context for speed
-    n_batch: 512         # Fast prompt processing
-    max_concurrent: 4    # Maximum parallel requests
+    display_name: "Nanbeige4-3B Thinking"
+    model_dir: "nanbeige-inference"
+    model_repo: "bartowski/Nanbeige_Nanbeige4-3B-Thinking-2511-GGUF"
+    model_file: "Nanbeige_Nanbeige4-3B-Thinking-2511-Q4_K_M.gguf"
+    n_ctx: 2048
+    n_batch: 512
+    max_concurrent: 4
 
   nemotron:
-    # 30B MoE model with IQ2_M quantization (~8GB) - OPTIMIZED CPU CONFIG
-    # Uses q8_0 KV cache, cont-batching, flash-attn for best CPU performance
-    n_ctx: 512           # Small but usable context
-    n_threads: 4         # Use all vCPUs
-    n_batch: 256         # Larger batch for prompt processing
-    max_concurrent: 1    # Single request only (MoE overhead)
+    display_name: "Nemotron-3 Nano 30B"
+    model_dir: "nemotron-inference"
+    model_repo: "unsloth/Nemotron-3-Nano-30B-A3B-GGUF"
+    model_file: "Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf"
+    n_ctx: 512
+    n_threads: 4
+    n_batch: 256
+    max_concurrent: 1
 
   rnj:
-    # 8B model with unique architecture
+    display_name: "RNJ-1"
+    model_dir: "rnj-inference"
+    model_repo: "EssentialAI/rnj-1-instruct-GGUF"
+    model_file: "Rnj-1-Instruct-8B-Q4_K_M.gguf"
     n_ctx: 2048
     n_batch: 512
     max_concurrent: 3
