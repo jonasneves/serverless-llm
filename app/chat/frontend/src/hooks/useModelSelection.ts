@@ -14,7 +14,7 @@ type ModelSelectionAction =
 
 const initialState: ModelSelectionState = {
     autoMode: true,
-    autoModeScope: 'local',
+    autoModeScope: 'self-hosted',
     selectedModelId: null,
 };
 

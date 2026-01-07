@@ -20,7 +20,7 @@ export interface ChatViewHandle {
     scroll: (deltaY: number) => void;
 }
 
-export type ChatAutoModeScope = 'local' | 'api' | 'external';
+export type ChatAutoModeScope = 'self-hosted' | 'api' | 'external';
 
 export interface ModelResponse {
     modelId: string;
@@ -327,13 +327,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             if (autoMode) {
                 // Filter models based on scope, with fallback to other type
                 const primaryModels = models.filter(m => {
-                    if (autoModeScope === 'local') return m.type === 'self-hosted';
+                    if (autoModeScope === 'self-hosted') return m.type === 'self-hosted';
                     if (autoModeScope === 'api') return m.type === 'github' || m.type === 'external';
                     return true;
                 });
 
                 const fallbackModels = models.filter(m => {
-                    if (autoModeScope === 'local') return m.type === 'github' || m.type === 'external';
+                    if (autoModeScope === 'self-hosted') return m.type === 'github' || m.type === 'external';
                     if (autoModeScope === 'api') return m.type === 'self-hosted';
                     return false;
                 });

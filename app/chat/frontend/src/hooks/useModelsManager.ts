@@ -95,11 +95,11 @@ export function useModelsManager() {
         isSelectionInitialized.current = true;
       }
 
-      // Initialize chat model with first github/external model, fallback to default/local
+      // Initialize chat model with default model (lfm2), fallback to first github/external, then first available
       if (!isChatModelInitialized.current) {
         const defaultModel = apiModels.find(m => m.default);
         const firstApiModel = apiModels.find(m => m.type === 'github' || m.type === 'external');
-        setChatModelId(firstApiModel?.id || defaultModel?.id || apiModels[0]?.id || null);
+        setChatModelId(defaultModel?.id || firstApiModel?.id || apiModels[0]?.id || null);
         isChatModelInitialized.current = true;
       }
 

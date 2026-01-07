@@ -14,7 +14,7 @@ interface ModelModeSelectorProps {
     isGenerating: boolean;
 }
 
-type ExpandedDropdown = 'local' | 'api' | 'external' | null;
+type ExpandedDropdown = 'self-hosted' | 'api' | 'external' | null;
 
 export default function ModelModeSelector({
     models,
@@ -101,15 +101,15 @@ export default function ModelModeSelector({
     };
 
     // Determine button states
-    const isLocalActive = autoMode && autoModeScope === 'local';
+    const isLocalActive = autoMode && autoModeScope === 'self-hosted';
     const isApiActive = autoMode && autoModeScope === 'api';
     const isExternalActive = autoMode && autoModeScope === 'external';
     const isManualLocal = !autoMode && selectedModel?.type === 'self-hosted';
     const isManualApi = !autoMode && selectedModel?.type === 'github';
     const isManualExternal = !autoMode && selectedModel?.type === 'external';
 
-    const getButtonLabel = (type: 'local' | 'api' | 'external') => {
-        if (type === 'local') {
+    const getButtonLabel = (type: 'self-hosted' | 'api' | 'external') => {
+        if (type === 'self-hosted') {
             if (isLocalActive) return 'Self-Hosted Auto';
             if (isManualLocal) return selectedModel?.name || 'Self-Hosted';
             return 'Self-Hosted';
@@ -126,10 +126,10 @@ export default function ModelModeSelector({
 
     return (
         <div className="relative flex items-center gap-1 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 backdrop-blur-sm" ref={containerRef}>
-            {/* Local Button with Dropdown */}
+            {/* Self-Hosted Button with Dropdown */}
             <div className="relative flex items-center">
                 <button
-                    onClick={() => handleModeClick('local')}
+                    onClick={() => handleModeClick('self-hosted')}
                     disabled={isGenerating}
                     className={`h-7 pl-3 pr-1 flex items-center gap-1.5 rounded-l-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${isLocalActive || isManualLocal
                         ? 'bg-emerald-500/20 text-emerald-300'
@@ -141,21 +141,21 @@ export default function ModelModeSelector({
                     ) : (
                         <div className="w-2 h-2 rounded-full bg-emerald-500" />
                     )}
-                    <span className="max-w-[120px] truncate">{getButtonLabel('local')}</span>
+                    <span className="max-w-[120px] truncate">{getButtonLabel('self-hosted')}</span>
                 </button>
                 <button
-                    onClick={(e) => handleDropdownToggle('local', e)}
+                    onClick={(e) => handleDropdownToggle('self-hosted', e)}
                     disabled={isGenerating}
                     className={`h-7 px-1 flex items-center rounded-r-md transition-all ${isLocalActive || isManualLocal
                         ? 'bg-emerald-500/20 text-emerald-400'
                         : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/30'
                         }`}
                 >
-                    <ChevronDown size={12} className={`transition-transform ${expandedDropdown === 'local' ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={12} className={`transition-transform ${expandedDropdown === 'self-hosted' ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Self-Hosted Models Dropdown */}
-                {expandedDropdown === 'local' && localModels.length > 0 && (
+                {expandedDropdown === 'self-hosted' && localModels.length > 0 && (
                     <div className="absolute top-full left-0 mt-1 w-56 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
                         {/* Search input */}
                         {localModels.length > 5 && (
@@ -175,7 +175,7 @@ export default function ModelModeSelector({
                         )}
                         {/* Auto option */}
                         <button
-                            onClick={() => handleModeClick('local')}
+                            onClick={() => handleModeClick('self-hosted')}
                             className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${isLocalActive ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-300 hover:bg-slate-700/50'
                                 }`}
                         >

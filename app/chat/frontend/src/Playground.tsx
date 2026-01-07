@@ -149,7 +149,7 @@ function PlaygroundInner() {
     setAutoModeScope: setChatAutoModeScope,
   } = useModelSelection({
     autoMode: true,
-    autoModeScope: 'local',
+    autoModeScope: 'self-hosted',
   });
   const [chatCurrentResponse, setChatCurrentResponse] = useState('');
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
@@ -570,7 +570,7 @@ function PlaygroundInner() {
   }, [clearHistory, setModelsData]);
 
   // Orchestrator auto mode state
-  type OrchestratorAutoScope = 'all' | 'local' | 'api';
+  type OrchestratorAutoScope = 'all' | 'self-hosted' | 'api';
   const [orchestratorAutoMode, setOrchestratorAutoMode] = useState(true);
   const [orchestratorAutoScope, setOrchestratorAutoScope] = useState<OrchestratorAutoScope>('api');
   const [showOrchestratorMenu, setShowOrchestratorMenu] = useState(false);

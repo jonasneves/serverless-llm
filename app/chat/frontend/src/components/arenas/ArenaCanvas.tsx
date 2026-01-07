@@ -17,7 +17,7 @@ import { DragState } from '../../hooks/useCardReorder';
 import { ArenaContextMenu } from './types';
 import { Zap } from 'lucide-react';
 
-type OrchestratorAutoScope = 'all' | 'local' | 'api';
+type OrchestratorAutoScope = 'all' | 'self-hosted' | 'api';
 
 interface ArenaCanvasProps {
   mode: Mode;
@@ -596,9 +596,9 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               {orchestratorAutoMode ? (
                 <>
                   <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
-                    Auto Mode: {orchestratorAutoScope === 'local' ? 'SELF-HOSTED' : orchestratorAutoScope.toUpperCase()}
+                    Auto Mode: {orchestratorAutoScope === 'self-hosted' ? 'SELF-HOSTED' : orchestratorAutoScope.toUpperCase()}
                   </div>
-                  {(['all', 'local', 'api'] as OrchestratorAutoScope[]).map(scope => (
+                  {(['all', 'self-hosted', 'api'] as OrchestratorAutoScope[]).map(scope => (
                     <button
                       key={scope}
                       onClick={() => {
@@ -611,11 +611,11 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                         }`}
                     >
                       {scope === 'all' && 'All'}
-                      {scope === 'local' && 'Self-hosted'}
+                      {scope === 'self-hosted' && 'Self-hosted'}
                       {scope === 'api' && 'API'}
                       <span className="text-[10px] text-slate-500 ml-1">
                         {scope === 'all' && '(self-hosted → API)'}
-                        {scope === 'local' && '(no quota)'}
+                        {scope === 'self-hosted' && '(no quota)'}
                         {scope === 'api' && '(cloud only)'}
                       </span>
                     </button>
