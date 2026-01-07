@@ -1,4 +1,4 @@
-name: 📦 Build
+name: 🛠️ Build
 
 run-name: "Build Images • ${{ github.event_name == 'push' && 'Push' || inputs.models || 'all' }}"
 

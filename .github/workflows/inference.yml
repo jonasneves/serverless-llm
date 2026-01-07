@@ -1,4 +1,4 @@
-name: Inference Server
+name: 🤖 Inference Server
 run-name: "${{ inputs.model }} \u2022 ${{ inputs.duration_hours || '5' }}h \xD7 ${{ inputs.instances || '1' }}"
 'on':
   workflow_dispatch:
