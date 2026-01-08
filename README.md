@@ -21,21 +21,6 @@ Experimental playground for self-hosted LLMs running 24/7 on GitHub Actions with
 
 Runs 13 models (270M to 12B parameters) with OpenAI-compatible APIs, all on free infrastructure.
 
-### Interaction Experiments
-
-One experiment explores non-keyboard interaction via webcam:
-
-- **ASL Mode**: Fingerspell messages using American Sign Language
-  - Full A-Z alphabet recognition
-  - Control gestures: thumbs up (send), open palm (clear), flat hand (space), pinch (backspace)
-  - View switching: peace sign (✌️) or "I love you" sign (🤟) to cycle between chat/compare/council/roundtable layouts
-- **Gesture Navigation**: Respond with emoji and navigate hands-free
-  - Send emoji responses: 👍 👎 👋
-  - AI builds interactive button UIs (via JSON) that you select by pointing
-  - Dwell selection: hover over button for 1.8s to activate
-  - Scroll with closed fist, navigate with pointing finger
-- **Traditional Input**: Standard text chat and model comparison views
-
 ### Infrastructure
 
 - **Zero Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
