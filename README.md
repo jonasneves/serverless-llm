@@ -17,13 +17,13 @@
 
 ## Overview
 
-Free 24/7 LLM APIs using GitHub Actions and Cloudflare Tunnels.
+Experimental playground for self-hosted LLMs running 24/7 on GitHub Actions with auto-restart mechanisms. Started as an experiment to see if small models could run continuously on free CI/CD infrastructure, now serves as a testbed for various ideas: gesture-based interaction (ASL fingerspelling, hand tracking), AI-generated UIs, multi-model collaboration modes (discussion, council, roundtable), and more.
 
-I wanted to experiment with non-keyboard LLM interaction - the playground supports ASL fingerspelling and hand gesture navigation using webcam-based hand tracking. You can spell questions in American Sign Language, and the AI can build interactive button interfaces that you select by pointing. Also supports emoji gesture responses (thumbs up, wave, etc.).
+Runs 13 models (270M to 12B parameters) with OpenAI-compatible APIs, all on free infrastructure.
 
-Also runs 13 different models (270M to 12B parameters) with OpenAI-compatible API endpoints, all on free infrastructure.
+### Interaction Experiments
 
-### Interaction Modes
+One experiment explores non-keyboard interaction via webcam:
 
 - **ASL Mode**: Fingerspell messages using American Sign Language
   - Full A-Z alphabet recognition
