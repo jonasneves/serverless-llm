@@ -44,7 +44,7 @@ Guidelines:
         id: 'concise',
         name: 'Concise',
         description: 'Brief, direct responses',
-        prompt: 'Be concise. Give direct answers without unnecessary elaboration. Use bullet points for lists. Skip pleasantries.',
+        prompt: 'Be concise. Give direct answers in 1-3 sentences. No elaboration or pleasantries.',
     },
     technical: {
         id: 'technical',
@@ -125,7 +125,7 @@ function SystemPresetDropdown({
     }, [showDropdown, dropdownRef, setShowDropdown]);
 
     return (
-        <div className={`relative ${compact ? '' : 'mt-3'}`} ref={dropdownRef}>
+        <div className={`relative z-0 ${compact ? '' : 'mt-3'}`} ref={dropdownRef}>
             <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className={`flex items-center gap-1.5 rounded-md transition-all active:scale-95 font-medium ${
@@ -142,7 +142,7 @@ function SystemPresetDropdown({
             </button>
 
             {showDropdown && (
-                <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'} left-1/2 -translate-x-1/2 min-w-[200px] bg-slate-800/95 backdrop-blur-md rounded-lg border border-slate-700/50 shadow-xl overflow-hidden z-50`}>
+                <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'} left-1/2 -translate-x-1/2 min-w-[200px] bg-slate-800/95 backdrop-blur-md rounded-lg border border-slate-700/50 shadow-xl overflow-hidden z-[60]`}>
                     {presetIds.map(id => {
                         const p = SYSTEM_PRESETS[id];
                         const isSelected = id === systemPreset;
@@ -591,15 +591,17 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             direction="up"
                             compact
                         />
-                        <ModelTabs
-                            models={models}
-                            selectedModels={selectedModels}
-                            onToggleModel={onToggleModel}
-                            isGenerating={isGenerating}
-                            githubToken={githubToken}
-                            openrouterKey={openrouterKey}
-                            dropDirection="up"
-                        />
+                        <div className="relative z-[101] isolate">
+                            <ModelTabs
+                                models={models}
+                                selectedModels={selectedModels}
+                                onToggleModel={onToggleModel}
+                                isGenerating={isGenerating}
+                                githubToken={githubToken}
+                                openrouterKey={openrouterKey}
+                                dropDirection="up"
+                            />
+                        </div>
                     </div>
                 )}
                 <PromptInput
