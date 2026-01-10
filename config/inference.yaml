@@ -83,7 +83,7 @@ models:
     n_ctx: 2048
     max_concurrent: 1
 
-  lfm2.5:
+  "lfm2.5":
     display_name: "LFM2.5 1.2B"
     model_dir: "lfm2.5-inference"
     model_repo: "LiquidAI/LFM2.5-1.2B-Instruct-GGUF"
