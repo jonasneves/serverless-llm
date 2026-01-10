@@ -142,11 +142,48 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
         const baseMessages = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
 
-        // Add gesture context if needed
-        const apiMessages = fromGesture ? [
-            { role: 'system' as const, content: 'User is using gesture control. Keep responses concise.' },
-            ...baseMessages
-        ] : baseMessages;
+        // Add gesture context with UI builder instructions
+        const gestureSystemPrompt = `User is hands-free using gesture control. Build an interactive interface to guide them.
+
+Available gesture inputs:
+- 👍 (yes/approve/like)
+- 👎 (no/disapprove/dislike)
+- 👋 (hi/hello/greeting)
+- "ok" (okay/continue)
+- "thanks" (thank you)
+- "stop" (stop/wait)
+- Pointing finger (select UI buttons)
+
+Choose interaction style:
+- Simple binary: "Give 👍 to continue or 👎 to stop" (no JSON needed)
+- Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)
+
+For JSON UI (when appropriate):
+\`\`\`json
+{
+  "options": [
+    {"id": "opt1", "label": "Option 1", "action": "message", "value": "option 1"},
+    {"id": "opt2", "label": "Option 2", "action": "message", "value": "option 2"}
+  ]
+}
+\`\`\`
+
+Guidelines:
+- Keep response concise (2-3 sentences)
+- Use simple gestures for yes/no/continue (more efficient)
+- Use JSON UI for 3+ options or complex choices
+- Provide 2-4 options max in JSON
+- User can point at buttons with index finger`;
+
+        // Easter egg: Angry robot context for middle finger gesture
+        const isAngryTrigger = text === "🖕" || text.toLowerCase().includes("middle finger");
+        const angrySystemPrompt = "The user is showing you their middle finger (gesture). This is a playful interaction. Respond with humorous, over-the-top anger, indignation, or witty comeback. Don't be actually offended, but play along with the 'angry robot' persona.";
+
+        const systemPrompts: Array<{ role: 'system'; content: string }> = [];
+        if (fromGesture) systemPrompts.push({ role: 'system', content: gestureSystemPrompt });
+        if (isAngryTrigger) systemPrompts.push({ role: 'system', content: angrySystemPrompt });
+
+        const apiMessages = [...systemPrompts, ...baseMessages];
 
         let completedCount = 0;
         const totalCount = modelIds.length;

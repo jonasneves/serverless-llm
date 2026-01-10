@@ -33,7 +33,7 @@ PORT = int(os.getenv("PORT", "8105"))
 N_CTX = int(os.getenv("N_CTX", "4096"))
 N_THREADS = int(os.getenv("N_THREADS", "4"))
 N_BATCH = int(os.getenv("N_BATCH", "256"))
-MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "2"))
+MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "6"))
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # Internal port for llama-server (proxied through FastAPI)
