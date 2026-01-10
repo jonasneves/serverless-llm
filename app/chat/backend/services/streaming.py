@@ -31,31 +31,31 @@ def create_sse_response(event_generator: AsyncGenerator) -> StreamingResponse:
 async def merge_async_generators(generators: List[AsyncGenerator]) -> AsyncGenerator[Any, None]:
     """
     Merge multiple async generators into one stream, yielding items as they arrive.
-    
+
     This is useful for running multiple model streams in parallel and collecting
     results in real-time from whichever completes first.
-    
+
     Args:
         generators: List of async generators to merge
-        
+
     Yields:
         Items from any of the generators as they become available
-        
+
     Example:
         ```python
         async def stream1():
             yield {"model": "a", "chunk": "hello"}
-            
+
         async def stream2():
             yield {"model": "b", "chunk": "world"}
-            
+
         async for event in merge_async_generators([stream1(), stream2()]):
             print(event)  # Items from both streams
         ```
     """
     if not generators:
         return
-        
+
     queues = [asyncio.Queue() for _ in generators]
 
     async def consume(gen: AsyncGenerator, queue: asyncio.Queue):

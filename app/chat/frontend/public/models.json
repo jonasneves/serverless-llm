@@ -29,8 +29,8 @@
       "context_length": 32768
     },
     {
-      "id": "lfm2-2.6b",
-      "name": "LFM2 2.6B",
+      "id": "lfm2.5-1.2b-instruct",
+      "name": "LFM2.5 1.2B",
       "type": "self-hosted",
       "priority": 5,
       "context_length": 32768

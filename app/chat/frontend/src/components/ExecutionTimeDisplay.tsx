@@ -6,9 +6,11 @@ export interface ExecutionTimeData {
 
 interface ExecutionTimeDisplayProps {
   times?: ExecutionTimeData;
+  isFastestTTFT?: boolean;
+  isFastestTotal?: boolean;
 }
 
-export default function ExecutionTimeDisplay({ times }: ExecutionTimeDisplayProps) {
+export default function ExecutionTimeDisplay({ times, isFastestTTFT, isFastestTotal }: ExecutionTimeDisplayProps) {
   const hasStart = times?.startTime != null;
   const hasEnd = times?.endTime != null;
   const hasFirstToken = times?.firstTokenTime != null;
@@ -22,15 +24,23 @@ export default function ExecutionTimeDisplay({ times }: ExecutionTimeDisplayProp
     : null;
 
   return (
-    <div className="text-[10px] text-slate-500">
-      <span className="text-slate-400">TIME</span>{' '}
-      {totalSeconds
-        ? `${totalSeconds}s`
-        : hasStart && !hasEnd
-          ? '...'
-          : '—'}
+    <div className="text-[10px] text-slate-500 flex items-center gap-2">
+      <span
+        className={isFastestTotal ? 'text-yellow-400/90 bg-yellow-500/10 px-1.5 py-0.5 rounded' : undefined}
+        title={isFastestTotal ? 'Fastest' : undefined}
+      >
+        <span className={isFastestTotal ? undefined : 'text-slate-400'}>TIME</span>{' '}
+        {totalSeconds
+          ? `${totalSeconds}s`
+          : hasStart && !hasEnd
+            ? '...'
+            : '—'}
+      </span>
       {ttftSeconds && (
-        <span className="ml-2 text-slate-600">
+        <span
+          className={isFastestTTFT ? 'text-amber-400/90 bg-amber-500/10 px-1.5 py-0.5 rounded' : 'text-slate-600'}
+          title={isFastestTTFT ? 'Fastest TTFT' : undefined}
+        >
           TTFT {ttftSeconds}s
         </span>
       )}

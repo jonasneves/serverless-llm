@@ -1162,7 +1162,7 @@ const handStates = useRef<Map<number, {
      * This gives correct stacking context automatically:
      * - Hand layer renders before other UI elements in the DOM
      * - Z-index values work correctly relative to siblings
-     * 
+     *
      * STACKING ORDER:
      * - Hand skeleton/dots: z-index 1 (behind UI, glass effect)
      * - UI elements: z-index 10+ (cards, chat, header, etc.)
@@ -1171,7 +1171,7 @@ const handStates = useRef<Map<number, {
 
     return (
         <>
-            {/* 
+            {/*
              * Hand Skeleton Visualization Layer
              * ==================================
              * Rendered directly (no portal) at z-index:1 inside Playground container.

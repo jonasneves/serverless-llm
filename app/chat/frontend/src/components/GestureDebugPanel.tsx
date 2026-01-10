@@ -107,7 +107,7 @@ export default function GestureDebugPanel({
   // Track gesture triggers in history with more details
   useEffect(() => {
     if (gestureState?.triggered && gestureState.gesture) {
-      const details = debugInfo 
+      const details = debugInfo
         ? `2F:${debugInfo.twoFingerFrames} P:${debugInfo.wasPointingOnly ? 'Y' : 'N'}`
         : undefined;
       setGestureHistory(prev => [
@@ -128,8 +128,8 @@ export default function GestureDebugPanel({
     const l2 = landmarkData.landmarks[idx2];
     if (!l1 || !l2) return null;
     return Math.sqrt(
-      Math.pow(l1.x - l2.x, 2) + 
-      Math.pow(l1.y - l2.y, 2) + 
+      Math.pow(l1.x - l2.x, 2) +
+      Math.pow(l1.y - l2.y, 2) +
       Math.pow(l1.z - l2.z, 2)
     );
   }, [landmarkData]);
@@ -140,7 +140,7 @@ export default function GestureDebugPanel({
   }
 
   return (
-    <div 
+    <div
       data-debug-panel
       className={`fixed top-28 sm:top-24 ${rightOffset} z-50 w-80 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-xl overflow-hidden max-h-[70vh] flex flex-col`}
     >
@@ -191,8 +191,8 @@ export default function GestureDebugPanel({
             <button
               onClick={onMouseSimulationToggle}
               className={`w-full flex items-center justify-between p-2 rounded-lg transition-all ${
-                mouseSimulation 
-                  ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-400' 
+                mouseSimulation
+                  ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-400'
                   : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -273,7 +273,7 @@ export default function GestureDebugPanel({
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Distance Calculator</div>
               <div className="flex gap-2 items-center">
-                <select 
+                <select
                   className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-300"
                   value={selectedLandmarks?.[0] ?? ''}
                   onChange={(e) => setSelectedLandmarks([parseInt(e.target.value), selectedLandmarks?.[1] ?? 8])}
@@ -284,7 +284,7 @@ export default function GestureDebugPanel({
                   ))}
                 </select>
                 <span className="text-slate-500">→</span>
-                <select 
+                <select
                   className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-300"
                   value={selectedLandmarks?.[1] ?? ''}
                   onChange={(e) => setSelectedLandmarks([selectedLandmarks?.[0] ?? 4, parseInt(e.target.value)])}
@@ -334,7 +334,7 @@ export default function GestureDebugPanel({
           <div className="p-3">
             <div className="flex items-center justify-between mb-2">
               <div className="text-[10px] text-slate-500 uppercase tracking-wide">Event Log</div>
-              <button 
+              <button
                 onClick={() => setGestureHistory([])}
                 className="text-[10px] text-slate-500 hover:text-slate-300"
               >
@@ -370,7 +370,7 @@ export default function GestureDebugPanel({
             <ConfigSlider label="Min Point Time" value={config.minPointingTime} min={0} max={500} step={25} unit="ms" onChange={(v) => updateConfig('minPointingTime', v)} />
             <ConfigSlider label="Dwell Time" value={config.dwellTime} min={500} max={3000} step={100} unit="ms" onChange={(v) => updateConfig('dwellTime', v)} />
             <ConfigSlider label="Cursor Smooth" value={config.cursorSmoothing} min={0.1} max={1} step={0.05} unit="" onChange={(v) => updateConfig('cursorSmoothing', v)} />
-            
+
             <button
               onClick={() => onConfigChange(DEFAULT_GESTURE_CONFIG)}
               className="w-full text-[10px] text-slate-500 hover:text-slate-300 transition-colors py-1 border-t border-slate-700/50 mt-2"
@@ -408,20 +408,20 @@ function FingerIndicator({ label, extended }: { label: string; extended: boolean
   );
 }
 
-function ConfigSlider({ 
-  label, 
-  value, 
-  min, 
-  max, 
-  step, 
-  unit, 
-  onChange 
-}: { 
-  label: string; 
-  value: number; 
-  min: number; 
-  max: number; 
-  step: number; 
+function ConfigSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
   unit: string;
   onChange: (value: number) => void;
 }) {

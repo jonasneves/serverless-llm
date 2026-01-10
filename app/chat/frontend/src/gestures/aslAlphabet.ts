@@ -1,13 +1,13 @@
 /**
  * ASL Alphabet Gesture Definitions
- * 
+ *
  * Based on the handsign-tensorflow project (https://github.com/syauqy/handsign-tensorflow)
  * Uses fingerpose library to define hand poses for ASL fingerspelling alphabet.
- * 
+ *
  * Each gesture is defined by:
  * - Finger curl states (NoCurl, HalfCurl, FullCurl)
  * - Finger directions (Up, Down, Left, Right, etc.)
- * 
+ *
  * Note: J and Z are dynamic gestures (require motion) and are approximated here
  * as their static start positions.
  */

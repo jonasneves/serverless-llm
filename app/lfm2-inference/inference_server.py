@@ -1,8 +1,8 @@
 """
-LFM2 2.6B Inference Server - Standalone llama-server wrapper
+LFM2.5 1.2B Inference Server - Standalone llama-server wrapper
 
 This server manages a llama-server subprocess and proxies requests to it.
-We use this approach because the LFM2 lfm2 architecture has compatibility
+We use this approach because the LFM2 architecture has compatibility
 issues with llama-cpp-python bindings (llama_decode returns -1).
 """
 
@@ -27,21 +27,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration from environment
-MODEL_REPO = os.getenv("MODEL_REPO", "LiquidAI/LFM2-2.6B-GGUF")
-MODEL_FILE = os.getenv("MODEL_FILE", "LFM2-2.6B-Q4_K_M.gguf")
+MODEL_REPO = os.getenv("MODEL_REPO", "LiquidAI/LFM2.5-1.2B-Instruct-GGUF")
+MODEL_FILE = os.getenv("MODEL_FILE", "LFM2.5-1.2B-Instruct-Q4_K_M.gguf")
 PORT = int(os.getenv("PORT", "8105"))
-N_CTX = int(os.getenv("N_CTX", "2048"))
+N_CTX = int(os.getenv("N_CTX", "4096"))
 N_THREADS = int(os.getenv("N_THREADS", "4"))
 N_BATCH = int(os.getenv("N_BATCH", "256"))
-MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "1"))
+MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "2"))
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # Internal port for llama-server (proxied through FastAPI)
 LLAMA_SERVER_PORT = 8080
 
 app = FastAPI(
-    title="LFM2 2.6B Inference API",
-    description="REST API for LFM2 2.6B model inference using native llama.cpp",
+    title="LFM2.5 1.2B Inference API",
+    description="REST API for LFM2.5 1.2B model inference using native llama.cpp",
 )
 
 # Global process reference
@@ -109,7 +109,7 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         bufsize=1,
     )
 
-    # Wait for server to be ready (2.6B should load quickly)
+    # Wait for server to be ready (1.2B should load quickly)
     max_wait = 300
     start_time = time.time()
     check_count = 0
@@ -204,7 +204,7 @@ async def health():
     try:
         response = await http_client.get("/health")
         if response.status_code == 200:
-            return {"status": "healthy", "model": "LFM2 2.6B", "format": "GGUF"}
+            return {"status": "healthy", "model": "LFM2.5 1.2B", "format": "GGUF"}
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -216,7 +216,7 @@ async def health_details():
     """Detailed health info"""
     return {
         "status": "healthy",
-        "model": "LFM2 2.6B",
+        "model": "LFM2.5 1.2B",
         "format": "GGUF",
         "repo": MODEL_REPO,
         "file": MODEL_FILE,
@@ -239,7 +239,7 @@ async def list_models():
         "object": "list",
         "data": [
             {
-                "id": "lfm2-2.6b",
+                "id": "lfm2.5-1.2b-instruct",
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "liquidai",

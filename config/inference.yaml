@@ -76,12 +76,12 @@ models:
     max_concurrent: 3
 
   lfm2:
-    display_name: "LFM2 2.6B"
+    display_name: "LFM2.5 1.2B"
     model_dir: "lfm2-inference"
-    model_repo: "LiquidAI/LFM2-2.6B-GGUF"
-    model_file: "LFM2-2.6B-Q4_K_M.gguf"
-    n_ctx: 2048
-    max_concurrent: 1
+    model_repo: "LiquidAI/LFM2.5-1.2B-Instruct-GGUF"
+    model_file: "LFM2.5-1.2B-Instruct-Q4_K_M.gguf"
+    n_ctx: 4096
+    max_concurrent: 2
 
   nanbeige:
     display_name: "Nanbeige4-3B Thinking"

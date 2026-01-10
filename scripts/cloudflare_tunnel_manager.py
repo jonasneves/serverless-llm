@@ -21,7 +21,7 @@ class CloudflareTunnelManager:
     def __init__(self, api_token: str, account_id: str):
         """
         Initialize manager with Cloudflare credentials
-        
+
         Args:
             api_token: Cloudflare API token with Zone:Read, Account:Cloudflare Tunnel:Edit permissions
             account_id: Cloudflare Account ID (found in Zero Trust dashboard URL)
@@ -41,11 +41,11 @@ class CloudflareTunnelManager:
         response = requests.request(method, url, headers=self.headers, json=data)
         response.raise_for_status()
         result = response.json()
-        
+
         if not result.get("success", False):
             errors = result.get("errors", [])
             raise Exception(f"Cloudflare API error: {errors}")
-        
+
         return result
 
     def get_tunnels(self) -> List[Dict]:
@@ -61,7 +61,7 @@ class CloudflareTunnelManager:
     def create_tunnel(self, name: str) -> Tuple[str, str]:
         """
         Create a new Cloudflare Tunnel
-        
+
         Returns:
             Tuple of (tunnel_id, tunnel_token)
         """
@@ -74,7 +74,7 @@ class CloudflareTunnelManager:
         # Get tunnel token (this is what we need for cloudflared)
         token_result = self._request("GET", f"cfd_tunnel/{tunnel_id}/token")
         result_data = token_result.get("result", {})
-        
+
         # Handle different response formats
         if isinstance(result_data, dict):
             tunnel_token = result_data.get("token", "")
@@ -83,7 +83,7 @@ class CloudflareTunnelManager:
             tunnel_token = result_data
         else:
             raise ValueError(f"Unexpected token result format: {type(result_data)}")
-        
+
         if not tunnel_token:
             raise ValueError("Failed to retrieve tunnel token")
 
@@ -98,7 +98,7 @@ class CloudflareTunnelManager:
     ) -> Dict:
         """
         Create a public hostname route for a tunnel
-        
+
         Args:
             tunnel_id: Tunnel ID
             subdomain: Subdomain (e.g., "qwen")
@@ -109,7 +109,7 @@ class CloudflareTunnelManager:
         try:
             config_result = self._request("GET", f"cfd_tunnel/{tunnel_id}/configurations")
             result_data = config_result.get("result")
-            
+
             # Cloudflare API may return config in different formats
             if result_data is None:
                 config = {}
@@ -138,25 +138,25 @@ class CloudflareTunnelManager:
             config = {}
         if not isinstance(config, dict):
             raise ValueError(f"Expected config to be a dict, got {type(config).__name__}: {config}")
-        
+
         # Add new ingress rule
         ingress = config.get("ingress", [])
-        
+
         # Ensure ingress is a list
         if not isinstance(ingress, list):
             ingress = []
-        
+
         # Remove existing route for this hostname if it exists
         hostname = f"{subdomain}.{domain}"
         ingress = [r for r in ingress if r.get("hostname") != hostname]
-        
+
         # Add new route at the beginning (before catch-all)
         new_route = {
             "hostname": hostname,
             "service": service_url,
         }
         ingress.insert(0, new_route)
-        
+
         # Ensure catch-all is last
         ingress = [r for r in ingress if r.get("service") != "http_status:404"]
         ingress.append({"service": "http_status:404"})
@@ -164,7 +164,7 @@ class CloudflareTunnelManager:
         # Update tunnel config
         config["ingress"] = ingress
         data = {"config": config}
-        
+
         result = self._request("PUT", f"cfd_tunnel/{tunnel_id}/configurations", data)
         return_result = result.get("result", {})
         return return_result if isinstance(return_result, dict) else {}
@@ -174,7 +174,7 @@ class CloudflareTunnelManager:
     ) -> Dict:
         """
         Ensure DNS CNAME record exists for tunnel
-        
+
         Args:
             zone_id: Cloudflare Zone ID for the domain
             subdomain: Subdomain (e.g., "qwen")
@@ -191,11 +191,11 @@ class CloudflareTunnelManager:
         response = requests.get(records_url, headers=self.headers, params=params)
         response.raise_for_status()
         result = response.json()
-        
+
         if not result.get("success", False):
             errors = result.get("errors", [])
             raise Exception(f"Cloudflare API error getting DNS records: {errors}")
-        
+
         records = result.get("result", [])
 
         if records:
@@ -204,7 +204,7 @@ class CloudflareTunnelManager:
             record_id = record["id"]
             existing_content = record.get("content", "").rstrip(".")  # Remove trailing dot if present
             dns_target_clean = dns_target.rstrip(".")
-            
+
             # Only update if content is different or proxy is disabled
             existing_proxied = record.get("proxied", False)
             if existing_content != dns_target_clean or not existing_proxied:
@@ -216,7 +216,7 @@ class CloudflareTunnelManager:
                     "ttl": 1,  # Auto
                     "proxied": True,  # Tunnels require Cloudflare proxy
                 }
-                
+
                 try:
                     response = requests.put(
                         f"{records_url}/{record_id}", headers=self.headers, json=data
@@ -268,8 +268,8 @@ class CloudflareTunnelManager:
         response = requests.get(url, headers=self.headers, params=params)
         response.raise_for_status()
         zones = response.json().get("result", [])
-        
+
         if not zones:
             raise Exception(f"Domain {domain} not found in Cloudflare account")
-        
+
         return zones[0]["id"]

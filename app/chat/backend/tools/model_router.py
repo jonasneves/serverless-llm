@@ -57,9 +57,9 @@ class ModelRouter:
             "description": "Lightweight, 131K context, creative writing"
         },
         "reasoner-8": {  # Rank 8
-            "name": "LFM2 2.6B",
+            "name": "LFM2.5 1.2B",
             "url_env": "LFM2_API_URL",
-            "description": "Hybrid small model with strong instruction following"
+            "description": "Hybrid edge-optimized model with RL tuning"
         },
         # Answer models (same ranking)
         "answer-1": {  # Rank 1
@@ -98,9 +98,9 @@ class ModelRouter:
             "description": "Conversational, creative writing"
         },
         "answer-8": {  # Rank 8
-            "name": "LFM2 2.6B",
+            "name": "LFM2.5 1.2B",
             "url_env": "LFM2_API_URL",
-            "description": "Hybrid small model with strong instruction following"
+            "description": "Hybrid edge-optimized model with RL tuning"
         },
     }
 

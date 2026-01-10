@@ -59,6 +59,8 @@ interface ArenaCanvasProps {
   orchestratorMenuRef: MutableRefObject<HTMLDivElement | null>;
   availableModels: Model[];
   setModerator: (id: string) => void;
+  fastestTTFT: string | null;
+  fastestTotal: string | null;
 }
 
 const GRID_CARD_WIDTH = 256;
@@ -105,6 +107,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     orchestratorMenuRef,
     availableModels,
     setModerator,
+    fastestTTFT,
+    fastestTotal,
   } = props;
 
   const isCircleMode = mode !== 'compare';
@@ -304,7 +308,11 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                     })}
                   </p>
                   <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-700/50">
-                    <ExecutionTimeDisplay times={executionTimes[model.id]} />
+                    <ExecutionTimeDisplay
+                      times={executionTimes[model.id]}
+                      isFastestTTFT={fastestTTFT === model.id}
+                      isFastestTotal={fastestTotal === model.id}
+                    />
                   </div>
                 </div>
               )}

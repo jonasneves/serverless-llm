@@ -193,40 +193,40 @@ def validate_environment():
     """
     errors = []
     warnings = []
-    
+
     # Check if at least one model endpoint is configured
     configured_models = [
         model_id for model_id, endpoint in MODEL_ENDPOINTS.items()
         if endpoint and endpoint != DEFAULT_LOCAL_ENDPOINTS.get(f"{model_id.upper().replace('-', '_').replace('.', '_')}_API_URL", "")
     ]
-    
+
     if not configured_models:
         warnings.append("No model endpoints explicitly configured - using defaults (localhost)")
-    
+
     # Check GitHub token for Discussion/Agents modes
     gh_token = get_default_github_token()
     if not gh_token:
         warnings.append("GH_MODELS_TOKEN not set - Discussion and Agents modes will have limited functionality")
-    
+
     # Check for misconfigured URLs (common mistake)
     for config in MODEL_CONFIG:
         env_value = os.getenv(config["env"])
         if env_value:
             if not (env_value.startswith("http://") or env_value.startswith("https://")):
                 errors.append(f"{config['env']} must start with http:// or https:// (got: {env_value})")
-    
+
     # Log results
     if errors:
         logger.error("❌ Environment validation failed:")
         for error in errors:
             logger.error(f"  - {error}")
         raise RuntimeError("Invalid environment configuration. Please check your .env file.")
-    
+
     if warnings:
         logger.warning("⚠️  Environment validation warnings:")
         for warning in warnings:
             logger.warning(f"  - {warning}")
-    
+
     logger.info("✓ Environment validation passed")
 
 
@@ -396,9 +396,9 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
                 max_tokens=max_tokens,
                 temperature=temperature
             )
-            
+
             elapsed = time.time() - start_time
-            
+
             return {
                 "model": display_name,
                 "content": result["content"],

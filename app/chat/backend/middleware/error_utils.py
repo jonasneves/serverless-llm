@@ -9,10 +9,7 @@ def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
     Sanitize error messages to hide raw HTML/technical details from users.
     Logs full details server-side.
     """
-    try:
-        logger.error(f"Model error from {endpoint}: {error_text[:500]}...")
-    except Exception:
-        pass
+    logger.error(f"Model error from {endpoint}: {error_text[:500]}...")
 
     error_lower = (error_text or "").lower()
 
@@ -58,12 +55,12 @@ def sanitize_error_message(error_text: str, endpoint: str = "") -> str:
 def create_error_event(error: Exception, context: str = None, model_id: str = None) -> dict:
     """
     Create a standardized error event dictionary.
-    
+
     Args:
         error: The exception that occurred
         context: Optional context string describing where the error occurred
         model_id: Optional model ID that caused the error
-        
+
     Returns:
         Dictionary with standardized error event structure
     """
@@ -72,12 +69,12 @@ def create_error_event(error: Exception, context: str = None, model_id: str = No
         "event": "error",
         "error": sanitize_error_message(str(error), context or "")
     }
-    
+
     if context:
         event["context"] = context
-        
+
     if model_id:
         event["model_id"] = model_id
-        
+
     return event
 

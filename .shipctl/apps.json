@@ -26,10 +26,10 @@
     },
     {
       "key": "lfm2",
-      "name": "LFM2 2.6B",
+      "name": "LFM2.5 1.2B",
       "localPort": 8105,
       "category": "small",
-      "modelId": "lfm2-2.6b",
+      "modelId": "lfm2.5-1.2b-instruct",
       "rank": 4
     },
     {
@@ -135,7 +135,7 @@
       "serviceKey": "smollm3"
     },
     {
-      "name": "LFM2 2.6B",
+      "name": "LFM2.5 1.2B",
       "path": "inference.yml",
       "category": "small",
       "serviceKey": "lfm2"
@@ -244,8 +244,8 @@
       "category": "small"
     },
     {
-      "id": "lfm2-2.6b",
-      "name": "LFM2 2.6B",
+      "id": "lfm2.5-1.2b-instruct",
+      "name": "LFM2.5 1.2B",
       "type": "local",
       "priority": 4,
       "category": "small"
@@ -314,6 +314,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-10T02:12:24.763964Z",
+  "generatedAt": "2026-01-10T21:08:47.993068Z",
   "sourceFile": "config/models.py"
 }

@@ -3,7 +3,7 @@
 [![Nanbeige API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/nanbeige4-3b-thinking)](https://nanbeige.neevs.io/health)
 [![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen3-4b)](https://qwen.neevs.io/health)
 [![DeepSeek R1Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/deepseek-r1-distill-qwen-1.5b)](https://r1qwen.neevs.io/health)
-[![LFM2 API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/lfm2-2.6b)](https://lfm2.neevs.io/health)
+[![LFM2.5 API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/lfm2.5-1.2b-instruct)](https://lfm2.neevs.io/health)
 [![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-3-12b-it)](https://gemma.neevs.io/health)
 [![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
 [![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
@@ -43,7 +43,7 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | 1 | **Nanbeige4-3B-Thinking** | 3B | AIME 2024: 90.4%, GPQA-Diamond: 82.2% (outperforms Qwen3-32B) | Step-by-step reasoning, complex math, competitive programming |
 | 2 | **Qwen3-4B-Instruct-2507** | 4B | MMLU-Pro: 69.6%, GPQA: 62.0%, 262K context, 119 languages | Multilingual tasks, long-context analysis, agent workflows |
 | 3 | **SmolLM3 3B** | 3B | AIME 2025: 36.7%, BFCL: 92.3%, 64K context, hybrid reasoning | Tool-calling, reasoning with /think mode, multilingual (6 langs) |
-| 4 | **LFM2 2.6B** | 2.6B | GSM8K: 82.4%, IFEval: 79.6%, 32K context, hybrid architecture | On-device deployment, instruction following, edge inference |
+| 4 | **LFM2.5 1.2B** | 1.2B | 8 languages, 32K context, hybrid LFM2 architecture, RL tuning | Edge deployment, instruction following, multilingual |
 | 5 | **DeepSeek R1 1.5B** | 1.5B | AIME 2024: 28.9%, MATH-500: 83.9%, Codeforces: 954 rating | Math reasoning, algorithmic problems, code generation |
 | 6 | **Gemma 3 12B** | 12B | Safety-aligned IT checkpoint, stronger instruction following, ~8K context | Fact-checking, educational content, safe generation |
 | 7 | **Mistral 7B v0.3** | 7B | MMLU: 63%, 32K context, native function calling | JSON generation, tool use, structured output |
@@ -61,7 +61,7 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | Nanbeige4-3B-Thinking | [arXiv](https://arxiv.org/abs/2411.xxxxx), [Hugging Face](https://huggingface.co/Nanbeige/Nanbeige4-3B-Thinking-2511), [MarkTechPost](https://www.marktechpost.com/) |
 | Qwen3-4B-Instruct-2507 | [Hugging Face Model Card](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) |
 | SmolLM3 3B | [Hugging Face](https://huggingface.co/HuggingFaceTB/SmolLM3-3B), [Blog](https://hf.co/blog/smollm3) |
-| LFM2 2.6B | [Liquid AI Blog](https://www.liquid.ai/blog/liquid-foundation-models-v2-our-second-series-of-generative-ai-models), [Hugging Face](https://huggingface.co/LiquidAI/LFM2-2.6B), [Technical Report](https://arxiv.org/html/2511.23404v1) |
+| LFM2.5 1.2B | [Liquid AI Docs](https://docs.liquid.ai/lfm), [Hugging Face](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF), [Playground](https://playground.liquid.ai/) |
 | DeepSeek R1 1.5B | [OpenRouter](https://openrouter.ai/), [DataCamp](https://www.datacamp.com/) |
 | Gemma 3 12B | [Google Blog](https://blog.google/), [Unsloth](https://huggingface.co/unsloth/gemma-3-12b-it-GGUF) |
 | Mistral 7B v0.3 | [Mistral AI](https://mistral.ai/), [Hugging Face](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3) |
@@ -146,7 +146,7 @@ serverless-llm/
 │   ├── nanbeige-inference/     # Nanbeige4-3B-Thinking model server
 │   ├── qwen-inference/         # Qwen3-4B-Instruct-2507 model server
 │   ├── deepseek-r1qwen-inference/ # DeepSeek R1 Qwen 1.5B model server
-│   ├── lfm2-inference/         # LFM2 2.6B model server (native llama-server)
+│   ├── lfm2-inference/         # LFM2.5 1.2B model server (native llama-server)
 │   ├── gemma-inference/        # Gemma 3 12B model server
 │   ├── mistral-inference/      # Mistral 7B model server
 │   ├── phi-inference/          # Phi-3 Mini model server
@@ -171,7 +171,7 @@ serverless-llm/
 | Component | Technology |
 |-----------|------------|
 | Compute | GitHub Actions (ARM64 runners, 4 vCPU, 16GB RAM) |
-| LLM Runtime | llama-cpp-python (GGUF) for most models; native llama-server for LFM2, RNJ, Nemotron |
+| LLM Runtime | llama-cpp-python (GGUF) for most models; native llama-server for LFM2.5, RNJ, Nemotron |
 | API Framework | FastAPI |
 | Streaming | Server-Sent Events |
 | Tunneling | Cloudflare Zero Trust |

@@ -1,5 +1,5 @@
 # =============================================================================
-# LFM2-Specific Inference Dockerfile
+# LFM2.5-Specific Inference Dockerfile
 # =============================================================================
 # This model requires building llama.cpp from master with lfm2 architecture
 # support. Uses llama-server binary rather than llama-cpp-python bindings.
@@ -65,8 +65,8 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app/lfm2-inference/inference_server.py .
 
-ENV MODEL_REPO=LiquidAI/LFM2-2.6B-GGUF
-ENV MODEL_FILE=LFM2-2.6B-Q4_K_M.gguf
+ENV MODEL_REPO=LiquidAI/LFM2.5-1.2B-Instruct-GGUF
+ENV MODEL_FILE=LFM2.5-1.2B-Instruct-Q4_K_M.gguf
 ENV PORT=8000
 
 EXPOSE 8000

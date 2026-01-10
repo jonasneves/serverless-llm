@@ -41,14 +41,14 @@ async def check_model_health(model_id: str, endpoint: str) -> Dict[str, Any]:
     """
     client = get_http_client()
     start_time = time.time()
-    
+
     try:
         # Test health endpoint
         health_response = await client.get(f"{endpoint}/health")
 
         if health_response.status_code == 200:
             health_data = health_response.json()
-            
+
             # Try to fetch detailed health info including actual n_ctx
             try:
                 details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)

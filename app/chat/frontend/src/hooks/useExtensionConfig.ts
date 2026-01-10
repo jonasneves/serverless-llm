@@ -2,7 +2,7 @@
  * Hook to load extension configuration
  * - Extension mode: from chrome.storage, sets API base URL
  * - Web mode: uses relative URLs (same origin)
- * 
+ *
  * IMPORTANT: Service definitions are generated from config/models.py
  * Run `python3 scripts/generate_extension_config.py` to update.
  */

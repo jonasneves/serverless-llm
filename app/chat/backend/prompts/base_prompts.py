@@ -60,7 +60,7 @@ import re
 def strip_thinking_tags(content: str) -> str:
     """
     Strip thinking/analysis content from model responses.
-    
+
     Handles:
     - <think>...</think> and <thinking>...</thinking> blocks (DeepSeek, SmolLM3, etc.)
     - Implicit thinking where content starts with thinking but has no opening tag
@@ -68,7 +68,7 @@ def strip_thinking_tags(content: str) -> str:
     """
     if not content:
         return ""
-    
+
     # GPT-OSS Harmony format: extract only the "final" channel content
     # Pattern: <|channel|>analysis<|message|>...<|end|><|start|>assistant<|channel|>final<|message|>actual response
     harmony_match = re.search(
@@ -94,16 +94,16 @@ def strip_thinking_tags(content: str) -> str:
             content,
             flags=re.IGNORECASE
         )
-    
+
     # Handle <think>...</think> blocks
     content = re.sub(r'<think>[\s\S]*?</think>\s*', '', content, flags=re.IGNORECASE)
     # Handle <thinking>...</thinking> blocks
     content = re.sub(r'<thinking>[\s\S]*?</thinking>\s*', '', content, flags=re.IGNORECASE)
-    
+
     # Handle implicit thinking: content ends with </think> or </thinking> but no opening tag
     content = re.sub(r'^[\s\S]*?</think>\s*', '', content, flags=re.IGNORECASE)
     content = re.sub(r'^[\s\S]*?</thinking>\s*', '', content, flags=re.IGNORECASE)
-    
+
     return content.strip()
 
 

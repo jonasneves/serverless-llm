@@ -2,10 +2,10 @@ import { createContext, useContext, useState, useCallback, ReactNode, useRef } f
 
 /**
  * GestureContext - Shared state for gesture control system
- * 
+ *
  * This context enables HandBackground to be rendered at the Playground level
  * (for correct z-index stacking) while GestureControl in the Header manages the UI.
- * 
+ *
  * Architecture:
  * - GestureProvider wraps the app at Playground level
  * - GestureControl (in Header) manages UI and updates context
@@ -82,27 +82,27 @@ interface GestureContextValue {
   // Is gesture control active (camera running)?
   isActive: boolean;
   setIsActive: (active: boolean) => void;
-  
+
   // Current mode (navigation vs ASL)
   gestureMode: GestureMode;
   setGestureMode: (mode: GestureMode) => void;
-  
+
   // App context (chat, compare, etc.)
   appContext: AppContext;
   setAppContext: (context: AppContext) => void;
-  
+
   // Gesture config
   gestureConfig: GestureConfig;
   setGestureConfig: (config: GestureConfig) => void;
-  
+
   // Mouse simulation mode (debug)
   mouseSimulation: boolean;
   setMouseSimulation: (enabled: boolean) => void;
-  
+
   // Callbacks for gesture actions - stored in ref to avoid re-renders
   callbacks: React.MutableRefObject<GestureCallbacks>;
   setCallbacks: (callbacks: GestureCallbacks) => void;
-  
+
   // Feedback state from HandBackground (for GestureControl UI)
   gestureState: GestureState;
   setGestureState: (state: GestureState) => void;
@@ -130,14 +130,14 @@ export function GestureProvider({ children }: GestureProviderProps) {
   const [appContext, setAppContext] = useState<AppContext>('chat');
   const [gestureConfig, setGestureConfig] = useState<GestureConfig>(DEFAULT_GESTURE_CONFIG);
   const [mouseSimulation, setMouseSimulation] = useState(false);
-  
+
   // Use ref for callbacks to avoid re-renders when they change
   const callbacksRef = useRef<GestureCallbacks>({});
-  
+
   const setCallbacks = useCallback((newCallbacks: GestureCallbacks) => {
     callbacksRef.current = newCallbacks;
   }, []);
-  
+
   // Feedback state from HandBackground
   const [gestureState, setGestureState] = useState<GestureState>({ gesture: null, progress: 0, triggered: false });
   const [aslResult, setASLResult] = useState<ASLResult | null>(null);
@@ -145,7 +145,7 @@ export function GestureProvider({ children }: GestureProviderProps) {
   const [landmarkData, setLandmarkData] = useState<LandmarkData | undefined>(undefined);
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | undefined>(undefined);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  
+
   const value: GestureContextValue = {
     isActive,
     setIsActive,
@@ -172,7 +172,7 @@ export function GestureProvider({ children }: GestureProviderProps) {
     cameraError,
     setCameraError,
   };
-  
+
   return (
     <GestureContext.Provider value={value}>
       {children}

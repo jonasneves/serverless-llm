@@ -87,24 +87,24 @@ def _download_model(default_repo: str, default_file: str) -> str:
 
 def create_app_for_model(model_name: str) -> FastAPI:
     """Create an inference app for a model by reading config from config/models.py.
-    
+
     This is the simplified factory function that eliminates boilerplate in
     individual inference_server.py files. Just call:
-    
+
         app = create_app_for_model("qwen")
-    
+
     Instead of manually specifying all the ModelConfig fields.
     """
     # Import here to avoid circular imports
     import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
     from config.models import get_model
-    
+
     model = get_model(model_name)
-    
+
     if not model.hf_repo or not model.hf_file:
         raise ValueError(f"Model '{model_name}' missing hf_repo or hf_file in config/models.py")
-    
+
     config = ModelConfig(
         title=f"{model.display_name} Inference API",
         description=f"REST API for {model.display_name} model inference using GGUF",
@@ -119,7 +119,7 @@ def create_app_for_model(model_name: str) -> FastAPI:
         default_n_threads=4,
         n_batch=256,
     )
-    
+
     return create_inference_app(config)
 
 
@@ -151,7 +151,7 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         n_ctx = int(os.getenv("N_CTX", str(config.default_n_ctx)))
         n_threads = int(os.getenv("N_THREADS", str(config.default_n_threads)))
         n_batch = int(os.getenv("N_BATCH", str(config.n_batch)))
-        
+
         # KV-cache quantization (Q8_0 = 8) reduces memory ~30% with minimal quality loss
         # Enable via KV_CACHE_QUANT=1 or KV_CACHE_QUANT=8 for Q8_0
         # Note: KV-cache quantization requires flash_attn to be enabled
@@ -167,7 +167,7 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}, max_concurrent={max_concurrent}")
         if type_k:
             print(f"  KV-cache quantization enabled: type_k={type_k}, type_v={type_v}, flash_attn={flash_attn}")
-        
+
         llama_kwargs = {
             "model_path": model_path,
             "n_ctx": n_ctx,
@@ -180,13 +180,13 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         }
         if config.chat_format:
             llama_kwargs["chat_format"] = config.chat_format
-        
+
         # Add KV-cache quantization if enabled (requires flash_attn)
         if type_k is not None:
             llama_kwargs["type_k"] = type_k
             llama_kwargs["type_v"] = type_v
             llama_kwargs["flash_attn"] = flash_attn
-        
+
         llm = Llama(**llama_kwargs)
         print("Model loaded successfully!")
 

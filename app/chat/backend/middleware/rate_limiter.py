@@ -135,11 +135,11 @@ class RateLimiter:
     async def acquire(self):
         """
         Acquire permission to make a request
-        
+
         This should be used with 'async with' pattern:
         async with await rate_limiter.acquire():
             # Make API request here
-            
+
         This method returns a context manager that:
         1. Acquires the concurrency semaphore
         2. Checks rate limits and waits if needed (inside the semaphore lock)
@@ -148,11 +148,11 @@ class RateLimiter:
         @asynccontextmanager
         async def _controlled_execution():
             async with self.semaphore:
-                # Check limits inside the semaphore so pending requests see the updated state 
+                # Check limits inside the semaphore so pending requests see the updated state
                 # (e.g. 429s from recent requests) and wait accordingly
                 self.last_wait_message = await self._wait_if_needed()
                 yield
-        
+
         return _controlled_execution()
 
     def get_wait_message(self) -> Optional[str]:

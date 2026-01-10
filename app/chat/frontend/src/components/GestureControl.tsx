@@ -29,7 +29,7 @@ interface GestureControlProps {
 export default function GestureControl({ inHeader = false, ...props }: GestureControlProps) {
   // Use shared context for state that HandBackground needs
   const gesture = useGesture();
-  
+
   // Sync context with props
   useEffect(() => {
     gesture.setCallbacks({
@@ -41,14 +41,14 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
       onModeChange: props.onModeChange,
     });
   }, [props.onStopGeneration, props.onSendMessage, props.onScroll, props.onPinch, props.onHover, props.onModeChange, gesture.setCallbacks]);
-  
+
   // Sync app context
   useEffect(() => {
     if (props.appContext) {
       gesture.setAppContext(props.appContext);
     }
   }, [props.appContext, gesture.setAppContext]);
-  
+
   // Local UI state (not shared)
   const [showModal, setShowModal] = useState(false);
   const [skipIntro, setSkipIntro] = useState(false);
@@ -64,10 +64,10 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
 
   // Use context for state shared with HandBackground (rendered in Playground)
   // Note: setters for feedback state are used by HandBackground and mouse simulation
-  const { 
-    isActive, setIsActive, 
-    gestureMode, setGestureMode, 
-    gestureConfig, setGestureConfig, 
+  const {
+    isActive, setIsActive,
+    gestureMode, setGestureMode,
+    gestureConfig, setGestureConfig,
     mouseSimulation, setMouseSimulation,
     // Feedback state from HandBackground (read in GestureControl, setGestureState also used by mouse sim)
     gestureState, setGestureState,
@@ -84,7 +84,7 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
   // Debug panel state
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [showTrainingModal, setShowTrainingModal] = useState(false);
-  
+
   // Load gesture mode from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -94,14 +94,14 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
       }
     }
   }, [setGestureMode]);
-  
+
   // Load gesture config from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(DEBUG_CONFIG_KEY);
       if (saved) {
-        try { 
-          setGestureConfig(JSON.parse(saved)); 
+        try {
+          setGestureConfig(JSON.parse(saved));
         } catch { }
       }
     }
@@ -237,7 +237,7 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
     setGestureConfig(newConfig);
     localStorage.setItem(DEBUG_CONFIG_KEY, JSON.stringify(newConfig));
   }, [setGestureConfig]);
-  
+
   // Save gesture mode to localStorage when changed
   useEffect(() => {
     localStorage.setItem(MODE_STORAGE_KEY, gestureMode);

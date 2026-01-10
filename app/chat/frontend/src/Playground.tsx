@@ -12,7 +12,6 @@ import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
 import { useSelectionBox } from './hooks/useSelectionBox';
 import { useCardReorder } from './hooks/useCardReorder';
-import { useModelSelection } from './hooks/useModelSelection';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
@@ -139,21 +138,38 @@ function PlaygroundInner() {
     return false;
   }, [mode, githubToken]);
 
-  // Chat mode state - persisted across mode switches
+  // Chat state - simplified: just selectedModels + messages
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  // Use useModelSelection hook for better state management
-  const {
-    autoMode: chatAutoMode,
-    autoModeScope: chatAutoModeScope,
-    setAutoMode: setChatAutoMode,
-    setAutoModeScope: setChatAutoModeScope,
-  } = useModelSelection({
-    autoMode: true,
-    autoModeScope: 'self-hosted',
-  });
-  const [chatCurrentResponse, setChatCurrentResponse] = useState('');
+  const [chatSelectedModels, setChatSelectedModels] = useState<Set<string>>(() => new Set(['lfm2.5-1.2b-instruct']));
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
   const prevGestureActiveRef = useRef(false);
+
+  const handleToggleModel = useCallback((modelId: string) => {
+    setChatSelectedModels(prev => {
+      const next = new Set(prev);
+      if (next.has(modelId)) {
+        next.delete(modelId);
+      } else {
+        next.add(modelId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleToggleChatGroup = useCallback((type: 'self-hosted' | 'github' | 'external') => {
+    const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
+    setChatSelectedModels(prev => {
+      const allSelected = idsOfType.every(id => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        idsOfType.forEach(id => next.delete(id));
+      } else {
+        idsOfType.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  }, [modelsData]);
+
   const {
     history,
     historyRef: conversationHistoryRef,
@@ -186,23 +202,78 @@ function PlaygroundInner() {
   };
 
   useEffect(() => {
-    const wasActive = prevGestureActiveRef.current;
     prevGestureActiveRef.current = gestureCtx.isActive;
-
-    if (mode !== 'chat') return;
-    if (gestureCtx.isActive && !wasActive) {
-      setChatAutoModeScope('api');
-    }
-  }, [gestureCtx.isActive, mode, setChatAutoModeScope]);
+  }, [gestureCtx.isActive]);
 
 
 
   // Local state for GitHub Models token is persisted via usePersistedSetting
 
   // Map selected IDs to models to preserve user-defined order (important for drag-and-drop)
-  const selectedModels = selected
+  const selectedModelsBase = selected
     .map(id => modelsData.find(m => m.id === id))
     .filter((m): m is Model => !!m && (mode === 'compare' || m.id !== moderator));
+
+  // In Compare mode, sort models by response time (first to respond appears first)
+  const selectedModels = useMemo(() => {
+    if (mode !== 'compare') return selectedModelsBase;
+
+    return [...selectedModelsBase].sort((a, b) => {
+      const aTime = executionTimes[a.id]?.firstTokenTime;
+      const bTime = executionTimes[b.id]?.firstTokenTime;
+
+      // Models that haven't responded go to the end
+      if (aTime === undefined && bTime === undefined) return 0;
+      if (aTime === undefined) return 1;
+      if (bTime === undefined) return -1;
+
+      // Earlier response time comes first
+      return aTime - bTime;
+    });
+  }, [mode, selectedModelsBase, executionTimes]);
+
+  // Calculate fastest TTFT and fastest total time for Compare mode badges
+  const { fastestTTFT, fastestTotal } = useMemo(() => {
+    if (mode !== 'compare') return { fastestTTFT: null, fastestTotal: null };
+
+    let fastestTTFTId: string | null = null;
+    let fastestTTFTValue = Infinity;
+    let fastestTotalId: string | null = null;
+    let fastestTotalValue = Infinity;
+    let ttftCount = 0;
+    let totalCount = 0;
+
+    for (const model of selectedModelsBase) {
+      const times = executionTimes[model.id];
+      if (!times) continue;
+
+      // TTFT = firstTokenTime - startTime
+      if (times.firstTokenTime !== undefined) {
+        ttftCount++;
+        const ttft = times.firstTokenTime - times.startTime;
+        if (ttft < fastestTTFTValue) {
+          fastestTTFTValue = ttft;
+          fastestTTFTId = model.id;
+        }
+      }
+
+      // Total time = endTime - startTime
+      if (times.endTime !== undefined) {
+        totalCount++;
+        const total = times.endTime - times.startTime;
+        if (total < fastestTotalValue) {
+          fastestTotalValue = total;
+          fastestTotalId = model.id;
+        }
+      }
+    }
+
+    // Only show badges if at least 2 models have data (otherwise no competition)
+    return {
+      fastestTTFT: ttftCount >= 2 ? fastestTTFTId : null,
+      fastestTotal: totalCount >= 2 ? fastestTotalId : null,
+    };
+  }, [mode, selectedModelsBase, executionTimes]);
 
 
 
@@ -973,7 +1044,7 @@ function PlaygroundInner() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
-      {/* 
+      {/*
        * HandBackground rendered at Playground level for correct z-index stacking.
        * This is controlled by GestureControl (in Header) via GestureContext.
        * Renders BEHIND UI elements with glass-like effect.
@@ -1232,13 +1303,10 @@ function PlaygroundInner() {
           dockRef={dockRef}
           mode={mode}
           allModels={modelsData}
-          chatModelId={chatModelId}
-          setChatModelId={setChatModelId}
-          chatAutoMode={chatAutoMode}
-          setChatAutoMode={setChatAutoMode}
-          chatAutoModeScope={chatAutoModeScope}
-          setChatAutoModeScope={setChatAutoModeScope}
           setShowDock={setShowDock}
+          chatSelectedModels={chatSelectedModels}
+          onToggleChatModel={handleToggleModel}
+          onToggleChatGroup={handleToggleChatGroup}
         />
 
 
@@ -1253,21 +1321,14 @@ function PlaygroundInner() {
                     <ChatView
                       ref={chatViewRef}
                       models={modelsData}
-                      selectedModelId={chatModelId}
-                      onSelectModel={setChatModelId}
+                      selectedModels={chatSelectedModels}
+                      onToggleModel={handleToggleModel}
                       githubToken={githubToken}
                       openrouterKey={openrouterKey}
                       messages={chatMessages}
                       setMessages={setChatMessages}
-                      autoMode={chatAutoMode}
-                      setAutoMode={setChatAutoMode}
-                      autoModeScope={chatAutoModeScope}
-                      setAutoModeScope={setChatAutoModeScope}
-                      currentResponse={chatCurrentResponse}
-                      setCurrentResponse={setChatCurrentResponse}
                       isGenerating={chatIsGenerating}
                       setIsGenerating={setChatIsGenerating}
-                      onModelUsed={setChatModelId}
                       gesturesActive={gestureCtx.isActive}
                     />
                   </Suspense>
@@ -1363,6 +1424,8 @@ function PlaygroundInner() {
                   orchestratorMenuRef={orchestratorMenuRef}
                   availableModels={availableModels}
                   setModerator={setModerator}
+                  fastestTTFT={fastestTTFT}
+                  fastestTotal={fastestTotal}
                 />
               </div>
             </div>

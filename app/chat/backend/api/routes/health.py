@@ -31,12 +31,12 @@ async def detailed_health():
         check_model_health(model_id, endpoint)
         for model_id, endpoint in MODEL_ENDPOINTS.items()
     ]
-    
+
     if tasks:
         model_results = await asyncio.gather(*tasks)
         for model_id, result in zip(MODEL_ENDPOINTS.keys(), model_results):
             results["models"][model_id] = result
-    
+
     # Calculate overall status
     model_statuses = [m["status"] for m in results["models"].values()]
     if not model_statuses:

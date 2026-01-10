@@ -7,7 +7,7 @@ configuration without manual synchronization.
 
 Usage:
     python scripts/generate_extension_config.py
-    
+
 Or via Makefile:
     make generate-configs
 """
@@ -64,7 +64,7 @@ def generate_workflows_config() -> list[dict]:
 def generate_models_fallback() -> list[dict]:
     """Generate models.json fallback data"""
     models = []
-    
+
     # Local models
     for model in get_inference_models():
         models.append({
@@ -74,7 +74,7 @@ def generate_models_fallback() -> list[dict]:
             "priority": model.rank,
             "category": model.category.value,
         })
-    
+
     return models
 
 
@@ -124,12 +124,12 @@ def main():
     output_dirs = [
         project_root / "app" / "chat" / "frontend" / "src" / "data",
     ]
-    
+
     # Write to standard ShipCTL Manifest location
     manifest_dir = project_root / ".shipctl"
     manifest_dir.mkdir(exist_ok=True)
     manifest_file = manifest_dir / "apps.json"
-    
+
     # Generate Manifest
     with open(manifest_file, "w") as f:
         json.dump(config, f, indent=2)

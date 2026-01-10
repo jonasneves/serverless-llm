@@ -31,7 +31,7 @@ TUNNEL_PORTS = {
 
 def get_tunnel_port(model_name: str) -> int:
     """Get the port that Cloudflare tunnel should connect to.
-    
+
     For GitHub Actions deployment:
     - Chat interface runs on port 8080
     - All inference models run on port 8000 (each on separate runner)
@@ -51,7 +51,7 @@ def _try_add_github_secret(secret_json: str) -> bool:
         )
         if result.returncode != 0:
             return False
-        
+
         # Check if authenticated
         result = subprocess.run(
             ["gh", "auth", "status"],
@@ -61,7 +61,7 @@ def _try_add_github_secret(secret_json: str) -> bool:
         )
         if result.returncode != 0:
             return False
-        
+
         # Add the secret
         process = subprocess.Popen(
             ["gh", "secret", "set", "TUNNELS_JSON"],
@@ -71,9 +71,9 @@ def _try_add_github_secret(secret_json: str) -> bool:
             text=True
         )
         stdout, stderr = process.communicate(input=secret_json, timeout=10)
-        
+
         return process.returncode == 0
-            
+
     except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
         return False
 
@@ -118,11 +118,11 @@ def setup_all_tunnels(
             if existing:
                 print(f"✓ Tunnel exists: {existing['id']}")
                 tunnel_id = existing["id"]
-                
+
                 # Get token
                 token_result = manager._request("GET", f"cfd_tunnel/{tunnel_id}/token")
                 result_data = token_result.get("result", {})
-                
+
                 # Handle different response formats
                 if isinstance(result_data, dict):
                     tunnel_token = result_data.get("token", "")
@@ -130,7 +130,7 @@ def setup_all_tunnels(
                     tunnel_token = result_data
                 else:
                     raise ValueError(f"Unexpected token result format: {type(result_data)}")
-                
+
                 if not tunnel_token:
                     raise ValueError("Failed to retrieve tunnel token")
             else:
@@ -186,7 +186,7 @@ def setup_all_tunnels(
         json.dump(results, f, indent=2)
 
     print(f"\nSetup complete. Results saved to: {output_file}")
-    
+
     # Auto-prepare secret output
     valid_results = {k: v for k, v in results.items() if "error" not in v}
     if valid_results:
@@ -197,11 +197,11 @@ def setup_all_tunnels(
                 token = model_data.get("tunnel_token", "")
                 if token:
                     print(f"::add-mask::{token}")
-        
+
         secret_json = json.dumps(valid_results)
         print("\nGitHub Secret (TUNNELS_JSON):")
         print(secret_json)
-        
+
         # Try to add secret automatically if gh CLI is available
         if not no_auto_secret and _try_add_github_secret(secret_json):
             print("✓ Secret added to GitHub automatically")

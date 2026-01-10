@@ -122,41 +122,43 @@ PHI_PROFILE = {
     "description": "Reasoning specialist with strong instruction following despite compact size"
 }
 
-LFM2_26B_PROFILE = {
-    "model_id": "lfm2-2.6b",
-    "display_name": "LFM2 2.6B",
+LFM2_PROFILE = {
+    "model_id": "lfm2.5-1.2b-instruct",
+    "display_name": "LFM2.5 1.2B",
     "model_type": "self-hosted",
     "creator": "Liquid AI",
-    "size": "2.6B parameters",
+    "size": "1.2B parameters",
     "quantization": "Q4_K_M",
 
-    "primary_strengths": ["instruction_following", "conversation", "data_extraction", "agentic_capabilities"],
+    "primary_strengths": ["instruction_following", "conversation", "edge_deployment", "multilingual"],
 
     "benchmark_scores": {},
 
     "expertise_domains": {
-        "instruction_following": 0.80,
-        "conversation": 0.78,
-        "summarization": 0.72,
+        "instruction_following": 0.82,
+        "conversation": 0.80,
+        "summarization": 0.74,
         "creative_writing": 0.72,
-        "data_extraction": 0.78,
-        "agent_capabilities": 0.74,
-        "common_sense": 0.70,
-        "reasoning": 0.64,
-        "mathematics": 0.55,
-        "coding": 0.50,
+        "data_extraction": 0.76,
+        "agent_capabilities": 0.75,
+        "common_sense": 0.72,
+        "reasoning": 0.68,
+        "mathematics": 0.58,
+        "coding": 0.55,
+        "multilingual": 0.78,
+        "edge_deployment": 0.92,
     },
 
     "use_as_lead_for": [
         "instruction-following tasks",
         "multi-turn conversations",
-        "data extraction",
+        "edge deployment",
         "lightweight agentic workflows",
-        "creative writing",
+        "multilingual tasks (8 languages)",
     ],
 
     "context_length": 32768,
-    "description": "Hybrid small model optimized for edge deployment with strong instruction following"
+    "description": "Hybrid LFM2 model, 8 languages, edge-optimized with RL tuning"
 }
 
 
@@ -478,8 +480,6 @@ MISTRAL_7B_PROFILE = {
     "context_length": 32768,
     "description": "Efficient 7B model excelling at instruction following and structured outputs"
 }
-
- 
 
 GEMMA3_12B_PROFILE = {
     "model_id": "gemma-3-12b-it",
@@ -902,7 +902,7 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "nanbeige4-3b-thinking": NANBEIGE_4_3B_THINKING_PROFILE,   # Rank 1
     "qwen3-4b": QWEN_PROFILE,                                  # Rank 2
     "smollm3-3b": SMOLLM3_3B_PROFILE,                          # Rank 3
-    "lfm2-2.6b": LFM2_26B_PROFILE,                             # Rank 4
+    "lfm2.5-1.2b-instruct": LFM2_PROFILE,                       # Rank 4
     "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,  # Rank 5
     "gemma-3-12b-it": GEMMA3_12B_PROFILE,                      # Rank 6
     "mistral-7b-instruct-v0.3": MISTRAL_7B_PROFILE,            # Rank 7
@@ -1005,10 +1005,10 @@ def get_display_name(model_id: str) -> str:
     """
     Get human-readable display name for a model ID.
     Convenience wrapper with fallback to model_id if not found.
-    
+
     Args:
         model_id: Model identifier
-        
+
     Returns:
         Human-readable display name, or model_id if profile not found
     """
@@ -1047,7 +1047,7 @@ __all__ = [
     "DEEPSEEK_R1_QWEN15B_PROFILE",
     "GEMMA3_12B_PROFILE",
     "MISTRAL_7B_PROFILE",
-    "LFM2_26B_PROFILE",
+    "LFM2_PROFILE",
     "PHI_PROFILE",
     "RNJ_1_PROFILE",
     "LLAMA_PROFILE",

@@ -37,7 +37,7 @@ declare module 'fingerpose' {
    */
   export class GestureDescription {
     constructor(name: string);
-    
+
     /**
      * Add expected curl state for a finger
      * @param finger The finger index
@@ -45,7 +45,7 @@ declare module 'fingerpose' {
      * @param weight Confidence weight (0-1)
      */
     addCurl(finger: Finger, curl: FingerCurl, weight?: number): void;
-    
+
     /**
      * Add expected direction for a finger
      * @param finger The finger index
@@ -53,7 +53,7 @@ declare module 'fingerpose' {
      * @param weight Confidence weight (0-1)
      */
     addDirection(finger: Finger, direction: FingerDirection, weight?: number): void;
-    
+
     /**
      * The name of this gesture
      */
@@ -85,7 +85,7 @@ declare module 'fingerpose' {
      * @param knownGestures Array of gesture descriptions to detect
      */
     constructor(knownGestures: GestureDescription[]);
-    
+
     /**
      * Estimate which gesture best matches the provided landmarks
      * @param landmarks Array of 21 hand landmarks from MediaPipe/TensorFlow

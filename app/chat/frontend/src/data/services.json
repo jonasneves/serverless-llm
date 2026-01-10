@@ -26,10 +26,10 @@
     },
     {
       "key": "lfm2",
-      "name": "LFM2 2.6B",
+      "name": "LFM2.5 1.2B",
       "localPort": 8105,
       "category": "small",
-      "modelId": "lfm2-2.6b",
+      "modelId": "lfm2.5-1.2b-instruct",
       "rank": 4
     },
     {

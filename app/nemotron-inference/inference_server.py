@@ -88,7 +88,7 @@ def download_model() -> str:
 
 def start_llama_server(model_path: str) -> subprocess.Popen:
     """Start the llama-server process
-    
+
     Optimizations applied:
     - cache-type-k/v q8_0: Quantized KV cache saves ~30% memory
     - cont-batching: Better request handling
@@ -106,7 +106,7 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
         # Memory optimizations (no --mlock: slow startup + permission issues in containers)
         "--cache-type-k", "q8_0",     # Quantized KV cache (~30% less memory)
         "--cache-type-v", "q8_0",
-        # Performance optimizations  
+        # Performance optimizations
         "--cont-batching",            # Continuous batching for better throughput
         "--flash-attn", "auto",       # Faster attention (auto-detect support)
     ]
@@ -133,7 +133,7 @@ def start_llama_server(model_path: str) -> subprocess.Popen:
     while time.time() - start_time < max_wait:
         check_count += 1
         elapsed = int(time.time() - start_time)
-        
+
         try:
             response = httpx.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=2)
             if response.status_code == 200:

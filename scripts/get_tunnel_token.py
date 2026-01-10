@@ -5,10 +5,10 @@ Unified tunnel token retrieval for local and CI environments.
 Usage:
     # From tunnels.json file (local):
     python scripts/get_tunnel_token.py qwen
-    
+
     # From JSON string (CI - pass as argument):
     python scripts/get_tunnel_token.py --json '{"qwen": {...}}' qwen
-    
+
     # From environment variable (CI - set TUNNELS_JSON):
     TUNNELS_JSON='{"qwen": {...}}' python scripts/get_tunnel_token.py qwen
 """
@@ -83,29 +83,29 @@ def main() -> None:
         action="store_true",
         help="Exit silently with code 1 instead of printing errors",
     )
-    
+
     args = parser.parse_args()
     model_name = args.model
-    
+
     # Priority: --json > TUNNELS_JSON env > --file > auto-detect
     token = None
-    
+
     if args.json_str:
         token = get_token_from_json(args.json_str, model_name)
-    
+
     if not token:
         env_json = os.environ.get("TUNNELS_JSON", "")
         if env_json:
             token = get_token_from_json(env_json, model_name)
-    
+
     if not token and args.config_file:
         token = get_token_from_file(args.config_file, model_name)
-    
+
     if not token:
         file_path = find_tunnels_file()
         if file_path:
             token = get_token_from_file(file_path, model_name)
-    
+
     if token:
         print(token)
         sys.exit(0)

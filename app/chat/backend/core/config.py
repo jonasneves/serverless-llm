@@ -37,7 +37,7 @@ if RAW_BASE_DOMAIN:
 
 def get_endpoint(model: ModelConfig) -> str:
     """Get endpoint URL for a model.
-    
+
     Priority: Environment Variable > BASE_DOMAIN > Local Default
     """
     # 1. Specific Env Var (e.g. QWEN_API_URL)
@@ -48,7 +48,7 @@ def get_endpoint(model: ModelConfig) -> str:
     # 2. Base Domain (if configured)
     if BASE_DOMAIN:
         return f"{BASE_SCHEME}://{model.subdomain}.{BASE_DOMAIN}"
-    
+
     # 3. Default Local URL
     return model.service_url
 
