@@ -97,8 +97,6 @@ function SystemPresetDropdown({
     setSystemPreset,
     showDropdown,
     setShowDropdown,
-    showPreview,
-    setShowPreview,
     dropdownRef,
     direction = 'down',
     compact = false,
@@ -107,13 +105,10 @@ function SystemPresetDropdown({
     setSystemPreset: (id: SystemPresetId) => void;
     showDropdown: boolean;
     setShowDropdown: (show: boolean) => void;
-    showPreview: boolean;
-    setShowPreview: (show: boolean) => void;
     dropdownRef: React.RefObject<HTMLDivElement>;
     direction?: 'up' | 'down';
     compact?: boolean;
 }) {
-    const preset = SYSTEM_PRESETS[systemPreset];
     const presetIds = Object.keys(SYSTEM_PRESETS) as SystemPresetId[];
 
     // Click outside to close
@@ -121,14 +116,13 @@ function SystemPresetDropdown({
         const handleClickOutside = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
                 setShowDropdown(false);
-                setShowPreview(false);
             }
         };
-        if (showDropdown || showPreview) {
+        if (showDropdown) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
-    }, [showDropdown, showPreview, dropdownRef, setShowDropdown, setShowPreview]);
+    }, [showDropdown, dropdownRef, setShowDropdown]);
 
     return (
         <div className={`relative ${compact ? '' : 'mt-3'}`} ref={dropdownRef}>
@@ -143,7 +137,7 @@ function SystemPresetDropdown({
                 }`}
             >
                 <Settings2 size={compact ? 11 : 12} />
-                <span>System: {preset.name}</span>
+                <span>System: {SYSTEM_PRESETS[systemPreset].name}</span>
                 <ChevronDown size={compact ? 10 : 12} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
             </button>
 
@@ -174,22 +168,6 @@ function SystemPresetDropdown({
                             </div>
                         );
                     })}
-                    {/* Preview toggle */}
-                    {preset.prompt && (
-                        <div className="border-t border-slate-700/50">
-                            <button
-                                onClick={() => setShowPreview(!showPreview)}
-                                className="w-full px-3 py-1.5 text-[10px] text-slate-500 hover:text-slate-400 text-left"
-                            >
-                                {showPreview ? '▼ Hide prompt' : '▶ Show prompt'}
-                            </button>
-                            {showPreview && (
-                                <div className="px-3 pb-2 text-[10px] text-slate-400 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
-                                    {preset.prompt}
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
             )}
         </div>
@@ -214,7 +192,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [streamingTiming, setStreamingTiming] = useState<Map<string, ExecutionTimeData>>(new Map());
     const [systemPreset, setSystemPreset] = usePersistedSetting<SystemPresetId>('chat-system-preset', 'none');
     const [showPresetDropdown, setShowPresetDropdown] = useState(false);
-    const [showPresetPreview, setShowPresetPreview] = useState(false);
     const presetDropdownRef = useRef<HTMLDivElement>(null);
     const abortRefs = useRef<Map<string, AbortController>>(new Map());
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -513,8 +490,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 setSystemPreset={setSystemPreset}
                                 showDropdown={showPresetDropdown}
                                 setShowDropdown={setShowPresetDropdown}
-                                showPreview={showPresetPreview}
-                                setShowPreview={setShowPresetPreview}
                                 dropdownRef={presetDropdownRef}
                                 direction="down"
                             />
@@ -612,8 +587,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             setSystemPreset={setSystemPreset}
                             showDropdown={showPresetDropdown}
                             setShowDropdown={setShowPresetDropdown}
-                            showPreview={showPresetPreview}
-                            setShowPreview={setShowPresetPreview}
                             dropdownRef={presetDropdownRef}
                             direction="up"
                             compact
