@@ -12,6 +12,7 @@ run-name: "${{ github.event.client_payload.model || inputs.model }} \u2022 ${{ g
         - gemma
         - gptoss
         - lfm2
+        - lfm2.5
         - llama
         - mistral
         - nanbeige
