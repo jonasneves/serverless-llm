@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallba
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Check, Copy, Sparkles } from 'lucide-react';
+import { Bot, AlertTriangle, User, Check, Copy, ChevronDown, Settings2 } from 'lucide-react';
 import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
 import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
@@ -10,6 +10,57 @@ import ModelTabs from './ModelTabs';
 import { useGestureOptional } from '../context/GestureContext';
 import ExecutionTimeDisplay, { ExecutionTimeData } from './ExecutionTimeDisplay';
 import { usePersistedSetting } from '../hooks/usePersistedSetting';
+
+// System prompt presets
+export const SYSTEM_PRESETS = {
+    none: {
+        id: 'none',
+        name: 'None',
+        description: 'No system prompt',
+        prompt: null,
+    },
+    ui_builder: {
+        id: 'ui_builder',
+        name: 'UI Builder',
+        description: 'Interactive JSON buttons for gesture control',
+        prompt: `You can output interactive UI elements using JSON. When appropriate, include clickable options:
+
+\`\`\`json
+{
+  "options": [
+    {"id": "opt1", "label": "Option 1", "action": "message", "value": "User selected option 1"},
+    {"id": "opt2", "label": "Option 2", "action": "message", "value": "User selected option 2"}
+  ]
+}
+\`\`\`
+
+Guidelines:
+- Use for choices, confirmations, or navigation
+- 2-4 options max
+- Keep labels short
+- Include JSON after your text response`,
+    },
+    concise: {
+        id: 'concise',
+        name: 'Concise',
+        description: 'Brief, direct responses',
+        prompt: 'Be concise. Give direct answers without unnecessary elaboration. Use bullet points for lists. Skip pleasantries.',
+    },
+    technical: {
+        id: 'technical',
+        name: 'Technical',
+        description: 'Detailed technical explanations',
+        prompt: 'Provide detailed technical explanations. Include code examples where relevant. Explain tradeoffs and edge cases. Assume technical proficiency.',
+    },
+    creative: {
+        id: 'creative',
+        name: 'Creative',
+        description: 'More expressive and creative responses',
+        prompt: 'Be creative and expressive. Use analogies and metaphors. Explore ideas freely. Personality is encouraged.',
+    },
+} as const;
+
+export type SystemPresetId = keyof typeof SYSTEM_PRESETS;
 
 export interface ChatViewHandle {
     sendMessage: (text: string, fromGesture?: boolean) => void;
@@ -40,6 +91,111 @@ interface ChatViewProps {
     gesturesActive?: boolean;
 }
 
+// System preset dropdown component
+function SystemPresetDropdown({
+    systemPreset,
+    setSystemPreset,
+    showDropdown,
+    setShowDropdown,
+    showPreview,
+    setShowPreview,
+    dropdownRef,
+    direction = 'down',
+    compact = false,
+}: {
+    systemPreset: SystemPresetId;
+    setSystemPreset: (id: SystemPresetId) => void;
+    showDropdown: boolean;
+    setShowDropdown: (show: boolean) => void;
+    showPreview: boolean;
+    setShowPreview: (show: boolean) => void;
+    dropdownRef: React.RefObject<HTMLDivElement>;
+    direction?: 'up' | 'down';
+    compact?: boolean;
+}) {
+    const preset = SYSTEM_PRESETS[systemPreset];
+    const presetIds = Object.keys(SYSTEM_PRESETS) as SystemPresetId[];
+
+    // Click outside to close
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setShowDropdown(false);
+                setShowPreview(false);
+            }
+        };
+        if (showDropdown || showPreview) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showDropdown, showPreview, dropdownRef, setShowDropdown, setShowPreview]);
+
+    return (
+        <div className={`relative ${compact ? '' : 'mt-3'}`} ref={dropdownRef}>
+            <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className={`flex items-center gap-1.5 rounded-md transition-all active:scale-95 font-medium ${
+                    compact ? 'h-6 px-2 text-[11px]' : 'h-7 px-2.5 text-xs'
+                } ${
+                    systemPreset !== 'none'
+                        ? 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25'
+                        : 'bg-slate-800/60 text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
+                }`}
+            >
+                <Settings2 size={compact ? 11 : 12} />
+                <span>System: {preset.name}</span>
+                <ChevronDown size={compact ? 10 : 12} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showDropdown && (
+                <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'} left-1/2 -translate-x-1/2 min-w-[200px] bg-slate-800/95 backdrop-blur-md rounded-lg border border-slate-700/50 shadow-xl overflow-hidden z-50`}>
+                    {presetIds.map(id => {
+                        const p = SYSTEM_PRESETS[id];
+                        const isSelected = id === systemPreset;
+                        return (
+                            <div key={id} className="relative group">
+                                <button
+                                    onClick={() => {
+                                        setSystemPreset(id);
+                                        setShowDropdown(false);
+                                    }}
+                                    className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between transition-colors ${
+                                        isSelected
+                                            ? 'bg-sky-500/20 text-sky-300'
+                                            : 'text-slate-300 hover:bg-slate-700/50'
+                                    }`}
+                                >
+                                    <div>
+                                        <div className="font-medium">{p.name}</div>
+                                        <div className="text-[10px] text-slate-500">{p.description}</div>
+                                    </div>
+                                    {isSelected && <Check size={12} className="text-sky-400" />}
+                                </button>
+                            </div>
+                        );
+                    })}
+                    {/* Preview toggle */}
+                    {preset.prompt && (
+                        <div className="border-t border-slate-700/50">
+                            <button
+                                onClick={() => setShowPreview(!showPreview)}
+                                className="w-full px-3 py-1.5 text-[10px] text-slate-500 hover:text-slate-400 text-left"
+                            >
+                                {showPreview ? '▼ Hide prompt' : '▶ Show prompt'}
+                            </button>
+                            {showPreview && (
+                                <div className="px-3 pb-2 text-[10px] text-slate-400 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                    {preset.prompt}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
     selectedModels,
@@ -56,6 +212,10 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const [streamingResponses, setStreamingResponses] = useState<Map<string, string>>(new Map());
     const [streamingTiming, setStreamingTiming] = useState<Map<string, ExecutionTimeData>>(new Map());
+    const [systemPreset, setSystemPreset] = usePersistedSetting<SystemPresetId>('chat-system-preset', 'none');
+    const [showPresetDropdown, setShowPresetDropdown] = useState(false);
+    const [showPresetPreview, setShowPresetPreview] = useState(false);
+    const presetDropdownRef = useRef<HTMLDivElement>(null);
     const abortRefs = useRef<Map<string, AbortController>>(new Map());
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -142,47 +302,25 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
         const baseMessages = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
 
-        // Add gesture context with UI builder instructions
-        const gestureSystemPrompt = `User is hands-free using gesture control. Build an interactive interface to guide them.
+        // Build system prompts from preset + special cases
+        const systemPrompts: Array<{ role: 'system'; content: string }> = [];
 
-Available gesture inputs:
-- 👍 (yes/approve/like)
-- 👎 (no/disapprove/dislike)
-- 👋 (hi/hello/greeting)
-- "ok" (okay/continue)
-- "thanks" (thank you)
-- "stop" (stop/wait)
-- Pointing finger (select UI buttons)
+        // Add selected preset's system prompt
+        const preset = SYSTEM_PRESETS[systemPreset];
+        if (preset.prompt) {
+            systemPrompts.push({ role: 'system', content: preset.prompt });
+        }
 
-Choose interaction style:
-- Simple binary: "Give 👍 to continue or 👎 to stop" (no JSON needed)
-- Complex choices: Use JSON UI buttons (3+ options, or multi-word responses needed)
-
-For JSON UI (when appropriate):
-\`\`\`json
-{
-  "options": [
-    {"id": "opt1", "label": "Option 1", "action": "message", "value": "option 1"},
-    {"id": "opt2", "label": "Option 2", "action": "message", "value": "option 2"}
-  ]
-}
-\`\`\`
-
-Guidelines:
-- Keep response concise (2-3 sentences)
-- Use simple gestures for yes/no/continue (more efficient)
-- Use JSON UI for 3+ options or complex choices
-- Provide 2-4 options max in JSON
-- User can point at buttons with index finger`;
+        // Gesture mode: add gesture-specific context
+        if (fromGesture) {
+            systemPrompts.push({ role: 'system', content: `User is using gesture control. Available gestures: 👍 (yes), 👎 (no), 👋 (hello), "ok", "thanks", "stop", pointing finger (select buttons).` });
+        }
 
         // Easter egg: Angry robot context for middle finger gesture
         const isAngryTrigger = text === "🖕" || text.toLowerCase().includes("middle finger");
-        const angrySystemPrompt = "The user is showing you their middle finger (gesture). This is a playful interaction. Respond with humorous, over-the-top anger, indignation, or witty comeback. Don't be actually offended, but play along with the 'angry robot' persona.";
-
-        const systemPrompts: Array<{ role: 'system'; content: string }> = [];
-        // Inject UI builder prompt when gestures are active (typed or gesture-triggered)
-        if (gesturesActive || fromGesture) systemPrompts.push({ role: 'system', content: gestureSystemPrompt });
-        if (isAngryTrigger) systemPrompts.push({ role: 'system', content: angrySystemPrompt });
+        if (isAngryTrigger) {
+            systemPrompts.push({ role: 'system', content: "The user is showing you their middle finger. Respond with humorous, over-the-top mock indignation. Play along with the 'angry robot' persona." });
+        }
 
         const apiMessages = [...systemPrompts, ...baseMessages];
 
@@ -370,11 +508,21 @@ Guidelines:
                                 openrouterKey={openrouterKey}
                                 dropDirection="down"
                             />
+                            <SystemPresetDropdown
+                                systemPreset={systemPreset}
+                                setSystemPreset={setSystemPreset}
+                                showDropdown={showPresetDropdown}
+                                setShowDropdown={setShowPresetDropdown}
+                                showPreview={showPresetPreview}
+                                setShowPreview={setShowPresetPreview}
+                                dropdownRef={presetDropdownRef}
+                                direction="down"
+                            />
                         </div>
                     )}
 
                     {messages.map((msg, idx) => {
-                        const hasGestureOptions = msg.role === 'assistant' && gesturesActive && msg.content.includes('```json');
+                        const hasGestureOptions = msg.role === 'assistant' && (gesturesActive || systemPreset === 'ui_builder') && msg.content.includes('```json');
                         return (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`group relative max-w-[85%] rounded-2xl px-4 py-3 ${
@@ -456,17 +604,30 @@ Guidelines:
             </div>
 
             {/* Bottom area: Model selector (when messages) + Input */}
-            <div className="fixed bottom-0 left-0 right-0 z-[99] flex flex-col items-center gap-3 px-4 pb-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+            <div className="fixed bottom-0 left-0 right-0 z-[99] flex flex-col items-center gap-2 px-4 pb-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
                 {messages.length > 0 && (
-                    <ModelTabs
-                        models={models}
-                        selectedModels={selectedModels}
-                        onToggleModel={onToggleModel}
-                        isGenerating={isGenerating}
-                        githubToken={githubToken}
-                        openrouterKey={openrouterKey}
-                        dropDirection="up"
-                    />
+                    <div className="flex flex-col items-center gap-2">
+                        <SystemPresetDropdown
+                            systemPreset={systemPreset}
+                            setSystemPreset={setSystemPreset}
+                            showDropdown={showPresetDropdown}
+                            setShowDropdown={setShowPresetDropdown}
+                            showPreview={showPresetPreview}
+                            setShowPreview={setShowPresetPreview}
+                            dropdownRef={presetDropdownRef}
+                            direction="up"
+                            compact
+                        />
+                        <ModelTabs
+                            models={models}
+                            selectedModels={selectedModels}
+                            onToggleModel={onToggleModel}
+                            isGenerating={isGenerating}
+                            githubToken={githubToken}
+                            openrouterKey={openrouterKey}
+                            dropDirection="up"
+                        />
+                    </div>
                 )}
                 <PromptInput
                     inputRef={inputRef}
