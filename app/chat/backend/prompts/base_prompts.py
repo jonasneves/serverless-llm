@@ -50,10 +50,8 @@ Guidelines:
 - Use JSON UI when appropriate, YOU MUST BUILD THE JSON UI
 - User can point at buttons with index finger"""
 
-# Gesture mode context for LOCAL models (when user is interacting hands-free)
+# Aliases for backwards compatibility
 GESTURE_MODE_CONTEXT_LOCAL = GESTURE_MODE_CONTEXT
-
-# Gesture mode context for API models (smart UI builder)
 GESTURE_MODE_CONTEXT_API = GESTURE_MODE_CONTEXT
 
 

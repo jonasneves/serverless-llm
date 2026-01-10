@@ -109,14 +109,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
 
   const isCircleMode = mode !== 'compare';
   const orchestratorYOffset = mode === 'analyze' ? layoutRadius - 64 : 0;
-  const orchestratorStatusLabel =
-    orchestratorStatus === 'responding'
-      ? 'Responding'
-      : orchestratorStatus === 'waiting'
-        ? 'Waiting'
-        : orchestratorStatus === 'done'
-          ? 'Done'
-          : 'Ready';
+  const orchestratorStatusLabel = getStatusLabel(orchestratorStatus);
 
   // Store menu click position for portal rendering
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -149,49 +142,14 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         const isDone = !isSpeaking && !hasError && Boolean(executionTimes[model.id]?.endTime) && model.response.trim().length > 0;
         // Show "waiting" for models in a debate session that haven't started their turn yet
         const isWaiting = !isSpeaking && !isDone && !hasError && isGenerating && mode === 'debate';
-        const statusState: 'idle' | 'responding' | 'done' | 'waiting' | 'error' = hasError
-          ? 'error'
-          : isSpeaking
-            ? 'responding'
-            : isDone
-              ? 'done'
-              : isWaiting
-                ? 'waiting'
-                : 'idle';
-        const statusLabel = hasError
-          ? 'Error'
-          : isSpeaking
-            ? 'Responding'
-            : isDone
-              ? 'Done'
-              : isWaiting
-                ? 'Waiting'
-                : 'Ready';
+        const statusState = getModelStatusState(isSpeaking, isDone, hasError, isWaiting);
+        const statusLabel = getStatusLabel(statusState);
         const processingColor = '#fbbf24';
         const errorColor = '#ef4444';
         const typeColor = model.type === 'self-hosted' ? '#10b981' : '#3b82f6';
         const effectiveColor = hasError ? errorColor : typeColor;
         const isProcessing = isSpeaking && !hasError;
-        const baseBackground = 'rgba(30, 41, 59, 0.85)';
-        const cardBackground = hasError
-          ? `linear-gradient(135deg, ${errorColor}14, ${baseBackground})`
-          : isProcessing
-            ? `linear-gradient(135deg, ${processingColor}14, ${baseBackground})`
-            : baseBackground;
-        const cardBorder = hasError
-          ? `1px solid ${errorColor}99`
-          : isProcessing
-            ? `1px solid ${processingColor}99`
-            : isSelected
-              ? `1px solid ${typeColor}d0`
-              : '1px solid rgba(71, 85, 105, 0.5)';
-        const cardShadow = hasError
-          ? `0 0 24px ${errorColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
-          : isProcessing
-            ? `0 0 24px ${processingColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`
-            : isSelected
-              ? `0 0 20px ${typeColor}30, inset 0 1px 1px rgba(255,255,255,0.1)`
-              : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)';
+        const cardStyles = getCardStyles({ hasError, isProcessing, isSelected, errorColor, processingColor, typeColor });
 
         const styleTransform = getCardTransform({
           mode,
@@ -300,11 +258,11 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               onMouseLeave={() => isCircleMode && setHoveredCard(null)}
               className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
               style={{
-                background: cardBackground,
+                background: cardStyles.background,
                 backdropFilter: isCircleMode ? undefined : 'blur(8px)',
                 WebkitBackdropFilter: isCircleMode ? undefined : 'blur(8px)',
-                border: cardBorder,
-                boxShadow: cardShadow,
+                border: cardStyles.border,
+                boxShadow: cardStyles.shadow,
                 transform: isSelected || isProcessing ? 'scale(1.05)' : 'scale(1)',
                 width: `${width}px`,
                 height: `${height}px`,
@@ -858,18 +816,12 @@ function renderCardContent({
   getTailSnippet: (text: string, maxChars?: number) => string;
 }) {
   if (model.statusMessage) {
-    if (model.statusMessage.startsWith('<svg')) {
-      return <span dangerouslySetInnerHTML={{ __html: model.statusMessage }} />;
-    }
-    return model.statusMessage;
+    return renderSvgContent(model.statusMessage) ?? model.statusMessage;
   }
 
   if (isSpeaking) {
     if (model.response.trim().length > 0) {
-      if (model.response.startsWith('<svg')) {
-        return <span dangerouslySetInnerHTML={{ __html: model.response }} />;
-      }
-      return <Typewriter text={model.response} speed={20} />;
+      return renderSvgContent(model.response) ?? <Typewriter text={model.response} speed={20} />;
     }
     if (model.thinking && model.thinking.trim().length > 0) {
       return (
@@ -882,10 +834,7 @@ function renderCardContent({
     return thinkingFallback;
   }
 
-  if (model.response.startsWith('<svg')) {
-    return <span dangerouslySetInnerHTML={{ __html: model.response }} />;
-  }
-  return model.response;
+  return renderSvgContent(model.response) ?? model.response;
 }
 
 function renderPreviewContent({
@@ -900,10 +849,7 @@ function renderPreviewContent({
   maxChars?: number;
 }) {
   if (model.statusMessage) {
-    if (model.statusMessage.startsWith('<svg')) {
-      return <span dangerouslySetInnerHTML={{ __html: model.statusMessage }} />;
-    }
-    return model.statusMessage;
+    return renderSvgContent(model.statusMessage) ?? model.statusMessage;
   }
 
   if (isSpeaking) {
@@ -911,16 +857,13 @@ function renderPreviewContent({
     if (model.thinking && model.thinking.trim().length > 0) {
       return (
         <span>
-          <span className="text-purple-400/80 text-[10px] uppercase tracking-wider font-medium">💭 Thinking </span>
+          <span className="text-purple-400/80 text-[10px] uppercase tracking-wider font-medium">Thinking </span>
           <span className="text-slate-400">{getTailSnippet(model.thinking.trim(), 260)}</span>
         </span>
       );
     }
     if (model.response.trim().length > 0) {
-      if (model.response.startsWith('<svg')) {
-        return <span dangerouslySetInnerHTML={{ __html: model.response }} />;
-      }
-      return <Typewriter text={model.response} speed={20} />;
+      return renderSvgContent(model.response) ?? <Typewriter text={model.response} speed={20} />;
     }
     return <span className="text-slate-500 italic">Thinking…</span>;
   }
@@ -929,17 +872,14 @@ function renderPreviewContent({
   if (model.thinking && model.thinking.trim().length > 0) {
     return (
       <span>
-        <span className="text-purple-400/80 text-[10px] uppercase tracking-wider font-medium">💭 Reasoning </span>
+        <span className="text-purple-400/80 text-[10px] uppercase tracking-wider font-medium">Reasoning </span>
         <span className="text-slate-400">{getTailSnippet(model.thinking.trim(), 260)}</span>
       </span>
     );
   }
 
   if (model.response) {
-    if (model.response.startsWith('<svg')) {
-      return <span dangerouslySetInnerHTML={{ __html: model.response }} />;
-    }
-    return getTailSnippet(model.response, maxChars);
+    return renderSvgContent(model.response) ?? getTailSnippet(model.response, maxChars);
   }
   return <span className="text-slate-500 italic">No response yet.</span>;
 }
@@ -973,14 +913,12 @@ function renderModeratorContent({
   }
 
   if (isGenerating) {
-    if (phaseLabel && phaseLabel.startsWith('<svg')) {
-      return <span className="text-slate-500 italic" dangerouslySetInnerHTML={{ __html: phaseLabel }} />;
+    const svgContent = phaseLabel ? renderSvgContent(phaseLabel) : null;
+    if (svgContent) {
+      return <span className="text-slate-500 italic">{svgContent}</span>;
     }
-    return (
-      <span className="text-slate-500 italic">
-        {phaseLabel === 'Stage 1 · Responses' ? 'Waiting for model responses...' : (phaseLabel || 'Orchestrating...')}
-      </span>
-    );
+    const label = phaseLabel === 'Stage 1 · Responses' ? 'Waiting for model responses...' : (phaseLabel || 'Orchestrating...');
+    return <span className="text-slate-500 italic">{label}</span>;
   }
 
   return <span className="text-slate-500 italic">Send a prompt to see the synthesis.</span>;
@@ -998,3 +936,75 @@ const GRID_CONTENT_STYLE: React.CSSProperties = {
   opacity: 1,
   transition: 'opacity 0.3s ease-out',
 };
+
+type StatusState = 'idle' | 'responding' | 'done' | 'waiting' | 'error';
+
+function getStatusLabel(status: StatusState): string {
+  switch (status) {
+    case 'error': return 'Error';
+    case 'responding': return 'Responding';
+    case 'done': return 'Done';
+    case 'waiting': return 'Waiting';
+    default: return 'Ready';
+  }
+}
+
+function getModelStatusState(
+  isSpeaking: boolean,
+  isDone: boolean,
+  hasError: boolean,
+  isWaiting: boolean
+): StatusState {
+  if (hasError) return 'error';
+  if (isSpeaking) return 'responding';
+  if (isDone) return 'done';
+  if (isWaiting) return 'waiting';
+  return 'idle';
+}
+
+interface CardStyleParams {
+  hasError: boolean;
+  isProcessing: boolean;
+  isSelected: boolean;
+  errorColor: string;
+  processingColor: string;
+  typeColor: string;
+}
+
+function renderSvgContent(content: string): React.ReactNode {
+  if (content.startsWith('<svg')) {
+    return <span dangerouslySetInnerHTML={{ __html: content }} />;
+  }
+  return null;
+}
+
+function getCardStyles({ hasError, isProcessing, isSelected, errorColor, processingColor, typeColor }: CardStyleParams) {
+  const baseBackground = 'rgba(30, 41, 59, 0.85)';
+
+  if (hasError) {
+    return {
+      background: `linear-gradient(135deg, ${errorColor}14, ${baseBackground})`,
+      border: `1px solid ${errorColor}99`,
+      shadow: `0 0 24px ${errorColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`,
+    };
+  }
+  if (isProcessing) {
+    return {
+      background: `linear-gradient(135deg, ${processingColor}14, ${baseBackground})`,
+      border: `1px solid ${processingColor}99`,
+      shadow: `0 0 24px ${processingColor}33, inset 0 1px 1px rgba(255,255,255,0.1)`,
+    };
+  }
+  if (isSelected) {
+    return {
+      background: baseBackground,
+      border: `1px solid ${typeColor}d0`,
+      shadow: `0 0 20px ${typeColor}30, inset 0 1px 1px rgba(255,255,255,0.1)`,
+    };
+  }
+  return {
+    background: baseBackground,
+    border: '1px solid rgba(71, 85, 105, 0.5)',
+    shadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
+  };
+}
