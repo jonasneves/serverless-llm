@@ -180,7 +180,8 @@ Guidelines:
         const angrySystemPrompt = "The user is showing you their middle finger (gesture). This is a playful interaction. Respond with humorous, over-the-top anger, indignation, or witty comeback. Don't be actually offended, but play along with the 'angry robot' persona.";
 
         const systemPrompts: Array<{ role: 'system'; content: string }> = [];
-        if (fromGesture) systemPrompts.push({ role: 'system', content: gestureSystemPrompt });
+        // Inject UI builder prompt when gestures are active (typed or gesture-triggered)
+        if (gesturesActive || fromGesture) systemPrompts.push({ role: 'system', content: gestureSystemPrompt });
         if (isAngryTrigger) systemPrompts.push({ role: 'system', content: angrySystemPrompt });
 
         const apiMessages = [...systemPrompts, ...baseMessages];
