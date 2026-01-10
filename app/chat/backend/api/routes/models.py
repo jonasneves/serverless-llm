@@ -17,12 +17,6 @@ async def list_models():
     from core.config import MODEL_CONFIG, MODEL_ENDPOINTS, DEFAULT_MODEL_ID
     from clients.model_profiles import MODEL_PROFILES
 
-    def get_context_length(model_id: str) -> int:
-        """Get context length: prefer live value from server, fall back to profile."""
-        if model_id in LIVE_CONTEXT_LENGTHS:
-            return LIVE_CONTEXT_LENGTHS[model_id]
-        return MODEL_PROFILES.get(model_id, {}).get("context_length", 0)
-
     # Build list of self-hosted models from MODEL_CONFIG
     # Include priority (from rank) so frontend uses authoritative rankings
     self_hosted_models = [
@@ -32,7 +26,10 @@ async def list_models():
             "type": "self-hosted",
             "endpoint": MODEL_ENDPOINTS.get(config["id"]),
             "default": config.get("default", False),
-            "context_length": get_context_length(config["id"]),
+            "context_length": LIVE_CONTEXT_LENGTHS.get(
+                config["id"],
+                MODEL_PROFILES.get(config["id"], {}).get("context_length", 0),
+            ),
             "priority": config.get("rank", 99),  # Use rank from config/models.py
         }
         for config in MODEL_CONFIG
@@ -51,11 +48,11 @@ async def list_models():
             profile = MODEL_PROFILES.get(model_id, {})
             # If not in profile, build valid default
             if not profile:
-                 info = get_github_model_info(model_id) or {}
-                 profile = {
-                     "display_name": info.get("name", model_id),
-                     "context_length": int(info.get("limits", {}).get("max_input_tokens", 128000))
-                 }
+                info = get_github_model_info(model_id) or {}
+                profile = {
+                    "display_name": info.get("name", model_id),
+                    "context_length": int(info.get("limits", {}).get("max_input_tokens", 128000)),
+                }
 
             # Get info to retrieve calculated priority
             info = get_github_model_info(model_id) or {}
@@ -116,19 +113,19 @@ async def model_status(model_id: str, detailed: bool = False):
     if detailed:
         health_data = await check_model_health(model_id, endpoint)
         return health_data
-    else:
-        # Quick status check
-        client = get_http_client()
-        try:
-            response = await client.get(f"{endpoint}/health", timeout=3.0)
-            return {
-                "model": model_id,
-                "status": "online" if response.status_code == 200 else "offline",
-                "endpoint": endpoint
-            }
-        except Exception:
-            return {
-                "model": model_id,
-                "status": "offline",
-                "endpoint": endpoint
-            }
+
+    # Quick status check
+    client = get_http_client()
+    try:
+        response = await client.get(f"{endpoint}/health", timeout=3.0)
+        return {
+            "model": model_id,
+            "status": "online" if response.status_code == 200 else "offline",
+            "endpoint": endpoint,
+        }
+    except Exception:
+        return {
+            "model": model_id,
+            "status": "offline",
+            "endpoint": endpoint,
+        }
