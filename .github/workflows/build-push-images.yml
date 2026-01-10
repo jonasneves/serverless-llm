@@ -151,9 +151,6 @@ jobs:
           elif [ "${{ matrix.model }}" = "lfm2-inference" ]; then
             # LFM2 has its own Dockerfile (builds llama.cpp from master for lfm2 arch)
             DOCKERFILE="./app/lfm2-inference/Dockerfile"
-          elif [ "${{ matrix.model }}" = "lfm2.5-inference" ]; then
-            # LFM2.5 has its own Dockerfile (builds llama.cpp from master for lfm2 arch)
-            DOCKERFILE="./app/lfm2.5-inference/Dockerfile"
           else
             # All other models use shared Dockerfile
             DOCKERFILE="./app/shared/Dockerfile.inference"
@@ -174,8 +171,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || '.' }}
-          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/backend/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || matrix.model == 'nemotron-inference' && './app/nemotron-inference/Dockerfile' || matrix.model == 'lfm2-inference' && './app/lfm2-inference/Dockerfile' || matrix.model == 'lfm2.5-inference' && './app/lfm2.5-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
-          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && matrix.model != 'rnj-inference' && matrix.model != 'nemotron-inference' && matrix.model != 'lfm2-inference' && matrix.model != 'lfm2.5-inference' && format('MODEL_DIR={0}', matrix.model) || '' }}
+          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/backend/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || matrix.model == 'nemotron-inference' && './app/nemotron-inference/Dockerfile' || matrix.model == 'lfm2-inference' && './app/lfm2-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
+          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && matrix.model != 'rnj-inference' && matrix.model != 'nemotron-inference' && matrix.model != 'lfm2-inference' && format('MODEL_DIR={0}', matrix.model) || '' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
