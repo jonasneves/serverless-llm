@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallba
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Check, Copy, ChevronDown, Settings2 } from 'lucide-react';
+import { Bot, AlertTriangle, User, Check, Copy, Puzzle, Frown } from 'lucide-react';
 import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
 import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
@@ -11,19 +11,7 @@ import { useGestureOptional } from '../context/GestureContext';
 import ExecutionTimeDisplay, { ExecutionTimeData } from './ExecutionTimeDisplay';
 import { usePersistedSetting } from '../hooks/usePersistedSetting';
 
-// System prompt presets
-export const SYSTEM_PRESETS = {
-    none: {
-        id: 'none',
-        name: 'None',
-        description: 'No system prompt',
-        prompt: null,
-    },
-    ui_builder: {
-        id: 'ui_builder',
-        name: 'UI Builder',
-        description: 'Interactive JSON buttons for gesture control',
-        prompt: `You can output interactive UI elements using JSON. When appropriate, include clickable options:
+const UI_BUILDER_PROMPT = `You can output interactive UI elements using JSON. When appropriate, include clickable options:
 
 \`\`\`json
 {
@@ -38,29 +26,7 @@ Guidelines:
 - Use for choices, confirmations, or navigation
 - 2-4 options max
 - Keep labels short
-- Include JSON after your text response`,
-    },
-    concise: {
-        id: 'concise',
-        name: 'Concise',
-        description: 'Brief, direct responses',
-        prompt: 'Be concise. Give direct answers in 1-3 sentences. No elaboration or pleasantries.',
-    },
-    technical: {
-        id: 'technical',
-        name: 'Technical',
-        description: 'Detailed technical explanations',
-        prompt: 'Provide detailed technical explanations. Include code examples where relevant. Explain tradeoffs and edge cases. Assume technical proficiency.',
-    },
-    creative: {
-        id: 'creative',
-        name: 'Creative',
-        description: 'More expressive and creative responses',
-        prompt: 'Be creative and expressive. Use analogies and metaphors. Explore ideas freely. Personality is encouraged.',
-    },
-} as const;
-
-export type SystemPresetId = keyof typeof SYSTEM_PRESETS;
+- Include JSON after your text response`;
 
 export interface ChatViewHandle {
     sendMessage: (text: string, fromGesture?: boolean) => void;
@@ -91,89 +57,6 @@ interface ChatViewProps {
     gesturesActive?: boolean;
 }
 
-// System preset dropdown component
-function SystemPresetDropdown({
-    systemPreset,
-    setSystemPreset,
-    showDropdown,
-    setShowDropdown,
-    dropdownRef,
-    direction = 'down',
-    compact = false,
-}: {
-    systemPreset: SystemPresetId;
-    setSystemPreset: (id: SystemPresetId) => void;
-    showDropdown: boolean;
-    setShowDropdown: (show: boolean) => void;
-    dropdownRef: React.RefObject<HTMLDivElement>;
-    direction?: 'up' | 'down';
-    compact?: boolean;
-}) {
-    const presetIds = Object.keys(SYSTEM_PRESETS) as SystemPresetId[];
-
-    // Click outside to close
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setShowDropdown(false);
-            }
-        };
-        if (showDropdown) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [showDropdown, dropdownRef, setShowDropdown]);
-
-    return (
-        <div className={`relative z-0 ${compact ? '' : 'mt-3'}`} ref={dropdownRef}>
-            <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className={`flex items-center gap-1.5 rounded-md transition-all active:scale-95 font-medium ${
-                    compact ? 'h-6 px-2 text-[11px]' : 'h-7 px-2.5 text-xs'
-                } ${
-                    systemPreset !== 'none'
-                        ? 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25'
-                        : 'bg-slate-800/60 text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
-                }`}
-            >
-                <Settings2 size={compact ? 11 : 12} />
-                <span>System: {SYSTEM_PRESETS[systemPreset].name}</span>
-                <ChevronDown size={compact ? 10 : 12} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showDropdown && (
-                <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'} left-1/2 -translate-x-1/2 min-w-[200px] bg-slate-800/95 backdrop-blur-md rounded-lg border border-slate-700/50 shadow-xl overflow-hidden z-[60]`}>
-                    {presetIds.map(id => {
-                        const p = SYSTEM_PRESETS[id];
-                        const isSelected = id === systemPreset;
-                        return (
-                            <div key={id} className="relative group">
-                                <button
-                                    onClick={() => {
-                                        setSystemPreset(id);
-                                        setShowDropdown(false);
-                                    }}
-                                    className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between transition-colors ${
-                                        isSelected
-                                            ? 'bg-sky-500/20 text-sky-300'
-                                            : 'text-slate-300 hover:bg-slate-700/50'
-                                    }`}
-                                >
-                                    <div>
-                                        <div className="font-medium">{p.name}</div>
-                                        <div className="text-[10px] text-slate-500">{p.description}</div>
-                                    </div>
-                                    {isSelected && <Check size={12} className="text-sky-400" />}
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-}
-
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
     selectedModels,
@@ -190,9 +73,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const [streamingResponses, setStreamingResponses] = useState<Map<string, string>>(new Map());
     const [streamingTiming, setStreamingTiming] = useState<Map<string, ExecutionTimeData>>(new Map());
-    const [systemPreset, setSystemPreset] = usePersistedSetting<SystemPresetId>('chat-system-preset', 'none');
-    const [showPresetDropdown, setShowPresetDropdown] = useState(false);
-    const presetDropdownRef = useRef<HTMLDivElement>(null);
+    const [uiBuilderEnabled, setUiBuilderEnabled] = usePersistedSetting<boolean>('chat-ui-builder', false);
     const abortRefs = useRef<Map<string, AbortController>>(new Map());
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -200,6 +81,24 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
     const gestureCtx = useGestureOptional();
     const isMiddleFinger = gestureCtx?.gestureState?.gesture === 'Middle_Finger';
+
+    // Auto-focus input when typing printable characters (type-anywhere)
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+            // Check if it's a printable character (single character, not a modifier key)
+            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                    // The character will be typed into the input automatically
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Check if user is near bottom
     const isNearBottom = useCallback(() => {
@@ -225,53 +124,33 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         return () => el.removeEventListener('scroll', handleScroll);
     }, [isNearBottom]);
 
-    useImperativeHandle(ref, () => ({
-        sendMessage: (text: string, fromGesture?: boolean) => handleSend(text, fromGesture),
-        setInput: (text: string) => {
-            if (inputRef.current) {
-                inputRef.current.value = text;
-                inputRef.current.focus();
-            }
-        },
-        stopGeneration: handleStop,
-        scroll: (deltaY: number) => {
-            if (scrollRef.current) {
-                userScrolledAwayRef.current = true;
-                scrollRef.current.scrollTop = scrollRef.current.scrollTop - deltaY;
-            }
-        }
-    }));
-
-    // Auto-scroll to bottom only if user hasn't scrolled away
-    useEffect(() => {
-        if (scrollRef.current && !userScrolledAwayRef.current) {
+    // Smart auto-scroll: only scroll if user hasn't scrolled away
+    const smartScroll = useCallback(() => {
+        if (!userScrolledAwayRef.current && scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages, streamingResponses]);
-
-    // Auto-focus on keydown
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.ctrlKey || e.metaKey || e.altKey) return;
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-            if (e.key.length === 1) inputRef.current?.focus();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const handleSend = async (text: string, fromGesture = false) => {
-        if (!text.trim() || isGenerating || selectedModels.size === 0) return;
+    // Auto-scroll when messages change (if user is at bottom)
+    useEffect(() => {
+        smartScroll();
+    }, [messages, streamingResponses, smartScroll]);
 
-        // Reset scroll tracking so new responses auto-scroll
-        userScrolledAwayRef.current = false;
+    const handleSend = useCallback(async (text: string, fromGesture = false) => {
+        if (!text.trim() || isGenerating) return;
 
         const modelIds = Array.from(selectedModels);
+        if (modelIds.length === 0) return;
+
+        // Reset user scroll tracking on new message
+        userScrolledAwayRef.current = false;
+
+        setIsGenerating(true);
+        setStreamingResponses(new Map());
+        setStreamingTiming(new Map());
+
         const userMessage: ChatMessage = { role: 'user', content: text };
         setMessages(prev => [...prev, userMessage]);
-        setIsGenerating(true);
-        setStreamingResponses(new Map(modelIds.map(id => [id, ''])));
 
         // Initialize timing for all models
         const now = Date.now();
@@ -279,13 +158,12 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
         const baseMessages = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
 
-        // Build system prompts from preset + special cases
+        // Build system prompts
         const systemPrompts: Array<{ role: 'system'; content: string }> = [];
 
-        // Add selected preset's system prompt
-        const preset = SYSTEM_PRESETS[systemPreset];
-        if (preset.prompt) {
-            systemPrompts.push({ role: 'system', content: preset.prompt });
+        // Add UI Builder prompt if enabled
+        if (uiBuilderEnabled) {
+            systemPrompts.push({ role: 'system', content: UI_BUILDER_PROMPT });
         }
 
         // Gesture mode: add gesture-specific context
@@ -310,58 +188,45 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             const startTime = Date.now();
 
             if (!model) {
-                // Immediately add error message and remove from streaming
                 setMessages(prev => [...prev, {
-                    role: 'assistant' as const,
-                    content: 'Model not found',
-                    modelName: modelId,
+                    role: 'assistant',
+                    content: `Model ${modelId} not found`,
                     modelId,
-                    error: true
+                    modelName: modelId,
+                    error: true,
                 }]);
-                setStreamingResponses(prev => {
-                    const next = new Map(prev);
-                    next.delete(modelId);
-                    return next;
-                });
-                setStreamingTiming(prev => {
-                    const next = new Map(prev);
-                    next.delete(modelId);
-                    return next;
-                });
                 completedCount++;
                 if (completedCount === totalCount) setIsGenerating(false);
                 return;
             }
 
-            const abortController = new AbortController();
-            abortRefs.current.set(modelId, abortController);
-            let firstTokenTime: number | undefined;
+            const controller = new AbortController();
+            abortRefs.current.set(modelId, controller);
 
             try {
                 const stream = await fetchChatStream({
                     models: [modelId],
                     messages: apiMessages,
-                    max_tokens: 2048,
+                    max_tokens: 4096,
                     temperature: 0.7,
-                    github_token: githubToken || null,
-                    openrouter_key: openrouterKey || null,
-                }, abortController.signal);
+                    github_token: githubToken,
+                    openrouter_key: openrouterKey,
+                }, controller.signal);
 
                 let content = '';
+                let firstToken = true;
+                let firstTokenTime: number | undefined;
+
                 await streamSseEvents(stream, (event) => {
-                    if (abortController.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-                    if (event.event === 'error' || event.error) {
-                        throw new Error(typeof event.error === 'string' ? event.error : event.content || 'Stream failed');
-                    }
                     if (event.content) {
-                        // Track first token time
-                        if (!firstTokenTime) {
+                        if (firstToken) {
+                            firstToken = false;
                             firstTokenTime = Date.now();
                             setStreamingTiming(prev => {
-                                const next = new Map(prev);
-                                const current = next.get(modelId);
-                                if (current) next.set(modelId, { ...current, firstTokenTime });
-                                return next;
+                                const newMap = new Map(prev);
+                                const existing = newMap.get(modelId) || { startTime };
+                                newMap.set(modelId, { ...existing, firstTokenTime });
+                                return newMap;
                             });
                         }
                         content += event.content;
@@ -370,112 +235,109 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 });
 
                 const endTime = Date.now();
-                // Model completed successfully - add message with timing
+
                 setMessages(prev => [...prev, {
-                    role: 'assistant' as const,
-                    content,
-                    modelName: model.name,
+                    role: 'assistant',
+                    content: content || '(empty response)',
                     modelId,
-                    timing: { startTime, firstTokenTime, endTime }
+                    modelName: model.name,
+                    timing: { startTime, firstTokenTime, endTime },
                 }]);
-            } catch (error: any) {
-                const endTime = Date.now();
-                if (error.name !== 'AbortError') {
-                    // Error - add error message with timing
+            } catch (err: any) {
+                if (err.name !== 'AbortError') {
                     setMessages(prev => [...prev, {
-                        role: 'assistant' as const,
-                        content: error.message,
-                        modelName: model.name,
+                        role: 'assistant',
+                        content: err.message || 'Request failed',
                         modelId,
+                        modelName: model.name,
                         error: true,
-                        timing: { startTime, firstTokenTime, endTime }
                     }]);
                 }
             } finally {
                 abortRefs.current.delete(modelId);
                 setStreamingResponses(prev => {
-                    const next = new Map(prev);
-                    next.delete(modelId);
-                    return next;
-                });
-                setStreamingTiming(prev => {
-                    const next = new Map(prev);
-                    next.delete(modelId);
-                    return next;
+                    const newMap = new Map(prev);
+                    newMap.delete(modelId);
+                    return newMap;
                 });
                 completedCount++;
                 if (completedCount === totalCount) setIsGenerating(false);
             }
         });
 
-        await Promise.all(streamPromises);
-    };
+        await Promise.allSettled(streamPromises);
+    }, [isGenerating, selectedModels, messages, models, githubToken, openrouterKey, uiBuilderEnabled, setMessages, setIsGenerating]);
 
-    const handleStop = () => {
+    const stopGeneration = useCallback(() => {
         abortRefs.current.forEach(c => c.abort());
         abortRefs.current.clear();
-
-        // Save partial responses with timing
-        const partial: ChatMessage[] = [];
-        const endTime = Date.now();
-        streamingResponses.forEach((content, modelId) => {
-            if (content.trim()) {
-                const model = models.find(m => m.id === modelId);
-                const timing = streamingTiming.get(modelId);
-                partial.push({
-                    role: 'assistant',
-                    content,
-                    modelName: model?.name,
-                    modelId,
-                    timing: timing ? { ...timing, endTime } : undefined
-                });
-            }
-        });
-        if (partial.length > 0) setMessages(prev => [...prev, ...partial]);
-
-        setStreamingResponses(new Map());
-        setStreamingTiming(new Map());
         setIsGenerating(false);
-    };
+    }, [setIsGenerating]);
 
-    const copyResponse = useCallback(async (idx: number) => {
+    const scroll = useCallback((deltaY: number) => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop += deltaY;
+        }
+    }, []);
+
+    useImperativeHandle(ref, () => ({
+        sendMessage: handleSend,
+        setInput: (text: string) => {
+            if (inputRef.current) {
+                inputRef.current.value = text;
+                inputRef.current.focus();
+            }
+        },
+        stopGeneration,
+        scroll,
+    }), [handleSend, stopGeneration, scroll]);
+
+    const copyResponse = (idx: number) => {
         const msg = messages[idx];
-        if (!msg) return;
-        try {
-            await navigator.clipboard.writeText(msg.content);
+        if (msg && msg.role === 'assistant') {
+            navigator.clipboard.writeText(msg.content);
             setCopiedMessageId(`${idx}`);
             setTimeout(() => setCopiedMessageId(null), 2000);
-        } catch (e) { console.error('Copy failed', e); }
-    }, [messages]);
+        }
+    };
 
-    const placeholder = selectedModels.size === 0
-        ? "Select models to start..."
-        : selectedModels.size === 1
-            ? `Message ${models.find(m => m.id === Array.from(selectedModels)[0])?.name || 'model'}...`
-            : `Message ${selectedModels.size} models...`;
+    // UI Builder toggle button
+    const UiBuilderToggle = ({ compact = false }: { compact?: boolean }) => (
+        <button
+            onClick={() => setUiBuilderEnabled(!uiBuilderEnabled)}
+            className={`flex items-center gap-1.5 rounded-md transition-all active:scale-95 font-medium ${
+                compact ? 'h-6 px-2 text-[11px]' : 'h-7 px-2.5 text-xs'
+            } ${
+                uiBuilderEnabled
+                    ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                    : 'bg-slate-800/60 text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
+            }`}
+            title="Enable interactive UI elements in responses"
+        >
+            <Puzzle size={compact ? 11 : 12} />
+            <span>UI Builder</span>
+        </button>
+    );
 
     return (
-        <div className="flex flex-col h-full relative">
-            {/* Messages */}
+        <div className="flex flex-col h-full w-full relative">
+            {/* Scrollable messages area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-scroll p-4 pb-40 chat-scroll"
-                style={{ WebkitOverflowScrolling: 'touch' }}
-                data-no-arena-scroll
+                className="flex-1 overflow-y-auto px-4 py-6 space-y-4"
+                style={{ paddingBottom: messages.length > 0 ? '160px' : '80px' }}
             >
-                <div className="mx-auto max-w-2xl space-y-4">
-                    {/* Empty state with robot icon and model selector */}
+                <div className="max-w-3xl mx-auto space-y-4">
+                    {/* Empty state - centered vertically */}
                     {messages.length === 0 && (
-                        <div className="flex-1 flex flex-col items-center text-slate-500 select-none pt-[15vh]">
-                            {isMiddleFinger ? (
-                                <div className="mb-6 relative">
-                                    <div className="absolute inset-0 bg-red-500 blur-xl opacity-50 rounded-full" />
-                                    <Bot size={72} className="relative text-red-500" />
-                                    <div className="absolute -top-2 -right-2 text-3xl">💢</div>
-                                </div>
-                            ) : (
-                                <Bot size={72} className="mb-6 opacity-50 transition-all duration-300" />
-                            )}
+                        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+                            <div className="relative">
+                                <Bot size={48} className={`transition-colors ${isMiddleFinger ? 'text-red-500' : 'text-slate-500'}`} />
+                                {isMiddleFinger && (
+                                    <Frown size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-400" />
+                                )}
+                            </div>
+                            <p className="text-slate-500 text-sm">Select models and start chatting</p>
                             <ModelTabs
                                 models={models}
                                 selectedModels={selectedModels}
@@ -485,19 +347,12 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 openrouterKey={openrouterKey}
                                 dropDirection="down"
                             />
-                            <SystemPresetDropdown
-                                systemPreset={systemPreset}
-                                setSystemPreset={setSystemPreset}
-                                showDropdown={showPresetDropdown}
-                                setShowDropdown={setShowPresetDropdown}
-                                dropdownRef={presetDropdownRef}
-                                direction="down"
-                            />
+                            <UiBuilderToggle />
                         </div>
                     )}
 
                     {messages.map((msg, idx) => {
-                        const hasGestureOptions = msg.role === 'assistant' && (gesturesActive || systemPreset === 'ui_builder') && msg.content.includes('```json');
+                        const hasGestureOptions = msg.role === 'assistant' && (gesturesActive || uiBuilderEnabled) && msg.content.includes('```json');
                         return (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`group relative max-w-[85%] rounded-2xl px-4 py-3 ${
@@ -578,46 +433,22 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 </div>
             </div>
 
-            {/* Bottom area: Model selector (when messages) + Input */}
+            {/* Bottom area: Input */}
             <div className="fixed bottom-0 left-0 right-0 z-[99] flex flex-col items-center gap-2 px-4 pb-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
-                {messages.length > 0 && (
-                    <div className="flex flex-col items-center gap-2">
-                        <SystemPresetDropdown
-                            systemPreset={systemPreset}
-                            setSystemPreset={setSystemPreset}
-                            showDropdown={showPresetDropdown}
-                            setShowDropdown={setShowPresetDropdown}
-                            dropdownRef={presetDropdownRef}
-                            direction="up"
-                            compact
-                        />
-                        <div className="relative z-[101] isolate">
-                            <ModelTabs
-                                models={models}
-                                selectedModels={selectedModels}
-                                onToggleModel={onToggleModel}
-                                isGenerating={isGenerating}
-                                githubToken={githubToken}
-                                openrouterKey={openrouterKey}
-                                dropDirection="up"
-                            />
-                        </div>
-                    </div>
-                )}
                 <PromptInput
                     inputRef={inputRef}
                     inputFocused={inputFocused}
                     setInputFocused={setInputFocused}
                     onSendMessage={handleSend}
-                    placeholder={placeholder}
-                    isGenerating={isGenerating}
-                    onStop={handleStop}
-                    className="w-full flex justify-center"
-                    style={{}}
+                    isGenerating={isGenerating || selectedModels.size === 0}
+                    onStop={stopGeneration}
+                    placeholder={selectedModels.size === 0 ? "Select a model above..." : "Type a message..."}
                 />
             </div>
         </div>
     );
 });
+
+ChatView.displayName = 'ChatView';
 
 export default ChatView;

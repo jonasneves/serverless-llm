@@ -1049,25 +1049,16 @@ function PlaygroundInner() {
        * This is controlled by GestureControl (in Header) via GestureContext.
        * Renders BEHIND UI elements with glass-like effect.
        */}
-      {gestureCtx.isActive && !gestureCtx.mouseSimulation && (
+      {gestureCtx.isActive && (
         <Suspense fallback={null}>
           <HandBackground
-            onStopGeneration={gestureCtx.callbacks.current.onStopGeneration}
             onSendMessage={gestureCtx.callbacks.current.onSendMessage}
             onScroll={gestureCtx.callbacks.current.onScroll}
             onPinch={gestureCtx.callbacks.current.onPinch}
             onHover={gestureCtx.callbacks.current.onHover}
-            onModeChange={gestureCtx.callbacks.current.onModeChange}
-            config={gestureCtx.gestureConfig}
-            appContext={gestureCtx.appContext}
-            // Restrict message gestures (thumbs up/down, wave, etc.) to the transcript panel area
-            // Panel is 400px (xl: 480px) on the right side - approximate as rightmost 30% of screen
             gestureActiveArea={{ minX: 0.70, maxX: 1.0, minY: 0, maxY: 1.0 }}
-            // Feedback callbacks - write to context for GestureControl UI
             onGestureState={gestureCtx.setGestureState}
             onError={gestureCtx.setCameraError}
-            onDebugInfo={gestureCtx.setDebugInfo}
-            onLandmarkData={gestureCtx.setLandmarkData}
             onPerformance={gestureCtx.setPerformanceMetrics}
           />
         </Suspense>
