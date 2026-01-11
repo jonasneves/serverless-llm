@@ -324,7 +324,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             {/* Scrollable messages area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto px-4 py-6 space-y-4"
+                data-no-arena-scroll
+                className="flex-1 overflow-y-auto px-4 py-6 space-y-4 chat-scroll"
                 style={{ paddingBottom: messages.length > 0 ? '160px' : '80px' }}
             >
                 <div className="max-w-3xl mx-auto space-y-4">
