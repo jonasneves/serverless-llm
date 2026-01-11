@@ -69,57 +69,31 @@ dev-interface-local:
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
 	cd app/chat/backend && BASE_DOMAIN= PYTHONPATH=../../..:$$PYTHONPATH ../../../venv/bin/python chat_server.py
 
-dev-qwen:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/qwen-inference && PORT=8100 ../../venv/bin/python inference_server.py
+# Model configuration: name -> directory:port
+MODEL_DIR_qwen     := qwen-inference:8100
+MODEL_DIR_phi      := phi-inference:8101
+MODEL_DIR_gemma    := gemma-inference:8200
+MODEL_DIR_llama    := llama-inference:8201
+MODEL_DIR_mistral  := mistral-inference:8202
+MODEL_DIR_rnj      := rnj-inference:8203
+MODEL_DIR_r1qwen   := deepseek-r1qwen-inference:8300
+MODEL_DIR_functiongemma := functiongemma-inference:8103
+MODEL_DIR_smollm3  := smollm3-inference:8104
+MODEL_DIR_lfm2     := lfm2-inference:8105
+MODEL_DIR_nanbeige := nanbeige-inference:8301
+MODEL_DIR_nemotron := nemotron-inference:8302
+MODEL_DIR_gptoss   := gpt-oss-inference:8303
 
-dev-phi:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/phi-inference && PORT=8101 ../../venv/bin/python inference_server.py
+INFERENCE_MODELS := qwen phi gemma llama mistral rnj r1qwen functiongemma smollm3 lfm2 nanbeige nemotron gptoss
 
-dev-gemma:
+# Pattern rule for dev-MODEL targets
+$(addprefix dev-,$(INFERENCE_MODELS)):
 	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/gemma-inference && PORT=8200 ../../venv/bin/python inference_server.py
-
-dev-llama:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/llama-inference && PORT=8201 ../../venv/bin/python inference_server.py
-
-dev-mistral:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/mistral-inference && PORT=8202 ../../venv/bin/python inference_server.py
-
-dev-rnj:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/rnj-inference && PORT=8203 ../../venv/bin/python inference_server.py
-
-dev-r1qwen:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/deepseek-r1qwen-inference && PORT=8300 ../../venv/bin/python inference_server.py
-
-dev-functiongemma:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/functiongemma-inference && PORT=8103 ../../venv/bin/python inference_server.py
-
-dev-smollm3:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/smollm3-inference && PORT=8104 ../../venv/bin/python inference_server.py
-
-dev-lfm2:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/lfm2-inference && PORT=8105 ../../venv/bin/python inference_server.py
-
-dev-nanbeige:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/nanbeige-inference && PORT=8301 ../../venv/bin/python inference_server.py
-
-dev-nemotron:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/nemotron-inference && PORT=8302 ../../venv/bin/python inference_server.py
-
-dev-gptoss:
-	@[ -d venv ] || { echo "Run 'make install' first"; exit 1; }
-	cd app/gpt-oss-inference && PORT=8303 ../../venv/bin/python inference_server.py
+	$(eval MODEL := $(subst dev-,,$@))
+	$(eval CONFIG := $(MODEL_DIR_$(MODEL)))
+	$(eval DIR := $(word 1,$(subst :, ,$(CONFIG))))
+	$(eval PORT := $(word 2,$(subst :, ,$(CONFIG))))
+	cd app/$(DIR) && PORT=$(PORT) ../../venv/bin/python inference_server.py
 
 # =============================================================================
 # Docker

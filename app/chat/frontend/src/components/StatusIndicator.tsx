@@ -1,3 +1,5 @@
+import { appendAlpha } from '../utils/color';
+
 type StatusIndicatorState = 'idle' | 'responding' | 'done' | 'waiting' | 'error';
 
 interface StatusIndicatorProps {
@@ -7,14 +9,6 @@ interface StatusIndicatorProps {
   label?: string;
   className?: string;
 }
-
-const appendAlpha = (value: string, alpha: string) => {
-  if (!value || !value.startsWith('#')) return value;
-  if (value.length === 7 || value.length === 4) {
-    return `${value}${alpha}`;
-  }
-  return value;
-};
 
 const defaultLabels: Record<StatusIndicatorState, string> = {
   idle: 'Ready',

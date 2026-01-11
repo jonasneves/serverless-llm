@@ -2,9 +2,57 @@
 Shared streaming utilities for SSE (Server-Sent Events) responses
 """
 
+import json
+import logging
 import asyncio
 from fastapi.responses import StreamingResponse
-from typing import AsyncGenerator, List, Any
+from typing import AsyncGenerator, List, Any, Optional, Callable, Awaitable
+
+logger = logging.getLogger(__name__)
+
+
+async def stream_engine_events(
+    engine_class: type,
+    run_method: str,
+    participants: List[str],
+    run_kwargs: dict,
+    github_token: Optional[str] = None,
+    openrouter_key: Optional[str] = None,
+) -> AsyncGenerator[str, None]:
+    """
+    Generic SSE streaming factory for engine-based modes (analyze, debate).
+
+    Args:
+        engine_class: Engine class to instantiate (AnalyzeEngine, DebateEngine)
+        run_method: Name of the run method on the engine (e.g., "run_analyze", "run_debate")
+        participants: List of model IDs
+        run_kwargs: Kwargs to pass to the run method
+        github_token: GitHub token for API models
+        openrouter_key: OpenRouter API key
+
+    Yields:
+        SSE-formatted event strings
+    """
+    try:
+        from core.config import MODEL_ENDPOINTS
+
+        if not participants:
+            yield f"data: {json.dumps({'event': 'error', 'error': 'No participants selected'})}\n\n"
+            return
+
+        engine = engine_class(
+            model_endpoints=MODEL_ENDPOINTS,
+            github_token=github_token,
+            openrouter_key=openrouter_key
+        )
+
+        method = getattr(engine, run_method)
+        async for event in method(participants=participants, **run_kwargs):
+            yield f"data: {json.dumps({'event': event['type'], **event})}\n\n"
+
+    except Exception as e:
+        logger.error(f"Engine streaming error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'event': 'error', 'error': str(e)})}\n\n"
 
 
 def create_sse_response(event_generator: AsyncGenerator) -> StreamingResponse:

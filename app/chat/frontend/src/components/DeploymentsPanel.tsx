@@ -5,6 +5,7 @@ import DeployPanel from './DeployPanel';
 import ObservePanel from './ObservePanel';
 import StatusRing from './StatusRing';
 import CategoryHeader from './CategoryHeader';
+import TabButtons from './TabButtons';
 import {
     SERVICES,
     WORKFLOWS,
@@ -551,35 +552,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                         deploymentUrl={chatApp.deploymentUrl}
                         defaultExpanded={false}
                     >
-                        <div className="flex gap-1 mb-3 bg-slate-900/40 p-1 rounded-lg">
-                            <button
-                                onClick={() => setActiveTab(chatApp.id, 'build')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTabs[chatApp.id] === 'build'
-                                    ? 'bg-slate-700/60 text-white'
-                                    : 'text-slate-400 hover:text-slate-200'
-                                    }`}
-                            >
-                                Build
-                            </button>
-                            <button
-                                onClick={() => setActiveTab(chatApp.id, 'deploy')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTabs[chatApp.id] === 'deploy'
-                                    ? 'bg-slate-700/60 text-white'
-                                    : 'text-slate-400 hover:text-slate-200'
-                                    }`}
-                            >
-                                Deploy
-                            </button>
-                            <button
-                                onClick={() => setActiveTab(chatApp.id, 'observe')}
-                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTabs[chatApp.id] === 'observe'
-                                    ? 'bg-slate-700/60 text-white'
-                                    : 'text-slate-400 hover:text-slate-200'
-                                    }`}
-                            >
-                                Observe
-                            </button>
-                        </div>
+                        <TabButtons
+                            activeTab={activeTabs[chatApp.id]}
+                            onTabChange={(tab) => setActiveTab(chatApp.id, tab)}
+                        />
 
                         {activeTabs[chatApp.id] === 'build' && (
                             <BuildPanel
@@ -660,35 +636,10 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                     deploymentUrl={app.deploymentUrl}
                                     defaultExpanded={false}
                                 >
-                                    <div className="flex gap-1 mb-3 bg-slate-900/40 p-1 rounded-lg">
-                                        <button
-                                            onClick={() => setActiveTab(app.id, 'build')}
-                                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'build'
-                                                ? 'bg-slate-700/60 text-white'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                                }`}
-                                        >
-                                            Build
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab(app.id, 'deploy')}
-                                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'deploy'
-                                                ? 'bg-slate-700/60 text-white'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                                }`}
-                                        >
-                                            Deploy
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab(app.id, 'observe')}
-                                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'observe'
-                                                ? 'bg-slate-700/60 text-white'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                                }`}
-                                        >
-                                            Observe
-                                        </button>
-                                    </div>
+                                    <TabButtons
+                                        activeTab={activeTab}
+                                        onTabChange={(tab) => setActiveTab(app.id, tab)}
+                                    />
 
                                     {activeTab === 'build' && (
                                         <BuildPanel
