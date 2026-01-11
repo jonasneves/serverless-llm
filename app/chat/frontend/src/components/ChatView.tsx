@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallba
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Check, Copy, Puzzle, Frown } from 'lucide-react';
+import { Bot, AlertTriangle, User, Check, Copy, Puzzle } from 'lucide-react';
 import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
 import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
@@ -331,12 +331,15 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     {/* Empty state - centered vertically */}
                     {messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-                            <div className="relative">
-                                <Bot size={48} className={`transition-colors ${isMiddleFinger ? 'text-red-500' : 'text-slate-500'}`} />
-                                {isMiddleFinger && (
-                                    <Frown size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-400" />
-                                )}
-                            </div>
+                            {isMiddleFinger ? (
+                                <div className="mb-2 relative">
+                                    <div className="absolute inset-0 bg-red-500 blur-xl opacity-50 rounded-full" />
+                                    <Bot size={72} className="relative text-red-500" />
+                                    <div className="absolute -top-2 -right-2 text-3xl">💢</div>
+                                </div>
+                            ) : (
+                                <Bot size={72} className="mb-2 text-slate-500 transition-all duration-300" />
+                            )}
                             <p className="text-slate-500 text-sm">Select models and start chatting</p>
                             <ModelTabs
                                 models={models}
