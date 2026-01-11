@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
     FilesetResolver,
-    HandLandmarker,
     GestureRecognizer,
     GestureRecognizerResult
 } from '@mediapipe/tasks-vision';
-import { GestureEstimator } from 'fingerpose';
-import ASL_ALL_GESTURES, { isControlGesture } from '../gestures/aslAlphabet';
-
-// Gesture mode types
-export type GestureMode = 'navigation' | 'asl';
 
 interface GestureConfig {
     twoFingerTapWindow: number;
@@ -40,13 +34,6 @@ interface PerformanceMetrics {
     detectionTime: number;
 }
 
-// ASL recognition result
-interface ASLResult {
-    letter: string | null;
-    confidence: number;
-    allGestures: Array<{ name: string; score: number }>;
-}
-
 interface HandBackgroundProps {
     onStopGeneration?: () => void;
     onSendMessage?: (msg: string) => void;
@@ -54,19 +41,16 @@ interface HandBackgroundProps {
     onPinch?: (x: number, y: number) => void;
     onHover?: (x: number, y: number) => void;
     onModeChange?: (direction: 'prev' | 'next') => void;
-    onGestureModeToggle?: () => void; // Toggle between Navigation and ASL modes
     onGestureState?: (state: {
         gesture: string | null;
         progress: number;
         triggered: boolean;
     }) => void;
-    onASLResult?: (result: ASLResult) => void;
     onError?: (message: string) => void;
     config?: GestureConfig;
     onDebugInfo?: (info: DebugInfo) => void;
     onLandmarkData?: (data: LandmarkData) => void;
     onPerformance?: (metrics: PerformanceMetrics) => void;
-    mode?: GestureMode;
     appContext?: 'chat' | 'compare' | 'analyze' | 'debate';
     // Restrict message gestures (thumbs up/down, etc.) to only work within this area
     // Values are normalized 0-1 representing screen position
@@ -109,15 +93,12 @@ export default function HandBackground({
     onPinch,
     onHover,
     onModeChange,
-    onGestureModeToggle,
     onGestureState,
-    onASLResult,
     onError,
     config = DEFAULT_CONFIG,
     onDebugInfo,
     onLandmarkData,
     onPerformance,
-    mode = 'navigation',
     appContext = 'chat',
     gestureActiveArea
 }: HandBackgroundProps) {
@@ -128,14 +109,11 @@ export default function HandBackground({
     const onPinchRef = useRef(onPinch);
     const onHoverRef = useRef(onHover);
     const onModeChangeRef = useRef(onModeChange);
-    const onGestureModeToggleRef = useRef(onGestureModeToggle);
     const onGestureStateRef = useRef(onGestureState);
-    const onASLResultRef = useRef(onASLResult);
     const onDebugInfoRef = useRef(onDebugInfo);
     const onLandmarkDataRef = useRef(onLandmarkData);
     const onPerformanceRef = useRef(onPerformance);
     const configRef = useRef(config);
-    const modeRef = useRef(mode);
     const appContextRef = useRef(appContext);
     const gestureActiveAreaRef = useRef(gestureActiveArea);
 
@@ -146,14 +124,11 @@ export default function HandBackground({
     onPinchRef.current = onPinch;
     onHoverRef.current = onHover;
     onModeChangeRef.current = onModeChange;
-    onGestureModeToggleRef.current = onGestureModeToggle;
     onGestureStateRef.current = onGestureState;
-    onASLResultRef.current = onASLResult;
     onDebugInfoRef.current = onDebugInfo;
     onLandmarkDataRef.current = onLandmarkData;
     onPerformanceRef.current = onPerformance;
     configRef.current = config;
-    modeRef.current = mode;
     appContextRef.current = appContext;
     gestureActiveAreaRef.current = gestureActiveArea;
     const onErrorRef = useRef(onError);
@@ -170,12 +145,8 @@ export default function HandBackground({
     const requestRef = useRef<number>();
 
     // MediaPipe refs
-    const handLandmarkerRef = useRef<HandLandmarker | null>(null);
     const gestureRecognizerRef = useRef<GestureRecognizer | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
-
-    // Fingerpose ASL estimator
-    const aslEstimatorRef = useRef<GestureEstimator | null>(null);
 
     // Floating cursor refs
     const cursorRef = useRef<HTMLDivElement>(null);
@@ -209,14 +180,6 @@ const handStates = useRef<Map<number, {
         middleFingerActive: boolean;
     }>>(new Map());
 
-    // ASL mode state
-    const aslBuffer = useRef<string[]>([]);
-    const lastASLLetter = useRef<string | null>(null);
-    const aslLetterConfirmFrames = useRef<number>(0);
-    const lastASLGestureTime = useRef<number>(0); // For cooldown mechanism
-    const COOLDOWN_MS = 800; // Cooldown time in ms to prevent repeated letters
-    const ASL_CONFIRM_THRESHOLD = 12; // Increased frames to confirm a letter (was 10)
-
     // Adaptive persistence thresholds based on gesture complexity
     const getAdaptivePersistenceThreshold = useCallback((gestureName: string) => {
         // Complex gestures need more persistence (higher threshold)
@@ -234,22 +197,22 @@ const handStates = useRef<Map<number, {
 
     // Function to determine if a gesture should be processed based on app context
     const shouldProcessGesture = useCallback((gestureName: string, context: string) => {
-        // ASL control gestures (like SEND, CLEAR, etc.) should work in all contexts
+        // Mode change gestures should work in all contexts
         if (['PREV_MODE', 'NEXT_MODE'].includes(gestureName)) {
             return true;
         }
 
         switch (context) {
             case 'chat':
-                // In chat mode, allow all navigation and ASL gestures
+                // In chat mode, allow all navigation gestures
                 return true;
             case 'compare':
-                // In compare mode, focus on navigation gestures, limit ASL
-                return !gestureName.startsWith('ASL');
+                // In compare mode, focus on navigation gestures
+                return true;
             case 'analyze':
             case 'debate':
                 // In discussion modes, allow navigation and key control gestures
-                return true;  // Allow all for now, can be refined based on specific needs
+                return true;
             default:
                 return true; // Default behavior
         }
@@ -298,10 +261,9 @@ const handStates = useRef<Map<number, {
         return gesturePersistence.current.get(index)!;
     }, []);
 
-    // Initialize MediaPipe and fingerpose
+    // Initialize MediaPipe
     useEffect(() => {
         let gestureRecognizer: GestureRecognizer | null = null;
-        let handLandmarker: HandLandmarker | null = null;
 
         const init = async () => {
             try {
@@ -315,10 +277,6 @@ const handStates = useRef<Map<number, {
                 const gestureModelPath = isExtension
                     ? '/mediapipe/gesture_recognizer.task'
                     : 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
-
-                const handLandmarkerPath = isExtension
-                    ? '/mediapipe/hand_landmarker.task'
-                    : 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
                 const vision = await FilesetResolver.forVisionTasks(wasmPath);
 
@@ -336,23 +294,6 @@ const handStates = useRef<Map<number, {
                 });
                 gestureRecognizerRef.current = gestureRecognizer;
 
-                // Also initialize HandLandmarker for ASL mode (fingerpose needs landmarks)
-                handLandmarker = await HandLandmarker.createFromOptions(vision, {
-                    baseOptions: {
-                        modelAssetPath: handLandmarkerPath,
-                        delegate: "GPU"
-                    },
-                    runningMode: "VIDEO",
-                    numHands: 2,
-                    minHandDetectionConfidence: 0.5,
-                    minHandPresenceConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                });
-                handLandmarkerRef.current = handLandmarker;
-
-                // Initialize fingerpose ASL estimator with letters + control gestures
-                aslEstimatorRef.current = new GestureEstimator(ASL_ALL_GESTURES);
-
                 // Create downscale canvas for performance (320x240)
                 const downscaleCanvas = document.createElement('canvas');
                 downscaleCanvas.width = 320;
@@ -369,13 +310,10 @@ const handStates = useRef<Map<number, {
                     warmupCtx.fillRect(0, 0, 1, 1);
                 }
 
-                // Warm up both models
+                // Warm up the model
                 try {
                     if (gestureRecognizer) {
                         gestureRecognizer.recognizeForVideo(warmupCanvas, 0);
-                    }
-                    if (handLandmarker) {
-                        handLandmarker.detectForVideo(warmupCanvas, 0);
                     }
                 } catch (e) {
                     // Warm-up errors are expected and can be ignored
@@ -392,9 +330,6 @@ const handStates = useRef<Map<number, {
         return () => {
             if (gestureRecognizerRef.current) {
                 gestureRecognizerRef.current.close();
-            }
-            if (handLandmarkerRef.current) {
-                handLandmarkerRef.current.close();
             }
         };
     }, []);
@@ -691,135 +626,19 @@ const handStates = useRef<Map<number, {
 
 
         return gestureName;
-    }, [getHandState, getPersistence, shouldProcessGesture]);
-
-    // Process ASL gestures using fingerpose
-    const processASLGestures = useCallback((
-        landmarks: Array<{ x: number; y: number; z: number }>,
-        now: number
-    ) => {
-        if (!aslEstimatorRef.current || !landmarks) return null;
-
-        // Convert landmarks to the format fingerpose expects
-        const fpLandmarks = landmarks.map(l => [l.x, l.y, l.z] as [number, number, number]);
-
-        // Estimate gesture with minimum confidence of 7.5 (out of 10)
-        const result = aslEstimatorRef.current.estimate(fpLandmarks, 7.5);
-
-        if (result.gestures.length > 0) {
-            // Sort by score and get top gesture
-            const sorted = result.gestures.sort((a, b) => b.score - a.score);
-            const topGesture = sorted[0];
-
-            // Check if this gesture should be processed in the current context
-            const currentContext = appContextRef.current;
-            if (!shouldProcessGesture(topGesture.name, currentContext)) {
-                // Still update visual state to show the gesture was detected but not processed
-                if (onGestureStateRef.current) {
-                    onGestureStateRef.current({
-                        gesture: isControlGesture(topGesture.name) ? `ACTION: ${topGesture.name}` : `ASL: ${topGesture.name}`,
-                        progress: 0,
-                        triggered: false
-                    });
-                }
-                return null;
-            }
-
-            // Check cooldown period to prevent repeated letters
-            const isOnCooldown = lastASLGestureTime.current !== 0 &&
-                (now - lastASLGestureTime.current) < COOLDOWN_MS &&
-                !isControlGesture(topGesture.name) &&
-                topGesture.name === lastASLLetter.current;
-
-            // Update confirmation frames only if not on cooldown
-            if (!isOnCooldown) {
-                if (topGesture.name === lastASLLetter.current) {
-                    aslLetterConfirmFrames.current++;
-                } else {
-                    // Reset and start tracking new gesture
-                    lastASLLetter.current = topGesture.name;
-                    aslLetterConfirmFrames.current = 1;
-                }
-            }
-
-            const aslResult: ASLResult = {
-                letter: topGesture.name,
-                confidence: topGesture.score / 10,
-                allGestures: sorted
-            };
-
-            // Emit result
-            if (onASLResultRef.current) {
-                onASLResultRef.current(aslResult);
-            }
-
-            // Report to gesture state for visual feedback
-            // Handle letters vs control gestures differently
-            if (onGestureStateRef.current) {
-                const progress = Math.min(1, aslLetterConfirmFrames.current / ASL_CONFIRM_THRESHOLD);
-                const triggered = aslLetterConfirmFrames.current >= ASL_CONFIRM_THRESHOLD && !isOnCooldown;
-
-                if (triggered) {
-                    // Update the last gesture time to implement cooldown
-                    lastASLGestureTime.current = now;
-                    aslLetterConfirmFrames.current = 0;
-
-                    if (isControlGesture(topGesture.name)) {
-                        // Handle control gestures - these are actions, not letters
-                        if (topGesture.name === 'PREV_MODE' && onModeChangeRef.current) {
-                            onModeChangeRef.current('prev');
-                        } else if (topGesture.name === 'NEXT_MODE' && onModeChangeRef.current) {
-                            onModeChangeRef.current('next');
-                        }
-                        // GestureControl will handle SEND, CLEAR, SPACE, BACKSPACE
-                    } else {
-                        // Regular letter - add to internal buffer
-                        aslBuffer.current.push(topGesture.name);
-                    }
-                }
-
-                // Prefix control gestures differently for the UI
-                const gestureLabel = isControlGesture(topGesture.name)
-                    ? `ACTION: ${topGesture.name}`
-                    : `ASL: ${topGesture.name}`;
-
-                onGestureStateRef.current({
-                    gesture: gestureLabel,
-                    progress,
-                    triggered
-                });
-            }
-
-            return topGesture.name;
-        }
-
-        // No gesture detected
-        lastASLLetter.current = null;
-        aslLetterConfirmFrames.current = 0;
-
-        if (onGestureStateRef.current) {
-            onGestureStateRef.current({ gesture: null, progress: 0, triggered: false });
-        }
-
-        return null;
-    }, [shouldProcessGesture]);
+    }, [getHandState, getPersistence, shouldProcessGesture, getAdaptivePersistenceThreshold, isInActiveArea]);
 
     const draw = useCallback(() => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        const currentMode = modeRef.current;
 
         if (!video || !canvas) {
             requestRef.current = requestAnimationFrame(draw);
             return;
         }
 
-        // Check we have the right recognizer for the mode
-        if (currentMode === 'navigation' && !gestureRecognizerRef.current) {
-            requestRef.current = requestAnimationFrame(draw);
-            return;
-        }
-        if (currentMode === 'asl' && !handLandmarkerRef.current) {
+        // Check we have the recognizer
+        if (!gestureRecognizerRef.current) {
             requestRef.current = requestAnimationFrame(draw);
             return;
         }
@@ -860,62 +679,31 @@ const handStates = useRef<Map<number, {
 
         let landmarks: Array<Array<{ x: number; y: number; z: number }>> = [];
         let gesture: string | null = null;
-        let gestureDetected = false;
 
-        if (currentMode === 'navigation' && gestureRecognizerRef.current) {
-            // Use GestureRecognizer for navigation
-            const result = gestureRecognizerRef.current.recognizeForVideo(detectionSource, startTimeMs);
+        // Use GestureRecognizer for navigation
+        const result = gestureRecognizerRef.current.recognizeForVideo(detectionSource, startTimeMs);
 
-            if (result.landmarks) {
-                landmarks = result.landmarks.map(hand =>
-                    hand.map(l => ({ x: l.x, y: l.y, z: l.z }))
-                );
+        if (result.landmarks) {
+            landmarks = result.landmarks.map(hand =>
+                hand.map(l => ({ x: l.x, y: l.y, z: l.z }))
+            );
+        }
+
+        // Process gestures for each hand
+        for (let i = 0; i < (result.landmarks?.length || 0); i++) {
+            const processedGesture = processNavigationGestures(result, startTimeMs, i);
+            if (processedGesture) {
+                gesture = processedGesture;
             }
+        }
 
-            // Process gestures for each hand
-            for (let i = 0; i < (result.landmarks?.length || 0); i++) {
-                const processedGesture = processNavigationGestures(result, startTimeMs, i);
-                if (processedGesture) {
-                    gesture = processedGesture;
-                    gestureDetected = true;
-                }
-            }
-
-            // Emit landmark data for debug
-            if (onLandmarkDataRef.current && landmarks[0]) {
-                const handedness = result.handednesses?.[0]?.[0]?.categoryName as 'Left' | 'Right' | undefined;
-                onLandmarkDataRef.current({
-                    landmarks: landmarks[0],
-                    handedness: handedness ?? null
-                });
-            }
-        } else if (currentMode === 'asl' && handLandmarkerRef.current) {
-            // Use HandLandmarker + fingerpose for ASL
-            const result = handLandmarkerRef.current.detectForVideo(detectionSource, startTimeMs);
-
-            if (result.landmarks) {
-                landmarks = result.landmarks.map(hand =>
-                    hand.map(l => ({ x: l.x, y: l.y, z: l.z }))
-                );
-
-                // Process ASL for first hand
-                if (landmarks[0]) {
-                    const processedGesture = processASLGestures(landmarks[0], startTimeMs);
-                    if (processedGesture) {
-                        gesture = processedGesture;
-                        gestureDetected = true;
-                    }
-                }
-
-                // Emit landmark data for debug
-                if (onLandmarkDataRef.current) {
-                    const handedness = result.handednesses?.[0]?.[0]?.categoryName as 'Left' | 'Right' | undefined;
-                    onLandmarkDataRef.current({
-                        landmarks: landmarks[0],
-                        handedness: handedness ?? null
-                    });
-                }
-            }
+        // Emit landmark data for debug
+        if (onLandmarkDataRef.current && landmarks[0]) {
+            const handedness = result.handednesses?.[0]?.[0]?.categoryName as 'Left' | 'Right' | undefined;
+            onLandmarkDataRef.current({
+                landmarks: landmarks[0],
+                handedness: handedness ?? null
+            });
         }
 
         const detectionTime = Math.round(performance.now() - startTimeMs);
@@ -947,47 +735,33 @@ const handStates = useRef<Map<number, {
         // Draw hands
         if (landmarks.length > 0) {
             for (const hand of landmarks) {
-                // Dynamic color based on mode and gesture with enhanced feedback
-                let mainColor = currentMode === 'asl' ? '#10b981' : '#3b82f6'; // Green for ASL, Blue for nav
-                let glowColor = currentMode === 'asl' ? '#6ee7b7' : '#60a5fa';
+                // Dynamic color based on gesture with enhanced feedback
+                let mainColor = '#3b82f6'; // Blue for navigation
+                let glowColor = '#60a5fa';
 
                 // Enhanced color coding based on gesture recognition state
                 if (gesture) {
-                    if (currentMode === 'asl') {
-                        // In ASL mode, differentiate between letters and control gestures
-                        if (gesture.startsWith('ASL:')) {
-                            mainColor = '#10b981'; // Green for valid letters
-                            glowColor = '#6ee7b7';
-                        } else if (gesture.startsWith('ACTION:')) {
-                            mainColor = '#8b5cf6'; // Purple for control actions
-                            glowColor = '#c4b5fd';
-                        } else {
-                            mainColor = '#10b981';
-                            glowColor = '#6ee7b7';
-                        }
-                    } else { // Navigation mode
-                        if (gesture === 'Pointing_Up' || gesture === 'POINTING') {
-                            mainColor = '#06b6d4'; // Cyan for pointing
-                            glowColor = '#67e8f9';
-                        } else if (gesture === 'Thumb_Up' || gesture === 'THUMBS_UP') {
-                            mainColor = '#22c55e'; // Green for positive
-                            glowColor = '#86efac';
-                        } else if (gesture === 'Thumb_Down' || gesture === 'THUMBS_DOWN') {
-                            mainColor = '#f97316'; // Orange for negative
-                            glowColor = '#fdba74';
-                        } else if (gesture === 'Closed_Fist' || gesture === 'FIST') {
-                            mainColor = '#a855f7'; // Purple for scroll
-                            glowColor = '#d8b4fe';
-                        } else if (gesture === 'Open_Palm' || gesture === 'WAVE') {
-                            mainColor = '#f59e0b'; // Amber for wave
-                            glowColor = '#fcd34d';
-                        } else if (gesture === 'Middle_Finger') {
-                            mainColor = '#ef4444'; // Red
-                            glowColor = '#f87171';
-                        } else {
-                            mainColor = '#3b82f6'; // Default blue
-                            glowColor = '#60a5fa';
-                        }
+                    if (gesture === 'Pointing_Up' || gesture === 'POINTING') {
+                        mainColor = '#06b6d4'; // Cyan for pointing
+                        glowColor = '#67e8f9';
+                    } else if (gesture === 'Thumb_Up' || gesture === 'THUMBS_UP') {
+                        mainColor = '#22c55e'; // Green for positive
+                        glowColor = '#86efac';
+                    } else if (gesture === 'Thumb_Down' || gesture === 'THUMBS_DOWN') {
+                        mainColor = '#f97316'; // Orange for negative
+                        glowColor = '#fdba74';
+                    } else if (gesture === 'Closed_Fist' || gesture === 'FIST') {
+                        mainColor = '#a855f7'; // Purple for scroll
+                        glowColor = '#d8b4fe';
+                    } else if (gesture === 'Open_Palm' || gesture === 'WAVE') {
+                        mainColor = '#f59e0b'; // Amber for wave
+                        glowColor = '#fcd34d';
+                    } else if (gesture === 'Middle_Finger') {
+                        mainColor = '#ef4444'; // Red
+                        glowColor = '#f87171';
+                    } else {
+                        mainColor = '#3b82f6'; // Default blue
+                        glowColor = '#60a5fa';
                     }
                 }
 
@@ -1066,7 +840,7 @@ const handStates = useRef<Map<number, {
         }
 
         requestRef.current = requestAnimationFrame(draw);
-    }, [processNavigationGestures, processASLGestures]);
+    }, [processNavigationGestures]);
 
     // Start camera when loaded
     useEffect(() => {
@@ -1144,11 +918,6 @@ const handStates = useRef<Map<number, {
                 gestureRecognizerRef.current = null;
             }
 
-            if (handLandmarkerRef.current) {
-                handLandmarkerRef.current.close();
-                handLandmarkerRef.current = null;
-            }
-
             // Clean up canvas references
             if (dotsCanvasRef.current) {
                 dotsCanvasRef.current.width = 0;
@@ -1187,36 +956,34 @@ const handStates = useRef<Map<number, {
                 <canvas ref={dotsCanvasRef} className="absolute inset-0 w-full h-full opacity-50 mix-blend-screen" />
             </div>
 
-            {/* Floating cursor (navigation mode only) - ON TOP for click/hover */}
-            {mode === 'navigation' && (
+            {/* Floating cursor - ON TOP for click/hover */}
+            <div
+                ref={cursorRef}
+                className="fixed pointer-events-none z-[9999]"
+                style={{
+                    top: 0,
+                    left: 0,
+                    width: 28,
+                    height: 28,
+                    marginLeft: -14,
+                    marginTop: -14,
+                    borderRadius: '50%',
+                    border: '2px solid rgba(148, 163, 184, 0.7)',
+                    opacity: 0,
+                    boxShadow: '0 0 8px rgba(148, 163, 184, 0.3)',
+                    willChange: 'transform, opacity',
+                }}
+            >
                 <div
-                    ref={cursorRef}
-                    className="fixed pointer-events-none z-[9999]"
+                    ref={cursorInnerRef}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
                     style={{
-                        top: 0,
-                        left: 0,
-                        width: 28,
-                        height: 28,
-                        marginLeft: -14,
-                        marginTop: -14,
-                        borderRadius: '50%',
-                        border: '2px solid rgba(148, 163, 184, 0.7)',
-                        opacity: 0,
-                        boxShadow: '0 0 8px rgba(148, 163, 184, 0.3)',
-                        willChange: 'transform, opacity',
+                        width: 6,
+                        height: 6,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
                     }}
-                >
-                    <div
-                        ref={cursorInnerRef}
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                        style={{
-                            width: 6,
-                            height: 6,
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        }}
-                    />
-                </div>
-            )}
+                />
+            </div>
         </>
     )
 }

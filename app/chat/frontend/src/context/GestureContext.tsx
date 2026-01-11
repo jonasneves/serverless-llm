@@ -13,7 +13,6 @@ import { createContext, useContext, useState, useCallback, ReactNode, useRef } f
  */
 
 // Re-export types from HandBackground for convenience
-export type GestureMode = 'navigation' | 'asl';
 export type AppContext = 'chat' | 'compare' | 'analyze' | 'debate';
 
 export interface GestureConfig {
@@ -51,12 +50,6 @@ export interface GestureState {
   triggered: boolean;
 }
 
-export interface ASLResult {
-  letter: string | null;
-  confidence: number;
-  allGestures: Array<{ name: string; score: number }>;
-}
-
 export interface DebugInfo {
   indexExtended: boolean;
   middleExtended: boolean;
@@ -83,10 +76,6 @@ interface GestureContextValue {
   isActive: boolean;
   setIsActive: (active: boolean) => void;
 
-  // Current mode (navigation vs ASL)
-  gestureMode: GestureMode;
-  setGestureMode: (mode: GestureMode) => void;
-
   // App context (chat, compare, etc.)
   appContext: AppContext;
   setAppContext: (context: AppContext) => void;
@@ -106,8 +95,6 @@ interface GestureContextValue {
   // Feedback state from HandBackground (for GestureControl UI)
   gestureState: GestureState;
   setGestureState: (state: GestureState) => void;
-  aslResult: ASLResult | null;
-  setASLResult: (result: ASLResult | null) => void;
   debugInfo: DebugInfo | undefined;
   setDebugInfo: (info: DebugInfo | undefined) => void;
   landmarkData: LandmarkData | undefined;
@@ -126,7 +113,6 @@ interface GestureProviderProps {
 
 export function GestureProvider({ children }: GestureProviderProps) {
   const [isActive, setIsActive] = useState(false);
-  const [gestureMode, setGestureMode] = useState<GestureMode>('navigation');
   const [appContext, setAppContext] = useState<AppContext>('chat');
   const [gestureConfig, setGestureConfig] = useState<GestureConfig>(DEFAULT_GESTURE_CONFIG);
   const [mouseSimulation, setMouseSimulation] = useState(false);
@@ -140,7 +126,6 @@ export function GestureProvider({ children }: GestureProviderProps) {
 
   // Feedback state from HandBackground
   const [gestureState, setGestureState] = useState<GestureState>({ gesture: null, progress: 0, triggered: false });
-  const [aslResult, setASLResult] = useState<ASLResult | null>(null);
   const [debugInfo, setDebugInfo] = useState<DebugInfo | undefined>(undefined);
   const [landmarkData, setLandmarkData] = useState<LandmarkData | undefined>(undefined);
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | undefined>(undefined);
@@ -149,8 +134,6 @@ export function GestureProvider({ children }: GestureProviderProps) {
   const value: GestureContextValue = {
     isActive,
     setIsActive,
-    gestureMode,
-    setGestureMode,
     appContext,
     setAppContext,
     gestureConfig,
@@ -161,8 +144,6 @@ export function GestureProvider({ children }: GestureProviderProps) {
     setCallbacks,
     gestureState,
     setGestureState,
-    aslResult,
-    setASLResult,
     debugInfo,
     setDebugInfo,
     landmarkData,

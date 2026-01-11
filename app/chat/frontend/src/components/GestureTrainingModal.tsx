@@ -30,34 +30,34 @@ const gestures: Gesture[] = [
   {
     id: 'thumbs_up',
     name: 'Thumbs Up',
-    description: 'Send 👍 emoji message (yes/approve/like)',
+    description: 'Send a positive response message',
     tips: [
       'Make a fist with all fingers except your thumb',
       'Keep your index, middle, ring, and pinky fingers curled',
       'Point your thumb straight up',
-      'Sends 👍 emoji to chat'
+      'Sends positive response to chat'
     ]
   },
   {
     id: 'thumbs_down',
     name: 'Thumbs Down',
-    description: 'Send 👎 emoji message (no/disapprove/dislike)',
+    description: 'Send a negative response message',
     tips: [
       'Make a fist with all fingers except your thumb',
       'Keep your index, middle, ring, and pinky fingers curled',
       'Point your thumb straight down',
-      'Sends 👎 emoji to chat'
+      'Sends negative response to chat'
     ]
   },
   {
     id: 'open_palm',
     name: 'Open Palm',
-    description: 'Send 👋 message (hi/hello/greeting)',
+    description: 'Send a greeting message',
     tips: [
       'Keep all fingers extended straight',
       'Keep your palm facing forward',
       'Keep fingers together but not touching',
-      'Sends 👋 to chat'
+      'Sends greeting to chat'
     ]
   },
   {
@@ -78,7 +78,7 @@ const gestures: Gesture[] = [
     tips: [
       'Extend your thumb, index, and pinky fingers',
       'Keep middle and ring fingers curled down',
-      'This is the ASL sign for "I Love You"',
+      'This gesture signifies gratitude',
       'Sends "thanks" to chat'
     ]
   },
@@ -95,52 +95,17 @@ const gestures: Gesture[] = [
   }
 ];
 
-const ASL_GESTURES: Gesture[] = [
-  {
-    id: 'asl_a',
-    name: 'ASL Letter A',
-    description: 'Make a fist with thumb tucked beside index finger',
-    tips: [
-      'Make a fist with all fingers curled',
-      'Place your thumb over your fingers (not sticking out)',
-      'Keep palm facing forward'
-    ]
-  },
-  {
-    id: 'asl_b',
-    name: 'ASL Letter B',
-    description: 'Extend all fingers with thumb beside index finger',
-    tips: [
-      'Extend all four fingers (index, middle, ring, pinky)',
-      'Place your thumb beside your index finger',
-      'Keep all fingers straight and together'
-    ]
-  },
-  {
-    id: 'asl_o',
-    name: 'ASL Letter O',
-    description: 'Make a circle with thumb and index finger',
-    tips: [
-      'Touch the tip of your thumb and index finger together',
-      'Keep middle, ring, and pinky fingers curled',
-      'Form a circle shape with thumb and index finger'
-    ]
-  }
-];
-
 export default function GestureTrainingModal({ open, onClose }: GestureTrainingModalProps) {
   const [currentGestureIndex, setCurrentGestureIndex] = useState(0);
-  const [mode, setMode] = useState<'navigation' | 'asl'>('navigation');
   const [showTips, setShowTips] = useState(false);
 
-  const currentGestures = mode === 'navigation' ? gestures : ASL_GESTURES;
-  const currentGesture = currentGestures[currentGestureIndex];
+  const currentGesture = gestures[currentGestureIndex];
 
   const nextGesture = useCallback(() => {
-    if (currentGestureIndex < currentGestures.length - 1) {
+    if (currentGestureIndex < gestures.length - 1) {
       setCurrentGestureIndex(prev => prev + 1);
     }
-  }, [currentGestureIndex, currentGestures.length]);
+  }, [currentGestureIndex]);
 
   const prevGesture = useCallback(() => {
     if (currentGestureIndex > 0) {
@@ -156,7 +121,6 @@ export default function GestureTrainingModal({ open, onClose }: GestureTrainingM
     if (!open) {
       // Reset when modal closes
       setCurrentGestureIndex(0);
-      setMode('navigation');
     }
   }, [open]);
 
@@ -175,7 +139,7 @@ export default function GestureTrainingModal({ open, onClose }: GestureTrainingM
           <div>
             <h2 className="text-lg font-semibold text-slate-100">Gesture Training Mode</h2>
             <p className="text-sm text-slate-400">
-              Learn and practice gestures for navigation and ASL
+              Learn and practice gestures for navigation
             </p>
           </div>
           <button
@@ -186,44 +150,18 @@ export default function GestureTrainingModal({ open, onClose }: GestureTrainingM
           </button>
         </div>
 
-        {/* Mode Tabs - Fixed positioning */}
-        <div className="px-5 py-3 border-b border-slate-800 bg-slate-900/90 z-10">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setMode('navigation')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                mode === 'navigation'
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-400 hover:bg-slate-800/50'
-              }`}
-            >
-              Navigation Gestures
-            </button>
-            <button
-              onClick={() => setMode('asl')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                mode === 'asl'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:bg-slate-800/50'
-              }`}
-            >
-              ASL Letters
-            </button>
-          </div>
-        </div>
-
         {/* Gesture Content - Scrollable area */}
         <div className="flex-1 overflow-y-auto max-h-[60vh] p-5">
           {/* Progress */}
           <div className="mb-6">
             <div className="flex justify-between text-sm text-slate-400 mb-1">
-              <span>Gesture {currentGestureIndex + 1} of {currentGestures.length}</span>
+              <span>Gesture {currentGestureIndex + 1} of {gestures.length}</span>
               <span>{currentGesture.name}</span>
             </div>
             <div className="w-full bg-slate-800 rounded-full h-2">
               <div
                 className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${((currentGestureIndex + 1) / currentGestures.length) * 100}%` }}
+                style={{ width: `${((currentGestureIndex + 1) / gestures.length) * 100}%` }}
               />
             </div>
           </div>
@@ -315,9 +253,9 @@ export default function GestureTrainingModal({ open, onClose }: GestureTrainingM
 
             <button
               onClick={nextGesture}
-              disabled={currentGestureIndex === currentGestures.length - 1}
+              disabled={currentGestureIndex === gestures.length - 1}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                currentGestureIndex === currentGestures.length - 1
+                currentGestureIndex === gestures.length - 1
                   ? 'text-slate-600 cursor-not-allowed'
                   : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/50'
               }`}

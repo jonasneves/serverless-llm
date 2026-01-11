@@ -17,7 +17,7 @@
 
 ## Overview
 
-Experimental playground for self-hosted LLMs running 24/7 on GitHub Actions with auto-restart mechanisms. Started as an experiment to see if small models could run continuously on free CI/CD infrastructure, now serves as a testbed for various ideas: gesture-based interaction (ASL fingerspelling, hand tracking), AI-generated UIs, multi-model collaboration modes (discussion, council, roundtable), and more.
+Experimental playground for self-hosted LLMs running 24/7 on GitHub Actions with auto-restart mechanisms. Started as an experiment to see if small models could run continuously on free CI/CD infrastructure, now serves as a testbed for various ideas: gesture-based interaction, AI-generated UIs, multi-model collaboration modes (discussion, council, roundtable), and more.
 
 Runs 13 models (270M to 12B parameters) with OpenAI-compatible APIs, all on free infrastructure.
 
@@ -177,7 +177,7 @@ serverless-llm/
 | Tunneling | Cloudflare Zero Trust |
 | Caching | GitHub Actions Cache (models) |
 | Frontend | React + TypeScript |
-| Hand Tracking | MediaPipe + fingerpose (ASL recognition) |
+| Hand Tracking | MediaPipe GestureRecognizer |
 
 ## Configuration
 

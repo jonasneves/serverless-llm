@@ -1059,15 +1059,12 @@ function PlaygroundInner() {
             onHover={gestureCtx.callbacks.current.onHover}
             onModeChange={gestureCtx.callbacks.current.onModeChange}
             config={gestureCtx.gestureConfig}
-            mode={gestureCtx.gestureMode}
             appContext={gestureCtx.appContext}
-            onGestureModeToggle={() => gestureCtx.setGestureMode(gestureCtx.gestureMode === 'navigation' ? 'asl' : 'navigation')}
             // Restrict message gestures (thumbs up/down, wave, etc.) to the transcript panel area
             // Panel is 400px (xl: 480px) on the right side - approximate as rightmost 30% of screen
             gestureActiveArea={{ minX: 0.70, maxX: 1.0, minY: 0, maxY: 1.0 }}
             // Feedback callbacks - write to context for GestureControl UI
             onGestureState={gestureCtx.setGestureState}
-            onASLResult={gestureCtx.setASLResult}
             onError={gestureCtx.setCameraError}
             onDebugInfo={gestureCtx.setDebugInfo}
             onLandmarkData={gestureCtx.setLandmarkData}

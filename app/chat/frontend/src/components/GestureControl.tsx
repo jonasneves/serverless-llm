@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Hand, X, Camera, HelpCircle, Check, Type, Navigation, Bug, BookOpen } from 'lucide-react';
-import { GestureMode } from './HandBackground';
+import { Hand, X, Camera, HelpCircle, Check, Navigation, Bug, BookOpen } from 'lucide-react';
 import GestureDebugPanel, { GestureConfig } from './GestureDebugPanel';
 import GestureTrainingModal from './GestureTrainingModal';
 import { useGesture } from '../context/GestureContext';
 
 const STORAGE_KEY = 'gesture-control-skip-intro';
 const DEBUG_CONFIG_KEY = 'gesture-debug-config';
-const MODE_STORAGE_KEY = 'gesture-mode';
 
 // Context for which mode the gestures should work with
 export type AppContext = 'chat' | 'compare' | 'analyze' | 'debate';
@@ -58,42 +56,23 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
 
   const panelRef = useRef<HTMLDivElement>(null);
   const panelFloatingRef = useRef<HTMLDivElement>(null);
-  const aslBoxRef = useRef<HTMLDivElement>(null);
   const [panelBounds, setPanelBounds] = useState<{ width: number; height: number }>({ width: 256, height: 320 });
-  const [aslBounds, setAslBounds] = useState<{ width: number; height: number }>({ width: 220, height: 180 });
 
   // Use context for state shared with HandBackground (rendered in Playground)
-  // Note: setters for feedback state are used by HandBackground and mouse simulation
   const {
     isActive, setIsActive,
-    gestureMode, setGestureMode,
     gestureConfig, setGestureConfig,
     mouseSimulation, setMouseSimulation,
-    // Feedback state from HandBackground (read in GestureControl, setGestureState also used by mouse sim)
     gestureState, setGestureState,
-    aslResult,
     debugInfo,
     landmarkData,
     performanceMetrics,
     cameraError, setCameraError,
   } = gesture;
 
-  // ASL buffer (local to GestureControl)
-  const [aslBuffer, setASLBuffer] = useState<string>('');
-
   // Debug panel state
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [showTrainingModal, setShowTrainingModal] = useState(false);
-
-  // Load gesture mode from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(MODE_STORAGE_KEY);
-      if (saved === 'asl' || saved === 'navigation') {
-        setGestureMode(saved as GestureMode);
-      }
-    }
-  }, [setGestureMode]);
 
   // Load gesture config from localStorage on mount
   useEffect(() => {
@@ -114,11 +93,6 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
       setSkipIntro(true);
     }
   }, []);
-
-  // Save gesture mode to localStorage when changed
-  useEffect(() => {
-    localStorage.setItem(MODE_STORAGE_KEY, gestureMode);
-  }, [gestureMode]);
 
   // Close panel on click outside
   useEffect(() => {
@@ -150,50 +124,8 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
     if (gestureState.triggered) {
       setFlashTrigger(true);
       setTimeout(() => setFlashTrigger(false), 300);
-
-      if (gestureMode === 'asl' && gestureState.gesture) {
-        // Handle control gestures (SEND, CLEAR, SPACE, BACKSPACE)
-        if (gestureState.gesture.startsWith('ACTION:')) {
-          const action = gestureState.gesture.replace('ACTION: ', '');
-          switch (action) {
-            case 'SEND':
-              if (aslBuffer && props.onSendMessage) {
-                props.onSendMessage(aslBuffer);
-                setASLBuffer('');
-              }
-              break;
-            case 'CLEAR':
-              setASLBuffer('');
-              break;
-            case 'SPACE':
-              setASLBuffer(prev => prev + ' ');
-              break;
-            case 'BACKSPACE':
-              setASLBuffer(prev => prev.slice(0, -1));
-              break;
-          }
-        }
-        // Handle letter gestures
-        else if (gestureState.gesture.startsWith('ASL:')) {
-          const letter = gestureState.gesture.replace('ASL: ', '');
-          setASLBuffer(prev => prev + letter);
-        }
-      }
     }
-  }, [gestureState, gestureMode, aslBuffer, props.onSendMessage]);
-
-  // Clear ASL buffer
-  const clearASLBuffer = useCallback(() => {
-    setASLBuffer('');
-  }, []);
-
-  // Send ASL buffer as message
-  const sendASLBuffer = useCallback(() => {
-    if (aslBuffer && props.onSendMessage) {
-      props.onSendMessage(aslBuffer);
-      setASLBuffer('');
-    }
-  }, [aslBuffer, props.onSendMessage]);
+  }, [gestureState]);
 
   // Handle camera error - clear error after timeout
   useEffect(() => {
@@ -237,11 +169,6 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
     setGestureConfig(newConfig);
     localStorage.setItem(DEBUG_CONFIG_KEY, JSON.stringify(newConfig));
   }, [setGestureConfig]);
-
-  // Save gesture mode to localStorage when changed
-  useEffect(() => {
-    localStorage.setItem(MODE_STORAGE_KEY, gestureMode);
-  }, [gestureMode]);
 
   // Mouse simulation
   useEffect(() => {
@@ -329,23 +256,6 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
     };
   }, [showPanel]);
 
-  // Measure ASL buffer size for collision avoidance
-  useEffect(() => {
-    if (!(isActive && gestureMode === 'asl')) return;
-    const measure = () => {
-      if (aslBoxRef.current) {
-        const rect = aslBoxRef.current.getBoundingClientRect();
-        setAslBounds({ width: rect.width, height: rect.height });
-      }
-    };
-    const id = requestAnimationFrame(measure);
-    window.addEventListener('resize', measure);
-    return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener('resize', measure);
-    };
-  }, [isActive, gestureMode]);
-
   // Wrapper classes differ based on mode
   const containerClass = inHeader
     ? 'relative z-50 pointer-events-auto' // Inline in header
@@ -374,9 +284,7 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
               }
             }}
             className={`relative min-w-[42px] min-h-[42px] w-[42px] h-[42px] rounded-full flex items-center justify-center border transition-all duration-200 active:scale-95 ${isActive
-              ? gestureMode === 'asl'
-                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30 animate-pulse'
-                : 'bg-blue-500/20 border-blue-500/50 text-blue-400 hover:bg-blue-500/30 animate-pulse'
+              ? 'bg-blue-500/20 border-blue-500/50 text-blue-400 hover:bg-blue-500/30 animate-pulse'
               : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
               }`}
             title={isActive ? "Open Gesture Control Panel" : "Enable Gesture Control"}
@@ -418,7 +326,7 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
             {/* Header */}
             <div className="px-3 py-2.5 border-b border-slate-700/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Hand size={14} className={gestureMode === 'asl' ? 'text-emerald-400' : 'text-blue-400'} />
+                <Hand size={14} className="text-blue-400" />
                 <span className="text-xs font-medium text-slate-200">Gesture Control</span>
               </div>
               {performanceMetrics && (
@@ -428,33 +336,6 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
               )}
             </div>
 
-            {/* Mode Toggle */}
-            <div className="px-3 py-2 border-b border-slate-700/50">
-              <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Mode</div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setGestureMode('navigation')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${gestureMode === 'navigation'
-                    ? 'bg-blue-500/20 border border-blue-500/50 text-blue-400'
-                    : 'bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-700/50'
-                    }`}
-                >
-                  <Navigation size={12} />
-                  Navigate
-                </button>
-                <button
-                  onClick={() => setGestureMode('asl')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${gestureMode === 'asl'
-                    ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-400'
-                    : 'bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-700/50'
-                    }`}
-                >
-                  <Type size={12} />
-                  ASL
-                </button>
-              </div>
-            </div>
-
             {/* Gesture Hints */}
             <div className="px-3 py-2 border-b border-slate-700/50">
               <div className="flex items-center justify-between mb-2">
@@ -462,58 +343,26 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
                 <HelpCircle size={10} className="text-slate-600" />
               </div>
 
-              {gestureMode === 'navigation' ? (
-                <div className="grid grid-cols-2 gap-1 text-[10px]">
-                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    ☝️ Point → Hover
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    🖐️ Hold → Click
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    ✊ Fist → Scroll
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    👋 Wave → Hi
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    👍 Up → Yes
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                    👎 Down → No
-                  </div>
-</div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-1 text-[10px]">
-                    <div className="flex items-center gap-1.5 text-slate-400">
-                      <span className="text-emerald-400">👍</span> Send
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-400">
-                      <span className="text-red-400">🖐️</span> Clear
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-400">
-                      <span className="text-blue-400 text-[8px]">✋→</span> Space
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-400">
-                      <span className="text-orange-400 text-[8px]">🤏</span> Backspace
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-9 gap-0.5">
-                    {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
-                      <span
-                        key={letter}
-                        className={`text-center py-0.5 rounded text-[8px] ${aslResult?.letter === letter
-                          ? 'bg-emerald-500/30 text-emerald-400'
-                          : 'bg-slate-800/50 text-slate-600'
-                          }`}
-                      >
-                        {letter}
-                      </span>
-                    ))}
-                  </div>
+              <div className="grid grid-cols-2 gap-1 text-[10px]">
+                <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
+                  ☝️ Point → Hover
                 </div>
-              )}
+                <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
+                  🖐️ Hold → Click
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
+                  ✊ Fist → Scroll
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
+                  👋 Wave → Hi
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
+                  👍 Up → Yes
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
+                  👎 Down → No
+                </div>
+              </div>
             </div>
 
             {/* Debug Toggle */}
@@ -580,81 +429,6 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
       {/* Portal for fixed-position elements when rendered inside header */}
       {createPortal(
         <>
-          {/* ASL Buffer Display - floating to the LEFT of the hand gesture button when in ASL mode */}
-          {isActive && gestureMode === 'asl' && (
-            <div
-              ref={aslBoxRef}
-              className="fixed z-50 pointer-events-auto"
-              style={inHeader && buttonRect
-                ? (() => {
-                  const bufferWidth = 220;
-                  const gap = 12; // modest breathing room
-                  const left = Math.min(buttonRect.right + gap, window.innerWidth - bufferWidth - gap);
-                  const panelHeight = panelBounds.height || 320;
-                  const bufferHeight = aslBounds.height || 180;
-                  const targetTop = showPanel
-                    ? buttonRect.top + panelHeight + gap
-                    : buttonRect.top + (buttonRect.height / 2) - bufferHeight / 2;
-                  const top = Math.max(gap, Math.min(targetTop, window.innerHeight - bufferHeight - gap));
-                  return {
-                    left,
-                    top
-                  };
-                })()
-                : { ...handOffsetStyle, top: 'calc(4rem)' }}
-            >
-              <div className="bg-slate-900/95 backdrop-blur-md border border-emerald-500/30 rounded-lg shadow-xl p-2 min-w-[180px]">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Type size={10} className="text-emerald-400" />
-                    <span className="text-[10px] text-slate-400">ASL Input</span>
-                  </div>
-                  {aslResult?.letter && (
-                    <span className="text-sm font-bold text-emerald-400 animate-pulse">
-                      {aslResult.letter}
-                    </span>
-                  )}
-                </div>
-
-                {/* Buffer */}
-                <div className="bg-slate-800/50 rounded px-2 py-1.5 min-h-[28px] flex items-center justify-between">
-                  <span className="font-mono text-slate-200 text-xs tracking-wider">
-                    {aslBuffer || <span className="text-slate-600 italic text-[10px]">Sign letters...</span>}
-                  </span>
-                  {aslBuffer && (
-                    <div className="flex gap-0.5 ml-2">
-                      <button
-                        onClick={clearASLBuffer}
-                        className="text-slate-500 hover:text-red-400 transition-colors p-0.5"
-                        title="Clear"
-                      >
-                        <X size={12} />
-                      </button>
-                      <button
-                        onClick={sendASLBuffer}
-                        className="text-slate-500 hover:text-emerald-400 transition-colors p-0.5"
-                        title="Send"
-                      >
-                        <Check size={12} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Progress indicator */}
-                {gestureState.progress > 0 && (
-                  <div className="mt-1.5 h-1 bg-slate-700/50 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-100 ${gestureState.gesture?.startsWith('ACTION') ? 'bg-amber-400' : 'bg-emerald-400'
-                        }`}
-                      style={{ width: `${gestureState.progress * 100}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Visual feedback ring - near the main button */}
           {isActive && gestureState.progress > 0 && !showPanel && (
             <div
@@ -690,14 +464,14 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
                   cy="24"
                   r="21"
                   fill="none"
-                  stroke={flashTrigger ? '#22c55e' : gestureMode === 'asl' ? '#10b981' : '#3b82f6'}
+                  stroke={flashTrigger ? '#22c55e' : '#3b82f6'}
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeDasharray={`${gestureState.progress * 132} 132`}
                   style={{
                     filter: flashTrigger
                       ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.8))'
-                      : `drop-shadow(0 0 6px ${gestureMode === 'asl' ? 'rgba(16, 185, 129, 0.5)' : 'rgba(59, 130, 246, 0.5)'})`,
+                      : 'drop-shadow(0 0 6px rgba(59, 130, 246, 0.5))',
                     transition: 'stroke 0.2s, filter 0.2s'
                   }}
                 />
@@ -717,7 +491,7 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
                 {/* Header */}
                 <div className="p-4 sm:p-5 border-b border-slate-800 flex justify-between items-center shrink-0">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500/20 to-emerald-500/20 rounded-lg">
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-lg">
                       <Hand size={18} className="text-slate-300 sm:w-5 sm:h-5" />
                     </div>
                     <div>
@@ -736,75 +510,29 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
                 {/* Scrollable Content */}
                 <div className="p-4 sm:p-5 overflow-y-auto flex-1">
                   <p className="text-xs sm:text-sm text-slate-400 mb-4 leading-relaxed">
-                    Control the app using hand gestures. Choose a mode to get started:
+                    Control the app using hand gestures. Use navigation gestures to interact:
                   </p>
 
-                  {/* Mode Selection - clicking directly enables camera */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    {/* Navigation Mode */}
-                    <button
-                      onClick={() => {
-                        setGestureMode('navigation');
-                        startCamera();
-                      }}
-                      className="group p-4 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
-                          <Navigation size={20} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-slate-200">Navigate</div>
-                          <div className="text-[10px] text-slate-500">Point, click, scroll</div>
-                        </div>
+                  {/* Navigation Mode Info */}
+                  <div className="p-4 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 mb-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                        <Navigation size={20} />
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-500">
-                        <div className="flex items-center gap-1">☝️ Hover</div>
-                        <div className="flex items-center gap-1">✊ Scroll</div>
-                        <div className="flex items-center gap-1">👍 Yes</div>
-                        <div className="flex items-center gap-1">👎 No</div>
+                      <div>
+                        <div className="text-sm font-medium text-slate-200">Navigation Gestures</div>
+                        <div className="text-[10px] text-slate-500">Point, click, scroll</div>
                       </div>
-                    </button>
-
-                    {/* ASL Mode */}
-                    <button
-                      onClick={() => {
-                        setGestureMode('asl');
-                        startCamera();
-                      }}
-                      className="group p-4 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
-                          <Type size={20} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-slate-200">ASL Alphabet</div>
-                          <div className="text-[10px] text-slate-500">Fingerspelling A-Z</div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-9 gap-0.5">
-                        {'ABCDEFGHI'.split('').map(letter => (
-                          <span
-                            key={letter}
-                            className="text-center py-0.5 rounded bg-slate-700/30 text-slate-500 text-[8px] font-mono"
-                          >
-                            {letter}
-                          </span>
-                        ))}
-                      </div>
-                    </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-1">☝️ Hover</div>
+                      <div className="flex items-center gap-1">✊ Scroll</div>
+                      <div className="flex items-center gap-1">👍 Yes</div>
+                      <div className="flex items-center gap-1">👎 No</div>
+                    </div>
                   </div>
 
                   {/* Privacy note */}
-                  {/* Pro Tip - floating above privacy note */}
-                  <div className="mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-2">
-                    <span className="text-lg">🤙</span>
-                    <span className="text-[10px] sm:text-xs text-blue-400 font-medium">
-                      Tip: Shaka gesture switches modes anytime!
-                    </span>
-                  </div>
-
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
                     <Camera size={14} className="text-slate-500 mt-0.5 shrink-0" />
                     <p className="text-[10px] sm:text-xs text-slate-500 leading-relaxed">
@@ -817,7 +545,7 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
                 {/* Footer */}
                 <div className="p-4 sm:p-5 border-t border-slate-800 shrink-0 bg-slate-900/50">
                   {/* Remember choice checkbox */}
-                  <label className="flex items-center gap-2 cursor-pointer group">
+                  <label className="flex items-center gap-2 cursor-pointer group mb-4">
                     <div
                       className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${rememberChoice
                         ? 'bg-blue-600 border-blue-500'
@@ -831,6 +559,13 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
                       Don't show this guide again
                     </span>
                   </label>
+
+                  <button
+                    onClick={startCamera}
+                    className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Enable Gesture Control
+                  </button>
                 </div>
               </div>
             </div>
@@ -883,4 +618,3 @@ export default function GestureControl({ inHeader = false, ...props }: GestureCo
     </>
   );
 }
-
