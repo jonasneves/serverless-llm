@@ -583,6 +583,7 @@ function PlaygroundInner() {
     }, 350);
   }, []);
 
+  const prevModeForClearRef = useRef<Mode>(mode);
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
     triggerLineTransition();
@@ -630,7 +631,7 @@ function PlaygroundInner() {
     // Reset model responses
     setModelsData(prev => prev.map(model => ({
       ...model,
-      response: 'Ready to generate...',
+      response: '',
       thinking: undefined,
       error: undefined,
     })));
@@ -699,6 +700,84 @@ function PlaygroundInner() {
       return next;
     });
   };
+
+  // Store per-mode state for arena modes (compare/analyze/debate)
+  // Each mode persists its own transcript within the session
+  type ArenaModeState = {
+    responses: Record<string, { response: string; thinking?: string; error?: string }>;
+    moderatorSynthesis: string;
+    phaseLabel: string | null;
+    executionTimes: Record<string, ExecutionTimeData>;
+  };
+  const arenaModeStateRef = useRef<Record<string, ArenaModeState>>({
+    compare: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {} },
+    analyze: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {} },
+    debate: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {} },
+  });
+
+  // Refs to access current values without triggering effect
+  const modelsDataRef = useRef(modelsData);
+  const moderatorSynthesisRef = useRef(moderatorSynthesis);
+  const phaseLabelRef = useRef(phaseLabel);
+  const executionTimesRef = useRef(executionTimes);
+  useEffect(() => { modelsDataRef.current = modelsData; }, [modelsData]);
+  useEffect(() => { moderatorSynthesisRef.current = moderatorSynthesis; }, [moderatorSynthesis]);
+  useEffect(() => { phaseLabelRef.current = phaseLabel; }, [phaseLabel]);
+  useEffect(() => { executionTimesRef.current = executionTimes; }, [executionTimes]);
+
+  // Save/restore state when switching between compare/analyze/debate modes
+  useEffect(() => {
+    const arenaModes: Mode[] = ['compare', 'analyze', 'debate'];
+    const prevMode = prevModeForClearRef.current;
+
+    if (arenaModes.includes(prevMode) && arenaModes.includes(mode) && prevMode !== mode) {
+      // Save current mode's state using refs
+      const currentResponses: Record<string, { response: string; thinking?: string; error?: string }> = {};
+      modelsDataRef.current.forEach(m => {
+        currentResponses[m.id] = { response: m.response, thinking: m.thinking, error: m.error };
+      });
+      arenaModeStateRef.current[prevMode] = {
+        responses: currentResponses,
+        moderatorSynthesis: moderatorSynthesisRef.current,
+        phaseLabel: phaseLabelRef.current,
+        executionTimes: executionTimesRef.current,
+      };
+
+      // Restore new mode's state (or start fresh if empty)
+      const savedState = arenaModeStateRef.current[mode];
+      const hasContent = Object.values(savedState.responses).some(r => r.response && r.response !== '');
+
+      if (hasContent) {
+        // Restore saved state
+        setModelsData(prev => prev.map(model => ({
+          ...model,
+          response: savedState.responses[model.id]?.response || '',
+          thinking: savedState.responses[model.id]?.thinking,
+          error: savedState.responses[model.id]?.error,
+        })));
+        setModeratorSynthesis(savedState.moderatorSynthesis);
+        setPhaseLabel(savedState.phaseLabel);
+        setExecutionTimes(savedState.executionTimes);
+      } else {
+        // Start fresh
+        clearHistory();
+        setModelsData(prev => prev.map(model => ({
+          ...model,
+          response: '',
+          thinking: undefined,
+          error: undefined,
+        })));
+        setModeratorSynthesis('');
+        setPhaseLabel(null);
+        setExecutionTimes({});
+      }
+
+      setIsSynthesizing(false);
+      setDiscussionTurnsByModel({});
+      setSpeaking(new Set());
+    }
+    prevModeForClearRef.current = mode;
+  }, [mode, clearHistory, setModelsData]);
 
   const { sendMessage } = useSessionController({
     mode,

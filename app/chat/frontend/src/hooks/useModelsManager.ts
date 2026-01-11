@@ -76,7 +76,7 @@ export function useModelsManager() {
           name: meta.name || model.name || model.id,
           color: meta.color,
           type: modelType,
-          response: 'Ready to generate...',
+          response: '',
           priority: model.priority,
           context_length: model.context_length,
           default: model.default
