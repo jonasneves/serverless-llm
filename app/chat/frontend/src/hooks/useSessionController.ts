@@ -3,6 +3,7 @@ import { GENERATION_DEFAULTS, isThinkingModel, isHarmonyFormatModel } from '../c
 import { fetchChatStream, fetchAnalyzeStream, fetchDebateStream, streamSseEvents } from '../utils/streaming';
 import { ChatHistoryEntry, Mode, Model } from '../types';
 import { ExecutionTimeData } from '../components/ExecutionTimeDisplay';
+import { parseThinkingChunk, ThinkingState } from '../utils/thinkingParser';
 
 type DiscussionTurn = {
   turn_number: number;
@@ -205,129 +206,14 @@ export function useSessionController(params: SessionControllerParams) {
     };
 
     const applyThinkingChunk = (modelId: string, rawChunk: string) => {
-      const state = thinkingStateRef.current[modelId] || { inThink: false, carry: '', implicitThinking: false };
-      let textChunk = state.carry + rawChunk;
-      state.carry = '';
+      const currentState: ThinkingState = thinkingStateRef.current[modelId] || {
+        inThink: false,
+        carry: '',
+        implicitThinking: false,
+      };
 
-      // Check for partial tags at the end (handle both <think> and <thinking>)
-      const lastLt = textChunk.lastIndexOf('<');
-      if (lastLt !== -1 && textChunk.length - lastLt < 12) {
-        const tail = textChunk.slice(lastLt);
-        if (
-          '<think>'.startsWith(tail) || '</think>'.startsWith(tail) ||
-          '<thinking>'.startsWith(tail) || '</thinking>'.startsWith(tail)
-        ) {
-          state.carry = tail;
-          textChunk = textChunk.slice(0, lastLt);
-        }
-      }
-
-      let thinkingAdd = '';
-      let answerAdd = '';
-      let idx = 0;
-
-      // Handle Harmony format (GPT-OSS): <|channel|>analysis/final<|message|>
-      if (state.harmonyFormat) {
-        // Check for final channel marker - this switches from thinking to answer mode
-        const finalChannelMarker = '<|channel|>final<|message|>';
-        const finalIdx = textChunk.indexOf(finalChannelMarker);
-
-        if (finalIdx !== -1) {
-          // Everything before the final marker is thinking
-          if (state.inThink) {
-            thinkingAdd += textChunk.slice(0, finalIdx);
-          }
-          // Switch to answer mode
-          state.inThink = false;
-          // Everything after is answer (strip the marker)
-          answerAdd += textChunk.slice(finalIdx + finalChannelMarker.length);
-        } else if (state.inThink) {
-          // Still in analysis mode - all content is thinking
-          // Strip analysis channel markers
-          const cleanChunk = textChunk
-            .replace(/<\|channel\|>analysis<\|message\|>/gi, '')
-            .replace(/<\|end\|>/gi, '')
-            .replace(/<\|start\|>/gi, '')
-            .replace(/assistant/gi, ''); // Often appears as <|start|>assistant
-          thinkingAdd += cleanChunk;
-        } else {
-          // In answer mode - all content is answer
-          // Strip any remaining markers
-          const cleanChunk = textChunk.replace(/<\|end\|>/gi, '');
-          answerAdd += cleanChunk;
-        }
-
-        thinkingStateRef.current[modelId] = state;
-        if (answerAdd) recordResponse(modelId, answerAdd);
-        if (thinkingAdd || answerAdd) enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
-        return; // Skip the standard think tag parsing
-      }
-
-      // Check for implicit thinking mode: if we haven't entered thinking mode yet but see a closing tag,
-      // everything before it was implicit thinking (common with DeepSeek R1)
-      if (!state.inThink && !state.implicitThinking) {
-        const closeThink = textChunk.indexOf('</think>');
-        const closeThinking = textChunk.indexOf('</thinking>');
-        const hasCloseTag = closeThink !== -1 || closeThinking !== -1;
-        const hasOpenTag = textChunk.indexOf('<think>') !== -1 || textChunk.indexOf('<thinking>') !== -1;
-
-        // If we have a close tag but no open tag, enable implicit thinking mode
-        if (hasCloseTag && !hasOpenTag) {
-          state.implicitThinking = true;
-          state.inThink = true; // Treat everything as thinking until we see the close tag
-        }
-      }
-
-      while (idx < textChunk.length) {
-        if (!state.inThink) {
-          // Look for either <think> or <thinking>
-          const startThink = textChunk.indexOf('<think>', idx);
-          const startThinking = textChunk.indexOf('<thinking>', idx);
-
-          let start = -1;
-          let tagLen = 0;
-          if (startThink !== -1 && (startThinking === -1 || startThink < startThinking)) {
-            start = startThink;
-            tagLen = 7; // '<think>'.length
-          } else if (startThinking !== -1) {
-            start = startThinking;
-            tagLen = 10; // '<thinking>'.length
-          }
-
-          if (start === -1) {
-            answerAdd += textChunk.slice(idx);
-            break;
-          }
-          answerAdd += textChunk.slice(idx, start);
-          state.inThink = true;
-          idx = start + tagLen;
-        } else {
-          // Look for either </think> or </thinking>
-          const endThink = textChunk.indexOf('</think>', idx);
-          const endThinking = textChunk.indexOf('</thinking>', idx);
-
-          let end = -1;
-          let tagLen = 0;
-          if (endThink !== -1 && (endThinking === -1 || endThink < endThinking)) {
-            end = endThink;
-            tagLen = 8; // '</think>'.length
-          } else if (endThinking !== -1) {
-            end = endThinking;
-            tagLen = 11; // '</thinking>'.length
-          }
-
-          if (end === -1) {
-            thinkingAdd += textChunk.slice(idx);
-            break;
-          }
-          thinkingAdd += textChunk.slice(idx, end);
-          state.inThink = false;
-          state.implicitThinking = false; // Reset implicit mode after closing tag
-          idx = end + tagLen;
-        }
-      }
-
-      thinkingStateRef.current[modelId] = state;
+      const { answerAdd, thinkingAdd, newState } = parseThinkingChunk(rawChunk, currentState);
+      thinkingStateRef.current[modelId] = newState;
 
       if (answerAdd) {
         recordResponse(modelId, answerAdd);

@@ -12,6 +12,8 @@ import { useStreamAccumulator } from './hooks/useStreamAccumulator';
 import { useSessionController } from './hooks/useSessionController';
 import { useSelectionBox } from './hooks/useSelectionBox';
 import { useCardReorder } from './hooks/useCardReorder';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useArenaScroll } from './hooks/useArenaScroll';
 import { ArenaCanvas } from './components/arenas/ArenaCanvas';
 import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
@@ -78,10 +80,6 @@ function PlaygroundInner() {
 
   const [showDock, setShowDock] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
-  // Arena vertical offset is visual-only; keep it in refs to avoid full re-renders on scroll.
-  const arenaOffsetYRef = useRef(0);
-  const arenaTargetYRef = useRef(0);
-  const wheelRafRef = useRef<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [githubToken, setGithubToken] = usePersistedSetting<string>('github_models_token', '', {
     serialize: value => value ? value : null,
@@ -497,6 +495,20 @@ function PlaygroundInner() {
     resetPendingStream,
   } = useStreamAccumulator(setModelsData);
 
+  // Initialize a temporary ref for drag selection - will be set by useSelectionBox
+  const dragSelectionActiveRefTemp = useRef(false);
+
+  const {
+    arenaOffsetYRef,
+    arenaTargetYRef,
+    wheelRafRef,
+    clampTarget,
+    ensureRaf,
+  } = useArenaScroll({
+    visualizationAreaRef,
+    dragSelectionActiveRef: dragSelectionActiveRefTemp,
+  });
+
   const {
     selectionRect,
     isSelecting,
@@ -513,6 +525,9 @@ function PlaygroundInner() {
     setSelectedCardIds,
     suppressClickRef,
   });
+
+  // Sync the drag selection ref
+  dragSelectionActiveRefTemp.current = dragSelectionActiveRef.current;
 
   const { dragState, handlePointerDown } = useCardReorder({
     visualizationAreaRef,
@@ -816,215 +831,24 @@ function PlaygroundInner() {
 
   // Analyze/Debate synthesis is handled by backend streams.
 
-  // Handle Escape key to close dock and Delete/Backspace to remove selected models
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Escape: unfocus active element, close dock, clear hover
-      if (event.key === 'Escape') {
-        const activeEl = document.activeElement as HTMLElement | null;
-        if (activeEl && activeEl !== document.body) {
-          activeEl.blur();
-        }
-        if (showSettings) {
-          setShowSettings(false);
-          return;
-        }
-        if (contextMenu) {
-          setContextMenu(null);
-          return;
-        }
-        if (selectedCardIds.size > 0) {
-          clearSelection();
-          setHoveredCard(null);
-          return;
-        }
-        if (showDock) {
-          setShowDock(false);
-          return;
-        }
-        setHoveredCard(null);
-        return;
-      }
-
-      // Cmd+A / Ctrl+A to select all visible cards (only if not in chat mode)
-      if ((event.metaKey || event.ctrlKey) && (event.key === 'a' || event.key === 'A')) {
-        const target = event.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-        if (mode === 'chat') return; // Chat handles its own selection
-
-        event.preventDefault();
-
-        // Select all active models
-        // Note: In visual modes, 'selected' array contains the active model IDs
-        if (selected.length > 0) {
-          setSelectedCardIds(new Set(selected));
-        }
-        return;
-      }
-
-      // Don't trigger keyboard shortcuts if user is typing in an input
-      const target = event.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
-        event.preventDefault();
-        const order: Mode[] = ['chat', 'compare', 'analyze', 'debate'];
-        const currentIndex = order.indexOf(mode);
-        if (currentIndex !== -1) {
-          const delta = event.key === 'ArrowRight' ? 1 : -1;
-          const nextIndex = (currentIndex + delta + order.length) % order.length;
-          handleModeChange(order[nextIndex]);
-        }
-        return;
-      }
-
-      // 'M' toggles models dock
-      if (event.key === 'm' || event.key === 'M') {
-        event.preventDefault();
-        setShowDock(!showDock);
-        return;
-      }
-
-      // Delete or Backspace removes selected cards from arena
-      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCardIds.size > 0) {
-        event.preventDefault();
-        setSelected(prev => prev.filter(id => !selectedCardIds.has(id)));
-        clearSelection();
-        return;
-      }
-
-      // Auto-focus input when typing printable characters (except shortcut keys)
-      // Check if it's a printable character (single character, not a modifier key)
-      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          // The character will be typed into the input automatically
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [
-    showDock,
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    mode,
     showSettings,
+    showDock,
     contextMenu,
     selectedCardIds,
-    mode,
-    handleModeChange,
+    selected,
+    inputRef,
+    setShowSettings,
+    setShowDock,
+    setContextMenu,
+    setSelected,
+    setSelectedCardIds,
     clearSelection,
-  ]);
-
-  // Handle wheel scroll to move arena up/down
-  // Helpers for Arena Scrolling (Hoisted for HandBackground access)
-  const touchActiveRef = useRef(false);
-  const lastTouchYRef = useRef(0);
-
-  const applyOffset = (offset: number) => {
-    const el = visualizationAreaRef.current;
-    if (!el) return;
-    el.style.setProperty('--arena-offset-y', `${offset}px`);
-  };
-
-  const clampTarget = (value: number) =>
-    Math.max(-LAYOUT.scrollClamp, Math.min(LAYOUT.scrollClamp, value));
-
-  const step = () => {
-    const current = arenaOffsetYRef.current;
-    const target = arenaTargetYRef.current;
-    const diff = target - current;
-
-    if (Math.abs(diff) < 0.5) {
-      arenaOffsetYRef.current = target;
-      applyOffset(target);
-      wheelRafRef.current = null;
-      return;
-    }
-
-    // Ease toward target for a more natural feel.
-    const next = current + diff * 0.35;
-    arenaOffsetYRef.current = next;
-    applyOffset(next);
-    wheelRafRef.current = requestAnimationFrame(step);
-  };
-
-  const ensureRaf = () => {
-    if (wheelRafRef.current == null) {
-      wheelRafRef.current = requestAnimationFrame(step);
-    }
-  };
-
-  // Handle wheel scroll to move arena up/down
-  useEffect(() => {
-    const handleWheel = (event: WheelEvent) => {
-      if (dragSelectionActiveRef.current) return;
-      const target = event.target as HTMLElement | null;
-      // Let native scroll work inside text inputs
-      if (target && target.closest('input, textarea, [data-no-arena-scroll]')) return;
-
-      event.preventDefault();
-      const delta = event.deltaY * 0.9; // Slightly faster / closer to native feel
-      const nextTarget = arenaTargetYRef.current - delta;
-      arenaTargetYRef.current = clampTarget(nextTarget);
-      ensureRaf();
-    };
-
-    const shouldIgnoreTouch = (target: HTMLElement | null) => {
-      if (!target) return false;
-      return Boolean(
-        target.closest('input, textarea, [data-no-arena-scroll], [data-card], button, a, select, [role="button"]')
-      );
-    };
-
-    const handleTouchStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1) return;
-      const target = event.target as HTMLElement | null;
-      if (shouldIgnoreTouch(target)) return;
-      touchActiveRef.current = true;
-      lastTouchYRef.current = event.touches[0].clientY;
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (dragSelectionActiveRef.current) return;
-      if (!touchActiveRef.current || event.touches.length !== 1) return;
-      const target = event.target as HTMLElement | null;
-      if (shouldIgnoreTouch(target)) {
-        touchActiveRef.current = false;
-        return;
-      }
-
-      const touchY = event.touches[0].clientY;
-      const deltaY = touchY - lastTouchYRef.current;
-      lastTouchYRef.current = touchY;
-
-      event.preventDefault();
-      arenaTargetYRef.current = clampTarget(arenaTargetYRef.current + deltaY);
-      ensureRaf();
-    };
-
-    const handleTouchEnd = () => {
-      touchActiveRef.current = false;
-    };
-
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd);
-    window.addEventListener('touchcancel', handleTouchEnd);
-    window.addEventListener('wheel', handleWheel, { passive: false });
-
-    return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('touchcancel', handleTouchEnd);
-      window.removeEventListener('wheel', handleWheel);
-      if (wheelRafRef.current != null) {
-        cancelAnimationFrame(wheelRafRef.current);
-      }
-    };
-  }, []);
+    setHoveredCard,
+    handleModeChange,
+  });
 
   const [bgStyle, setBgStyle] = usePersistedSetting<BackgroundStyle>(
     'playground-bg-style',
@@ -1047,15 +871,6 @@ function PlaygroundInner() {
       : moderatorSynthesis
         ? 'done'
         : 'idle';
-
-  // Simplified orchestrator label - detailed phase now shown in transcript panel
-  const orchestratorPhaseLabel = isSynthesizing
-    ? 'Synthesizing...'
-    : isGenerating
-      ? 'Observing'
-      : moderatorSynthesis
-        ? 'Complete'
-        : 'Ready';
 
   const orchestratorTransform = orchestratorEntryOffset
     ? `translate(-50%, -50%) translate(${orchestratorEntryOffset.x}px, ${orchestratorEntryOffset.y}px)`
@@ -1475,7 +1290,6 @@ function PlaygroundInner() {
                   moderatorId={moderator}
                   orchestratorTransform={orchestratorTransformWithScale}
                   orchestratorStatus={orchestratorStatus}
-                  orchestratorPhaseLabel={orchestratorPhaseLabel}
                   moderatorSynthesis={moderatorSynthesis}
                   isSynthesizing={isSynthesizing}
                   isGenerating={isGenerating}
