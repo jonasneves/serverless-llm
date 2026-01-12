@@ -22,6 +22,7 @@ import { GestureProvider, useGesture } from './context/GestureContext';
 import './playground.css';
 
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
+const ResponseModal = lazy(() => import('./components/ResponseModal'));
 const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscript'));
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const HandBackground = lazy(() => import('./components/HandBackground'));
@@ -417,6 +418,7 @@ function PlaygroundInner() {
     }
   };
   const [hoveredCard, setHoveredCard] = useState<string | null>(null); // For tiny preview on hover
+  const [expandedModelId, setExpandedModelId] = useState<string | null>(null); // For full response modal
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
   const [inputFocused, setInputFocused] = useState<boolean>(false);
   // Card selection state (for arena modes)
@@ -1299,6 +1301,7 @@ function PlaygroundInner() {
                   getTailSnippet={getTailSnippet}
                   hoveredCard={hoveredCard}
                   setHoveredCard={setHoveredCard}
+                  setExpandedModelId={setExpandedModelId}
                   layoutRadius={layoutRadius}
                   getCirclePosition={getCirclePosition}
                   moderatorModel={moderatorModel}
@@ -1400,6 +1403,27 @@ function PlaygroundInner() {
           setBgStyle={setBgStyle}
         />
       </Suspense>
+
+      {/* Response Modal for viewing full responses */}
+      {expandedModelId && mode === 'compare' && (
+        <Suspense fallback={null}>
+          <ResponseModal
+            model={selectedModels.find(m => m.id === expandedModelId) || null}
+            executionTimes={executionTimes[expandedModelId]}
+            onClose={() => setExpandedModelId(null)}
+            onPrev={() => {
+              const idx = selectedModels.findIndex(m => m.id === expandedModelId);
+              if (idx > 0) setExpandedModelId(selectedModels[idx - 1].id);
+            }}
+            onNext={() => {
+              const idx = selectedModels.findIndex(m => m.id === expandedModelId);
+              if (idx < selectedModels.length - 1) setExpandedModelId(selectedModels[idx + 1].id);
+            }}
+            hasPrev={selectedModels.findIndex(m => m.id === expandedModelId) > 0}
+            hasNext={selectedModels.findIndex(m => m.id === expandedModelId) < selectedModels.length - 1}
+          />
+        </Suspense>
+      )}
 
       {/* Fixed Prompt Input for Compare, Analyze, and Debate Modes */}
       {

@@ -34,6 +34,7 @@ interface ArenaCanvasProps {
   getTailSnippet: (text: string, maxChars?: number) => string;
   hoveredCard: string | null;
   setHoveredCard: (value: string | null) => void;
+  setExpandedModelId?: (id: string | null) => void;
   layoutRadius: number;
   getCirclePosition: (index: number, total: number, currentMode: Mode, radius: number) => Position;
   moderatorModel?: Model;
@@ -81,6 +82,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
     getTailSnippet,
     hoveredCard,
     setHoveredCard,
+    setExpandedModelId,
     layoutRadius,
     getCirclePosition,
     moderatorModel,
@@ -233,8 +235,14 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                 selectedModels,
                 lastSelectedCardRef,
               })}
-              onMouseEnter={() => isCircleMode && setHoveredCard(model.id)}
-              onMouseLeave={() => isCircleMode && setHoveredCard(null)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (!isCircleMode && setExpandedModelId) {
+                  setExpandedModelId(model.id);
+                }
+              }}
+              onMouseEnter={() => setHoveredCard(model.id)}
+              onMouseLeave={() => setHoveredCard(null)}
               className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
               style={{
                 background: cardStyles.background,
@@ -383,6 +391,37 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                   {renderPreviewContent({ model, isSpeaking, getTailSnippet })}
                 </p>
                 <div className="flex items-center gap-4 mt-3 pt-2 border-t border-slate-700/50">
+                  <ExecutionTimeDisplay times={executionTimes[model.id]} />
+                </div>
+              </div>
+            )}
+
+            {/* Grid mode hover preview */}
+            {!isCircleMode && hoveredCard === model.id && model.response && model.response.trim().length > 100 && (
+              <div
+                data-card
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (setExpandedModelId) setExpandedModelId(model.id);
+                }}
+                className="absolute w-80 max-h-64 overflow-y-auto p-4 rounded-xl transition-all duration-200 z-[220] pointer-events-auto"
+                style={{
+                  top: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginTop: '8px',
+                  background: 'rgba(15, 23, 42, 0.98)',
+                  backdropFilter: 'blur(16px)',
+                  border: `1px solid ${effectiveColor}40`,
+                  boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${effectiveColor}15`,
+                }}
+              >
+                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  {renderPreviewContent({ model, isSpeaking, getTailSnippet, maxChars: 600 })}
+                </p>
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-700/50">
+                  <span className="text-[10px] text-slate-500">Double-click to expand</span>
                   <ExecutionTimeDisplay times={executionTimes[model.id]} />
                 </div>
               </div>
