@@ -285,7 +285,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
                       model,
                       isSpeaking,
                       thinkingFallback: (
-                        <span className="text-slate-500 italic">Thinking…</span>
+                        <span className="text-slate-500 italic">Generating…</span>
                       ),
                       getTailSnippet,
                     })}
@@ -626,7 +626,7 @@ function renderPreviewContent({
     if (model.response.trim().length > 0) {
       return renderSvgContent(model.response) ?? <Typewriter text={model.response} speed={20} />;
     }
-    return <span className="text-slate-500 italic">Thinking…</span>;
+    return <span className="text-slate-500 italic">Generating…</span>;
   }
 
   // After generation complete: prioritize showing thinking if available
