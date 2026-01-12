@@ -62,21 +62,20 @@ jobs:
     - name: Read model config
       id: config
       run: |
-        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-        sudo chmod +x /usr/local/bin/yq
-
         MODEL="${{ github.event.client_payload.model || inputs.model }}"
-        CONFIG_FILE="config/inference.yaml"
 
-        MODEL_DIR=$(yq ".models.$MODEL.model_dir" "$CONFIG_FILE")
-        MODEL_REPO=$(yq ".models.$MODEL.model_repo" "$CONFIG_FILE")
-        MODEL_FILE=$(yq ".models.$MODEL.model_file" "$CONFIG_FILE")
-        DISPLAY_NAME=$(yq ".models.$MODEL.display_name" "$CONFIG_FILE")
-
-        if [ "$MODEL_DIR" = "null" ] || [ -z "$MODEL_DIR" ]; then
-          echo "Error: Model '$MODEL' not found in config/inference.yaml"
+        # Read config from Python (single source of truth)
+        CONFIG=$(python3 config/models.py "$MODEL")
+        if [ $? -ne 0 ]; then
+          echo "Error: Model '$MODEL' not found in config/models.py"
           exit 1
         fi
+
+        # Parse JSON output
+        MODEL_DIR=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_dir'])")
+        MODEL_REPO=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_repo'])")
+        MODEL_FILE=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_file'])")
+        DISPLAY_NAME=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['display_name'])")
 
         echo "model_name=$MODEL" >> $GITHUB_OUTPUT
         echo "model_dir=$MODEL_DIR" >> $GITHUB_OUTPUT

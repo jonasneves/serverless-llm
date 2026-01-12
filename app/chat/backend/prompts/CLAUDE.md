@@ -13,11 +13,14 @@ All prompts follow Claude/Anthropic's style from Claude Code:
 
 ```
 prompts/
-├── base_prompts.py       # Shared principles and guidelines
-├── council_prompts.py    # Council mode (3-stage: respond → rank → synthesize)
+├── base_prompts.py       # Shared principles, guidelines, analyze/debate prompts
+├── council_prompts.py    # Council mode (3-stage: respond -> rank -> synthesize)
 ├── discussion_prompts.py # Roundtable mode (turn-based discussion)
-├── version.py           # Version tracking and changelog
-└── CLAUDE.md           # This file
+├── personality_prompts.py # Personality mode (persona-based responses)
+└── CLAUDE.md             # This file
+
+utils/
+└── text_processing.py    # strip_thinking_tags() and text utilities
 ```
 
 ## Prompt Design Principles

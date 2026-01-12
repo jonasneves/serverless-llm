@@ -93,36 +93,24 @@ jobs:
       - name: Read inference config
         id: config
         run: |
-          # Install yq for YAML parsing
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64
-          sudo chmod +x /usr/local/bin/yq
-          
           MODEL="${{ inputs.model_name }}"
-          CONFIG_FILE="config/inference.yaml"
-          
-          # Read model-specific value or fall back to default
-          get_config() {
-            local key=$1
-            local model_value=$(yq ".models.$MODEL.$key // \"\"" "$CONFIG_FILE")
-            if [ -n "$model_value" ] && [ "$model_value" != "null" ]; then
-              echo "$model_value"
-            else
-              yq ".defaults.$key" "$CONFIG_FILE"
-            fi
-          }
-          
-          N_CTX=$(get_config "n_ctx")
-          N_THREADS=$(get_config "n_threads")
-          N_BATCH=$(get_config "n_batch")
-          MAX_CONCURRENT=$(get_config "max_concurrent")
-          KV_CACHE_QUANT=$(get_config "kv_cache_quant")
-          
+
+          # Read config from Python (single source of truth)
+          CONFIG=$(python3 config/models.py "$MODEL")
+
+          # Parse JSON output
+          N_CTX=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_ctx'])")
+          N_THREADS=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_threads'])")
+          N_BATCH=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_batch'])")
+          MAX_CONCURRENT=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['max_concurrent'])")
+          KV_CACHE_QUANT=$(echo "$CONFIG" | python3 -c "import sys,json; c=json.load(sys.stdin); print('true' if c['kv_cache_quant'] else 'false')")
+
           echo "n_ctx=$N_CTX" >> $GITHUB_OUTPUT
           echo "n_threads=$N_THREADS" >> $GITHUB_OUTPUT
           echo "n_batch=$N_BATCH" >> $GITHUB_OUTPUT
           echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
           echo "kv_cache_quant=$KV_CACHE_QUANT" >> $GITHUB_OUTPUT
-          
+
           echo "✓ Config for $MODEL: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
 
       - name: Move Docker data to /mnt

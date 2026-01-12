@@ -114,10 +114,9 @@ def create_app_for_model(model_name: str) -> FastAPI:
         default_repo=model.hf_repo,
         default_file=model.hf_file,
         chat_format=model.chat_format,
-        # These will be overridden by env vars from config/inference.yaml at runtime
-        default_n_ctx=4096,
-        default_n_threads=4,
-        n_batch=256,
+        default_n_ctx=model.n_ctx,
+        default_n_threads=model.n_threads,
+        n_batch=model.n_batch,
     )
 
     return create_inference_app(config)

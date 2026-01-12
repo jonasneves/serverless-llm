@@ -44,6 +44,12 @@ class ModelConfig:
     owned_by: Optional[str] = None  # e.g., "qwen", "microsoft"
     chat_format: Optional[str] = None  # llama-cpp chat format override (e.g., "llama-3")
     workflow_file: Optional[str] = None  # GitHub workflow filename override (e.g. "my-workflow.yml")
+    # Runtime inference config (optimized for GitHub Actions ARM runners: 4 vCPU, 16GB RAM)
+    n_ctx: int = 4096  # Context window size (tokens)
+    n_threads: int = 4  # CPU threads
+    n_batch: int = 256  # Batch size for prompt processing
+    max_concurrent: int = 2  # Max parallel requests per instance
+    kv_cache_quant: bool = True  # Q8_0 KV-cache quantization (reduces memory ~30%)
     
     @property
     def service_url(self) -> str:
@@ -98,8 +104,8 @@ MODELS: dict[str, ModelConfig] = {
         description="Multilingual (119 langs), 262K context, reasoning, coding",
         rank=2,
         default=False,
-        hf_repo="unsloth/Qwen3-4B-GGUF",
-        hf_file="Qwen3-4B-Q4_K_M.gguf",
+        hf_repo="unsloth/Qwen3-4B-Instruct-2507-GGUF",
+        hf_file="Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
         owned_by="qwen",
     ),
     "phi": ModelConfig(
@@ -112,8 +118,8 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="phi-inference",
         description="Compact reasoning, synthetic data efficiency",
         rank=9,
-        hf_repo="microsoft/Phi-3-mini-4k-instruct-gguf",
-        hf_file="Phi-3-mini-4k-instruct-q4.gguf",
+        hf_repo="bartowski/Phi-3-mini-4k-instruct-GGUF",
+        hf_file="Phi-3-mini-4k-instruct-Q4_K_M.gguf",
         owned_by="microsoft",
     ),
     "functiongemma": ModelConfig(
@@ -143,6 +149,8 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/SmolLM3-3B-GGUF",
         hf_file="SmolLM3-3B-Q4_K_M.gguf",
         owned_by="huggingfacetb",
+        n_batch=512,
+        max_concurrent=3,
     ),
     "lfm2": ModelConfig(
         name="lfm2",
@@ -175,6 +183,7 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/gemma-3-12b-it-GGUF",
         hf_file="gemma-3-12b-it-Q4_K_M.gguf",
         owned_by="google",
+        n_ctx=8192,
     ),
     "llama": ModelConfig(
         name="llama",
@@ -218,6 +227,9 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="EssentialAI/rnj-1-instruct-GGUF",
         hf_file="Rnj-1-Instruct-8B-Q4_K_M.gguf",
         owned_by="essentialai",
+        n_ctx=2048,
+        n_batch=512,
+        max_concurrent=3,
     ),
     
     # Reasoning models
@@ -249,6 +261,9 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="bartowski/Nanbeige_Nanbeige4-3B-Thinking-2511-GGUF",
         hf_file="Nanbeige_Nanbeige4-3B-Thinking-2511-Q4_K_M.gguf",
         owned_by="nanbeige",
+        n_ctx=2048,
+        n_batch=512,
+        max_concurrent=4,
     ),
     "nemotron": ModelConfig(
         name="nemotron",
@@ -263,6 +278,8 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/Nemotron-3-Nano-30B-A3B-GGUF",
         hf_file="Nemotron-3-Nano-30B-A3B-UD-IQ2_M.gguf",
         owned_by="nvidia",
+        n_ctx=512,
+        max_concurrent=1,
     ),
     "gptoss": ModelConfig(
         name="gptoss",
@@ -347,8 +364,43 @@ MODEL_ID_TO_SERVICE: dict[str, str] = {
 
 
 if __name__ == "__main__":
-    print("Serverless LLM - Model Configuration")
-    print("=" * 60)
-    
-    for m in get_inference_models():
-        print(f"  #{m.rank} {m.display_name:<20} :{m.port}  {m.env_var}")
+    import sys
+    import json
+
+    if len(sys.argv) > 1:
+        # CLI mode: python config/models.py <model_name> [field]
+        model_name = sys.argv[1]
+        try:
+            m = get_model(model_name)
+            if len(sys.argv) > 2:
+                # Output single field
+                field = sys.argv[2]
+                value = getattr(m, field, None)
+                if value is not None:
+                    print(value)
+                else:
+                    print(f"Unknown field: {field}", file=sys.stderr)
+                    sys.exit(1)
+            else:
+                # Output all config as JSON for workflow parsing
+                print(json.dumps({
+                    "model_name": m.name,
+                    "model_dir": m.inference_dir,
+                    "model_repo": m.hf_repo,
+                    "model_file": m.hf_file,
+                    "display_name": m.display_name,
+                    "n_ctx": m.n_ctx,
+                    "n_threads": m.n_threads,
+                    "n_batch": m.n_batch,
+                    "max_concurrent": m.max_concurrent,
+                    "kv_cache_quant": m.kv_cache_quant,
+                }))
+        except KeyError as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(1)
+    else:
+        # List mode
+        print("Serverless LLM - Model Configuration")
+        print("=" * 60)
+        for m in get_inference_models():
+            print(f"  #{m.rank} {m.display_name:<20} :{m.port}  {m.env_var}")

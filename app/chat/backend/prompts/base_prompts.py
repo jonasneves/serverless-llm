@@ -1,7 +1,8 @@
 """
 Base system prompts shared across different modes
 
-Inspired by Claude Code's concise, reasoning-focused style
+Inspired by Claude Code's concise, reasoning-focused style.
+Also includes simple mode-specific prompts (analyze, debate) to reduce file count.
 """
 
 # Core principles for all modes
@@ -50,62 +51,36 @@ Guidelines:
 - Use JSON UI when appropriate, YOU MUST BUILD THE JSON UI
 - User can point at buttons with index finger"""
 
-# Aliases for backwards compatibility
-GESTURE_MODE_CONTEXT_LOCAL = GESTURE_MODE_CONTEXT
-GESTURE_MODE_CONTEXT_API = GESTURE_MODE_CONTEXT
+# =============================================================================
+# Analyze Mode
+# =============================================================================
+
+ANALYZE_RESPONSE_SYSTEM = f"""You are participating in a multi-model analysis session.
+
+{CONCISE_REASONING_PRINCIPLES}
+
+Your task:
+- Provide your independent analysis of the question
+- Your response will be compared with other models to identify consensus and divergence
+- Focus on clear reasoning and key insights
+- No need to mention other models or compare approaches
+
+Target length: 100-200 words."""
 
 
-import re
+# =============================================================================
+# Debate Mode
+# =============================================================================
 
-def strip_thinking_tags(content: str) -> str:
-    """
-    Strip thinking/analysis content from model responses.
+DEBATE_TURN_SYSTEM = f"""You are participating in a multi-model debate.
 
-    Handles:
-    - <think>...</think> and <thinking>...</thinking> blocks (DeepSeek, SmolLM3, etc.)
-    - Implicit thinking where content starts with thinking but has no opening tag
-    - GPT-OSS Harmony format: <|channel|>analysis<|message|>...<|end|><|start|>assistant<|channel|>final<|message|>...
-    """
-    if not content:
-        return ""
+{CONCISE_REASONING_PRINCIPLES}
 
-    # GPT-OSS Harmony format: extract only the "final" channel content
-    # Pattern: <|channel|>analysis<|message|>...<|end|><|start|>assistant<|channel|>final<|message|>actual response
-    harmony_match = re.search(
-        r'<\|channel\|>final<\|message\|>([\s\S]*?)(?:<\|end\|>|$)',
-        content,
-        flags=re.IGNORECASE
-    )
-    if harmony_match:
-        content = harmony_match.group(1).strip()
-    else:
-        # Also handle case where analysis channel exists but no final channel marker
-        # Strip everything up to and including the final channel marker
-        content = re.sub(
-            r'^[\s\S]*?<\|start\|>assistant<\|channel\|>final<\|message\|>',
-            '',
-            content,
-            flags=re.IGNORECASE
-        )
-        # Also strip analysis channel blocks entirely
-        content = re.sub(
-            r'<\|channel\|>analysis<\|message\|>[\s\S]*?<\|end\|>\s*',
-            '',
-            content,
-            flags=re.IGNORECASE
-        )
+Your task:
+- Respond to the question considering previous responses (if any)
+- You may build on, challenge, or offer alternatives to earlier points
+- Bring new perspectives or evidence to the discussion
+- Reference specific points from others when relevant, but stay concise
+- No meta-commentary about the debate process itself
 
-    # Handle <think>...</think> blocks
-    content = re.sub(r'<think>[\s\S]*?</think>\s*', '', content, flags=re.IGNORECASE)
-    # Handle <thinking>...</thinking> blocks
-    content = re.sub(r'<thinking>[\s\S]*?</thinking>\s*', '', content, flags=re.IGNORECASE)
-
-    # Handle implicit thinking: content ends with </think> or </thinking> but no opening tag
-    content = re.sub(r'^[\s\S]*?</think>\s*', '', content, flags=re.IGNORECASE)
-    content = re.sub(r'^[\s\S]*?</thinking>\s*', '', content, flags=re.IGNORECASE)
-
-    return content.strip()
-
-
-
-
+Target length: 100-200 words."""
