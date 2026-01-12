@@ -603,9 +603,13 @@ function PlaygroundInner() {
     if (nextMode === mode) return;
     triggerLineTransition();
     // Chat mode uses separate selection (chatModelId) - no cross-mode selection sync needed
-    // Reset generating state to prevent blocking new messages in the new mode
-    // The background generation will complete but won't block the UI
-    setIsGenerating(false);
+    // For arena modes (compare/analyze/debate), state is saved/restored by useEffect
+    // Only reset generating when switching to/from chat mode
+    const arenaModes: Mode[] = ['compare', 'analyze', 'debate'];
+    const isArenaToArena = arenaModes.includes(mode) && arenaModes.includes(nextMode);
+    if (!isArenaToArena) {
+      setIsGenerating(false);
+    }
     setMode(nextMode);
   }, [mode, triggerLineTransition]);
 
@@ -723,11 +727,13 @@ function PlaygroundInner() {
     moderatorSynthesis: string;
     phaseLabel: string | null;
     executionTimes: Record<string, ExecutionTimeData>;
+    isGenerating: boolean;
+    speaking: Set<string>;
   };
   const arenaModeStateRef = useRef<Record<string, ArenaModeState>>({
-    compare: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {} },
-    analyze: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {} },
-    debate: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {} },
+    compare: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {}, isGenerating: false, speaking: new Set() },
+    analyze: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {}, isGenerating: false, speaking: new Set() },
+    debate: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {}, isGenerating: false, speaking: new Set() },
   });
 
   // Refs to access current values without triggering effect
@@ -735,10 +741,14 @@ function PlaygroundInner() {
   const moderatorSynthesisRef = useRef(moderatorSynthesis);
   const phaseLabelRef = useRef(phaseLabel);
   const executionTimesRef = useRef(executionTimes);
+  const isGeneratingRef = useRef(isGenerating);
+  const speakingRef = useRef(speaking);
   useEffect(() => { modelsDataRef.current = modelsData; }, [modelsData]);
   useEffect(() => { moderatorSynthesisRef.current = moderatorSynthesis; }, [moderatorSynthesis]);
   useEffect(() => { phaseLabelRef.current = phaseLabel; }, [phaseLabel]);
   useEffect(() => { executionTimesRef.current = executionTimes; }, [executionTimes]);
+  useEffect(() => { isGeneratingRef.current = isGenerating; }, [isGenerating]);
+  useEffect(() => { speakingRef.current = speaking; }, [speaking]);
 
   // Save/restore state when switching between compare/analyze/debate modes
   useEffect(() => {
@@ -746,7 +756,7 @@ function PlaygroundInner() {
     const prevMode = prevModeForClearRef.current;
 
     if (arenaModes.includes(prevMode) && arenaModes.includes(mode) && prevMode !== mode) {
-      // Save current mode's state using refs
+      // Save current mode's state using refs (including generation status)
       const currentResponses: Record<string, { response: string; thinking?: string; error?: string }> = {};
       modelsDataRef.current.forEach(m => {
         currentResponses[m.id] = { response: m.response, thinking: m.thinking, error: m.error };
@@ -756,14 +766,16 @@ function PlaygroundInner() {
         moderatorSynthesis: moderatorSynthesisRef.current,
         phaseLabel: phaseLabelRef.current,
         executionTimes: executionTimesRef.current,
+        isGenerating: isGeneratingRef.current,
+        speaking: new Set(speakingRef.current),
       };
 
       // Restore new mode's state (or start fresh if empty)
       const savedState = arenaModeStateRef.current[mode];
       const hasContent = Object.values(savedState.responses).some(r => r.response && r.response !== '');
 
-      if (hasContent) {
-        // Restore saved state
+      if (hasContent || savedState.isGenerating) {
+        // Restore saved state (including generation status)
         setModelsData(prev => prev.map(model => ({
           ...model,
           response: savedState.responses[model.id]?.response || '',
@@ -773,6 +785,8 @@ function PlaygroundInner() {
         setModeratorSynthesis(savedState.moderatorSynthesis);
         setPhaseLabel(savedState.phaseLabel);
         setExecutionTimes(savedState.executionTimes);
+        setIsGenerating(savedState.isGenerating);
+        setSpeaking(new Set(savedState.speaking));
       } else {
         // Start fresh
         clearHistory();
@@ -785,11 +799,12 @@ function PlaygroundInner() {
         setModeratorSynthesis('');
         setPhaseLabel(null);
         setExecutionTimes({});
+        setIsGenerating(false);
+        setSpeaking(new Set());
       }
 
       setIsSynthesizing(false);
       setDiscussionTurnsByModel({});
-      setSpeaking(new Set());
     }
     prevModeForClearRef.current = mode;
   }, [mode, clearHistory, setModelsData]);
