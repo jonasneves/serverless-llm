@@ -250,6 +250,24 @@ export const GENERATION_DEFAULTS = {
   temperature: 0.7,     // Balanced creativity/coherence
 };
 
+// UI Builder system prompt - instructs models to output interactive JSON options
+export const UI_BUILDER_PROMPT = `You can output interactive UI elements using JSON. When appropriate, include clickable options:
+
+\`\`\`json
+{
+  "options": [
+    {"id": "opt1", "label": "Option 1", "action": "message", "value": "User selected option 1"},
+    {"id": "opt2", "label": "Option 2", "action": "message", "value": "User selected option 2"}
+  ]
+}
+\`\`\`
+
+Guidelines:
+- Use for choices, confirmations, or navigation
+- 2-4 options max
+- Keep labels short
+- Include JSON after your text response`;
+
 // Layout constants - centralized for consistent sizing
 export const LAYOUT = {
   // Card dimensions

@@ -19,6 +19,7 @@ class AnalyzeRequest(BaseModel):
     max_tokens: int = 1024
     github_token: Optional[str] = None
     openrouter_key: Optional[str] = None
+    system_prompt: Optional[str] = None
 
 
 @router.post("/stream")
@@ -36,7 +37,11 @@ async def analyze_stream(request: AnalyzeRequest):
             engine_class=AnalyzeEngine,
             run_method="run_analyze",
             participants=request.participants,
-            run_kwargs={"query": request.query, "max_tokens": request.max_tokens},
+            run_kwargs={
+                "query": request.query,
+                "max_tokens": request.max_tokens,
+                "system_prompt": request.system_prompt,
+            },
             github_token=request.github_token,
             openrouter_key=request.openrouter_key,
         )

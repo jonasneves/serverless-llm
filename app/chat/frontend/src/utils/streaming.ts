@@ -107,6 +107,7 @@ export interface AnalyzeStreamPayload {
   participants: string[];
   max_tokens: number;
   github_token?: string | null;
+  system_prompt?: string | null;
 }
 
 export const fetchAnalyzeStream = async (
@@ -123,6 +124,7 @@ export interface DebateStreamPayload {
   max_tokens: number;
   temperature: number;
   github_token?: string | null;
+  system_prompt?: string | null;
 }
 
 export const fetchDebateStream = async (

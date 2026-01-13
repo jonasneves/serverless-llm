@@ -51,6 +51,7 @@ class DiscussionRequest(GenerationParams):
     openrouter_key: Optional[str] = None  # User-provided OpenRouter API key
     turns: int = 2  # Number of discussion rounds (all models participate each round)
     participants: Optional[List[str]] = None  # List of model IDs to participate (default: all local models)
+    system_prompt: Optional[str] = None  # Optional system prompt to prepend to messages
 
 
 

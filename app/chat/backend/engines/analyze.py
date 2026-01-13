@@ -139,7 +139,8 @@ class AnalyzeEngine:
         self,
         query: str,
         participants: List[str],
-        max_tokens: int = 2048
+        max_tokens: int = 2048,
+        system_prompt: str = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Run analyze mode: collect responses, then analyze
@@ -148,6 +149,7 @@ class AnalyzeEngine:
             query: User query
             participants: List of model IDs to participate
             max_tokens: Max tokens per response
+            system_prompt: Optional additional system prompt to prepend
 
         Yields:
             Events: analyze_start, model_start, model_chunk, model_response,
@@ -159,10 +161,11 @@ class AnalyzeEngine:
 
         yield {"type": "analyze_start", "participants": participants}
 
-        messages = [
-            {"role": "system", "content": ANALYZE_RESPONSE_SYSTEM},
-            {"role": "user", "content": query}
-        ]
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "system", "content": ANALYZE_RESPONSE_SYSTEM})
+        messages.append({"role": "user", "content": query})
         model_responses = {model_id: "" for model_id in participants}
         results = []
 

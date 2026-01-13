@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Model, Mode, Position, BackgroundStyle } from './types';
-import { BG_STYLES, MODE_COLORS, LAYOUT } from './constants';
+import { BG_STYLES, MODE_COLORS, LAYOUT, UI_BUILDER_PROMPT } from './constants';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
 import Header from './components/Header';
@@ -92,6 +92,8 @@ function PlaygroundInner() {
     deserialize: (stored, fallback) => stored ?? fallback,
   });
 
+  // UI Builder setting - shared with ChatView via same localStorage key
+  const [uiBuilderEnabled] = usePersistedSetting<boolean>('chat-ui-builder', false);
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
@@ -818,6 +820,7 @@ function PlaygroundInner() {
     selectedCardIds,
     githubToken,
     isGenerating,
+    systemPrompt: uiBuilderEnabled ? UI_BUILDER_PROMPT : undefined,
     summarizeSessionResponses,
     setLastQuery,
     setHoveredCard,

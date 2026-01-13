@@ -18,6 +18,7 @@ interface SessionControllerParams {
   selectedCardIds: Set<string>;
   githubToken: string;
   isGenerating: boolean;
+  systemPrompt?: string;
   summarizeSessionResponses: (responses: Record<string, string>, order: string[]) => string | null;
   setLastQuery: (text: string) => void;
   setHoveredCard: (value: string | null) => void;
@@ -58,6 +59,7 @@ export function useSessionController(params: SessionControllerParams) {
     selectedCardIds,
     githubToken,
     isGenerating,
+    systemPrompt,
     summarizeSessionResponses,
     setLastQuery,
     setHoveredCard,
@@ -245,9 +247,14 @@ export function useSessionController(params: SessionControllerParams) {
       if (mode === 'compare') {
         setSpeaking(new Set(sessionModelIds));
 
+        const baseMessages = baseHistory.map(msg => ({ role: msg.role, content: msg.content }));
+        const messages = systemPrompt
+          ? [{ role: 'system', content: systemPrompt }, ...baseMessages]
+          : baseMessages;
+
         const response = await fetchChatStream({
           models: sessionModelIds,
-          messages: baseHistory.map(msg => ({ role: msg.role, content: msg.content })),
+          messages,
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           temperature: GENERATION_DEFAULTS.temperature,
           github_token: githubToken || null,
@@ -327,6 +334,7 @@ export function useSessionController(params: SessionControllerParams) {
           participants,
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           github_token: githubToken || null,
+          system_prompt: systemPrompt || null,
         }, currentController.signal);
 
         let analyzeSynthesis = '';
@@ -463,6 +471,7 @@ export function useSessionController(params: SessionControllerParams) {
           max_tokens: GENERATION_DEFAULTS.maxTokens,
           temperature: GENERATION_DEFAULTS.temperature,
           github_token: githubToken || null,
+          system_prompt: systemPrompt || null,
         }, currentController.signal);
 
         await streamSseEvents(response, (data) => {

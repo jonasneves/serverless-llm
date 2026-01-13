@@ -129,7 +129,8 @@ Provide your response:"""
         previous_turns: List[DebateTurn],
         participant_ids: List[str],
         max_tokens: int = 512,
-        temperature: float = 0.7
+        temperature: float = 0.7,
+        system_prompt: str = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Execute one model's turn with streaming
@@ -143,6 +144,7 @@ Provide your response:"""
             participant_ids: All participants
             max_tokens: Max generation tokens
             temperature: Sampling temperature
+            system_prompt: Optional additional system prompt to prepend
 
         Yields:
             Events: turn_start, turn_chunk, turn_complete
@@ -164,10 +166,11 @@ Provide your response:"""
         start_time = asyncio.get_event_loop().time()
 
         try:
-            messages = [
-                {"role": "system", "content": DEBATE_TURN_SYSTEM},
-                {"role": "user", "content": prompt}
-            ]
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "system", "content": DEBATE_TURN_SYSTEM})
+            messages.append({"role": "user", "content": prompt})
 
             async for event in self.client.stream_model(model_id, messages, max_tokens, temperature):
                 if event["type"] == "chunk":
@@ -226,7 +229,8 @@ Provide your response:"""
         participants: List[str],
         rounds: int = 2,
         max_tokens: int = 512,
-        temperature: float = 0.7
+        temperature: float = 0.7,
+        system_prompt: str = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Run complete debate with streaming events
@@ -237,6 +241,7 @@ Provide your response:"""
             rounds: Number of rounds (each model speaks once per round)
             max_tokens: Max tokens per model response
             temperature: Sampling temperature
+            system_prompt: Optional additional system prompt to prepend
 
         Yields:
             Stream of events:
@@ -280,7 +285,8 @@ Provide your response:"""
                         previous_turns=completed_turns,
                         participant_ids=participants,
                         max_tokens=max_tokens,
-                        temperature=temperature
+                        temperature=temperature,
+                        system_prompt=system_prompt
                     ):
                         yield event
 

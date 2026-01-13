@@ -30,6 +30,7 @@ async def debate_stream(request: DiscussionRequest):
                 "rounds": request.turns,  # Reuse 'turns' field as 'rounds'
                 "max_tokens": request.max_tokens,
                 "temperature": request.temperature,
+                "system_prompt": request.system_prompt,
             },
             github_token=request.github_token,
             openrouter_key=request.openrouter_key,
