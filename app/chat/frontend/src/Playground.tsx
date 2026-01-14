@@ -203,6 +203,10 @@ function PlaygroundInner() {
   };
 
   useEffect(() => {
+    // Auto-enable UI builder when gestures become active
+    if (gestureCtx.isActive && !prevGestureActiveRef.current) {
+      setUiBuilderEnabled(true);
+    }
     prevGestureActiveRef.current = gestureCtx.isActive;
   }, [gestureCtx.isActive]);
 
