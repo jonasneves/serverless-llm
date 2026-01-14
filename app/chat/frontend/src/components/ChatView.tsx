@@ -262,7 +262,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
     const scroll = useCallback((deltaY: number) => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop += deltaY;
+            // Negate deltaY for natural scrolling (matches Compare mode behavior)
+            scrollRef.current.scrollTop -= deltaY;
         }
     }, []);
 
