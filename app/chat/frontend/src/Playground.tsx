@@ -92,8 +92,8 @@ function PlaygroundInner() {
     deserialize: (stored, fallback) => stored ?? fallback,
   });
 
-  // UI Builder setting - shared with ChatView via same localStorage key
-  const [uiBuilderEnabled] = usePersistedSetting<boolean>('chat-ui-builder', false);
+  // UI Builder setting - resets on page refresh (not persisted)
+  const [uiBuilderEnabled, setUiBuilderEnabled] = useState(false);
 
   // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
@@ -1232,6 +1232,8 @@ function PlaygroundInner() {
                       isGenerating={chatIsGenerating}
                       setIsGenerating={setChatIsGenerating}
                       gesturesActive={gestureCtx.isActive}
+                      uiBuilderEnabled={uiBuilderEnabled}
+                      setUiBuilderEnabled={setUiBuilderEnabled}
                     />
                   </Suspense>
                 </ErrorBoundary>

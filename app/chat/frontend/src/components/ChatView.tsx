@@ -9,7 +9,6 @@ import { fetchChatStream, streamSseEvents } from '../utils/streaming';
 import ModelTabs from './ModelTabs';
 import { useGestureOptional } from '../context/GestureContext';
 import ExecutionTimeDisplay, { ExecutionTimeData } from './ExecutionTimeDisplay';
-import { usePersistedSetting } from '../hooks/usePersistedSetting';
 import { UI_BUILDER_PROMPT } from '../constants';
 
 export interface ChatViewHandle {
@@ -39,6 +38,8 @@ interface ChatViewProps {
     isGenerating: boolean;
     setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
     gesturesActive?: boolean;
+    uiBuilderEnabled: boolean;
+    setUiBuilderEnabled: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
@@ -52,12 +53,13 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     isGenerating,
     setIsGenerating,
     gesturesActive = false,
+    uiBuilderEnabled,
+    setUiBuilderEnabled,
 }, ref) => {
     const [inputFocused, setInputFocused] = useState(false);
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const [streamingResponses, setStreamingResponses] = useState<Map<string, string>>(new Map());
     const [streamingTiming, setStreamingTiming] = useState<Map<string, ExecutionTimeData>>(new Map());
-    const [uiBuilderEnabled, setUiBuilderEnabled] = usePersistedSetting<boolean>('chat-ui-builder', false);
     const abortRefs = useRef<Map<string, AbortController>>(new Map());
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
