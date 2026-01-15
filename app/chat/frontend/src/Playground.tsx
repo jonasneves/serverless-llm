@@ -206,7 +206,7 @@ function PlaygroundInner() {
     // Auto-enable UI builder and select GPT-4o when gestures become active
     if (gestureCtx.isActive && !prevGestureActiveRef.current) {
       setUiBuilderEnabled(true);
-      setChatSelectedModels(new Set(['gpt-4o']));
+      setChatSelectedModels(new Set(['openai/gpt-4o']));
     }
     prevGestureActiveRef.current = gestureCtx.isActive;
   }, [gestureCtx.isActive]);
