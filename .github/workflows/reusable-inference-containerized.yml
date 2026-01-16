@@ -140,7 +140,7 @@ jobs:
             sudo chmod 600 /swapfile
             sudo mkswap /swapfile
             sudo swapon /swapfile
-            sudo sysctl -w vm.swappiness=60 > /dev/null
+            sudo sysctl -w vm.swappiness=1 > /dev/null
             sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
             echo "✓ Swap enabled: 16GB"
           ) &
