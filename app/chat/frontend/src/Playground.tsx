@@ -141,35 +141,39 @@ function PlaygroundInner() {
 
   // Chat state - simplified: just selectedModels + messages
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatSelectedModels, setChatSelectedModels] = useState<Set<string>>(() => new Set(['lfm2.5-1.2b-instruct']));
+  const [persistedChatModels, setPersistedChatModels] = usePersistedSetting<string[]>(
+    'playground_chat_selected_models',
+    ['gemma-3-12b-it', 'gpt-oss-20b', 'lfm2.5-1.2b-instruct'],
+  );
+  const chatSelectedModels = useMemo(() => new Set(persistedChatModels), [persistedChatModels]);
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
   const prevGestureActiveRef = useRef(false);
 
   const handleToggleModel = useCallback((modelId: string) => {
-    setChatSelectedModels(prev => {
-      const next = new Set(prev);
-      if (next.has(modelId)) {
-        next.delete(modelId);
+    setPersistedChatModels(prev => {
+      const set = new Set(prev);
+      if (set.has(modelId)) {
+        set.delete(modelId);
       } else {
-        next.add(modelId);
+        set.add(modelId);
       }
-      return next;
+      return Array.from(set);
     });
-  }, []);
+  }, [setPersistedChatModels]);
 
   const handleToggleChatGroup = useCallback((type: 'self-hosted' | 'github' | 'external') => {
     const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
-    setChatSelectedModels(prev => {
-      const allSelected = idsOfType.every(id => prev.has(id));
-      const next = new Set(prev);
+    setPersistedChatModels(prev => {
+      const set = new Set(prev);
+      const allSelected = idsOfType.every(id => set.has(id));
       if (allSelected) {
-        idsOfType.forEach(id => next.delete(id));
+        idsOfType.forEach(id => set.delete(id));
       } else {
-        idsOfType.forEach(id => next.add(id));
+        idsOfType.forEach(id => set.add(id));
       }
-      return next;
+      return Array.from(set);
     });
-  }, [modelsData]);
+  }, [modelsData, setPersistedChatModels]);
 
   const {
     history,
@@ -206,10 +210,10 @@ function PlaygroundInner() {
     // Auto-enable UI builder and select GPT-4o when gestures become active
     if (gestureCtx.isActive && !prevGestureActiveRef.current) {
       setUiBuilderEnabled(true);
-      setChatSelectedModels(new Set(['openai/gpt-4o']));
+      setPersistedChatModels(['openai/gpt-4o']);
     }
     prevGestureActiveRef.current = gestureCtx.isActive;
-  }, [gestureCtx.isActive]);
+  }, [gestureCtx.isActive, setPersistedChatModels]);
 
 
 
