@@ -121,18 +121,18 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                             <button
                                 onClick={() => handleDropdownToggle('self-hosted')}
                                 disabled={isGenerating}
-                                className={`h-7 w-[140px] px-2.5 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                                className={`h-7 px-2.5 flex items-center gap-2 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
                                     selectedLocalCount > 0
                                         ? 'bg-emerald-500/20 text-emerald-300'
                                         : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
                                 }`}
                             >
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                                 <span>{getGroupName('self-hosted')}</span>
-                                <span className={`text-[10px] ${selectedLocalCount > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] leading-none ${selectedLocalCount > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/50 text-slate-500'}`}>
                                     {selectedLocalCount}/{localModels.length}
                                 </span>
-                                <ChevronIcon size={12} className={`ml-auto shrink-0 transition-transform ${chevronRotation(expandedDropdown === 'self-hosted')}`} />
+                                <ChevronIcon size={10} className={`shrink-0 opacity-50 transition-transform ${chevronRotation(expandedDropdown === 'self-hosted')}`} />
                             </button>
 
                             {expandedDropdown === 'self-hosted' && (
@@ -161,18 +161,18 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                         <button
                             onClick={() => handleDropdownToggle('github')}
                             disabled={isGenerating}
-                            className={`h-7 w-[140px] px-2.5 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                            className={`h-7 px-2.5 flex items-center gap-2 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
                                 selectedApiCount > 0
                                     ? 'bg-blue-500/20 text-blue-300'
                                     : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
                             }`}
                         >
-                            <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                             <span>{getGroupName('github')}</span>
-                            <span className={`text-[10px] ${selectedApiCount > 0 ? 'text-blue-400' : 'text-slate-500'}`}>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] leading-none ${selectedApiCount > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700/50 text-slate-500'}`}>
                                 {selectedApiCount}/{apiModels.length}
                             </span>
-                            <ChevronIcon size={12} className={`ml-auto shrink-0 transition-transform ${chevronRotation(expandedDropdown === 'github')}`} />
+                            <ChevronIcon size={10} className={`shrink-0 opacity-50 transition-transform ${chevronRotation(expandedDropdown === 'github')}`} />
                         </button>
 
                         {expandedDropdown === 'github' && (
