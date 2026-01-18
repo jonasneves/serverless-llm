@@ -65,23 +65,23 @@ export function useModelsManager() {
 
     // Helper to process models response
     const processModels = (data: ModelsApiResponse) => {
-      const apiModels = data.models.map((model) => {
-        const modelType: 'self-hosted' | 'github' | 'external' =
-          (model.type === 'self-hosted' || model.type === 'github' || model.type === 'external')
-            ? model.type
-            : 'self-hosted';
-        const meta = MODEL_META[modelType];
-        return {
-          id: model.id,
-          name: meta.name || model.name || model.id,
-          color: meta.color,
-          type: modelType,
-          response: '',
-          priority: model.priority,
-          context_length: model.context_length,
-          default: model.default
-        };
-      });
+      const apiModels = data.models
+        .filter((model) => model.type !== 'external') // Filter out external models
+        .map((model) => {
+          const modelType: 'self-hosted' | 'github' =
+            model.type === 'github' ? 'github' : 'self-hosted';
+          const meta = MODEL_META[modelType];
+          return {
+            id: model.id,
+            name: meta.name || model.name || model.id,
+            color: meta.color,
+            type: modelType,
+            response: '',
+            priority: model.priority,
+            context_length: model.context_length,
+            default: model.default
+          };
+        });
 
       // Success! Update state
       setModelsData(apiModels);
@@ -95,15 +95,15 @@ export function useModelsManager() {
         isSelectionInitialized.current = true;
       }
 
-      // Initialize chat model with default model (lfm2), fallback to first github/external, then first available
+      // Initialize chat model with default model, fallback to first github, then first available
       if (!isChatModelInitialized.current) {
         const defaultModel = apiModels.find(m => m.default);
-        const firstApiModel = apiModels.find(m => m.type === 'github' || m.type === 'external');
+        const firstApiModel = apiModels.find(m => m.type === 'github');
         setChatModelId(defaultModel?.id || firstApiModel?.id || apiModels[0]?.id || null);
         isChatModelInitialized.current = true;
       }
 
-      const apiModeratorCandidate = apiModels.find(m => m.type === 'github' || m.type === 'external');
+      const apiModeratorCandidate = apiModels.find(m => m.type === 'github');
       const defaultModerator = apiModels.find(m => m.default);
       const fallbackModerator = apiModels[0]?.id || '';
       setModerator(apiModeratorCandidate?.id || defaultModerator?.id || fallbackModerator);
@@ -201,12 +201,10 @@ export function useModelsManager() {
     const total = {
       'self-hosted': modelsData.filter(m => m.type === 'self-hosted').length,
       github: modelsData.filter(m => m.type === 'github').length,
-      external: modelsData.filter(m => m.type === 'external').length,
     };
     const selectedCount = {
       'self-hosted': modelsData.filter(m => m.type === 'self-hosted' && selected.includes(m.id)).length,
       github: modelsData.filter(m => m.type === 'github' && selected.includes(m.id)).length,
-      external: modelsData.filter(m => m.type === 'external' && selected.includes(m.id)).length,
     };
 
     return {
@@ -214,8 +212,7 @@ export function useModelsManager() {
       allSelectedByType: {
         'self-hosted': total['self-hosted'] > 0 && selectedCount['self-hosted'] === total['self-hosted'],
         github: total.github > 0 && selectedCount.github === total.github,
-        external: total.external > 0 && selectedCount.external === total.external,
-      } as Record<'self-hosted' | 'github' | 'external', boolean>,
+      } as Record<'self-hosted' | 'github', boolean>,
     };
   }, [modelsData, selected]);
 

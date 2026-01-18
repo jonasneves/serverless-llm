@@ -113,13 +113,6 @@
       "type": "github",
       "priority": 6,
       "context_length": 128000
-    },
-    {
-      "id": "z-ai/glm-4.5-air:free",
-      "name": "GLM-4.5-Air (Free)",
-      "type": "external",
-      "priority": 1,
-      "context_length": 131072
     }
   ],
   "fetchedAt": "2025-12-18T05:27:26.401Z"

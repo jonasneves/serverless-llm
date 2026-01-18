@@ -5,11 +5,11 @@ import { Model, Mode } from '../types';
 interface ModelDockProps {
   showDock: boolean;
   availableModels: Model[];
-  allSelectedByType: Record<'self-hosted' | 'github' | 'external', boolean>;
-  totalModelsByType: Record<'self-hosted' | 'github' | 'external', number>;
+  allSelectedByType: Record<'self-hosted' | 'github', boolean>;
+  totalModelsByType: Record<'self-hosted' | 'github', number>;
   handleDragStart: (e: React.DragEvent, modelId: string) => void;
   handleModelToggle: (modelId: string) => void;
-  handleAddGroup: (type: 'self-hosted' | 'github' | 'external') => void;
+  handleAddGroup: (type: 'self-hosted' | 'github') => void;
   dockRef: React.RefObject<HTMLDivElement>;
   mode: Mode;
   allModels: Model[];
@@ -17,7 +17,7 @@ interface ModelDockProps {
   // Chat mode: multi-select
   chatSelectedModels?: Set<string>;
   onToggleChatModel?: (modelId: string) => void;
-  onToggleChatGroup?: (type: 'self-hosted' | 'github' | 'external') => void;
+  onToggleChatGroup?: (type: 'self-hosted' | 'github') => void;
 }
 
 export default function ModelDock({
@@ -45,13 +45,12 @@ export default function ModelDock({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  type SectionType = 'self-hosted' | 'github' | 'external';
-  type AccentColor = 'emerald' | 'blue' | 'purple';
+  type SectionType = 'self-hosted' | 'github';
+  type AccentColor = 'emerald' | 'blue';
 
   const sections: Array<{ type: SectionType; title: string; accentColor: AccentColor }> = [
     { type: 'self-hosted', title: 'Self-Hosted', accentColor: 'emerald' },
     { type: 'github', title: 'GitHub Models', accentColor: 'blue' },
-    { type: 'external', title: 'External', accentColor: 'purple' },
   ];
 
   const isInChatMode = mode === 'chat';

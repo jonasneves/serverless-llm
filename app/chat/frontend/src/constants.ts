@@ -3,12 +3,10 @@ import { BackgroundStyle, Mode, TopicPack, TopicPrompt, TrendingTopic } from './
 export const MODEL_META: Record<string, { color: string; name?: string }> = {
   'self-hosted': { color: '#10b981' }, // Green for self-hosted models
   'github': { color: '#3b82f6' },      // Blue for GitHub Models
-  'external': { color: '#8b5cf6' },    // Purple for external API models
 };
 
 export const SELF_HOSTED_DEFAULT_PRIORITY = 50;
 export const GITHUB_DEFAULT_PRIORITY = 100;
-export const EXTERNAL_DEFAULT_PRIORITY = 150;
 
 // Models that output thinking content by default (without explicit <think> tags)
 // These models start in "thinking mode" and we treat all content as thinking until </think>
@@ -39,26 +37,12 @@ export const isHarmonyFormatModel = (modelId: string): boolean => {
 
 
 
-export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github' | 'external', dynamicPriority?: number): number {
+export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github', dynamicPriority?: number): number {
   if (dynamicPriority !== undefined) {
     return dynamicPriority;
   }
 
-  let defaultPriority: number;
-
-  switch (modelType) {
-    case 'self-hosted':
-      defaultPriority = SELF_HOSTED_DEFAULT_PRIORITY;
-      break;
-    case 'github':
-      defaultPriority = GITHUB_DEFAULT_PRIORITY;
-      break;
-    case 'external':
-      defaultPriority = EXTERNAL_DEFAULT_PRIORITY;
-      break;
-  }
-
-  return defaultPriority;
+  return modelType === 'self-hosted' ? SELF_HOSTED_DEFAULT_PRIORITY : GITHUB_DEFAULT_PRIORITY;
 }
 
 // Curated static topics grounded in current-ish industry/news contexts

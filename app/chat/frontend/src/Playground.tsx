@@ -85,11 +85,6 @@ function PlaygroundInner() {
   const [showSettings, setShowSettings] = useState(false);
   const [githubAuth, setGithubAuth] = usePersistedSetting<GitHubAuth | null>('github_auth', null);
 
-  const [openrouterKey, setOpenrouterKey] = usePersistedSetting<string>('openrouter_api_key', '', {
-    serialize: value => value ? value : null,
-    deserialize: (stored, fallback) => stored ?? fallback,
-  });
-
   // UI Builder setting - resets on page refresh (not persisted)
   const [uiBuilderEnabled, setUiBuilderEnabled] = useState(false);
 
@@ -121,10 +116,10 @@ function PlaygroundInner() {
     if (mode === 'chat') return true;
     // If they have a token, allow it
     if (githubAuth?.token) return true;
-    // Check if the model is a github/external model
+    // Check if the model is a github model
     const model = modelsData.find(m => m.id === modelId);
-    if (!model || (model.type !== 'github' && model.type !== 'external')) return true;
-    // No token + github/external model = blocked
+    if (!model || model.type !== 'github') return true;
+    // No token + github model = blocked
     return false;
   }, [mode, githubAuth, modelsData]);
 
@@ -159,7 +154,7 @@ function PlaygroundInner() {
     });
   }, [setPersistedChatModels]);
 
-  const handleToggleChatGroup = useCallback((type: 'self-hosted' | 'github' | 'external') => {
+  const handleToggleChatGroup = useCallback((type: 'self-hosted' | 'github') => {
     const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
     setPersistedChatModels(prev => {
       const set = new Set(prev);
@@ -403,7 +398,7 @@ function PlaygroundInner() {
     }
   };
 
-  const handleAddGroup = (type: 'self-hosted' | 'github' | 'external') => {
+  const handleAddGroup = (type: 'self-hosted' | 'github') => {
     const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
     const isAllSelected = idsOfType.length > 0 && idsOfType.every(id => selected.includes(id));
 
@@ -413,8 +408,8 @@ function PlaygroundInner() {
       return;
     }
 
-    // Check API limit for multi-model modes when adding github/external group
-    if ((type === 'github' || type === 'external') && !canAddApiGroup()) {
+    // Check API limit for multi-model modes when adding github group
+    if (type === 'github' && !canAddApiGroup()) {
       showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
       return;
     }
@@ -1233,7 +1228,6 @@ function PlaygroundInner() {
                       selectedModels={chatSelectedModels}
                       onToggleModel={handleToggleModel}
                       githubToken={githubAuth?.token}
-                      openrouterKey={openrouterKey}
                       messages={chatMessages}
                       setMessages={setChatMessages}
                       isGenerating={chatIsGenerating}
@@ -1409,8 +1403,6 @@ function PlaygroundInner() {
           onClose={() => setShowSettings(false)}
           githubAuth={githubAuth}
           setGithubAuth={setGithubAuth}
-          openrouterKey={openrouterKey}
-          setOpenrouterKey={setOpenrouterKey}
           bgStyle={bgStyle}
           setBgStyle={setBgStyle}
         />

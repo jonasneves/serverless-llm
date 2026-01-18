@@ -10,8 +10,6 @@ interface SettingsModalProps {
   onClose: () => void;
   githubAuth: GitHubAuth | null;
   setGithubAuth: (auth: GitHubAuth | null) => void;
-  openrouterKey: string;
-  setOpenrouterKey: (key: string) => void;
   bgStyle: BackgroundStyle;
   setBgStyle: (style: BackgroundStyle) => void;
 }
@@ -66,19 +64,15 @@ export default function SettingsModal({
   onClose,
   githubAuth,
   setGithubAuth,
-  openrouterKey,
-  setOpenrouterKey,
   bgStyle,
   setBgStyle,
 }: SettingsModalProps) {
-  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [isConnecting, setIsConnecting] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setShowOpenRouterKey(false);
       setActiveTab('general');
       setOauthError(null);
     }
@@ -245,53 +239,6 @@ export default function SettingsModal({
                     )}
                   </div>
                 )}
-              </div>
-
-              {/* OpenRouter API Key Section */}
-              <div className="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4">
-                <h3 className="text-sm font-semibold text-slate-200 mb-1">OpenRouter API Key</h3>
-                <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                  Add your OpenRouter API key to access external models like GLM-4.5-Air.
-                  Token is stored only in your browser.
-                </p>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type={showOpenRouterKey ? 'text' : 'password'}
-                    value={openrouterKey}
-                    onChange={(e) => setOpenrouterKey(e.target.value.trim())}
-                    placeholder="sk-or-v1-xxxxxxxxxxxxxxxx"
-                    autoComplete="off"
-                    className="flex-1 rounded-lg bg-slate-950/60 border border-slate-700/60 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-blue-500/60"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowOpenRouterKey((v) => !v)}
-                    className="min-w-[44px] min-h-[44px] w-11 h-11 sm:w-9 sm:h-9 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors active:scale-95 flex items-center justify-center"
-                    title={showOpenRouterKey ? 'Hide key' : 'Show key'}
-                  >
-                    {showOpenRouterKey ? (
-                      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 014.74-5.74M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.4 18.4 0 01-2.16 3.19M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <line x1="3" y1="3" x2="21" y2="21" strokeWidth={2} />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" strokeWidth={2} />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-
-                <a
-                  href="https://openrouter.ai/settings/keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-3 text-xs text-blue-400 hover:text-blue-300 underline"
-                >
-                  Get an OpenRouter API key
-                </a>
               </div>
             </>
           )}

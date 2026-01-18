@@ -32,7 +32,6 @@ interface ChatViewProps {
     selectedModels: Set<string>;
     onToggleModel: (modelId: string) => void;
     githubToken?: string;
-    openrouterKey?: string;
     messages: ChatMessage[];
     setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
     isGenerating: boolean;
@@ -47,7 +46,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     selectedModels,
     onToggleModel,
     githubToken,
-    openrouterKey,
     messages,
     setMessages,
     isGenerating,
@@ -196,7 +194,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     max_tokens: 4096,
                     temperature: 0.7,
                     github_token: githubToken,
-                    openrouter_key: openrouterKey,
                 }, controller.signal);
 
                 let content = '';
@@ -252,7 +249,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         });
 
         await Promise.allSettled(streamPromises);
-    }, [isGenerating, selectedModels, messages, models, githubToken, openrouterKey, uiBuilderEnabled, setMessages, setIsGenerating]);
+    }, [isGenerating, selectedModels, messages, models, githubToken, uiBuilderEnabled, setMessages, setIsGenerating]);
 
     const stopGeneration = useCallback(() => {
         abortRefs.current.forEach(c => c.abort());
@@ -335,7 +332,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 onToggleModel={onToggleModel}
                                 isGenerating={isGenerating}
                                 githubToken={githubToken}
-                                openrouterKey={openrouterKey}
                                 dropDirection="down"
                             />
                             <UiBuilderToggle />

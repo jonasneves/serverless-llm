@@ -8,13 +8,12 @@ interface ModelTabsProps {
     onToggleModel: (modelId: string) => void;
     isGenerating: boolean;
     githubToken?: string;
-    openrouterKey?: string;
     dropDirection?: 'up' | 'down';
 }
 
-type ExpandedDropdown = 'self-hosted' | 'github' | 'external' | null;
+type ExpandedDropdown = 'self-hosted' | 'github' | null;
 
-export default function ModelTabs({ models, selectedModels, onToggleModel, isGenerating, githubToken, openrouterKey, dropDirection = 'up' }: ModelTabsProps) {
+export default function ModelTabs({ models, selectedModels, onToggleModel, isGenerating, githubToken, dropDirection = 'up' }: ModelTabsProps) {
     const [expandedDropdown, setExpandedDropdown] = useState<ExpandedDropdown>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -22,7 +21,6 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
 
     const localModels = useMemo(() => models.filter(m => m.type === 'self-hosted'), [models]);
     const apiModels = useMemo(() => models.filter(m => m.type === 'github'), [models]);
-    const externalModels = useMemo(() => models.filter(m => m.type === 'external'), [models]);
 
     const filteredLocalModels = useMemo(() =>
         localModels.filter(m => !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase())),
@@ -32,14 +30,9 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
         apiModels.filter(m => !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase())),
         [apiModels, searchQuery]
     );
-    const filteredExternalModels = useMemo(() =>
-        externalModels.filter(m => !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase())),
-        [externalModels, searchQuery]
-    );
 
     const selectedLocalCount = localModels.filter(m => selectedModels.has(m.id)).length;
     const selectedApiCount = apiModels.filter(m => selectedModels.has(m.id)).length;
-    const selectedExternalCount = externalModels.filter(m => selectedModels.has(m.id)).length;
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -83,11 +76,10 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
         });
     };
 
-    const getGroupName = (type: 'self-hosted' | 'github' | 'external') =>
-        type === 'self-hosted' ? 'Self-Hosted' : type === 'github' ? 'GitHub' : 'External';
+    const getGroupName = (type: 'self-hosted' | 'github') =>
+        type === 'self-hosted' ? 'Self-Hosted' : 'GitHub';
 
     const showGithubWarning = selectedApiCount > 0 && !githubToken;
-    const showExternalWarning = selectedExternalCount > 0 && !openrouterKey;
 
     const ChevronIcon = dropDirection === 'up' ? ChevronUp : ChevronDown;
     const chevronRotation = (isOpen: boolean) => {
@@ -95,20 +87,12 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
         return isOpen ? 'rotate-180' : '';
     };
 
-    const warnings = (showGithubWarning || showExternalWarning) && (
+    const warnings = showGithubWarning && (
         <div className="flex flex-col items-center gap-1">
-            {showGithubWarning && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs">
-                    <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
-                    <span>Add GitHub token in Settings for dedicated quota</span>
-                </div>
-            )}
-            {showExternalWarning && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs">
-                    <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
-                    <span>Add OpenRouter key in Settings for external models</span>
-                </div>
-            )}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs">
+                <AlertTriangle size={11} className="shrink-0 text-yellow-500" />
+                <span>Add GitHub token in Settings for dedicated quota</span>
+            </div>
         </div>
     );
 
@@ -162,77 +146,36 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
 
                 {/* GitHub */}
                 {apiModels.length > 0 && (
-                    <>
-                        <div className="relative flex items-center">
-                            <button
-                                onClick={() => handleDropdownToggle('github')}
-                                disabled={isGenerating}
-                                className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                    selectedApiCount > 0
-                                        ? 'bg-blue-500/20 text-blue-300'
-                                        : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
-                                }`}
-                            >
-                                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                <span>{getGroupName('github')}</span>
-                                <span className={`text-[10px] ${selectedApiCount > 0 ? 'text-blue-400' : 'text-slate-500'}`}>
-                                    {selectedApiCount}/{apiModels.length}
-                                </span>
-                                <ChevronIcon size={12} className={`transition-transform ${chevronRotation(expandedDropdown === 'github')}`} />
-                            </button>
-
-                            {expandedDropdown === 'github' && (
-                                <ModelDropdown
-                                    models={filteredApiModels}
-                                    allModels={apiModels}
-                                    selectedModels={selectedModels}
-                                    onToggleModel={onToggleModel}
-                                    onToggleAll={() => toggleAllInCategory(apiModels)}
-                                    searchQuery={searchQuery}
-                                    setSearchQuery={setSearchQuery}
-                                    searchInputRef={searchInputRef}
-                                    color="blue"
-                                    showSearch={apiModels.length > 5}
-                                    direction={dropDirection}
-                                />
-                            )}
-                        </div>
-                        {externalModels.length > 0 && <div className="w-px h-5 bg-slate-600/50" />}
-                    </>
-                )}
-
-                {/* External */}
-                {externalModels.length > 0 && (
                     <div className="relative flex items-center">
                         <button
-                            onClick={() => handleDropdownToggle('external')}
+                            onClick={() => handleDropdownToggle('github')}
                             disabled={isGenerating}
                             className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                selectedExternalCount > 0
-                                    ? 'bg-purple-500/20 text-purple-300'
+                                selectedApiCount > 0
+                                    ? 'bg-blue-500/20 text-blue-300'
                                     : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
                             }`}
                         >
-                            <div className="w-2 h-2 rounded-full bg-purple-500" />
-                            <span>{getGroupName('external')}</span>
-                            <span className={`text-[10px] ${selectedExternalCount > 0 ? 'text-purple-400' : 'text-slate-500'}`}>
-                                {selectedExternalCount}/{externalModels.length}
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span>{getGroupName('github')}</span>
+                            <span className={`text-[10px] ${selectedApiCount > 0 ? 'text-blue-400' : 'text-slate-500'}`}>
+                                {selectedApiCount}/{apiModels.length}
                             </span>
-                            <ChevronIcon size={12} className={`transition-transform ${chevronRotation(expandedDropdown === 'external')}`} />
+                            <ChevronIcon size={12} className={`transition-transform ${chevronRotation(expandedDropdown === 'github')}`} />
                         </button>
 
-                        {expandedDropdown === 'external' && (
+                        {expandedDropdown === 'github' && (
                             <ModelDropdown
-                                models={filteredExternalModels}
-                                allModels={externalModels}
+                                models={filteredApiModels}
+                                allModels={apiModels}
                                 selectedModels={selectedModels}
                                 onToggleModel={onToggleModel}
-                                onToggleAll={() => toggleAllInCategory(externalModels)}
+                                onToggleAll={() => toggleAllInCategory(apiModels)}
                                 searchQuery={searchQuery}
                                 setSearchQuery={setSearchQuery}
                                 searchInputRef={searchInputRef}
-                                color="purple"
-                                showSearch={externalModels.length > 5}
+                                color="blue"
+                                showSearch={apiModels.length > 5}
                                 direction={dropDirection}
                             />
                         )}
@@ -267,7 +210,7 @@ function ModelDropdown({
     searchQuery: string;
     setSearchQuery: (q: string) => void;
     searchInputRef: React.RefObject<HTMLInputElement>;
-    color: 'emerald' | 'blue' | 'purple';
+    color: 'emerald' | 'blue';
     showSearch: boolean;
     direction: 'up' | 'down';
 }) {
@@ -275,7 +218,6 @@ function ModelDropdown({
     const colorClasses = {
         emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', check: 'text-emerald-400', dot: 'bg-emerald-500/50', border: 'focus:border-emerald-500/50' },
         blue: { bg: 'bg-blue-500/20', text: 'text-blue-300', check: 'text-blue-400', dot: 'bg-blue-500/50', border: 'focus:border-blue-500/50' },
-        purple: { bg: 'bg-purple-500/20', text: 'text-purple-300', check: 'text-purple-400', dot: 'bg-purple-500/50', border: 'focus:border-purple-500/50' },
     }[color];
 
     const positionClass = direction === 'up'

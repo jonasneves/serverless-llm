@@ -285,12 +285,12 @@ export function OrchestratorCard({
               <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-700/50">
                 Select Orchestrator
               </div>
-              {availableModels.filter(m => m.type === 'github' || m.type === 'external').length > 0 && (
+              {availableModels.filter(m => m.type === 'github').length > 0 && (
                 <>
                   <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-600 font-semibold">
                     GitHub Models
                   </div>
-                  {availableModels.filter(m => m.type === 'github' || m.type === 'external').map(model => (
+                  {availableModels.filter(m => m.type === 'github').map(model => (
                     <button
                       key={model.id}
                       onClick={() => {
