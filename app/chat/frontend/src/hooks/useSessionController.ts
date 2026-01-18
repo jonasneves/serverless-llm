@@ -16,7 +16,7 @@ interface SessionControllerParams {
   moderator: string;
   selected: string[];
   selectedCardIds: Set<string>;
-  githubToken: string;
+  githubToken?: string;
   isGenerating: boolean;
   systemPrompt?: string;
   summarizeSessionResponses: (responses: Record<string, string>, order: string[]) => string | null;

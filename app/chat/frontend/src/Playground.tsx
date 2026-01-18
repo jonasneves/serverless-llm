@@ -19,6 +19,7 @@ import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
 import { GestureProvider, useGesture } from './context/GestureContext';
+import type { GitHubAuth } from './utils/oauth';
 import './playground.css';
 
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
@@ -82,10 +83,7 @@ function PlaygroundInner() {
   const [showDock, setShowDock] = useState(false);
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
   const [showSettings, setShowSettings] = useState(false);
-  const [githubToken, setGithubToken] = usePersistedSetting<string>('github_models_token', '', {
-    serialize: value => value ? value : null,
-    deserialize: (stored, fallback) => stored ?? fallback,
-  });
+  const [githubAuth, setGithubAuth] = usePersistedSetting<GitHubAuth | null>('github_auth', null);
 
   const [openrouterKey, setOpenrouterKey] = usePersistedSetting<string>('openrouter_api_key', '', {
     serialize: value => value ? value : null,
@@ -122,22 +120,22 @@ function PlaygroundInner() {
     // Chat mode doesn't have this restriction
     if (mode === 'chat') return true;
     // If they have a token, allow it
-    if (githubToken) return true;
+    if (githubAuth?.token) return true;
     // Check if the model is a github/external model
     const model = modelsData.find(m => m.id === modelId);
     if (!model || (model.type !== 'github' && model.type !== 'external')) return true;
     // No token + github/external model = blocked
     return false;
-  }, [mode, githubToken, modelsData]);
+  }, [mode, githubAuth, modelsData]);
 
   const canAddApiGroup = useCallback((): boolean => {
     // Chat mode doesn't have this restriction
     if (mode === 'chat') return true;
     // If they have a token, allow it
-    if (githubToken) return true;
+    if (githubAuth?.token) return true;
     // No token = blocked for API group
     return false;
-  }, [mode, githubToken]);
+  }, [mode, githubAuth]);
 
   // Chat state - simplified: just selectedModels + messages
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -827,7 +825,7 @@ function PlaygroundInner() {
     moderator,
     selected,
     selectedCardIds,
-    githubToken,
+    githubToken: githubAuth?.token,
     isGenerating,
     systemPrompt: uiBuilderEnabled ? UI_BUILDER_PROMPT : undefined,
     summarizeSessionResponses,
@@ -1234,7 +1232,7 @@ function PlaygroundInner() {
                       models={modelsData}
                       selectedModels={chatSelectedModels}
                       onToggleModel={handleToggleModel}
-                      githubToken={githubToken}
+                      githubToken={githubAuth?.token}
                       openrouterKey={openrouterKey}
                       messages={chatMessages}
                       setMessages={setChatMessages}
@@ -1409,8 +1407,8 @@ function PlaygroundInner() {
         <SettingsModal
           open={showSettings}
           onClose={() => setShowSettings(false)}
-          token={githubToken}
-          setToken={setGithubToken}
+          githubAuth={githubAuth}
+          setGithubAuth={setGithubAuth}
           openrouterKey={openrouterKey}
           setOpenrouterKey={setOpenrouterKey}
           bgStyle={bgStyle}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitHub OAuth</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #334155;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .error {
+      color: #f87171;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner" id="spinner"></div>
+    <p id="status">Completing authentication...</p>
+  </div>
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const error = params.get('error');
+
+      const statusEl = document.getElementById('status');
+      const spinnerEl = document.getElementById('spinner');
+
+      if (error) {
+        spinnerEl.style.display = 'none';
+        statusEl.textContent = 'Authentication failed: ' + error;
+        statusEl.className = 'error';
+        if (window.opener) {
+          window.opener.postMessage({ type: 'oauth-callback', error: error }, window.location.origin);
+        }
+        setTimeout(() => window.close(), 2000);
+        return;
+      }
+
+      if (!token) {
+        spinnerEl.style.display = 'none';
+        statusEl.textContent = 'No token received';
+        statusEl.className = 'error';
+        if (window.opener) {
+          window.opener.postMessage({ type: 'oauth-callback', error: 'No token received' }, window.location.origin);
+        }
+        setTimeout(() => window.close(), 2000);
+        return;
+      }
+
+      // Send token to parent window
+      if (window.opener) {
+        window.opener.postMessage({ type: 'oauth-callback', token: token }, window.location.origin);
+        statusEl.textContent = 'Connected! Closing...';
+        setTimeout(() => window.close(), 500);
+      } else {
+        spinnerEl.style.display = 'none';
+        statusEl.textContent = 'Unable to communicate with parent window';
+        statusEl.className = 'error';
+      }
+    })();
+  </script>
+</body>
+</html>
