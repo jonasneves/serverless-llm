@@ -1,6 +1,6 @@
 // OAuth configuration - reusing the existing oauth.neevs.io proxy
 const OAUTH_PROXY_URL = 'https://oauth.neevs.io';
-const GITHUB_CLIENT_ID = 'Ov23liIlzx633b93m5hg';
+const GITHUB_CLIENT_ID = 'Ov23lianHkw0Uog0VGxT';
 const GITHUB_SCOPES = 'read:user';
 
 export interface GitHubAuth {
@@ -15,6 +15,7 @@ export async function connectGitHub(): Promise<GitHubAuth> {
     // State must be base64-encoded JSON for the oauth proxy
     const state = btoa(JSON.stringify({
       provider: 'github',
+      client_id: GITHUB_CLIENT_ID,
       redirect_url: redirectUri,
     }));
 
