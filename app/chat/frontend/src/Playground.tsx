@@ -19,7 +19,7 @@ import { ArenaContextMenu } from './components/arenas/types';
 import type { ExecutionTimeData } from './components/ExecutionTimeDisplay';
 import SelectionOverlay from './components/SelectionOverlay';
 import { GestureProvider, useGesture } from './context/GestureContext';
-import type { GitHubAuth } from './utils/oauth';
+import { connectGitHub, type GitHubAuth } from './utils/oauth';
 import './playground.css';
 
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
@@ -84,6 +84,15 @@ function PlaygroundInner() {
   const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
   const [showSettings, setShowSettings] = useState(false);
   const [githubAuth, setGithubAuth] = usePersistedSetting<GitHubAuth | null>('github_auth', null);
+
+  const handleConnectGitHub = useCallback(async () => {
+    try {
+      const auth = await connectGitHub();
+      setGithubAuth(auth);
+    } catch (err) {
+      console.error('GitHub OAuth failed:', err);
+    }
+  }, [setGithubAuth]);
 
   // UI Builder setting - resets on page refresh (not persisted)
   const [uiBuilderEnabled, setUiBuilderEnabled] = useState(false);
@@ -1228,6 +1237,7 @@ function PlaygroundInner() {
                       selectedModels={chatSelectedModels}
                       onToggleModel={handleToggleModel}
                       githubToken={githubAuth?.token}
+                      onConnectGitHub={handleConnectGitHub}
                       messages={chatMessages}
                       setMessages={setChatMessages}
                       isGenerating={chatIsGenerating}

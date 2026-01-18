@@ -32,6 +32,7 @@ interface ChatViewProps {
     selectedModels: Set<string>;
     onToggleModel: (modelId: string) => void;
     githubToken?: string;
+    onConnectGitHub?: () => void;
     messages: ChatMessage[];
     setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
     isGenerating: boolean;
@@ -46,6 +47,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     selectedModels,
     onToggleModel,
     githubToken,
+    onConnectGitHub,
     messages,
     setMessages,
     isGenerating,
@@ -332,6 +334,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 onToggleModel={onToggleModel}
                                 isGenerating={isGenerating}
                                 githubToken={githubToken}
+                                onConnectGitHub={onConnectGitHub}
                                 dropDirection="down"
                             />
                             <UiBuilderToggle />

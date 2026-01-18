@@ -41,6 +41,7 @@ interface HealthStatus {
 
 interface DeploymentsPanelProps {
     githubToken: string;
+    onConnectGitHub?: () => void;
     chatApiBaseUrl: string;
     modelsBaseDomain: string;
     modelsUseHttps: boolean;
@@ -60,7 +61,7 @@ function normalizeBaseUrl(url: string): string {
     return url.trim().replace(/\/+$/, '');
 }
 
-const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatApiBaseUrl, modelsBaseDomain, modelsUseHttps, globalTab, showOnlyBackend = false, onBackendStatusChange, onActiveDeploymentsChange }) => {
+const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, onConnectGitHub, chatApiBaseUrl, modelsBaseDomain, modelsUseHttps, globalTab, showOnlyBackend = false, onBackendStatusChange, onActiveDeploymentsChange }) => {
     const [workflows, setWorkflows] = useState<Map<string, WorkflowInfo>>(new Map());
     const [runs, setRuns] = useState<Map<string, WorkflowRun | null>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -569,6 +570,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                             <DeployPanel
                                 appId={chatApp.id}
                                 githubToken={githubToken}
+                                onConnectGitHub={onConnectGitHub}
                                 runs={runs}
                                 triggering={triggering}
                                 loading={loading}
@@ -653,6 +655,7 @@ const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ githubToken, chatAp
                                         <DeployPanel
                                             appId={app.id}
                                             githubToken={githubToken}
+                                            onConnectGitHub={onConnectGitHub}
                                             runs={runs}
                                             triggering={triggering}
                                             loading={loading}
