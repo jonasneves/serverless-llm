@@ -6,6 +6,7 @@ const GITHUB_SCOPES = 'read:user';
 export interface GitHubAuth {
   token: string;
   username: string;
+  name?: string; // Display name (may be null if not set)
 }
 
 export async function connectGitHub(): Promise<GitHubAuth> {
@@ -62,8 +63,8 @@ export async function connectGitHub(): Promise<GitHubAuth> {
         }
 
         try {
-          const username = await fetchGitHubUsername(token);
-          resolve({ token, username });
+          const userInfo = await fetchGitHubUser(token);
+          resolve({ token, ...userInfo });
         } catch (err) {
           reject(err);
         }
@@ -83,7 +84,7 @@ export async function connectGitHub(): Promise<GitHubAuth> {
   });
 }
 
-async function fetchGitHubUsername(token: string): Promise<string> {
+async function fetchGitHubUser(token: string): Promise<{ username: string; name?: string }> {
   const response = await fetch('https://api.github.com/user', {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -96,5 +97,8 @@ async function fetchGitHubUsername(token: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.login;
+  return {
+    username: data.login,
+    name: data.name || undefined, // Display name, may be null
+  };
 }

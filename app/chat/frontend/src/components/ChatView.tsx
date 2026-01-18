@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallba
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Check, Copy, Puzzle } from 'lucide-react';
+import { Bot, AlertTriangle, User, Check, Copy } from 'lucide-react';
 import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
 import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
@@ -289,24 +289,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         }
     };
 
-    // UI Builder toggle button
-    const UiBuilderToggle = ({ compact = false }: { compact?: boolean }) => (
-        <button
-            onClick={() => setUiBuilderEnabled(!uiBuilderEnabled)}
-            className={`flex items-center gap-1.5 rounded-md transition-all active:scale-95 font-medium ${
-                compact ? 'h-6 px-2 text-[11px]' : 'h-7 px-2.5 text-xs'
-            } ${
-                uiBuilderEnabled
-                    ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
-                    : 'bg-slate-800/60 text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
-            }`}
-            title="Enable interactive UI elements in responses"
-        >
-            <Puzzle size={compact ? 11 : 12} />
-            <span>UI Builder</span>
-        </button>
-    );
-
     return (
         <div className="flex flex-col h-full w-full relative">
             {/* Scrollable messages area */}
@@ -342,7 +324,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 onConnectGitHub={onConnectGitHub}
                                 dropDirection="down"
                             />
-                            <UiBuilderToggle />
                         </div>
                     )}
 
@@ -438,6 +419,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     isGenerating={isGenerating || selectedModels.size === 0}
                     onStop={stopGeneration}
                     placeholder={selectedModels.size === 0 ? "Select a model above..." : "Type a message..."}
+                    uiBuilderEnabled={uiBuilderEnabled}
+                    onToggleUiBuilder={() => setUiBuilderEnabled(!uiBuilderEnabled)}
                 />
             </div>
         </div>

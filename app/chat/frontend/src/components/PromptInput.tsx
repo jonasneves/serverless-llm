@@ -1,4 +1,4 @@
-import { Square, ArrowUp } from 'lucide-react';
+import { Square, ArrowUp, Puzzle } from 'lucide-react';
 
 interface PromptInputProps {
   inputRef: React.RefObject<HTMLInputElement>;
@@ -10,6 +10,8 @@ interface PromptInputProps {
   placeholder?: string;
   isGenerating?: boolean;
   onStop?: () => void;
+  uiBuilderEnabled?: boolean;
+  onToggleUiBuilder?: () => void;
 }
 
 export default function PromptInput({
@@ -22,6 +24,8 @@ export default function PromptInput({
   placeholder,
   isGenerating,
   onStop,
+  uiBuilderEnabled,
+  onToggleUiBuilder,
 }: PromptInputProps) {
 
   return (
@@ -35,6 +39,19 @@ export default function PromptInput({
         <div
           className={`rounded-xl p-2.5 transition-all duration-300 flex items-center gap-2 border border-slate-700/40 header-shell ${inputFocused ? 'prompt-panel-focused' : ''}`}
         >
+          {onToggleUiBuilder && (
+            <button
+              onClick={onToggleUiBuilder}
+              className={`p-2 rounded-lg transition-colors ${
+                uiBuilderEnabled
+                  ? 'text-violet-400 bg-violet-500/20'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/50'
+              }`}
+              title="UI Builder - Enable interactive UI elements in responses"
+            >
+              <Puzzle size={16} />
+            </button>
+          )}
           <input
             ref={inputRef}
             type="text"

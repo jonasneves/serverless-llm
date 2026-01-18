@@ -1237,7 +1237,7 @@ function PlaygroundInner() {
                       selectedModels={chatSelectedModels}
                       onToggleModel={handleToggleModel}
                       githubToken={githubAuth?.token}
-                      githubUsername={githubAuth?.username}
+                      githubUsername={githubAuth?.name || githubAuth?.username}
                       onConnectGitHub={handleConnectGitHub}
                       messages={chatMessages}
                       setMessages={setChatMessages}
