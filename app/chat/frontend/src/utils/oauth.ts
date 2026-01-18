@@ -12,11 +12,18 @@ export async function connectGitHub(): Promise<GitHubAuth> {
   return new Promise((resolve, reject) => {
     const redirectUri = `${window.location.origin}/oauth-callback.html`;
 
-    // Use the proxy's authorize endpoint - it handles state management
-    const authUrl = new URL(`${OAUTH_PROXY_URL}/authorize`);
+    // State must be base64-encoded JSON for the oauth proxy
+    const state = btoa(JSON.stringify({
+      provider: 'github',
+      redirect_url: redirectUri,
+    }));
+
+    // Go directly to GitHub, with proxy callback as redirect_uri
+    const authUrl = new URL('https://github.com/login/oauth/authorize');
     authUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
     authUrl.searchParams.set('scope', GITHUB_SCOPES);
-    authUrl.searchParams.set('final_redirect', redirectUri);
+    authUrl.searchParams.set('redirect_uri', `${OAUTH_PROXY_URL}/callback`);
+    authUrl.searchParams.set('state', state);
 
     const width = 500;
     const height = 600;
