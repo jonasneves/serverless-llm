@@ -10,14 +10,12 @@ export interface GitHubAuth {
 
 export async function connectGitHub(): Promise<GitHubAuth> {
   return new Promise((resolve, reject) => {
-    const state = crypto.randomUUID();
     const redirectUri = `${window.location.origin}/oauth-callback.html`;
 
-    const authUrl = new URL('https://github.com/login/oauth/authorize');
+    // Use the proxy's authorize endpoint - it handles state management
+    const authUrl = new URL(`${OAUTH_PROXY_URL}/authorize`);
     authUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
-    authUrl.searchParams.set('redirect_uri', `${OAUTH_PROXY_URL}/callback`);
     authUrl.searchParams.set('scope', GITHUB_SCOPES);
-    authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('final_redirect', redirectUri);
 
     const width = 500;
