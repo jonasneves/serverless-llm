@@ -121,7 +121,7 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                             <button
                                 onClick={() => handleDropdownToggle('self-hosted')}
                                 disabled={isGenerating}
-                                className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                                className={`h-7 px-3 min-w-[130px] flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
                                     selectedLocalCount > 0
                                         ? 'bg-emerald-500/20 text-emerald-300'
                                         : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
@@ -161,7 +161,7 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                         <button
                             onClick={() => handleDropdownToggle('github')}
                             disabled={isGenerating}
-                            className={`h-7 px-3 flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                            className={`h-7 px-3 min-w-[130px] flex items-center gap-1.5 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
                                 selectedApiCount > 0
                                     ? 'bg-blue-500/20 text-blue-300'
                                     : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
