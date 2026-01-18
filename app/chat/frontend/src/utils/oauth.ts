@@ -10,7 +10,7 @@ export interface GitHubAuth {
 
 export async function connectGitHub(): Promise<GitHubAuth> {
   return new Promise((resolve, reject) => {
-    const redirectUri = `${window.location.origin}/oauth-callback.html`;
+    const redirectUri = `${window.location.origin}/static/playground/oauth-callback.html`;
 
     // State must be base64-encoded JSON for the oauth proxy
     const state = btoa(JSON.stringify({
