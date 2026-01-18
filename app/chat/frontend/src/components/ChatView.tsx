@@ -32,6 +32,7 @@ interface ChatViewProps {
     selectedModels: Set<string>;
     onToggleModel: (modelId: string) => void;
     githubToken?: string;
+    githubUsername?: string;
     onConnectGitHub?: () => void;
     messages: ChatMessage[];
     setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
@@ -47,6 +48,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     selectedModels,
     onToggleModel,
     githubToken,
+    githubUsername,
     onConnectGitHub,
     messages,
     setMessages,
@@ -327,6 +329,9 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             ) : (
                                 <Bot size={72} className="mb-2 text-slate-500 transition-all duration-300" />
                             )}
+                            {githubUsername ? (
+                                <p className="text-slate-400 text-lg font-medium">Hey {githubUsername}!</p>
+                            ) : null}
                             <p className="text-slate-500 text-sm">Select one or more models and start chatting</p>
                             <ModelTabs
                                 models={models}
