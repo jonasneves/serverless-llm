@@ -312,7 +312,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 <Bot size={72} className="mb-2 text-slate-500 transition-all duration-300" />
                             )}
                             {githubUsername ? (
-                                <p className="text-slate-400 text-lg font-medium">Hey {githubUsername}!</p>
+                                <p className="text-slate-400 text-lg font-medium">Hey {githubUsername.split(' ')[0]}!</p>
                             ) : null}
                             <p className="text-slate-500 text-sm">Select one or more models and start chatting</p>
                             <ModelTabs
