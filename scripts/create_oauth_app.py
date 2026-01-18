@@ -63,14 +63,14 @@ def update_railway_env(client_id, client_secret):
     if not run_cmd("which railway", check=False):
         return False
 
-    # Get current GITHUB_CLIENTS value
+    # Get current OAUTH_CLIENTS value
     current = run_cmd("railway variables --json", cwd=OAUTH_PROXY_DIR, check=False)
     if not current:
         return False
 
     try:
         vars_data = json.loads(current)
-        current_clients = vars_data.get("GITHUB_CLIENTS", "{}")
+        current_clients = vars_data.get("OAUTH_CLIENTS", "{}")
         clients = json.loads(current_clients) if current_clients else {}
     except (json.JSONDecodeError, TypeError):
         clients = {}
@@ -80,7 +80,7 @@ def update_railway_env(client_id, client_secret):
     new_value = json.dumps(clients)
 
     # Set the variable
-    result = run_cmd(f"railway variables --set 'GITHUB_CLIENTS={new_value}'", cwd=OAUTH_PROXY_DIR, check=False)
+    result = run_cmd(f"railway variables --set 'OAUTH_CLIENTS={new_value}'", cwd=OAUTH_PROXY_DIR, check=False)
     return result is not None
 
 
@@ -157,7 +157,7 @@ def main():
         print("  Done")
     else:
         print("  Skipped - update manually:")
-        print(f'  Add to GITHUB_CLIENTS: {{"{client_id}":"{client_secret}"}}')
+        print(f'  Add to OAUTH_CLIENTS: {{"{client_id}":"{client_secret}"}}')
 
     # 3. Build frontend
     print("[3/4] Building frontend...")
