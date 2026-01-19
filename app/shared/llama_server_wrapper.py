@@ -288,6 +288,11 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
                     "/v1/chat/completions",
                     json=body,
                 ) as response:
+                    if response.status_code != 200:
+                        await response.aread()  # consume body
+                        error_event = f'data: {{"error": true, "content": "Model error: {response.status_code}"}}\n\n'
+                        yield error_event.encode()
+                        return
                     async for chunk in response.aiter_bytes():
                         yield chunk
 
@@ -297,13 +302,23 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
             )
         else:
             response = await http_client.post("/v1/chat/completions", json=body)
-            return response.json()
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            data = response.json()
+            if not isinstance(data, dict) or "choices" not in data:
+                raise HTTPException(status_code=502, detail="Invalid response from model server")
+            return data
 
     @app.post("/v1/completions")
     async def completions(request: Request):
         """Proxy completions to llama-server"""
         body = await request.json()
         response = await http_client.post("/v1/completions", json=body)
-        return response.json()
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        data = response.json()
+        if not isinstance(data, dict) or "choices" not in data:
+            raise HTTPException(status_code=502, detail="Invalid response from model server")
+        return data
 
     return app

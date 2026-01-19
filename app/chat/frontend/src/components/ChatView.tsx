@@ -297,7 +297,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 await streamSseEvents(stream, (event) => {
                     if (event.event === 'error' || event.error === true) {
                         hasError = true;
-                        content = String(event.error || event.content || 'An error occurred');
+                        content = typeof event.content === 'string' ? event.content : 'An error occurred';
                         streamingContentRef.current.set(modelId, content);
                         syncStreamingState();
                         return;
