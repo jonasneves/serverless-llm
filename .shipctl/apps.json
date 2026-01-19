@@ -1,14 +1,4 @@
 {
-  "config": {
-    "domain": {
-      "base": "neevs.io",
-      "useHttps": true
-    },
-    "chatApi": {
-      "localPort": 8080,
-      "healthPath": "/health"
-    }
-  },
   "services": [
     {
       "key": "nanbeige",
@@ -324,6 +314,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-18T23:32:35.005235Z",
+  "generatedAt": "2026-01-19T17:54:07.891382Z",
   "sourceFile": "config/models.py"
 }
