@@ -221,6 +221,7 @@ jobs:
             --name inference-server \
             --network inference-network \
             -p ${{ inputs.port }}:${{ inputs.port }} \
+            -e MODEL_NAME="${{ inputs.model_name }}" \
             -e MODEL_REPO="$MODEL_REPO" \
             -e MODEL_FILE="$MODEL_FILE" \
             -e PORT="$PORT" \
