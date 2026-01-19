@@ -29,11 +29,7 @@ export function useGestureOptions(content: string): GestureOption[] {
           const validOptions = data.options.filter((opt: any) =>
             opt.id && opt.label && opt.value
           );
-          if (validOptions.length > 0) {
-            setOptions(validOptions);
-          } else {
-            setOptions([]);
-          }
+          setOptions(validOptions);
         }
       } catch (e) {
         console.error('Failed to parse gesture options:', e);

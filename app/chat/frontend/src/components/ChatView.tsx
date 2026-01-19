@@ -101,11 +101,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         if (!el) return;
 
         const handleScroll = () => {
-            if (isNearBottom()) {
-                userScrolledAwayRef.current = false;
-            } else {
-                userScrolledAwayRef.current = true;
-            }
+            userScrolledAwayRef.current = !isNearBottom();
         };
 
         el.addEventListener('scroll', handleScroll, { passive: true });
@@ -319,9 +315,9 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             ) : (
                                 <Bot size={72} className="mb-2 text-slate-500 transition-all duration-300" />
                             )}
-                            {githubUsername ? (
+                            {githubUsername && (
                                 <p className="text-slate-400 text-lg font-medium">Hey {githubUsername.split(' ')[0]}!</p>
-                            ) : null}
+                            )}
                             <p className="text-slate-500 text-sm">Select one or more models and start chatting</p>
                             <ModelTabs
                                 models={models}
@@ -388,32 +384,28 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     })}
 
                     {/* Streaming responses */}
-                    {isGenerating && streamingResponses.size > 0 && (
-                        <>
-                            {Array.from(streamingResponses.entries()).map(([modelId, content]) => {
-                                const model = models.find(m => m.id === modelId);
-                                const timing = streamingTiming.get(modelId);
-                                return (
-                                    <div key={modelId} className="flex justify-start">
-                                        <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-slate-800/60 border border-amber-500/30 text-slate-200">
-                                            <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
-                                                <div className="w-3 h-3 border-2 border-amber-400/50 border-t-amber-400 rounded-full animate-spin" />
-                                                {model?.name || modelId}
-                                            </div>
-                                            <div className="prose prose-invert prose-sm max-w-none">
-                                                <FormattedContent text={content || '...'} />
-                                            </div>
-                                            {timing && (
-                                                <div className="mt-2 pt-2 border-t border-slate-700/30">
-                                                    <ExecutionTimeDisplay times={timing} />
-                                                </div>
-                                            )}
-                                        </div>
+                    {isGenerating && streamingResponses.size > 0 && Array.from(streamingResponses.entries()).map(([modelId, content]) => {
+                        const model = models.find(m => m.id === modelId);
+                        const timing = streamingTiming.get(modelId);
+                        return (
+                            <div key={modelId} className="flex justify-start">
+                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-slate-800/60 border border-amber-500/30 text-slate-200">
+                                    <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
+                                        <div className="w-3 h-3 border-2 border-amber-400/50 border-t-amber-400 rounded-full animate-spin" />
+                                        {model?.name || modelId}
                                     </div>
-                                );
-                            })}
-                        </>
-                    )}
+                                    <div className="prose prose-invert prose-sm max-w-none">
+                                        <FormattedContent text={content || '...'} />
+                                    </div>
+                                    {timing && (
+                                        <div className="mt-2 pt-2 border-t border-slate-700/30">
+                                            <ExecutionTimeDisplay times={timing} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
