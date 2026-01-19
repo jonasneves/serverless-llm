@@ -1,4 +1,4 @@
-name: 🤖 Inference
+name: Inference
 run-name: "${{ github.event.client_payload.model || inputs.model }} \u2022 ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}h \xD7 ${{ github.event.client_payload.instances || inputs.instances || '1' }}"
 'on':
   workflow_dispatch:
