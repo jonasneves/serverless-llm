@@ -1,17 +1,5 @@
 # Serverless LLM
 
-[![Nanbeige API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/nanbeige4-3b-thinking)](https://nanbeige.neevs.io/health)
-[![Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/qwen3-4b)](https://qwen.neevs.io/health)
-[![DeepSeek R1Qwen API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/deepseek-r1-distill-qwen-1.5b)](https://r1qwen.neevs.io/health)
-[![LFM2.5 API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/lfm2.5-1.2b-instruct)](https://lfm2.neevs.io/health)
-[![Gemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/gemma-3-12b-it)](https://gemma.neevs.io/health)
-[![Mistral API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/mistral-7b-instruct-v0.3)](https://mistral.neevs.io/health)
-[![Phi API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/phi-3-mini)](https://phi.neevs.io/health)
-[![RNJ API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/rnj-1-instruct)](https://rnj.neevs.io/health)
-[![Llama API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/llama-3.2-3b)](https://llama.neevs.io/health)
-[![FunctionGemma API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/functiongemma-270m-it)](https://functiongemma.neevs.io/health)
-[![SmolLM3 API](https://img.shields.io/endpoint?url=https://chat.neevs.io/api/badge/model/smollm3-3b)](https://smollm3.neevs.io/health)
-
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
 
