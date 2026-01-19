@@ -203,8 +203,15 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 let content = '';
                 let firstToken = true;
                 let firstTokenTime: number | undefined;
+                let hasError = false;
 
                 await streamSseEvents(stream, (event) => {
+                    if (event.event === 'error' || event.error === true) {
+                        hasError = true;
+                        content = String(event.error || event.content || 'An error occurred');
+                        setStreamingResponses(prev => new Map(prev).set(modelId, content));
+                        return;
+                    }
                     if (event.content) {
                         if (firstToken) {
                             firstToken = false;
@@ -229,6 +236,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     modelId,
                     modelName: model.name,
                     timing: { startTime, firstTokenTime, endTime },
+                    error: hasError,
                 }]);
             } catch (err: any) {
                 if (err.name !== 'AbortError') {
