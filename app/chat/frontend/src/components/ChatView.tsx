@@ -46,60 +46,65 @@ interface ChatViewProps {
 interface ChatMessageItemProps {
     msg: ChatMessage;
     idx: number;
-    hasGestureOptions: boolean;
-    copiedMessageId: string | null;
+    gesturesActive: boolean;
+    uiBuilderEnabled: boolean;
+    isCopied: boolean;
     onCopy: (idx: number) => void;
     onGestureSelect: (value: string) => void;
 }
 
-const ChatMessageItem = memo(({ msg, idx, hasGestureOptions, copiedMessageId, onCopy, onGestureSelect }: ChatMessageItemProps) => (
-    <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-        <div className={`group relative max-w-[85%] rounded-2xl px-4 py-3 ${
-            msg.role === 'user'
-                ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                : msg.error
-                    ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                    : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
-        }`}>
-            <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${
-                msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'
+const ChatMessageItem = memo(({ msg, idx, gesturesActive, uiBuilderEnabled, isCopied, onCopy, onGestureSelect }: ChatMessageItemProps) => {
+    const hasGestureOptions = msg.role === 'assistant' && (gesturesActive || uiBuilderEnabled) && msg.content.includes('```json');
+
+    return (
+        <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`group relative max-w-[85%] rounded-2xl px-4 py-3 ${
+                msg.role === 'user'
+                    ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
+                    : msg.error
+                        ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
+                        : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
             }`}>
-                {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                {msg.role === 'user' ? 'You' : msg.modelName || 'Assistant'}
-                {msg.error && <AlertTriangle size={12} className="text-red-400" />}
+                <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${
+                    msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'
+                }`}>
+                    {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
+                    {msg.role === 'user' ? 'You' : msg.modelName || 'Assistant'}
+                    {msg.error && <AlertTriangle size={12} className="text-red-400" />}
+                </div>
+                <div className="prose prose-invert prose-sm max-w-none">
+                    <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
+                </div>
+                {msg.role === 'assistant' && msg.timing && (
+                    <div className="mt-2 pt-2 border-t border-slate-700/30">
+                        <ExecutionTimeDisplay times={msg.timing} />
+                    </div>
+                )}
+                {msg.role === 'assistant' && msg.content && (
+                    <button
+                        onClick={() => onCopy(idx)}
+                        className={`absolute bottom-2 right-2 p-1.5 rounded-md transition-all ${
+                            isCopied
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'opacity-0 group-hover:opacity-100 bg-slate-700/70 text-slate-400'
+                        }`}
+                    >
+                        {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                    </button>
+                )}
             </div>
-            <div className="prose prose-invert prose-sm max-w-none">
-                <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
-            </div>
-            {msg.role === 'assistant' && msg.timing && (
-                <div className="mt-2 pt-2 border-t border-slate-700/30">
-                    <ExecutionTimeDisplay times={msg.timing} />
+            {hasGestureOptions && (
+                <div className="ml-4">
+                    <GestureOptions
+                        content={msg.content}
+                        onSelect={onGestureSelect}
+                        isInline={false}
+                    />
                 </div>
             )}
-            {msg.role === 'assistant' && msg.content && (
-                <button
-                    onClick={() => onCopy(idx)}
-                    className={`absolute bottom-2 right-2 p-1.5 rounded-md transition-all ${
-                        copiedMessageId === `${idx}`
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'opacity-0 group-hover:opacity-100 bg-slate-700/70 text-slate-400'
-                    }`}
-                >
-                    {copiedMessageId === `${idx}` ? <Check size={12} /> : <Copy size={12} />}
-                </button>
-            )}
         </div>
-        {hasGestureOptions && (
-            <div className="ml-4">
-                <GestureOptions
-                    content={msg.content}
-                    onSelect={onGestureSelect}
-                    isInline={false}
-                />
-            </div>
-        )}
-    </div>
-));
+    );
+});
 
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
@@ -124,12 +129,34 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const userScrolledAwayRef = useRef(false);
+    const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const streamingContentRef = useRef<Map<string, string>>(new Map());
+    const streamingTimingRef = useRef<Map<string, ExecutionTimeData>>(new Map());
+    const rafRef = useRef<number | null>(null);
 
     const gestureCtx = useGestureOptional();
     const isMiddleFinger = gestureCtx?.gestureState?.gesture === 'Middle_Finger';
 
     // O(1) model lookup map
     const modelMap = useMemo(() => new Map(models.map(m => [m.id, m])), [models]);
+
+    // Cleanup refs on unmount
+    useEffect(() => {
+        return () => {
+            if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+    }, []);
+
+    // Throttled streaming state sync using rAF
+    const syncStreamingState = useCallback(() => {
+        if (rafRef.current) return;
+        rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            setStreamingResponses(new Map(streamingContentRef.current));
+            setStreamingTiming(new Map(streamingTimingRef.current));
+        });
+    }, []);
 
     // Auto-focus input when typing printable characters (type-anywhere)
     useEffect(() => {
@@ -141,7 +168,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
                 if (inputRef.current) {
                     inputRef.current.focus();
-                    // The character will be typed into the input automatically
                 }
             }
         };
@@ -190,15 +216,17 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         // Reset user scroll tracking on new message
         userScrolledAwayRef.current = false;
 
+        // Initialize refs and state
+        const now = Date.now();
+        streamingContentRef.current = new Map(modelIds.map(id => [id, '']));
+        streamingTimingRef.current = new Map(modelIds.map(id => [id, { startTime: now }]));
+
         setIsGenerating(true);
-        setStreamingResponses(new Map(modelIds.map(id => [id, ''])));
+        setStreamingResponses(new Map(streamingContentRef.current));
+        setStreamingTiming(new Map(streamingTimingRef.current));
 
         const userMessage: ChatMessage = { role: 'user', content: text };
         setMessages(prev => [...prev, userMessage]);
-
-        // Initialize timing for all models
-        const now = Date.now();
-        setStreamingTiming(new Map(modelIds.map(id => [id, { startTime: now }])));
 
         const baseMessages = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
 
@@ -265,22 +293,20 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     if (event.event === 'error' || event.error === true) {
                         hasError = true;
                         content = String(event.error || event.content || 'An error occurred');
-                        setStreamingResponses(prev => new Map(prev).set(modelId, content));
+                        streamingContentRef.current.set(modelId, content);
+                        syncStreamingState();
                         return;
                     }
                     if (event.content) {
                         if (firstToken) {
                             firstToken = false;
                             firstTokenTime = Date.now();
-                            setStreamingTiming(prev => {
-                                const newMap = new Map(prev);
-                                const existing = newMap.get(modelId) || { startTime };
-                                newMap.set(modelId, { ...existing, firstTokenTime });
-                                return newMap;
-                            });
+                            const existing = streamingTimingRef.current.get(modelId) || { startTime };
+                            streamingTimingRef.current.set(modelId, { ...existing, firstTokenTime });
                         }
                         content += event.content;
-                        setStreamingResponses(prev => new Map(prev).set(modelId, content));
+                        streamingContentRef.current.set(modelId, content);
+                        syncStreamingState();
                     }
                 });
 
@@ -306,18 +332,16 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 }
             } finally {
                 abortRefs.current.delete(modelId);
-                setStreamingResponses(prev => {
-                    const newMap = new Map(prev);
-                    newMap.delete(modelId);
-                    return newMap;
-                });
+                streamingContentRef.current.delete(modelId);
+                streamingTimingRef.current.delete(modelId);
+                syncStreamingState();
                 completedCount++;
                 if (completedCount === totalCount) setIsGenerating(false);
             }
         });
 
         await Promise.allSettled(streamPromises);
-    }, [isGenerating, selectedModels, messages, modelMap, githubToken, uiBuilderEnabled, setMessages, setIsGenerating]);
+    }, [isGenerating, selectedModels, messages, modelMap, githubToken, uiBuilderEnabled, setMessages, setIsGenerating, syncStreamingState]);
 
     const stopGeneration = useCallback(() => {
         abortRefs.current.forEach(c => c.abort());
@@ -346,16 +370,22 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
     const copyResponse = useCallback((idx: number) => {
         const msg = messages[idx];
-        if (msg && msg.role === 'assistant') {
+        if (msg?.role === 'assistant') {
             navigator.clipboard.writeText(msg.content);
             setCopiedMessageId(`${idx}`);
-            setTimeout(() => setCopiedMessageId(null), 2000);
+            if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+            copyTimeoutRef.current = setTimeout(() => setCopiedMessageId(null), 2000);
         }
     }, [messages]);
 
     const handleGestureSelect = useCallback((value: string) => {
         handleSend(value, true);
     }, [handleSend]);
+
+    const streamingEntries = useMemo(
+        () => Array.from(streamingResponses.entries()),
+        [streamingResponses]
+    );
 
     return (
         <div className="flex flex-col h-full w-full relative">
@@ -400,15 +430,16 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                             key={idx}
                             msg={msg}
                             idx={idx}
-                            hasGestureOptions={msg.role === 'assistant' && (gesturesActive || uiBuilderEnabled) && msg.content.includes('```json')}
-                            copiedMessageId={copiedMessageId}
+                            gesturesActive={gesturesActive}
+                            uiBuilderEnabled={uiBuilderEnabled}
+                            isCopied={copiedMessageId === `${idx}`}
                             onCopy={copyResponse}
                             onGestureSelect={handleGestureSelect}
                         />
                     ))}
 
                     {/* Streaming responses */}
-                    {isGenerating && Array.from(streamingResponses.entries()).map(([modelId, content]) => {
+                    {isGenerating && streamingEntries.map(([modelId, content]) => {
                         const model = modelMap.get(modelId);
                         const timing = streamingTiming.get(modelId);
                         return (
