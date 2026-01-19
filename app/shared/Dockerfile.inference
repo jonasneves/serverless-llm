@@ -4,13 +4,11 @@
 # Multi-stage build for efficient inference server images.
 # Used by all standard models (qwen, phi, llama, mistral, gemma, deepseek-r1qwen).
 #
-# Build args:
-#   MODEL_DIR - Directory name (e.g., "qwen-inference", "phi-inference")
+# Environment:
+#   MODEL_NAME - Model name from config/models.py (e.g., "qwen", "phi")
 #
-# Exception: RNJ inference has its own Dockerfile (builds llama.cpp from source)
+# Exception: LFM2, RNJ, and Nemotron have their own Dockerfiles (llama-server wrapper)
 # =============================================================================
-
-ARG MODEL_DIR
 
 # Stage 1: Builder - Heavy build dependencies
 FROM python:3.11-slim AS builder
@@ -71,9 +69,8 @@ COPY --chown=appuser:appuser app/shared/ ./shared/
 # Copy centralized config (models.py, inference.yaml)
 COPY --chown=appuser:appuser config/ ./config/
 
-# Copy model-specific inference server configuration
-ARG MODEL_DIR
-COPY --chown=appuser:appuser app/${MODEL_DIR}/inference_server.py .
+# Use shared universal inference server (no per-model file needed)
+# MODEL_NAME is passed at runtime via environment variable
 
 # Ensure appuser owns /app directory for cache creation
 RUN chown -R appuser:appuser /app
@@ -88,4 +85,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["python3", "inference_server.py"]
+CMD ["python3", "shared/inference_server.py"]

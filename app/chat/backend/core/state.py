@@ -85,3 +85,67 @@ def is_inference_fresh(model_id: str) -> bool:
     if age is None:
         return False
     return age < INFERENCE_FRESHNESS_WINDOW
+
+
+async def init_model_semaphores(
+    model_endpoints: dict[str, str],
+    default_capacity: int,
+    logger
+) -> None:
+    """
+    Initialize model semaphores and fetch context lengths during startup.
+
+    Args:
+        model_endpoints: Dict mapping model_id -> endpoint URL
+        default_capacity: Default capacity for semaphores
+        logger: Logger instance
+    """
+    logger.info("Initializing model semaphores with default capacity...")
+
+    for model_id, endpoint in model_endpoints.items():
+        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(default_capacity)
+        MODEL_CAPACITIES[model_id] = default_capacity
+
+        try:
+            client = get_http_client()
+            details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
+            if details_response.status_code == 200:
+                details_data = details_response.json()
+                if "n_ctx" in details_data:
+                    LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
+                    logger.info(f"✓ {model_id}: n_ctx={details_data['n_ctx']}")
+        except Exception as e:
+            logger.warning(f"⚠️  {model_id}: failed to fetch n_ctx during startup ({e})")
+
+    if MODEL_SEMAPHORES:
+        logger.info(f"✓ Initialized {len(MODEL_SEMAPHORES)} models with default configurations")
+
+
+async def update_model_capacity(model_id: str, endpoint: str, fetch_capacity_fn, logger) -> None:
+    """
+    Update capacity for a single model in the background.
+
+    Args:
+        model_id: Model identifier
+        endpoint: Model endpoint URL
+        fetch_capacity_fn: Async function to fetch capacity
+        logger: Logger instance
+    """
+    try:
+        capacity = await fetch_capacity_fn(model_id, endpoint)
+        MODEL_CAPACITIES[model_id] = capacity
+        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(capacity)
+
+        try:
+            client = get_http_client()
+            details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
+            if details_response.status_code == 200:
+                details_data = details_response.json()
+                if "n_ctx" in details_data:
+                    LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
+                    logger.info(f"✓ {model_id}: n_ctx={details_data['n_ctx']}")
+        except Exception as e:
+            logger.warning(f"⚠️  {model_id}: failed to fetch n_ctx in background ({e})")
+
+    except Exception as e:
+        logger.error(f"Background: Error updating capacity for {model_id}: {e}")

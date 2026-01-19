@@ -134,7 +134,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         userScrolledAwayRef.current = false;
 
         setIsGenerating(true);
-        setStreamingResponses(new Map());
+        setStreamingResponses(new Map(modelIds.map(id => [id, ''])));
         setStreamingTiming(new Map());
 
         const userMessage: ChatMessage = { role: 'user', content: text };

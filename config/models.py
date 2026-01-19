@@ -70,6 +70,18 @@ class ModelConfig:
         """Public URL for a given domain."""
         return f"https://{self.subdomain}.{domain}"
 
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization and chat backend config."""
+        return {
+            "id": self.model_id,
+            "name": self.display_name,
+            "env": self.env_var,
+            "default_url": self.service_url,
+            "service": self.name,
+            "default": self.default,
+            "rank": self.rank,
+        }
+
 
 # =============================================================================
 # PORT ALLOCATION SCHEME

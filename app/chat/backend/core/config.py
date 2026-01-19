@@ -96,18 +96,7 @@ EVENT_TYPES = {
 
 # Build MODEL_CONFIG tuple for backward compatibility
 # Sorted by rank (capability)
-MODEL_CONFIG = tuple(
-    {
-        "id": m.model_id,
-        "name": m.display_name,
-        "env": m.env_var,
-        "default_url": m.service_url,
-        "service": m.name,
-        "default": m.default,
-        "rank": m.rank,
-    }
-    for m in get_inference_models()
-)
+MODEL_CONFIG = tuple(m.to_dict() for m in get_inference_models())
 
 # Model endpoints dict
 MODEL_ENDPOINTS = {

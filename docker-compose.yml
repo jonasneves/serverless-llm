@@ -69,119 +69,81 @@ services:
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: qwen-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: qwen
     ports:
       - "${QWEN_PORT:-8100}:8000"
     profiles: ["all", "qwen"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   phi:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: phi-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: phi
     ports:
       - "${PHI_PORT:-8101}:8000"
     profiles: ["all", "phi"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   lfm2:
     <<: *inference-common
     build:
-      context: ./app
-      dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: lfm2-inference
+      context: ./app/lfm2-inference
+      dockerfile: Dockerfile
     ports:
       - "${LFM2_PORT:-8105}:8000"
     profiles: ["all", "lfm2"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   llama:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: llama-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: llama
     ports:
       - "${LLAMA_PORT:-8200}:8000"
     profiles: ["all", "llama"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   mistral:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: mistral-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: mistral
     ports:
       - "${MISTRAL_PORT:-8202}:8000"
     profiles: ["all", "mistral"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   gemma:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: gemma-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: gemma
     ports:
       - "${GEMMA_PORT:-8200}:8000"
     profiles: ["all", "gemma"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   r1qwen:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: deepseek-r1qwen-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: r1qwen
     ports:
       - "${R1QWEN_PORT:-8300}:8000"
     profiles: ["all", "r1qwen"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   rnj:
     <<: *inference-common
@@ -191,63 +153,42 @@ services:
     ports:
       - "${RNJ_PORT:-8203}:8000"
     profiles: ["all", "rnj"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   smollm3:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: smollm3-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: smollm3
     ports:
       - "${SMOLLM3_PORT:-8104}:8000"
     profiles: ["all", "smollm3"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   functiongemma:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: functiongemma-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: functiongemma
     ports:
       - "${FUNCTIONGEMMA_PORT:-8103}:8000"
     profiles: ["all", "functiongemma"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   nanbeige:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: nanbeige-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: nanbeige
     ports:
       - "${NANBEIGE_PORT:-8301}:8000"
     profiles: ["all", "nanbeige"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   nemotron:
     <<: *inference-common
@@ -257,29 +198,18 @@ services:
     ports:
       - "${NEMOTRON_PORT:-8302}:8000"
     profiles: ["all", "nemotron"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   gptoss:
     <<: *inference-common
     build:
       context: ./app
       dockerfile: shared/Dockerfile.inference
-      args:
-        MODEL_DIR: gpt-oss-inference
+    environment:
+      <<: *common-env
+      MODEL_NAME: gptoss
     ports:
       - "${GPTOSS_PORT:-8303}:8000"
     profiles: ["all", "gptoss"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
 networks:
   llm-network:

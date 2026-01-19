@@ -16,8 +16,8 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from clients.model_profiles import MODEL_PROFILES, get_display_name
-from clients.model_client import ModelClient
 from prompts import DEBATE_TURN_SYSTEM
+from .base import MultiModelEngine
 
 
 @dataclass
@@ -36,7 +36,7 @@ class DebateTurn:
             self.timestamp = datetime.utcnow().isoformat()
 
 
-class DebateEngine:
+class DebateEngine(MultiModelEngine):
     """Manages turn-based debates between models"""
 
     def __init__(
@@ -46,18 +46,8 @@ class DebateEngine:
         openrouter_key: str = None,
         timeout_per_turn: int = 30
     ):
-        """
-        Initialize debate engine
-
-        Args:
-            model_endpoints: Dict mapping model_id -> API URL
-            github_token: GitHub token for API models
-            openrouter_key: OpenRouter API key
-            timeout_per_turn: Max seconds per model response
-        """
-        self.model_endpoints = model_endpoints
+        super().__init__(model_endpoints, github_token, openrouter_key, timeout_per_turn)
         self.timeout_per_turn = timeout_per_turn
-        self.client = ModelClient(github_token, openrouter_key)
 
     def _build_turn_prompt(
         self,

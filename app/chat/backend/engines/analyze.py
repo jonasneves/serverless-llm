@@ -10,34 +10,12 @@ After all models complete their responses, analyzes:
 from typing import List, Dict, Any, AsyncGenerator
 import asyncio
 from clients.model_profiles import get_display_name
-from clients.model_client import ModelClient
 from prompts import ANALYZE_RESPONSE_SYSTEM
+from .base import MultiModelEngine
 
 
-class AnalyzeEngine:
+class AnalyzeEngine(MultiModelEngine):
     """Analyzes completed responses to find consensus, divergence, and unique contributions"""
-
-    def __init__(
-        self,
-        model_endpoints: Dict[str, str],
-        github_token: str = None,
-        openrouter_key: str = None,
-        timeout: int = 60
-    ):
-        """
-        Initialize analyze engine
-
-        Args:
-            model_endpoints: Dict mapping model_id -> API URL for local models
-            github_token: GitHub token for API models
-            openrouter_key: OpenRouter API key
-            timeout: Max seconds per response
-        """
-        self.model_endpoints = model_endpoints
-        self.github_token = github_token
-        self.openrouter_key = openrouter_key
-        self.timeout = timeout
-        self.client = ModelClient(github_token, openrouter_key)
 
     async def _stream_model_response(
         self,

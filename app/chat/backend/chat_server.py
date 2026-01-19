@@ -51,6 +51,8 @@ from core.state import (
     UNSUPPORTED_GITHUB_MODELS,
     close_http_client,
     get_http_client,
+    init_model_semaphores,
+    update_model_capacity,
 )
 
 # Import GitHub token utility
@@ -64,17 +66,14 @@ async def lifespan(app: FastAPI):
     validate_environment()
     get_http_client()
 
-    # Log configured model endpoints - dynamically from config
+    # Log configured model endpoints
     from config.models import get_inference_models
-
     model_env_vars = {
         model.name.upper(): os.getenv(model.env_var)
         for model in get_inference_models()
     }
-
     configured = [k for k, v in model_env_vars.items() if v]
     missing = [k for k, v in model_env_vars.items() if not v]
-
     if configured:
         logger.info(f"✓ Configured model endpoints: {', '.join(configured)}")
     if missing:
@@ -86,31 +85,12 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
 
-    # Initialize model semaphores with default capacity during startup for immediate availability
-    logger.info("Initializing model semaphores with default capacity...")
-    for model_id, endpoint in MODEL_ENDPOINTS.items():
-        # Initialize with default capacity to allow immediate server startup
-        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(DEFAULT_MODEL_CAPACITY)
-        MODEL_CAPACITIES[model_id] = DEFAULT_MODEL_CAPACITY
+    # Initialize model semaphores
+    await init_model_semaphores(MODEL_ENDPOINTS, DEFAULT_MODEL_CAPACITY, logger)
 
-        # Also fetch context length during startup with default
-        try:
-            client = get_http_client()
-            details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
-            if details_response.status_code == 200:
-                details_data = details_response.json()
-                if "n_ctx" in details_data:
-                    LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
-                    logger.info(f"✓ {model_id}: n_ctx={details_data['n_ctx']}")
-        except Exception as e:
-            logger.warning(f"⚠️  {model_id}: failed to fetch n_ctx during startup ({e})")
-
-    if MODEL_SEMAPHORES:
-        logger.info(f"✓ Initialized {len(MODEL_SEMAPHORES)} models with default configurations")
-
-    # Run detailed capacity checks in the background after server startup
+    # Run detailed capacity checks in background
     logger.info("Starting background model capacity checks...")
-    asyncio.create_task(update_model_capacities_async())
+    asyncio.create_task(_update_all_model_capacities())
 
     # Fetch GitHub models
     from services.github_models_service import fetch_github_models
@@ -122,53 +102,17 @@ async def lifespan(app: FastAPI):
     await close_http_client()
 
 
-async def update_model_capacities_async():
-    """
-    Update model capacities in the background after server startup.
-    This allows the server to start quickly while still getting accurate capacity information.
-    """
+async def _update_all_model_capacities():
+    """Update model capacities in the background after server startup."""
     logger.info("Background: Querying model capacities and context lengths...")
-
-    # Create tasks for all capacity fetches to run concurrently
-    tasks = []
-    for model_id, endpoint in MODEL_ENDPOINTS.items():
-        task = asyncio.create_task(_update_single_model_capacity(model_id, endpoint))
-        tasks.append(task)
-
-    # Wait for all capacity checks to complete
+    tasks = [
+        asyncio.create_task(
+            update_model_capacity(model_id, endpoint, fetch_model_capacity, logger)
+        )
+        for model_id, endpoint in MODEL_ENDPOINTS.items()
+    ]
     await asyncio.gather(*tasks, return_exceptions=True)
     logger.info("Background: Completed all model capacity updates")
-
-
-async def _update_single_model_capacity(model_id: str, endpoint: str):
-    """
-    Update capacity for a single model in the background.
-    """
-    try:
-        capacity = await fetch_model_capacity(model_id, endpoint)
-
-        # Update the semaphore and capacity atomically
-        MODEL_CAPACITIES[model_id] = capacity
-
-        # Replace the semaphore with a new one with updated capacity
-        # Note: Any ongoing operations using the old semaphore will continue with the old capacity
-        # but new operations will use the updated capacity
-        MODEL_SEMAPHORES[model_id] = asyncio.Semaphore(capacity)
-
-        # Also fetch context length in the background
-        try:
-            client = get_http_client()
-            details_response = await client.get(f"{endpoint}/health/details", timeout=5.0)
-            if details_response.status_code == 200:
-                details_data = details_response.json()
-                if "n_ctx" in details_data:
-                    LIVE_CONTEXT_LENGTHS[model_id] = details_data["n_ctx"]
-                    logger.info(f"✓ {model_id}: n_ctx={details_data['n_ctx']}")
-        except Exception as e:
-            logger.warning(f"⚠️  {model_id}: failed to fetch n_ctx in background ({e})")
-
-    except Exception as e:
-        logger.error(f"Background: Error updating capacity for {model_id}: {e}")
 
 
 app = FastAPI(

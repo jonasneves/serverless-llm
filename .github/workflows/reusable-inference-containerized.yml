@@ -338,7 +338,7 @@ jobs:
 
           # Get duration from inputs
           DURATION_HOURS="${{ inputs.duration_hours }}"
-          DURATION=$((DURATION_HOURS * 3600))
+          DURATION=$(awk "BEGIN {printf \"%.0f\", $DURATION_HOURS * 3600}")
           RESTART_THRESHOLD=$((DURATION - 360))
           START_TIME=$(date +%s)
           RESTART_TRIGGERED=false
@@ -409,7 +409,7 @@ jobs:
               fi
             fi
 
-            [ $ELAPSED -gt $DURATION ] && break
+            [ "$ELAPSED" -gt "$DURATION" ] && break
             sleep 30
           done
 
