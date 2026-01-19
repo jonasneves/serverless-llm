@@ -53,18 +53,23 @@ interface ChatMessageItemProps {
     onGestureSelect: (value: string) => void;
 }
 
+function getMessageBubbleClasses(role: 'user' | 'assistant', hasError?: boolean): string {
+    const base = 'group relative max-w-[85%] rounded-2xl px-4 py-3';
+    if (role === 'user') {
+        return `${base} bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm`;
+    }
+    if (hasError) {
+        return `${base} bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm`;
+    }
+    return `${base} bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm`;
+}
+
 const ChatMessageItem = memo(({ msg, idx, gesturesActive, uiBuilderEnabled, isCopied, onCopy, onGestureSelect }: ChatMessageItemProps) => {
     const hasGestureOptions = msg.role === 'assistant' && (gesturesActive || uiBuilderEnabled) && msg.content.includes('```json');
 
     return (
         <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`group relative max-w-[85%] rounded-2xl px-4 py-3 ${
-                msg.role === 'user'
-                    ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                    : msg.error
-                        ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                        : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
-            }`}>
+            <div className={getMessageBubbleClasses(msg.role, msg.error)}>
                 <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${
                     msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'
                 }`}>

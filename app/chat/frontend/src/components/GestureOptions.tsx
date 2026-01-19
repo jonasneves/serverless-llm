@@ -136,8 +136,3 @@ export default function GestureOptions({ content, onSelect, isInline = false }: 
     </div>
   );
 }
-
-// Helper function to extract text without JSON blocks
-export function extractTextWithoutJSON(content: string): string {
-  return content.replace(/```json[\s\S]*?```/g, '').trim();
-}
