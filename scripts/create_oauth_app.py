@@ -6,7 +6,6 @@ This OAuth App uses minimal permissions (read:user only).
 The callback URL points to the oauth-proxy.
 """
 
-import json
 import re
 import signal
 import subprocess
@@ -33,11 +32,8 @@ OAUTH_PROXY_DIR = Path.home() / "Documents/GitHub/agentivo/oauth-proxy"
 
 
 def run_cmd(cmd, cwd=None, check=True):
-    """Run a command and return output."""
     result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True)
     if check and result.returncode != 0:
-        print(f"Command failed: {cmd}")
-        print(result.stderr)
         return None
     return result.stdout.strip()
 
@@ -51,43 +47,14 @@ def update_oauth_ts(client_id):
         content
     )
     if updated == content:
-        print("  Warning: No change made to oauth.ts")
         return False
     OAUTH_TS_PATH.write_text(updated)
     return True
 
 
-def update_railway_env(client_id, client_secret):
-    """Update Railway environment variable for oauth-proxy."""
-    # Check if railway CLI is available
-    if not run_cmd("which railway", check=False):
-        return False
-
-    # Get current OAUTH_CLIENTS value
-    current = run_cmd("railway variables --json", cwd=OAUTH_PROXY_DIR, check=False)
-    if not current:
-        return False
-
-    try:
-        vars_data = json.loads(current)
-        current_clients = vars_data.get("OAUTH_CLIENTS", "{}")
-        clients = json.loads(current_clients) if current_clients else {}
-    except (json.JSONDecodeError, TypeError):
-        clients = {}
-
-    # Add new client
-    clients[client_id] = client_secret
-    new_value = json.dumps(clients)
-
-    # Set the variable
-    result = run_cmd(f"railway variables --set 'OAUTH_CLIENTS={new_value}'", cwd=OAUTH_PROXY_DIR, check=False)
-    return result is not None
-
-
 def build_frontend():
     """Run npm build for frontend."""
     frontend_dir = REPO_ROOT / "app/chat/frontend"
-    print("  Running npm build...")
     result = subprocess.run(
         "npm run build",
         shell=True,
@@ -95,10 +62,7 @@ def build_frontend():
         capture_output=True,
         text=True
     )
-    if result.returncode != 0:
-        print(f"  Build failed: {result.stderr}")
-        return False
-    return True
+    return result.returncode == 0
 
 
 def main():
@@ -108,14 +72,10 @@ def main():
     print(f"  Name:         {APP_NAME}")
     print(f"  Homepage:     {HOMEPAGE}")
     print(f"  Callback URL: {CALLBACK_URL}")
-    print(f"  Description:  {DESCRIPTION}")
-    print()
-    print("This app will only request 'read:user' scope (profile info only).")
     print()
 
     input("Press Enter to open browser...")
 
-    # GitHub OAuth App creation URL (personal account)
     github_url = (
         f"https://github.com/settings/applications/new?"
         f"oauth_application[name]={quote(APP_NAME)}&"
@@ -127,17 +87,17 @@ def main():
     webbrowser.open(github_url)
 
     print("\n" + "=" * 60)
-    print("After creating the OAuth App, enter the credentials below:")
+    print("After creating the OAuth App, enter the credentials:")
     print("=" * 60 + "\n")
 
     client_id = input("Client ID: ").strip()
     if not client_id:
-        print("Error: Client ID is required")
+        print("Error: Client ID required")
         sys.exit(1)
 
     client_secret = input("Client Secret: ").strip()
     if not client_secret:
-        print("Error: Client Secret is required")
+        print("Error: Client Secret required")
         sys.exit(1)
 
     print("\n" + "=" * 60)
@@ -145,40 +105,28 @@ def main():
     print("=" * 60 + "\n")
 
     # 1. Update oauth.ts
-    print("[1/4] Updating oauth.ts...")
+    print("[1/3] Updating oauth.ts...")
     if update_oauth_ts(client_id):
-        print("  Done")
+        print("  Updated")
     else:
-        print("  Failed - update manually")
+        print("  Already has this client ID")
 
-    # 2. Try to update Railway env
-    print("[2/4] Updating Railway env vars...")
-    if update_railway_env(client_id, client_secret):
-        print("  Done")
-    else:
-        print("  Skipped - update manually:")
-        print(f'  Add to OAUTH_CLIENTS: {{"{client_id}":"{client_secret}"}}')
-
-    # 3. Build frontend
-    print("[3/4] Building frontend...")
+    # 2. Build frontend
+    print("[2/3] Building frontend...")
     if build_frontend():
         print("  Done")
     else:
-        print("  Failed - run manually: cd app/chat/frontend && npm run build")
+        print("  Failed - run: cd app/chat/frontend && npm run build")
 
-    # 4. Show git status
-    print("[4/4] Git status:")
-    status = run_cmd("git status --short", cwd=REPO_ROOT, check=False)
-    if status:
-        print(status)
-        print()
-        commit = input("Commit changes? [y/N]: ").strip().lower()
-        if commit == 'y':
-            run_cmd("git add -A", cwd=REPO_ROOT)
-            run_cmd("git commit -m 'Update GitHub OAuth client ID'", cwd=REPO_ROOT)
-            print("  Committed")
-    else:
-        print("  No changes to commit")
+    # 3. Instructions for oauth-proxy
+    print("[3/3] Add client to oauth-proxy:")
+    print(f"  cd {OAUTH_PROXY_DIR}")
+    print("  python3 scripts/manage_clients.py")
+    print()
+    print("  When prompted:")
+    print(f"    App name: {APP_NAME}")
+    print(f"    Client ID: {client_id}")
+    print(f"    Client Secret: {client_secret}")
 
     print("\nDone!")
 
