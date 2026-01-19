@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo, memo } from 'react';
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
@@ -43,6 +43,64 @@ interface ChatViewProps {
     setUiBuilderEnabled: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+interface ChatMessageItemProps {
+    msg: ChatMessage;
+    idx: number;
+    hasGestureOptions: boolean;
+    copiedMessageId: string | null;
+    onCopy: (idx: number) => void;
+    onGestureSelect: (value: string) => void;
+}
+
+const ChatMessageItem = memo(({ msg, idx, hasGestureOptions, copiedMessageId, onCopy, onGestureSelect }: ChatMessageItemProps) => (
+    <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+        <div className={`group relative max-w-[85%] rounded-2xl px-4 py-3 ${
+            msg.role === 'user'
+                ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
+                : msg.error
+                    ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
+                    : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
+        }`}>
+            <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${
+                msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'
+            }`}>
+                {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
+                {msg.role === 'user' ? 'You' : msg.modelName || 'Assistant'}
+                {msg.error && <AlertTriangle size={12} className="text-red-400" />}
+            </div>
+            <div className="prose prose-invert prose-sm max-w-none">
+                <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
+            </div>
+            {msg.role === 'assistant' && msg.timing && (
+                <div className="mt-2 pt-2 border-t border-slate-700/30">
+                    <ExecutionTimeDisplay times={msg.timing} />
+                </div>
+            )}
+            {msg.role === 'assistant' && msg.content && (
+                <button
+                    onClick={() => onCopy(idx)}
+                    className={`absolute bottom-2 right-2 p-1.5 rounded-md transition-all ${
+                        copiedMessageId === `${idx}`
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : 'opacity-0 group-hover:opacity-100 bg-slate-700/70 text-slate-400'
+                    }`}
+                >
+                    {copiedMessageId === `${idx}` ? <Check size={12} /> : <Copy size={12} />}
+                </button>
+            )}
+        </div>
+        {hasGestureOptions && (
+            <div className="ml-4">
+                <GestureOptions
+                    content={msg.content}
+                    onSelect={onGestureSelect}
+                    isInline={false}
+                />
+            </div>
+        )}
+    </div>
+));
+
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
     selectedModels,
@@ -69,6 +127,9 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
     const gestureCtx = useGestureOptional();
     const isMiddleFinger = gestureCtx?.gestureState?.gesture === 'Middle_Finger';
+
+    // O(1) model lookup map
+    const modelMap = useMemo(() => new Map(models.map(m => [m.id, m])), [models]);
 
     // Auto-focus input when typing printable characters (type-anywhere)
     useEffect(() => {
@@ -131,7 +192,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
         setIsGenerating(true);
         setStreamingResponses(new Map(modelIds.map(id => [id, ''])));
-        setStreamingTiming(new Map());
 
         const userMessage: ChatMessage = { role: 'user', content: text };
         setMessages(prev => [...prev, userMessage]);
@@ -168,7 +228,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
 
         // Stream all selected models in parallel - each completes independently
         const streamPromises = modelIds.map(async (modelId) => {
-            const model = models.find(m => m.id === modelId);
+            const model = modelMap.get(modelId);
             const startTime = Date.now();
 
             if (!model) {
@@ -257,7 +317,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         });
 
         await Promise.allSettled(streamPromises);
-    }, [isGenerating, selectedModels, messages, models, githubToken, uiBuilderEnabled, setMessages, setIsGenerating]);
+    }, [isGenerating, selectedModels, messages, modelMap, githubToken, uiBuilderEnabled, setMessages, setIsGenerating]);
 
     const stopGeneration = useCallback(() => {
         abortRefs.current.forEach(c => c.abort());
@@ -284,14 +344,18 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
         scroll,
     }), [handleSend, stopGeneration, scroll]);
 
-    const copyResponse = (idx: number) => {
+    const copyResponse = useCallback((idx: number) => {
         const msg = messages[idx];
         if (msg && msg.role === 'assistant') {
             navigator.clipboard.writeText(msg.content);
             setCopiedMessageId(`${idx}`);
             setTimeout(() => setCopiedMessageId(null), 2000);
         }
-    };
+    }, [messages]);
+
+    const handleGestureSelect = useCallback((value: string) => {
+        handleSend(value, true);
+    }, [handleSend]);
 
     return (
         <div className="flex flex-col h-full w-full relative">
@@ -331,61 +395,21 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         </div>
                     )}
 
-                    {messages.map((msg, idx) => {
-                        const hasGestureOptions = msg.role === 'assistant' && (gesturesActive || uiBuilderEnabled) && msg.content.includes('```json');
-                        return (
-                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`group relative max-w-[85%] rounded-2xl px-4 py-3 ${
-                                    msg.role === 'user'
-                                        ? 'bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm'
-                                        : msg.error
-                                            ? 'bg-red-500/10 border border-red-500/30 text-red-200 rounded-tl-sm'
-                                            : 'bg-slate-800/60 border border-slate-700/60 text-slate-200 rounded-tl-sm'
-                                }`}>
-                                    <div className={`flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider ${
-                                        msg.role === 'user' ? 'text-blue-300 flex-row-reverse' : 'text-slate-400'
-                                    }`}>
-                                        {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                                        {msg.role === 'user' ? 'You' : msg.modelName || 'Assistant'}
-                                        {msg.error && <AlertTriangle size={12} className="text-red-400" />}
-                                    </div>
-                                    <div className="prose prose-invert prose-sm max-w-none">
-                                        <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
-                                    </div>
-                                    {msg.role === 'assistant' && msg.timing && (
-                                        <div className="mt-2 pt-2 border-t border-slate-700/30">
-                                            <ExecutionTimeDisplay times={msg.timing} />
-                                        </div>
-                                    )}
-                                    {msg.role === 'assistant' && msg.content && (
-                                        <button
-                                            onClick={() => copyResponse(idx)}
-                                            className={`absolute bottom-2 right-2 p-1.5 rounded-md transition-all ${
-                                                copiedMessageId === `${idx}`
-                                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                                    : 'opacity-0 group-hover:opacity-100 bg-slate-700/70 text-slate-400'
-                                            }`}
-                                        >
-                                            {copiedMessageId === `${idx}` ? <Check size={12} /> : <Copy size={12} />}
-                                        </button>
-                                    )}
-                                </div>
-                                {hasGestureOptions && (
-                                    <div className="ml-4">
-                                        <GestureOptions
-                                            content={msg.content}
-                                            onSelect={(value) => handleSend(value, true)}
-                                            isInline={false}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                    {messages.map((msg, idx) => (
+                        <ChatMessageItem
+                            key={idx}
+                            msg={msg}
+                            idx={idx}
+                            hasGestureOptions={msg.role === 'assistant' && (gesturesActive || uiBuilderEnabled) && msg.content.includes('```json')}
+                            copiedMessageId={copiedMessageId}
+                            onCopy={copyResponse}
+                            onGestureSelect={handleGestureSelect}
+                        />
+                    ))}
 
                     {/* Streaming responses */}
-                    {isGenerating && streamingResponses.size > 0 && Array.from(streamingResponses.entries()).map(([modelId, content]) => {
-                        const model = models.find(m => m.id === modelId);
+                    {isGenerating && Array.from(streamingResponses.entries()).map(([modelId, content]) => {
+                        const model = modelMap.get(modelId);
                         const timing = streamingTiming.get(modelId);
                         return (
                             <div key={modelId} className="flex justify-start">
