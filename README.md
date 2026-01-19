@@ -129,25 +129,15 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 
 ```
 serverless-llm/
-├── .github/workflows/          # GitHub Actions workflows for each model + interface
+├── .github/workflows/          # GitHub Actions workflows
 ├── app/
-│   ├── nanbeige-inference/     # Nanbeige4-3B-Thinking model server
-│   ├── qwen-inference/         # Qwen3-4B-Instruct-2507 model server
-│   ├── deepseek-r1qwen-inference/ # DeepSeek R1 Qwen 1.5B model server
-│   ├── lfm2-inference/         # LFM2.5 1.2B model server (native llama-server)
-│   ├── gemma-inference/        # Gemma 3 12B model server
-│   ├── mistral-inference/      # Mistral 7B model server
-│   ├── phi-inference/          # Phi-3 Mini model server
-│   ├── rnj-inference/          # RNJ-1 Instruct model server (native llama-server)
-│   ├── llama-inference/        # Llama 3.2 3B model server
-│   ├── functiongemma-inference/ # FunctionGemma 270M model server
-│   ├── smollm3-inference/      # SmolLM3 3B model server
-│   ├── nemotron-inference/     # Nemotron-3 Nano 30B MoE (native llama-server)
-│   ├── gpt-oss-inference/      # GPT-OSS 20B MoE model server
+│   ├── shared/                 # Shared inference server (base code for all models)
+│   ├── lfm2-inference/         # LFM2.5 model config (native llama-server)
+│   ├── nemotron-inference/     # Nemotron model config (native llama-server)
+│   ├── rnj-inference/          # RNJ model config (native llama-server)
 │   └── chat/                   # Web interface + API proxy
-├── config/                     # Centralized configuration
-│   ├── inference.yaml          # Model inference settings (n_ctx, threads, etc.)
-│   └── models.py               # Model ports and metadata
+├── config/
+│   └── models.py               # Model ports, metadata, and inference settings
 ├── scripts/                    # Automation scripts
 │   ├── setup_tunnels.py        # Cloudflare tunnel automation
 │   └── get_tunnel_token.py     # Token retrieval utility
@@ -169,7 +159,7 @@ serverless-llm/
 
 ## Configuration
 
-**Centralized Config**: All inference settings are managed in `config/inference.yaml`:
+**Centralized Config**: All model and inference settings are managed in `config/models.py`:
 - `n_ctx`: Context window size (default: 4096)
 - `n_threads`: CPU threads (default: 4, matches runner vCPUs)
 - `n_batch`: Batch size (default: 256)
