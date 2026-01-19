@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
 Creates a GitHub OAuth App for Serverless LLM Playground.
-
-This OAuth App uses minimal permissions (read:user only).
-The callback URL points to the oauth-proxy.
 """
 
 import re
@@ -29,13 +26,12 @@ SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent
 OAUTH_TS_PATH = REPO_ROOT / "app/chat/frontend/src/utils/oauth.ts"
 OAUTH_PROXY_DIR = Path.home() / "Documents/GitHub/agentivo/oauth-proxy"
+DEPLOY_YML_PATH = OAUTH_PROXY_DIR / ".github/workflows/deploy.yml"
 
 
-def run_cmd(cmd, cwd=None, check=True):
+def run_cmd(cmd, cwd=None):
     result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True)
-    if check and result.returncode != 0:
-        return None
-    return result.stdout.strip()
+    return result.returncode == 0
 
 
 def update_oauth_ts(client_id):
@@ -52,16 +48,38 @@ def update_oauth_ts(client_id):
     return True
 
 
+def add_github_secret(client_id, client_secret):
+    """Add the secret to oauth-proxy repo."""
+    secret_name = f"OAUTH_SECRET_{client_id}"
+    return run_cmd(f"gh secret set {secret_name} --body '{client_secret}'", cwd=OAUTH_PROXY_DIR)
+
+
+def update_deploy_yml(client_id):
+    """Add the secret to deploy.yml env sections."""
+    content = DEPLOY_YML_PATH.read_text()
+    secret_line = f"          OAUTH_SECRET_{client_id}: ${{{{ secrets.OAUTH_SECRET_{client_id} }}}}"
+
+    if f"OAUTH_SECRET_{client_id}" in content:
+        return False  # Already exists
+
+    lines = content.split('\n')
+    new_lines = []
+    i = 0
+    while i < len(lines):
+        new_lines.append(lines[i])
+        if 'OAUTH_SECRET_' in lines[i] and ': ${{ secrets.OAUTH_SECRET_' in lines[i]:
+            if i + 1 < len(lines) and 'OAUTH_SECRET_' not in lines[i + 1]:
+                new_lines.append(secret_line)
+        i += 1
+
+    DEPLOY_YML_PATH.write_text('\n'.join(new_lines))
+    return True
+
+
 def build_frontend():
     """Run npm build for frontend."""
     frontend_dir = REPO_ROOT / "app/chat/frontend"
-    result = subprocess.run(
-        "npm run build",
-        shell=True,
-        cwd=frontend_dir,
-        capture_output=True,
-        text=True
-    )
+    result = subprocess.run("npm run build", shell=True, cwd=frontend_dir, capture_output=True, text=True)
     return result.returncode == 0
 
 
@@ -105,30 +123,34 @@ def main():
     print("=" * 60 + "\n")
 
     # 1. Update oauth.ts
-    print("[1/3] Updating oauth.ts...")
+    print("[1/4] Updating oauth.ts...")
     if update_oauth_ts(client_id):
         print("  Updated")
     else:
         print("  Already has this client ID")
 
     # 2. Build frontend
-    print("[2/3] Building frontend...")
+    print("[2/4] Building frontend...")
     if build_frontend():
         print("  Done")
     else:
         print("  Failed - run: cd app/chat/frontend && npm run build")
 
-    # 3. Instructions for oauth-proxy
-    print("[3/3] Add client to oauth-proxy:")
-    print(f"  cd {OAUTH_PROXY_DIR}")
-    print("  python3 scripts/manage_clients.py")
-    print()
-    print("  When prompted:")
-    print(f"    App name: {APP_NAME}")
-    print(f"    Client ID: {client_id}")
-    print(f"    Client Secret: {client_secret}")
+    # 3. Add GitHub secret
+    print("[3/4] Adding GitHub secret...")
+    if add_github_secret(client_id, client_secret):
+        print("  Added")
+    else:
+        print(f"  Failed - add manually: gh secret set OAUTH_SECRET_{client_id}")
 
-    print("\nDone!")
+    # 4. Update deploy.yml
+    print("[4/4] Updating deploy.yml...")
+    if update_deploy_yml(client_id):
+        print("  Updated")
+    else:
+        print("  Already configured")
+
+    print("\nDone! Commit oauth-proxy changes and restart the GitHub Action.")
 
 
 if __name__ == "__main__":

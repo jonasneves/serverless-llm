@@ -1,4 +1,21 @@
 {
+  "config": {
+    "github": {
+      "owner": "jonasneves",
+      "repo": "serverless-llm"
+    },
+    "domain": {
+      "base": "neevs.io",
+      "useHttps": true
+    },
+    "chatApi": {
+      "localPort": 8080,
+      "healthPath": "/health"
+    },
+    "nativeHost": {
+      "name": "io.neevs.serverless_llm"
+    }
+  },
   "services": [
     {
       "key": "nanbeige",
