@@ -8,6 +8,8 @@ run-name: "${{ github.event.client_payload.model || inputs.model }} \u2022 ${{ g
         required: true
         type: choice
         options:
+        - agentcpm
+        - dasd
         - functiongemma
         - gemma
         - gptoss
