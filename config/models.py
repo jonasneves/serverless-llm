@@ -179,8 +179,41 @@ MODELS: dict[str, ModelConfig] = {
         hf_file="LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
         owned_by="liquidai",
     ),
-    
-    
+    "dasd": ModelConfig(
+        name="dasd",
+        port=8106,
+        subdomain="dasd",
+        category=ModelCategory.SMALL,
+        model_id="dasd-4b-thinking",
+        display_name="DASD-4B Thinking",
+        inference_dir="dasd-inference",
+        description="Reasoning model with thinking capabilities from Alibaba-Apsara",
+        rank=2,
+        hf_repo="mradermacher/DASD-4B-Thinking-GGUF",
+        hf_file="DASD-4B-Thinking.Q4_K_M.gguf",
+        owned_by="alibaba-apsara",
+        n_ctx=4096,
+        n_batch=512,
+        max_concurrent=3,
+    ),
+    "agentcpm": ModelConfig(
+        name="agentcpm",
+        port=8107,
+        subdomain="agentcpm",
+        category=ModelCategory.SMALL,
+        model_id="agentcpm-explore-4b",
+        display_name="AgentCPM-Explore 4B",
+        inference_dir="agentcpm-inference",
+        description="Agentic exploration model for autonomous task execution",
+        rank=3,
+        hf_repo="openbmb/AgentCPM-Explore-GGUF",
+        hf_file="AgentCPM-Explore.Q4_K_M.gguf",
+        owned_by="openbmb",
+        n_ctx=4096,
+        n_batch=512,
+        max_concurrent=3,
+    ),
+
     # Medium models (7B-30B params)
     "gemma": ModelConfig(
         name="gemma",

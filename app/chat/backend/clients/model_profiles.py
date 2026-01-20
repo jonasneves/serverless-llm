@@ -731,6 +731,104 @@ SMOLLM3_3B_PROFILE = {
 }
 
 
+# DASD-4B Thinking (local, GGUF)
+DASD_4B_THINKING_PROFILE = {
+    "model_id": "dasd-4b-thinking",
+    "display_name": "DASD-4B Thinking",
+    "model_type": "self-hosted",
+    "creator": "Alibaba-Apsara",
+    "size": "4B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["reasoning", "mathematics", "science", "chain_of_thought"],
+
+    "benchmark_scores": {
+        "AIME": 75.0,
+        "GPQA": 70.0,
+        "MATH-500": 78.0,
+        "HumanEval": 65.0,
+    },
+
+    "expertise_domains": {
+        "reasoning": 0.92,
+        "chain_of_thought": 0.94,
+        "mathematics": 0.90,
+        "scientific_knowledge": 0.88,
+        "logical_reasoning": 0.90,
+        "problem_solving": 0.88,
+        "coding": 0.78,
+        "instruction_following": 0.82,
+        "technical_writing": 0.75,
+        "conversation": 0.70,
+        "creative_writing": 0.65,
+        "summarization": 0.72,
+        "common_sense": 0.75,
+    },
+
+    "use_as_lead_for": [
+        "step-by-step reasoning",
+        "mathematical problem solving",
+        "scientific analysis",
+        "complex logical problems",
+        "algorithm design",
+        "proof verification",
+    ],
+
+    "context_length": 4096,
+    "description": "Reasoning model with thinking capabilities from Alibaba-Apsara",
+    "outputs_thinking": True,
+}
+
+
+# AgentCPM-Explore 4B (local, GGUF)
+AGENTCPM_EXPLORE_4B_PROFILE = {
+    "model_id": "agentcpm-explore-4b",
+    "display_name": "AgentCPM-Explore 4B",
+    "model_type": "self-hosted",
+    "creator": "OpenBMB",
+    "size": "4B parameters",
+    "quantization": "Q4_K_M",
+
+    "primary_strengths": ["agent_capabilities", "exploration", "tool_use", "autonomous_tasks"],
+
+    "benchmark_scores": {
+        "Agent Tasks": 85.0,
+        "Tool Use": 82.0,
+        "Exploration": 88.0,
+        "MMLU": 58.0,
+    },
+
+    "expertise_domains": {
+        "agent_capabilities": 0.95,
+        "exploration": 0.92,
+        "tool_use": 0.90,
+        "autonomous_planning": 0.88,
+        "task_decomposition": 0.85,
+        "instruction_following": 0.82,
+        "reasoning": 0.75,
+        "coding": 0.72,
+        "problem_solving": 0.78,
+        "conversation": 0.68,
+        "mathematics": 0.62,
+        "creative_writing": 0.55,
+        "summarization": 0.70,
+        "common_sense": 0.72,
+    },
+
+    "use_as_lead_for": [
+        "autonomous task execution",
+        "exploration workflows",
+        "tool orchestration",
+        "multi-step agent tasks",
+        "environment interaction",
+        "automated research",
+    ],
+
+    "context_length": 4096,
+    "description": "Agentic exploration model for autonomous task execution",
+}
+
+
 # Nanbeige4-3B Thinking (local, GGUF)
 NANBEIGE_4_3B_THINKING_PROFILE = {
     "model_id": "nanbeige4-3b-thinking",
@@ -900,8 +998,10 @@ GLM_45_AIR_PROFILE = {
 MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     # Local models (ranked by Dec 2025 benchmarks)
     "nanbeige4-3b-thinking": NANBEIGE_4_3B_THINKING_PROFILE,   # Rank 1
-    "qwen3-4b": QWEN_PROFILE,                                  # Rank 2
-    "smollm3-3b": SMOLLM3_3B_PROFILE,                          # Rank 3
+    "dasd-4b-thinking": DASD_4B_THINKING_PROFILE,              # Rank 2
+    "agentcpm-explore-4b": AGENTCPM_EXPLORE_4B_PROFILE,        # Rank 3
+    "qwen3-4b": QWEN_PROFILE,                                  # Rank 4
+    "smollm3-3b": SMOLLM3_3B_PROFILE,                          # Rank 5
     "lfm2.5-1.2b-instruct": LFM2_PROFILE,                       # Rank 4
     "deepseek-r1-distill-qwen-1.5b": DEEPSEEK_R1_QWEN15B_PROFILE,  # Rank 5
     "gemma-3-12b-it": GEMMA3_12B_PROFILE,                      # Rank 6
@@ -1043,6 +1143,8 @@ def should_model_participate(
 __all__ = [
     "MODEL_PROFILES",
     # Local models (ranked by capability)
+    "DASD_4B_THINKING_PROFILE",
+    "AGENTCPM_EXPLORE_4B_PROFILE",
     "QWEN_PROFILE",
     "DEEPSEEK_R1_QWEN15B_PROFILE",
     "GEMMA3_12B_PROFILE",
