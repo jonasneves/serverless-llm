@@ -12,6 +12,7 @@ run-name: "${{ github.event.client_payload.model || inputs.model }} \u2022 ${{ g
         - dasd
         - functiongemma
         - gemma
+        - glm
         - gptoss
         - lfm2
         - llama

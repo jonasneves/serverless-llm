@@ -143,6 +143,9 @@ jobs:
           elif [ "${{ matrix.model }}" = "lfm2-inference" ]; then
             # LFM2 has its own Dockerfile (builds llama.cpp from master for lfm2 arch)
             DOCKERFILE="./app/lfm2-inference/Dockerfile"
+          elif [ "${{ matrix.model }}" = "glm-inference" ]; then
+            # GLM has its own Dockerfile (builds llama.cpp from master for Glm4MoeLite arch)
+            DOCKERFILE="./app/glm-inference/Dockerfile"
           else
             # All other models use shared Dockerfile
             DOCKERFILE="./app/shared/Dockerfile.inference"
@@ -163,8 +166,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || '.' }}
-          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/backend/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || matrix.model == 'lfm2-inference' && './app/lfm2-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
-          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && matrix.model != 'rnj-inference' && matrix.model != 'lfm2-inference' && format('MODEL_DIR={0}', matrix.model) || '' }}
+          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'chat' && './app/chat/backend/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || matrix.model == 'lfm2-inference' && './app/lfm2-inference/Dockerfile' || matrix.model == 'glm-inference' && './app/glm-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
+          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'chat' && matrix.model != 'rnj-inference' && matrix.model != 'lfm2-inference' && matrix.model != 'glm-inference' && format('MODEL_DIR={0}', matrix.model) || '' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
