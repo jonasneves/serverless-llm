@@ -878,48 +878,6 @@ NANBEIGE_4_3B_THINKING_PROFILE = {
 }
 
 
-# Nemotron-3 Nano 30B (local, GGUF)
-NEMOTRON_3_NANO_30B_PROFILE = {
-    "model_id": "nemotron-3-nano-30b-a3b",
-    "display_name": "Nemotron-3 Nano 30B",
-    "model_type": "self-hosted",
-    "creator": "NVIDIA",
-    "size": "30B parameters / 3.5B active",
-    "quantization": "IQ2_M",
-
-    "primary_strengths": ["reasoning", "efficiency", "moe_architecture"],
-
-    # MoE hybrid architecture - Mamba2+Transformer
-    "benchmark_scores": {
-        "MMLU": 58.0,            # Moderate general knowledge
-        "HumanEval": 52.0,       # Moderate code generation
-        "GSM8K": 48.0,           # Moderate math
-    },
-
-    "expertise_domains": {
-        "reasoning": 0.72,              # Good - hybrid architecture
-        "efficiency": 0.92,             # Exceptional - only 3.5B active
-        "instruction_following": 0.70,  # Good
-        "conversation": 0.68,           # Moderate
-        "coding": 0.65,                 # Moderate
-        "mathematics": 0.62,            # Moderate
-        "logical_reasoning": 0.68,      # Moderate
-        "creative_writing": 0.65,       # Moderate
-        "summarization": 0.70,          # Good
-        "common_sense": 0.65,           # Moderate
-    },
-
-    "use_as_lead_for": [
-        "resource-constrained reasoning",
-        "efficient inference",
-        "general assistance",
-    ],
-
-    "context_length": 4096,
-    "description": "MoE hybrid (Mamba2+Transformer), 30B params / 3.5B active",
-}
-
-
 # GPT-OSS 20B (local, GGUF)
 GPT_OSS_20B_PROFILE = {
     "model_id": "gpt-oss-20b",
@@ -1010,7 +968,6 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
     "rnj-1-instruct": RNJ_1_PROFILE,                           # Rank 9
     "llama-3.2-3b": LLAMA_PROFILE,                             # Rank 10
     "functiongemma-270m-it": FUNCTIONGEMMA_270M_PROFILE,       # Rank 12
-    "nemotron-3-nano-30b-a3b": NEMOTRON_3_NANO_30B_PROFILE,    # Rank 12
     "gpt-oss-20b": GPT_OSS_20B_PROFILE,                        # Rank 13
     # API models
     "openai/gpt-4.1": GPT4_1_PROFILE,

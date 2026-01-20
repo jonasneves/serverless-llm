@@ -89,14 +89,6 @@
       "rank": 12
     },
     {
-      "key": "nemotron",
-      "name": "Nemotron-3 Nano 30B",
-      "localPort": 8302,
-      "category": "reasoning",
-      "modelId": "nemotron-3-nano-30b-a3b",
-      "rank": 12
-    },
-    {
       "key": "gptoss",
       "name": "GPT-OSS 20B",
       "localPort": 8303,

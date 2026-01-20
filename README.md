@@ -39,8 +39,7 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | 9 | **RNJ-1 Instruct** | 8B | SWE-Bench Verified: 20.8%, strong tool-use (BFCL ranked) | Code automation, agentic workflows, tool calling |
 | 10 | **Llama 3.2 3B** | 3B | MMLU: 63.4%, 128K context, multilingual (8 languages) | Casual conversation, summarization, creative writing |
 | 11 | **FunctionGemma 270M** | 270M | Edge-optimized (50 t/s on Pixel 8), 240MB RAM (Q4), 32K context | Edge device agents, mobile actions, offline function calling |
-| 12 | **Nemotron-3 Nano 30B** | 30B MoE (~3.5B active) | Mamba2+Transformer hybrid, reasoning traces | Unique MoE architecture, experimental (slow on CPU) |
-| 13 | **GPT-OSS 20B** | 20B MoE (~3.6B active) | Function calling, agentic operations | Experimental MoE, agent operations (slow on CPU) |
+| 12 | **GPT-OSS 20B** | 20B MoE (~3.6B active) | Function calling, agentic operations | Experimental MoE, agent operations (slow on CPU) |
 
 ### Sources
 
@@ -133,7 +132,6 @@ serverless-llm/
 ├── app/
 │   ├── shared/                 # Shared inference server (base code for all models)
 │   ├── lfm2-inference/         # LFM2.5 model config (native llama-server)
-│   ├── nemotron-inference/     # Nemotron model config (native llama-server)
 │   ├── rnj-inference/          # RNJ model config (native llama-server)
 │   └── chat/                   # Web interface + API proxy
 ├── config/
@@ -149,7 +147,7 @@ serverless-llm/
 | Component | Technology |
 |-----------|------------|
 | Compute | GitHub Actions (ARM64 runners, 4 vCPU, 16GB RAM) |
-| LLM Runtime | llama-cpp-python (GGUF) for most models; native llama-server for LFM2.5, RNJ, Nemotron |
+| LLM Runtime | llama-cpp-python (GGUF) for most models; native llama-server for LFM2.5, RNJ |
 | API Framework | FastAPI |
 | Streaming | Server-Sent Events |
 | Tunneling | Cloudflare Zero Trust |
@@ -194,7 +192,7 @@ For local development with multiple models on the same machine:
 | 8080 | Core | Chat Interface |
 | 81XX | Small (<7B) | qwen (8100), phi (8101), functiongemma (8103), smollm3 (8104), lfm2 (8105) |
 | 82XX | Medium (7B-30B) | gemma (8200), llama (8201), mistral (8202), rnj (8203) |
-| 83XX | Reasoning | r1qwen (8300), nanbeige (8301), nemotron (8302), gptoss (8303) |
+| 83XX | Reasoning | r1qwen (8300), nanbeige (8301), gptoss (8303) |
 
 GitHub Actions uses port 8000 for all inference models (each runs on a separate runner).
 

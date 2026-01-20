@@ -89,14 +89,6 @@
       "rank": 12
     },
     {
-      "key": "nemotron",
-      "name": "Nemotron-3 Nano 30B",
-      "localPort": 8302,
-      "category": "reasoning",
-      "modelId": "nemotron-3-nano-30b-a3b",
-      "rank": 12
-    },
-    {
       "key": "gptoss",
       "name": "GPT-OSS 20B",
       "localPort": 8303,
@@ -181,12 +173,6 @@
       "path": "inference.yml",
       "category": "small",
       "serviceKey": "functiongemma"
-    },
-    {
-      "name": "Nemotron-3 Nano 30B",
-      "path": "inference.yml",
-      "category": "reasoning",
-      "serviceKey": "nemotron"
     },
     {
       "name": "GPT-OSS 20B",
@@ -300,13 +286,6 @@
       "category": "small"
     },
     {
-      "id": "nemotron-3-nano-30b-a3b",
-      "name": "Nemotron-3 Nano 30B",
-      "type": "local",
-      "priority": 12,
-      "category": "reasoning"
-    },
-    {
       "id": "gpt-oss-20b",
       "name": "GPT-OSS 20B",
       "type": "local",
@@ -314,6 +293,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-19T19:52:43.830038Z",
+  "generatedAt": "2026-01-20T01:19:52.585638Z",
   "sourceFile": "config/models.py"
 }

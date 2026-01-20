@@ -7,7 +7,7 @@
 #   docker-compose --profile qwen up       # Start chat + qwen
 #   docker-compose --profile qwen --profile phi up  # Start chat + qwen + phi
 #
-# Available profiles: all, qwen, phi, llama, mistral, gemma, r1qwen, rnj, lfm2, smollm3, nanbeige, functiongemma, nemotron, gptoss
+# Available profiles: all, qwen, phi, llama, mistral, gemma, r1qwen, rnj, lfm2, smollm3, nanbeige, functiongemma, gptoss
 # =============================================================================
 
 version: '3.8'
@@ -48,7 +48,6 @@ services:
       SMOLLM3_API_URL: http://smollm3:8000
       NANBEIGE_API_URL: http://nanbeige:8000
       FUNCTIONGEMMA_API_URL: http://functiongemma:8000
-      NEMOTRON_API_URL: http://nemotron:8000
       GPTOSS_API_URL: http://gptoss:8000
     networks:
       - llm-network
@@ -189,15 +188,6 @@ services:
     ports:
       - "${NANBEIGE_PORT:-8301}:8000"
     profiles: ["all", "nanbeige"]
-
-  nemotron:
-    <<: *inference-common
-    build:
-      context: ./app/nemotron-inference
-      dockerfile: Dockerfile
-    ports:
-      - "${NEMOTRON_PORT:-8302}:8000"
-    profiles: ["all", "nemotron"]
 
   gptoss:
     <<: *inference-common

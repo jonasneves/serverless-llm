@@ -89,9 +89,9 @@ export function useModelsManager() {
       setLoadError(null);
       setRetryCount(0);
 
-      // Initialize multi-model selection (for Compare, Analyze, etc.) with self-hosted models (except Nemotron)
+      // Initialize multi-model selection (for Compare, Analyze, etc.) with self-hosted models
       if (!isSelectionInitialized.current) {
-        setPersistedSelected(apiModels.filter(m => m.type === 'self-hosted' && m.id !== 'nemotron-3-nano-30b-a3b').map(m => m.id));
+        setPersistedSelected(apiModels.filter(m => m.type === 'self-hosted').map(m => m.id));
         isSelectionInitialized.current = true;
       }
 

@@ -79,16 +79,10 @@
       "priority": 13
     },
     {
-      "id": "nemotron-3-nano-30b-a3b",
-      "name": "Nemotron-3 Nano 30B",
-      "type": "self-hosted",
-      "priority": 14
-    },
-    {
       "id": "gpt-oss-20b",
       "name": "GPT-OSS 20B",
       "type": "self-hosted",
-      "priority": 15
+      "priority": 14
     },
     {
       "id": "gpt-4o",

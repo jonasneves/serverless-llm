@@ -7,7 +7,7 @@
 # Environment:
 #   MODEL_NAME - Model name from config/models.py (e.g., "qwen", "phi")
 #
-# Exception: LFM2, RNJ, and Nemotron have their own Dockerfiles (llama-server wrapper)
+# Exception: LFM2 and RNJ have their own Dockerfiles (llama-server wrapper)
 # =============================================================================
 
 # Stage 1: Builder - Heavy build dependencies

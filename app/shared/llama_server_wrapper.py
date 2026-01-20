@@ -4,7 +4,7 @@ Shared llama-server Subprocess Wrapper
 Base infrastructure for models that require native llama-server instead of
 llama-cpp-python bindings (due to architecture incompatibilities).
 
-Used by: LFM2, RNJ, Nemotron
+Used by: LFM2, RNJ
 """
 
 import asyncio
