@@ -24,7 +24,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from config.models import MODELS, ModelCategory, get_inference_models
+from config.models import get_inference_models
 
 
 def generate_services_config() -> list[dict]:
@@ -50,12 +50,9 @@ def generate_workflows_config() -> list[dict]:
     ]
 
     for model in get_inference_models():
-        # All inference models now use the single dynamic workflow
-        workflow_path = model.workflow_file or "inference.yml"
-
         workflows.append({
             "name": model.display_name or model.name.title(),
-            "path": workflow_path,
+            "path": model.workflow_file or "inference.yml",
             "category": model.category.value,
             "serviceKey": model.name,
         })

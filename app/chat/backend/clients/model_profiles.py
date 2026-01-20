@@ -10,7 +10,6 @@ Benchmark sources:
 - Llama 3.2-3B: https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/ (Meta release)
 """
 
-from typing import Dict, List, Any
 
 
 # Domain expertise scores (0.0 to 1.0)
@@ -953,7 +952,7 @@ GLM_45_AIR_PROFILE = {
 
 
 # Aggregate profiles for easy access (ordered by capability rank)
-MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
+MODEL_PROFILES: dict[str, dict] = {
     # Local models (ranked by Dec 2025 benchmarks)
     "nanbeige4-3b-thinking": NANBEIGE_4_3B_THINKING_PROFILE,   # Rank 1
     "dasd-4b-thinking": DASD_4B_THINKING_PROFILE,              # Rank 2
@@ -985,109 +984,53 @@ MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
 }
 
 
-def get_model_profile(model_id: str) -> Dict[str, Any]:
-    """
-    Get profile for a specific model
-
-    Args:
-        model_id: Model identifier
-
-    Returns:
-        Model profile dictionary
-
-    Raises:
-        ValueError: If model_id not found
-    """
+def get_model_profile(model_id: str) -> dict:
+    """Get profile for a specific model. Raises ValueError if not found."""
     if model_id not in MODEL_PROFILES:
         raise ValueError(f"Unknown model: {model_id}. Available: {list(MODEL_PROFILES.keys())}")
     return MODEL_PROFILES[model_id]
 
 
 def get_domain_expert(domain: str) -> str:
-    """
-    Get the best model for a specific domain
-
-    Args:
-        domain: Domain name (e.g., "mathematics", "conversation")
-
-    Returns:
-        Model ID with highest expertise in that domain
-    """
+    """Get the best model for a specific domain."""
     best_model = None
     best_score = 0.0
-
     for model_id, profile in MODEL_PROFILES.items():
         score = profile["expertise_domains"].get(domain, 0.0)
         if score > best_score:
             best_score = score
             best_model = model_id
+    return best_model or "qwen3-4b"
 
-    return best_model or "qwen3-4b"  # Default to Qwen
 
-
-def rank_models_for_query(domain_weights: Dict[str, float]) -> List[tuple[str, float]]:
-    """
-    Rank models by weighted expertise across domains
-
-    Args:
-        domain_weights: Dict mapping domain -> weight (should sum to 1.0)
-
-    Returns:
-        List of (model_id, score) tuples, sorted by score descending
-    """
+def rank_models_for_query(domain_weights: dict[str, float]) -> list[tuple[str, float]]:
+    """Rank models by weighted expertise across domains."""
     model_scores = {}
-
     for model_id, profile in MODEL_PROFILES.items():
-        score = 0.0
-        for domain, weight in domain_weights.items():
-            expertise = profile["expertise_domains"].get(domain, 0.0)
-            score += expertise * weight
+        score = sum(
+            profile["expertise_domains"].get(domain, 0.0) * weight
+            for domain, weight in domain_weights.items()
+        )
         model_scores[model_id] = score
-
     return sorted(model_scores.items(), key=lambda x: x[1], reverse=True)
 
 
-def get_all_model_ids() -> List[str]:
-    """Get list of all available model IDs"""
+def get_all_model_ids() -> list[str]:
+    """Get list of all available model IDs."""
     return list(MODEL_PROFILES.keys())
 
 
-def get_model_display_name(model_id: str) -> str:
-    """Get human-readable name for model"""
-    profile = get_model_profile(model_id)
-    return profile["display_name"]
-
-
 def get_display_name(model_id: str) -> str:
-    """
-    Get human-readable display name for a model ID.
-    Convenience wrapper with fallback to model_id if not found.
-
-    Args:
-        model_id: Model identifier
-
-    Returns:
-        Human-readable display name, or model_id if profile not found
-    """
+    """Get human-readable display name, or model_id if not found."""
     return MODEL_PROFILES.get(model_id, {}).get("display_name", model_id)
 
 
 def should_model_participate(
     model_id: str,
-    domain_weights: Dict[str, float],
+    domain_weights: dict[str, float],
     threshold: float = 0.5
 ) -> bool:
-    """
-    Determine if a model should participate based on domain match
-
-    Args:
-        model_id: Model to check
-        domain_weights: Query domain weights
-        threshold: Minimum weighted expertise score to participate
-
-    Returns:
-        True if model's weighted expertise >= threshold
-    """
+    """Determine if a model should participate based on domain match."""
     profile = get_model_profile(model_id)
     weighted_score = sum(
         profile["expertise_domains"].get(domain, 0.0) * weight
@@ -1096,10 +1039,8 @@ def should_model_participate(
     return weighted_score >= threshold
 
 
-# Export for convenience
 __all__ = [
     "MODEL_PROFILES",
-    # Local models (ranked by capability)
     "DASD_4B_THINKING_PROFILE",
     "AGENTCPM_EXPLORE_4B_PROFILE",
     "QWEN_PROFILE",
@@ -1110,16 +1051,14 @@ __all__ = [
     "PHI_PROFILE",
     "RNJ_1_PROFILE",
     "LLAMA_PROFILE",
-    # API models
     "GPT4_1_PROFILE",
     "GPT4O_PROFILE",
     "DEEPSEEK_V3_PROFILE",
     "LLAMA_33_70B_PROFILE",
-    # Functions
     "get_model_profile",
     "get_domain_expert",
+    "get_display_name",
     "rank_models_for_query",
     "get_all_model_ids",
-    "get_model_display_name",
     "should_model_participate",
 ]

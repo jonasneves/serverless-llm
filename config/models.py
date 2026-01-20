@@ -12,9 +12,8 @@ All other scripts should import from here.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class ModelCategory(Enum):
@@ -32,24 +31,22 @@ class ModelConfig:
     port: int
     subdomain: str
     category: ModelCategory
-    model_id: Optional[str] = None  # API model ID (e.g., "qwen3-4b")
-    display_name: Optional[str] = None  # Human-readable name
-    inference_dir: Optional[str] = None  # Directory in app/ folder
-    description: Optional[str] = None
-    rank: int = 99  # Capability ranking (1 = best)
-    default: bool = False  # Default model for auto-selection
-    # HuggingFace model source (for llama-cpp-python models)
-    hf_repo: Optional[str] = None  # e.g., "unsloth/Qwen3-4B-GGUF"
-    hf_file: Optional[str] = None  # e.g., "Qwen3-4B-Q4_K_M.gguf"
-    owned_by: Optional[str] = None  # e.g., "qwen", "microsoft"
-    chat_format: Optional[str] = None  # llama-cpp chat format override (e.g., "llama-3")
-    workflow_file: Optional[str] = None  # GitHub workflow filename override (e.g. "my-workflow.yml")
-    # Runtime inference config (optimized for GitHub Actions ARM runners: 4 vCPU, 16GB RAM)
-    n_ctx: int = 4096  # Context window size (tokens)
-    n_threads: int = 4  # CPU threads
-    n_batch: int = 256  # Batch size for prompt processing
-    max_concurrent: int = 2  # Max parallel requests per instance
-    kv_cache_quant: bool = True  # Q8_0 KV-cache quantization (reduces memory ~30%)
+    model_id: str | None = None
+    display_name: str | None = None
+    inference_dir: str | None = None
+    description: str | None = None
+    rank: int = 99
+    default: bool = False
+    hf_repo: str | None = None
+    hf_file: str | None = None
+    owned_by: str | None = None
+    chat_format: str | None = None
+    workflow_file: str | None = None
+    n_ctx: int = 4096
+    n_threads: int = 4
+    n_batch: int = 256
+    max_concurrent: int = 2
+    kv_cache_quant: bool = True
     
     @property
     def service_url(self) -> str:
@@ -115,7 +112,6 @@ MODELS: dict[str, ModelConfig] = {
         inference_dir="qwen-inference",
         description="Multilingual (119 langs), 262K context, reasoning, coding",
         rank=2,
-        default=False,
         hf_repo="unsloth/Qwen3-4B-Instruct-2507-GGUF",
         hf_file="Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
         owned_by="qwen",
@@ -192,7 +188,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="mradermacher/DASD-4B-Thinking-GGUF",
         hf_file="DASD-4B-Thinking.Q4_K_M.gguf",
         owned_by="alibaba-apsara",
-        n_ctx=4096,
         n_batch=512,
         max_concurrent=3,
     ),
