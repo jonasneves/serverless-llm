@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """
-Generate TypeScript/JSON configuration files from the Python source of truth.
+Generate configuration files from the Python source of truth.
 
-This script ensures the Chrome extension always has up-to-date model
-configuration without manual synchronization.
+Updates:
+- Frontend JSON configs (extension-config.json, services.json)
+- .shipctl/apps.json manifest
+- .github/workflows/inference.yml model options
 
 Usage:
     python scripts/generate_extension_config.py
 
 Or via Makefile:
-    make generate-configs
+    make build
 """
 
 import json
-import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -109,6 +111,34 @@ def generate_category_groups() -> list[dict]:
     return categories
 
 
+def update_inference_workflow(model_names: list[str]) -> bool:
+    """Update inference.yml workflow with current model list."""
+    workflow_file = project_root / ".github" / "workflows" / "inference.yml"
+    if not workflow_file.exists():
+        print(f"⚠ Workflow not found: {workflow_file}")
+        return False
+
+    content = workflow_file.read_text()
+
+    # Build the new options block (sorted alphabetically)
+    sorted_names = sorted(model_names)
+    new_options = "        options:\n" + "\n".join(f"        - {name}" for name in sorted_names)
+
+    # Replace the options block in the model input section
+    # Match from "options:" up to the next input parameter (instances:)
+    pattern = r"(        type: choice\n)(        options:\n(?:        - \w+\n)+)"
+    replacement = r"\1" + new_options + "\n"
+
+    new_content, count = re.subn(pattern, replacement, content, count=1)
+
+    if count == 0:
+        print(f"⚠ Could not find model options block in {workflow_file}")
+        return False
+
+    workflow_file.write_text(new_content)
+    return True
+
+
 def main():
     # Generate unified config
     config = {
@@ -149,10 +179,14 @@ def main():
         with open(services_file, "w") as f:
             json.dump({"services": config["services"]}, f, indent=2)
 
-    print(f"✓ Updated internal config locally")
-    print(f"  - {len(config['services'])} services")
-    print(f"  - {len(config['workflows'])} workflows")
-    print(f"  - Written to: {', '.join(str(d) for d in output_dirs)}")
+    print(f"✓ Updated frontend configs")
+
+    # Update inference.yml workflow
+    model_names = [m.name for m in get_inference_models()]
+    if update_inference_workflow(model_names):
+        print(f"✓ Updated .github/workflows/inference.yml")
+
+    print(f"  {len(config['services'])} models configured")
 
 
 if __name__ == "__main__":
