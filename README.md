@@ -7,12 +7,12 @@
 
 Experimental playground for self-hosted LLMs running 24/7 on GitHub Actions with auto-restart mechanisms. Started as an experiment to see if small models could run continuously on free CI/CD infrastructure, now serves as a testbed for various ideas: gesture-based interaction, AI-generated UIs, multi-model collaboration modes (discussion, council, roundtable), and more.
 
-Runs 13 models (270M to 12B parameters) with OpenAI-compatible APIs, all on free infrastructure.
+Runs 15 models (270M to 12B parameters) with OpenAI-compatible APIs, all on free infrastructure.
 
 ### Infrastructure
 
 - **Zero Cost**: Runs on GitHub Actions free tier (unlimited minutes for public repos)
-- **Multi-Model**: 13 models with different strengths (see table below)
+- **Multi-Model**: 15 models with different strengths (see table below)
 - **High Availability**: 1-3 parallel instances per model for load balancing
 - **Continuous Uptime**: Auto-restart before GitHub's 6-hour limit with graceful handoff
 - **Public Access**: Cloudflare Tunnels for external connectivity
@@ -29,7 +29,9 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | Rank | Model | Size | Key Benchmarks | Best For |
 |:-----|:------|:-----|:---------------|:---------|
 | 1 | **Nanbeige4-3B-Thinking** | 3B | AIME 2024: 90.4%, GPQA-Diamond: 82.2% (outperforms Qwen3-32B) | Step-by-step reasoning, complex math, competitive programming |
+| 2 | **DASD-4B Thinking** | 4B | Reasoning with thinking capabilities | Step-by-step reasoning, problem solving |
 | 2 | **Qwen3-4B-Instruct-2507** | 4B | MMLU-Pro: 69.6%, GPQA: 62.0%, 262K context, 119 languages | Multilingual tasks, long-context analysis, agent workflows |
+| 3 | **AgentCPM-Explore 4B** | 4B | Autonomous task exploration, agentic operations | Autonomous exploration, task planning |
 | 3 | **SmolLM3 3B** | 3B | AIME 2025: 36.7%, BFCL: 92.3%, 64K context, hybrid reasoning | Tool-calling, reasoning with /think mode, multilingual (6 langs) |
 | 4 | **LFM2.5 1.2B** | 1.2B | 8 languages, 32K context, hybrid LFM2 architecture, RL tuning | Edge deployment, instruction following, multilingual |
 | 5 | **DeepSeek R1 1.5B** | 1.5B | AIME 2024: 28.9%, MATH-500: 83.9%, Codeforces: 954 rating | Math reasoning, algorithmic problems, code generation |
@@ -46,7 +48,9 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | Model | Source |
 |:------|:-------|
 | Nanbeige4-3B-Thinking | [arXiv](https://arxiv.org/abs/2411.xxxxx), [Hugging Face](https://huggingface.co/Nanbeige/Nanbeige4-3B-Thinking-2511), [MarkTechPost](https://www.marktechpost.com/) |
+| DASD-4B Thinking | [Hugging Face](https://huggingface.co/mradermacher/DASD-4B-Thinking-GGUF) |
 | Qwen3-4B-Instruct-2507 | [Hugging Face Model Card](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) |
+| AgentCPM-Explore 4B | [Hugging Face](https://huggingface.co/openbmb/AgentCPM-Explore-GGUF) |
 | SmolLM3 3B | [Hugging Face](https://huggingface.co/HuggingFaceTB/SmolLM3-3B), [Blog](https://hf.co/blog/smollm3) |
 | LFM2.5 1.2B | [Liquid AI Docs](https://docs.liquid.ai/lfm), [Hugging Face](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF), [Playground](https://playground.liquid.ai/) |
 | DeepSeek R1 1.5B | [OpenRouter](https://openrouter.ai/), [DataCamp](https://www.datacamp.com/) |
@@ -190,7 +194,7 @@ For local development with multiple models on the same machine:
 | Range | Category | Models |
 |-------|----------|--------|
 | 8080 | Core | Chat Interface |
-| 81XX | Small (<7B) | qwen (8100), phi (8101), functiongemma (8103), smollm3 (8104), lfm2 (8105) |
+| 81XX | Small (<7B) | qwen (8100), phi (8101), functiongemma (8103), smollm3 (8104), lfm2 (8105), dasd (8106), agentcpm (8107) |
 | 82XX | Medium (7B-30B) | gemma (8200), llama (8201), mistral (8202), rnj (8203) |
 | 83XX | Reasoning | r1qwen (8300), nanbeige (8301), gptoss (8303) |
 
