@@ -35,6 +35,7 @@ RUN git clone https://github.com/ggml-org/llama.cpp.git . \
         -DGGML_OPENMP=ON \
         -DGGML_NATIVE=ON \
         -DGGML_NEON=ON \
+        -DLLAMA_FLASH_ATTN=ON \
         -DLLAMA_CURL=OFF \
         -DLLAMA_BUILD_EXAMPLES=OFF \
         -DLLAMA_BUILD_TESTS=OFF \

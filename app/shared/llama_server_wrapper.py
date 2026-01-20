@@ -68,6 +68,7 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
     N_THREADS = int(os.getenv("N_THREADS", str(config.n_threads)))
     N_BATCH = int(os.getenv("N_BATCH", str(config.n_batch)))
     MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", str(config.max_concurrent)))
+    KV_CACHE_QUANT = os.getenv("KV_CACHE_QUANT", "true").lower() in ("true", "1", "yes")
     HF_TOKEN = os.getenv("HF_TOKEN")
     STARTUP_TIMEOUT = int(os.getenv("STARTUP_TIMEOUT", str(config.startup_timeout)))
 
@@ -127,7 +128,12 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
             "--parallel", str(MAX_CONCURRENT),
             "--cont-batching",
             "--flash-attn", "auto",
+            "--mmap",
+            "--no-mlock",
         ]
+
+        if KV_CACHE_QUANT:
+            cmd.extend(["--cache-type-k", "q8_0", "--cache-type-v", "q8_0"])
 
         if config.extra_args:
             cmd.extend(config.extra_args)
@@ -253,6 +259,7 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
             "n_threads": N_THREADS,
             "n_batch": N_BATCH,
             "max_concurrent": MAX_CONCURRENT,
+            "kv_cache_quant": KV_CACHE_QUANT,
             "cpu_count": os.cpu_count(),
             "openblas_num_threads": os.getenv("OPENBLAS_NUM_THREADS"),
             "omp_num_threads": os.getenv("OMP_NUM_THREADS"),
