@@ -17,11 +17,27 @@
       "rank": 2
     },
     {
+      "key": "dasd",
+      "name": "DASD-4B Thinking",
+      "localPort": 8106,
+      "category": "small",
+      "modelId": "dasd-4b-thinking",
+      "rank": 2
+    },
+    {
       "key": "smollm3",
       "name": "SmolLM3 3B",
       "localPort": 8104,
       "category": "small",
       "modelId": "smollm3-3b",
+      "rank": 3
+    },
+    {
+      "key": "agentcpm",
+      "name": "AgentCPM-Explore 4B",
+      "localPort": 8107,
+      "category": "small",
+      "modelId": "agentcpm-explore-4b",
       "rank": 3
     },
     {
@@ -121,10 +137,22 @@
       "serviceKey": "qwen"
     },
     {
+      "name": "DASD-4B Thinking",
+      "path": "inference.yml",
+      "category": "small",
+      "serviceKey": "dasd"
+    },
+    {
       "name": "SmolLM3 3B",
       "path": "inference.yml",
       "category": "small",
       "serviceKey": "smollm3"
+    },
+    {
+      "name": "AgentCPM-Explore 4B",
+      "path": "inference.yml",
+      "category": "small",
+      "serviceKey": "agentcpm"
     },
     {
       "name": "LFM2.5 1.2B",
@@ -223,8 +251,22 @@
       "category": "small"
     },
     {
+      "id": "dasd-4b-thinking",
+      "name": "DASD-4B Thinking",
+      "type": "local",
+      "priority": 2,
+      "category": "small"
+    },
+    {
       "id": "smollm3-3b",
       "name": "SmolLM3 3B",
+      "type": "local",
+      "priority": 3,
+      "category": "small"
+    },
+    {
+      "id": "agentcpm-explore-4b",
+      "name": "AgentCPM-Explore 4B",
       "type": "local",
       "priority": 3,
       "category": "small"
@@ -293,6 +335,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-20T01:19:52.585638Z",
+  "generatedAt": "2026-01-20T05:54:00.463918Z",
   "sourceFile": "config/models.py"
 }
