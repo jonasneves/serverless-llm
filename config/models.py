@@ -317,10 +317,10 @@ MODELS: dict[str, ModelConfig] = {
         description="MoE (30B / 3B active), AIME 91.6%, SWE-bench 59.2%, function calling",
         rank=2,
         hf_repo="unsloth/GLM-4.7-Flash-GGUF",
-        hf_file="GLM-4.7-Flash-Q4_K_M.gguf",
+        hf_file="GLM-4.7-Flash-Q3_K_M.gguf",
         owned_by="zhipu",
-        n_batch=512,
-        max_concurrent=2,
+        n_batch=256,
+        max_concurrent=1,
     ),
     "gptoss": ModelConfig(
         name="gptoss",
