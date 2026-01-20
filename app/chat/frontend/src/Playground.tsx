@@ -152,25 +152,36 @@ function PlaygroundInner() {
   const prevGestureActiveRef = useRef(false);
 
   const handleToggleModel = useCallback((modelId: string) => {
+    const model = modelsData.find(m => m.id === modelId);
+    if (!model) return;
+
     setPersistedChatModels(prev => {
       const set = new Set(prev);
       if (set.has(modelId)) {
         set.delete(modelId);
       } else {
+        // Clear models from the other group
+        const otherType = model.type === 'self-hosted' ? 'github' : 'self-hosted';
+        modelsData.filter(m => m.type === otherType).forEach(m => set.delete(m.id));
         set.add(modelId);
       }
       return Array.from(set);
     });
-  }, [setPersistedChatModels]);
+  }, [setPersistedChatModels, modelsData]);
 
   const handleToggleChatGroup = useCallback((type: 'self-hosted' | 'github') => {
     const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
+    const otherType = type === 'self-hosted' ? 'github' : 'self-hosted';
+    const idsOfOtherType = modelsData.filter(m => m.type === otherType).map(m => m.id);
+
     setPersistedChatModels(prev => {
       const set = new Set(prev);
       const allSelected = idsOfType.every(id => set.has(id));
       if (allSelected) {
         idsOfType.forEach(id => set.delete(id));
       } else {
+        // Clear models from the other group
+        idsOfOtherType.forEach(id => set.delete(id));
         idsOfType.forEach(id => set.add(id));
       }
       return Array.from(set);
