@@ -37,7 +37,7 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | 5 | **DeepSeek R1 1.5B** | 1.5B | AIME 2024: 28.9%, MATH-500: 83.9%, Codeforces: 954 rating | Math reasoning, algorithmic problems, code generation |
 | 6 | **Gemma 3 12B** | 12B | Safety-aligned IT checkpoint, stronger instruction following, ~8K context | Fact-checking, educational content, safe generation |
 | 7 | **Mistral 7B v0.3** | 7B | MMLU: 63%, 32K context, native function calling | JSON generation, tool use, structured output |
-| 8 | **Phi-3 Mini** | 3.8B | MMLU: 69%, 4K context, trained on 3.3T tokens | Logic puzzles, efficient inference, mobile deployment |
+| 8 | **Phi-4 Mini** | 3.8B | GSM8K: 88.6%, 128K context, 22 languages, function calling | Math reasoning, multilingual, tool use |
 | 9 | **RNJ-1 Instruct** | 8B | SWE-Bench Verified: 20.8%, strong tool-use (BFCL ranked) | Code automation, agentic workflows, tool calling |
 | 10 | **Llama 3.2 3B** | 3B | MMLU: 63.4%, 128K context, multilingual (8 languages) | Casual conversation, summarization, creative writing |
 | 11 | **FunctionGemma 270M** | 270M | Edge-optimized (50 t/s on Pixel 8), 240MB RAM (Q4), 32K context | Edge device agents, mobile actions, offline function calling |
@@ -56,7 +56,7 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | DeepSeek R1 1.5B | [OpenRouter](https://openrouter.ai/), [DataCamp](https://www.datacamp.com/) |
 | Gemma 3 12B | [Google Blog](https://blog.google/), [Unsloth](https://huggingface.co/unsloth/gemma-3-12b-it-GGUF) |
 | Mistral 7B v0.3 | [Mistral AI](https://mistral.ai/), [Hugging Face](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3) |
-| Phi-3 Mini | [arXiv](https://arxiv.org/abs/2404.xxxxx), [Microsoft](https://www.microsoft.com/) |
+| Phi-4 Mini | [Hugging Face](https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF), [Microsoft](https://www.microsoft.com/) |
 | RNJ-1 Instruct | [Hugging Face](https://huggingface.co/EssentialAI/rnj-1-instruct), [Ollama](https://ollama.com/) |
 | Llama 3.2 3B | [NVIDIA](https://developer.nvidia.com/), [Meta](https://huggingface.co/meta-llama/) |
 | FunctionGemma 270M | [Google Blog](https://developers.googleblog.com/), [Unsloth](https://docs.unsloth.ai/models/functiongemma) |
