@@ -17,11 +17,8 @@ export const THINKING_MODELS: string[] = [
   'nanbeige',         // Nanbeige4-3B Thinking
 ];
 
-// Models that use GPT-OSS Harmony format with <|channel|>analysis/final markers
-export const HARMONY_FORMAT_MODELS: string[] = [
-  'gpt-oss',
-  'gptoss',
-];
+// Models that use Harmony format with <|channel|>analysis/final markers
+export const HARMONY_FORMAT_MODELS: string[] = [];
 
 // Check if a model ID matches any thinking model pattern
 export const isThinkingModel = (modelId: string): boolean => {
