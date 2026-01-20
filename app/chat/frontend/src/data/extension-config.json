@@ -25,6 +25,14 @@
       "rank": 2
     },
     {
+      "key": "glm",
+      "name": "GLM-4.7 Flash",
+      "localPort": 8302,
+      "category": "reasoning",
+      "modelId": "glm-4.7-flash",
+      "rank": 2
+    },
+    {
       "key": "smollm3",
       "name": "SmolLM3 3B",
       "localPort": 8104,
@@ -143,6 +151,12 @@
       "serviceKey": "dasd"
     },
     {
+      "name": "GLM-4.7 Flash",
+      "path": "inference.yml",
+      "category": "reasoning",
+      "serviceKey": "glm"
+    },
+    {
       "name": "SmolLM3 3B",
       "path": "inference.yml",
       "category": "small",
@@ -258,6 +272,13 @@
       "category": "small"
     },
     {
+      "id": "glm-4.7-flash",
+      "name": "GLM-4.7 Flash",
+      "type": "local",
+      "priority": 2,
+      "category": "reasoning"
+    },
+    {
       "id": "smollm3-3b",
       "name": "SmolLM3 3B",
       "type": "local",
@@ -335,6 +356,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-20T05:57:25.289513Z",
+  "generatedAt": "2026-01-20T06:25:30.801351Z",
   "sourceFile": "config/models.py"
 }

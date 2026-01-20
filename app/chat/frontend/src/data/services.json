@@ -25,6 +25,14 @@
       "rank": 2
     },
     {
+      "key": "glm",
+      "name": "GLM-4.7 Flash",
+      "localPort": 8302,
+      "category": "reasoning",
+      "modelId": "glm-4.7-flash",
+      "rank": 2
+    },
+    {
       "key": "smollm3",
       "name": "SmolLM3 3B",
       "localPort": 8104,
