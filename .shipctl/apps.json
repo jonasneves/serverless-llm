@@ -82,10 +82,10 @@
     },
     {
       "key": "phi",
-      "name": "Phi-3 Mini",
+      "name": "Phi-4 Mini",
       "localPort": 8101,
       "category": "small",
-      "modelId": "phi-3-mini",
+      "modelId": "phi-4-mini",
       "rank": 9
     },
     {
@@ -193,7 +193,7 @@
       "serviceKey": "mistral"
     },
     {
-      "name": "Phi-3 Mini",
+      "name": "Phi-4 Mini",
       "path": "inference.yml",
       "category": "small",
       "serviceKey": "phi"
@@ -321,8 +321,8 @@
       "category": "medium"
     },
     {
-      "id": "phi-3-mini",
-      "name": "Phi-3 Mini",
+      "id": "phi-4-mini",
+      "name": "Phi-4 Mini",
       "type": "local",
       "priority": 9,
       "category": "small"
@@ -356,6 +356,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-01-20T06:25:30.801351Z",
+  "generatedAt": "2026-01-20T06:26:10.970031Z",
   "sourceFile": "config/models.py"
 }
