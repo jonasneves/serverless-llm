@@ -24,9 +24,6 @@ on:
       duration_hours:
         type: string
         default: '5'
-      instances:
-        type: string
-        default: '1'
       port:
         type: string
         default: '8000'
@@ -42,17 +39,13 @@ on:
 
 jobs:
   inference:
-    name: ${{ inputs.model_name }} #${{ matrix.instance }}
-    runs-on: ubuntu-24.04-arm  # ARM64 runners for ARM-optimized inference
+    name: ${{ inputs.model_name }}
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 350
     permissions:
       actions: write
       contents: read
       packages: read
-    strategy:
-      matrix:
-        instance: ${{ fromJson(inputs.instances == '3' && '[1,2,3]' || inputs.instances == '2' && '[1,2]' || '[1]') }}
-      fail-fast: false
 
     steps:
       - name: Find previous workflow
@@ -219,7 +212,7 @@ jobs:
             -e PORT="$PORT" \
             -e HF_TOKEN="$HF_TOKEN" \
             -e HF_HOME=/app/.cache/huggingface \
-            -e INSTANCE_ID="${{ matrix.instance }}" \
+            -e INSTANCE_ID="1" \
             -e GITHUB_SHA="${{ github.sha }}" \
             -e N_CTX="$N_CTX" \
             -e N_THREADS="$N_THREADS" \
@@ -334,8 +327,7 @@ jobs:
           DURATION=$(awk "BEGIN {printf \"%.0f\", $DURATION_HOURS * 3600}")
           START_TIME=$(date +%s)
 
-          INSTANCES="${{ inputs.instances }}"
-          echo "Duration: ${DURATION_HOURS}h | Instances: $INSTANCES"
+          echo "Duration: ${DURATION_HOURS}h"
 
           while true; do
             ELAPSED=$(($(date +%s) - START_TIME))

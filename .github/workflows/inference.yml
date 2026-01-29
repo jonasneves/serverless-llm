@@ -1,5 +1,5 @@
 name: Inference
-run-name: "${{ github.event.client_payload.model || inputs.model }} \u2022 ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}h \xD7 ${{ github.event.client_payload.instances || inputs.instances || '1' }}"
+run-name: "${{ inputs.model }} \u2022 ${{ inputs.duration_hours || '5' }}h"
 'on':
   workflow_dispatch:
     inputs:
@@ -23,15 +23,6 @@ run-name: "${{ github.event.client_payload.model || inputs.model }} \u2022 ${{ g
         - r1qwen
         - rnj
         - smollm3
-      instances:
-        description: Parallel instances (1-3)
-        required: false
-        default: '1'
-        type: choice
-        options:
-        - '1'
-        - '2'
-        - '3'
       duration_hours:
         description: Duration (max 5.5 hours)
         required: false
@@ -92,7 +83,6 @@ jobs:
       cache_key_prefix: gguf-${{ needs.lookup.outputs.model_name }}
       workflow_file: inference.yml
       duration_hours: ${{ inputs.duration_hours || '5' }}
-      instances: ${{ inputs.instances || '1' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnels_json: ${{ secrets.TUNNELS_JSON }}

@@ -10,7 +10,6 @@ Self-hosted LLM inference platform serving 15 models (270M to 12B parameters) wi
 ### Infrastructure
 
 - **Multi-Model**: 15 models with different strengths (see table below)
-- **High Availability**: 1-3 parallel instances per model for load balancing
 - **Public Access**: Cloudflare Tunnels for external connectivity
 - **Fast Restarts**: GGUF models cached between runs
 
@@ -154,11 +153,6 @@ serverless-llm/
 - `n_threads`: CPU threads (default: 4)
 - `n_batch`: Batch size (default: 256)
 - `max_concurrent`: Parallel requests per instance (default: 2)
-
-**High Availability**: Run multiple parallel instances per model:
-- Each workflow supports 1-3 concurrent instances
-- Cloudflare Tunnels load-balance across active instances
-- Zero-downtime during restarts with multiple instances
 
 ## Local Development
 
