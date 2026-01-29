@@ -90,9 +90,10 @@ export function useModelsManager() {
       setLoadError(null);
       setRetryCount(0);
 
-      // Initialize multi-model selection (for Compare, Analyze, etc.) with self-hosted models
+      // Initialize multi-model selection (for Compare, Analyze, etc.) - start with empty selection
+      // Users will manually select models they want to use
       if (!isSelectionInitialized.current) {
-        setPersistedSelected(apiModels.filter(m => m.type === 'self-hosted').map(m => m.id));
+        setPersistedSelected([]);
         isSelectionInitialized.current = true;
       }
 
@@ -103,6 +104,12 @@ export function useModelsManager() {
         const firstApiModel = apiModels.find(m => m.type === 'github');
         setChatModelId(gpt4o?.id || defaultModel?.id || firstApiModel?.id || apiModels[0]?.id || null);
         isChatModelInitialized.current = true;
+      }
+
+      // Migrate existing users to gpt-4o if available and they're using a different model
+      const gpt4o = apiModels.find(m => m.id === 'gpt-4o');
+      if (gpt4o && chatModelId && chatModelId !== 'gpt-4o') {
+        setChatModelId(gpt4o.id);
       }
 
       const apiModeratorCandidate = apiModels.find(m => m.type === 'github');

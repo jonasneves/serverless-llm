@@ -66,6 +66,18 @@ function PlaygroundInner() {
 
   // Check health status of self-hosted models
   useModelHealth(modelsData, updateModelAvailability);
+
+  // Automatically deselect offline models
+  useEffect(() => {
+    const offlineModelIds = modelsData
+      .filter(m => m.type === 'self-hosted' && m.available === false)
+      .map(m => m.id);
+
+    if (offlineModelIds.length > 0) {
+      setSelected(prev => prev.filter(id => !offlineModelIds.includes(id)));
+    }
+  }, [modelsData, setSelected]);
+
   // Mode persists across page refreshes
   const [mode, setMode] = usePersistedSetting<Mode>(
     'playground_mode',
