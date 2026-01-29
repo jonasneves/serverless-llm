@@ -78,7 +78,7 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
     };
 
     const getGroupName = (type: 'self-hosted' | 'github') =>
-        type === 'self-hosted' ? 'Self-Hosted' : 'GitHub';
+        type === 'self-hosted' ? 'Self-Hosted' : 'GitHub Models';
 
     const showGithubWarning = selectedApiCount > 0 && !githubToken;
 
