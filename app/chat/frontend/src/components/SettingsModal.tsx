@@ -190,7 +190,7 @@ export default function SettingsModal({
               <div className="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4">
                 <h3 className="text-sm font-semibold text-slate-200 mb-1">GitHub Connection</h3>
                 <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                  Connect your GitHub account to use dedicated API quota for GitHub Models.
+                  Connect your GitHub account to use GitHub Models. Authentication required for API access.
                 </p>
 
                 {githubAuth ? (

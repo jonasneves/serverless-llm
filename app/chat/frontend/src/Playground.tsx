@@ -353,7 +353,7 @@ function PlaygroundInner() {
       } else if (!selected.includes(draggedDockModelId)) {
         // Check API model limit for multi-model modes
         if (!canAddApiModel(draggedDockModelId)) {
-          showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
+          showApiLimitToast('Connect GitHub in Settings to use API models');
           setDraggedDockModelId(null);
           return;
         }
@@ -419,7 +419,7 @@ function PlaygroundInner() {
     } else {
       // Adding a model - check API limit for multi-model modes
       if (!canAddApiModel(modelId)) {
-        showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
+        showApiLimitToast('Connect GitHub in Settings to use API models');
         return;
       }
       setSelected(prev => [...prev, modelId]);
@@ -442,7 +442,7 @@ function PlaygroundInner() {
 
     // Check API limit for multi-model modes when adding github group
     if (type === 'github' && !canAddApiGroup()) {
-      showApiLimitToast('Add your GitHub token in Settings for API model access with dedicated quota');
+      showApiLimitToast('Connect GitHub in Settings to use API models');
       return;
     }
 

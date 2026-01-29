@@ -138,7 +138,6 @@ python inference_server.py  # Runs on port 8100
 ```bash
 cd app/chat
 export QWEN_API_URL=http://localhost:8100
-export GH_MODELS_TOKEN=ghp_xxxxxxxxxxxxx  # Optional
 python chat_server.py  # Runs on port 8080
 ```
 
