@@ -37,14 +37,6 @@ run-name: "${{ github.event.client_payload.model || inputs.model }} \u2022 ${{ g
         required: false
         default: '5'
         type: string
-      auto_restart:
-        description: Auto-restart before timeout
-        required: false
-        default: true
-        type: boolean
-  repository_dispatch:
-    types:
-    - restart-inference
 permissions:
   actions: write
   contents: read
@@ -98,13 +90,9 @@ jobs:
       model_repo: ${{ needs.lookup.outputs.model_repo }}
       model_file: ${{ needs.lookup.outputs.model_file }}
       cache_key_prefix: gguf-${{ needs.lookup.outputs.model_name }}
-      restart_event_type: restart-inference
       workflow_file: inference.yml
-      duration_hours: ${{ github.event.client_payload.duration_hours || inputs.duration_hours || '5' }}
-      auto_restart: ${{ (github.event.client_payload.auto_restart == true || github.event.client_payload.auto_restart == 'true')
-        || (inputs.auto_restart == true || inputs.auto_restart == 'true' || inputs.auto_restart == '') }}
-      instances: ${{ github.event.client_payload.instances || inputs.instances || '1' }}
+      duration_hours: ${{ inputs.duration_hours || '5' }}
+      instances: ${{ inputs.instances || '1' }}
     secrets:
       hf_token: ${{ secrets.HF_TOKEN }}
       tunnels_json: ${{ secrets.TUNNELS_JSON }}
-      workflow_pat: ${{ secrets.WORKFLOW_PAT }}
