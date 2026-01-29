@@ -7,11 +7,6 @@
 
 Self-hosted LLM inference platform serving 15 models (270M to 12B parameters) with OpenAI-compatible APIs. Experimental testbed for gesture-based interaction, AI-generated UIs, and multi-model collaboration modes (discussion, council, roundtable).
 
-### Infrastructure
-
-- **Multi-Model**: 15 models with different strengths (see table below)
-- **Fast Restarts**: GGUF models cached between runs
-
 ## Models
 
 Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro, GPQA, AIME, MATH, HumanEval):
