@@ -69,8 +69,12 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
     };
 
     const toggleAllInCategory = (categoryModels: Model[]) => {
-        const allSelected = categoryModels.every(m => selectedModels.has(m.id));
-        categoryModels.forEach(m => {
+        // Filter out offline self-hosted models
+        const availableModels = categoryModels.filter(m =>
+            !(m.type === 'self-hosted' && m.available === false)
+        );
+        const allSelected = availableModels.every(m => selectedModels.has(m.id));
+        availableModels.forEach(m => {
             if (allSelected || !selectedModels.has(m.id)) {
                 onToggleModel(m.id);
             }
@@ -225,7 +229,11 @@ function ModelDropdown({
     showSearch: boolean;
     direction: 'up' | 'down';
 }) {
-    const allSelected = allModels.every(m => selectedModels.has(m.id));
+    // Only consider available models for "all selected" check
+    const availableModels = allModels.filter(m =>
+        !(m.type === 'self-hosted' && m.available === false)
+    );
+    const allSelected = availableModels.length > 0 && availableModels.every(m => selectedModels.has(m.id));
     const colorClasses = {
         emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', check: 'text-emerald-400', dot: 'bg-emerald-500/50', border: 'focus:border-emerald-500/50' },
         blue: { bg: 'bg-blue-500/20', text: 'text-blue-300', check: 'text-blue-400', dot: 'bg-blue-500/50', border: 'focus:border-blue-500/50' },

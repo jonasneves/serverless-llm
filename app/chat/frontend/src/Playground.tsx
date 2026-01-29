@@ -175,13 +175,16 @@ function PlaygroundInner() {
   }, [setPersistedChatModels, modelsData]);
 
   const handleToggleChatGroup = useCallback((type: 'self-hosted' | 'github') => {
-    const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
+    // Filter out offline self-hosted models
+    const idsOfType = modelsData
+      .filter(m => m.type === type && !(m.type === 'self-hosted' && m.available === false))
+      .map(m => m.id);
     const otherType = type === 'self-hosted' ? 'github' : 'self-hosted';
     const idsOfOtherType = modelsData.filter(m => m.type === otherType).map(m => m.id);
 
     setPersistedChatModels(prev => {
       const set = new Set(prev);
-      const allSelected = idsOfType.every(id => set.has(id));
+      const allSelected = idsOfType.length > 0 && idsOfType.every(id => set.has(id));
       if (allSelected) {
         idsOfType.forEach(id => set.delete(id));
       } else {
@@ -424,7 +427,11 @@ function PlaygroundInner() {
   };
 
   const handleAddGroup = (type: 'self-hosted' | 'github') => {
-    const idsOfType = modelsData.filter(m => m.type === type).map(m => m.id);
+    // Filter out offline self-hosted models
+    const availableModelsOfType = modelsData.filter(m =>
+      m.type === type && !(m.type === 'self-hosted' && m.available === false)
+    );
+    const idsOfType = availableModelsOfType.map(m => m.id);
     const isAllSelected = idsOfType.length > 0 && idsOfType.every(id => selected.includes(id));
 
     if (isAllSelected) {
@@ -440,7 +447,7 @@ function PlaygroundInner() {
     }
 
     const modelsToAdd = availableModels
-      .filter(m => m.type === type)
+      .filter(m => m.type === type && !(m.type === 'self-hosted' && m.available === false))
       .map(m => m.id);
     if (modelsToAdd.length > 0) {
       setSelected(prev => [...prev, ...modelsToAdd]);
