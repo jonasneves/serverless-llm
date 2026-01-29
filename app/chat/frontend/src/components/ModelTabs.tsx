@@ -288,19 +288,28 @@ function ModelDropdown({
             >
                 {models.map(model => {
                     const isSelected = selectedModels.has(model.id);
+                    const isOffline = model.type === 'self-hosted' && model.available === false;
+                    const isClickable = !isOffline;
+
                     return (
                         <button
                             key={model.id}
-                            onClick={() => onToggleModel(model.id)}
+                            onClick={isClickable ? () => onToggleModel(model.id) : undefined}
+                            disabled={isOffline}
+                            title={isOffline ? 'Model is offline' : undefined}
                             className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${
-                                isSelected ? `${colorClasses.bg} text-slate-200` : 'text-slate-300 hover:bg-slate-700/50'
+                                isOffline
+                                    ? 'opacity-40 cursor-not-allowed'
+                                    : isSelected
+                                    ? `${colorClasses.bg} text-slate-200`
+                                    : 'text-slate-300 hover:bg-slate-700/50'
                             }`}
                         >
                             <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${colorClasses.dot}`} />
+                                <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : colorClasses.dot}`} />
                                 <span>{model.name}</span>
                             </div>
-                            {isSelected && <span className={colorClasses.check}>✓</span>}
+                            {isSelected && !isOffline && <span className={colorClasses.check}>✓</span>}
                         </button>
                     );
                 })}

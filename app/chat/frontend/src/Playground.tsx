@@ -5,6 +5,7 @@ import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
 import Header from './components/Header';
 import { useModelsManager } from './hooks/useModelsManager';
+import { useModelHealth } from './hooks/useModelHealth';
 import { usePersistedSetting } from './hooks/usePersistedSetting';
 import { useExtensionConfig } from './hooks/useExtensionConfig';
 import { useConversationHistory } from './hooks/useConversationHistory';
@@ -56,11 +57,15 @@ function PlaygroundInner() {
     totalModelsByType,
     allSelectedByType,
     modelIdToName,
+    updateModelAvailability,
     isLoading: isLoadingModels,
     loadError: modelsLoadError,
     retryCount: modelsRetryCount,
     retryNow: retryModelsNow,
   } = useModelsManager();
+
+  // Check health status of self-hosted models
+  useModelHealth(modelsData, updateModelAvailability);
   // Mode persists across page refreshes
   const [mode, setMode] = usePersistedSetting<Mode>(
     'playground_mode',

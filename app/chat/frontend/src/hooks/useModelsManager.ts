@@ -79,7 +79,8 @@ export function useModelsManager() {
             response: '',
             priority: model.priority,
             context_length: model.context_length,
-            default: model.default
+            default: model.default,
+            available: modelType === 'github' ? true : undefined, // GitHub models are always available, self-hosted will be checked
           };
         });
 
@@ -221,6 +222,14 @@ export function useModelsManager() {
     [modelsData],
   );
 
+  const updateModelAvailability = useCallback((modelId: string, available: boolean) => {
+    setModelsData(prev =>
+      prev.map(model =>
+        model.id === modelId ? { ...model, available } : model
+      )
+    );
+  }, []);
+
   return {
     modelsData,
     setModelsData,
@@ -234,6 +243,7 @@ export function useModelsManager() {
     totalModelsByType,
     allSelectedByType,
     modelIdToName,
+    updateModelAvailability,
     isLoading,
     loadError,
     retryCount,

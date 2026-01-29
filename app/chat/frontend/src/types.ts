@@ -15,6 +15,7 @@ export interface Model {
   priority?: number;
   context_length?: number;
   default?: boolean;
+  available?: boolean; // Whether the model is currently online/available
 }
 
 export type Mode = 'compare' | 'analyze' | 'debate' | 'chat';

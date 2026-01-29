@@ -183,22 +183,34 @@ export default function ModelDock({
               <div className="space-y-1">
                 {modelsForSection.map((model) => {
                   const isSelected = isInChatMode ? chatSelectedModels.has(model.id) : false;
+                  // Only show as offline if explicitly marked as false (undefined means still checking)
+                  const isOffline = model.type === 'self-hosted' && model.available === false;
+                  const isClickable = !isOffline;
+
                   return (
                     <div
                       key={model.id}
-                      draggable={!isInChatMode}
-                      onDragStart={!isInChatMode ? (e) => handleDragStart(e, model.id) : undefined}
-                      onClick={() => handleModelClick(model.id)}
-                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
-                        isSelected
+                      draggable={!isInChatMode && isClickable}
+                      onDragStart={!isInChatMode && isClickable ? (e) => handleDragStart(e, model.id) : undefined}
+                      onClick={isClickable ? () => handleModelClick(model.id) : undefined}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors border ${
+                        isOffline
+                          ? 'opacity-40 cursor-not-allowed border-transparent'
+                          : isSelected
                           ? accent.active
-                          : 'hover:bg-white/5 border-transparent'
+                          : 'hover:bg-white/5 border-transparent cursor-pointer'
                       }`}
+                      title={isOffline ? 'Model is offline' : undefined}
                     >
-                      <span className={`text-xs font-medium ${isSelected ? 'text-slate-200' : 'text-slate-400'}`}>
-                        {model.name}
-                      </span>
-                      {isSelected && <Check size={14} className={accent.text} />}
+                      <div className="flex items-center gap-2">
+                        {isOffline && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        )}
+                        <span className={`text-xs font-medium ${isSelected ? 'text-slate-200' : 'text-slate-400'}`}>
+                          {model.name}
+                        </span>
+                      </div>
+                      {isSelected && !isOffline && <Check size={14} className={accent.text} />}
                     </div>
                   );
                 })}
