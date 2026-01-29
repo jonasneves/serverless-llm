@@ -5,9 +5,7 @@
 
 ## Overview
 
-Experimental playground for self-hosted LLMs running on GitHub Actions. Started as an experiment to see if small models could run on CI/CD infrastructure, now serves as a testbed for various ideas: gesture-based interaction, AI-generated UIs, multi-model collaboration modes (discussion, council, roundtable), and more.
-
-Runs 15 models (270M to 12B parameters) with OpenAI-compatible APIs.
+Self-hosted LLM inference platform serving 15 models (270M to 12B parameters) with OpenAI-compatible APIs. Experimental testbed for gesture-based interaction, AI-generated UIs, and multi-model collaboration modes (discussion, council, roundtable).
 
 ### Infrastructure
 
@@ -15,10 +13,6 @@ Runs 15 models (270M to 12B parameters) with OpenAI-compatible APIs.
 - **High Availability**: 1-3 parallel instances per model for load balancing
 - **Public Access**: Cloudflare Tunnels for external connectivity
 - **Fast Restarts**: GGUF models cached between runs
-
-## Architecture
-
-![Architecture](architecture.png)
 
 ## Models
 
@@ -61,11 +55,9 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 
 ## Quick Start
 
-**Setup overview**: Fork this repo, configure GitHub secrets and Cloudflare Tunnels, then trigger the workflows.
+**Setup overview**: Configure secrets and Cloudflare Tunnels, then deploy the workflows.
 
-### 1. Configure GitHub Secrets
-
-Add to **Settings > Secrets and variables > Actions**:
+### 1. Configure Secrets
 
 **Required:**
 | Secret | Description |
@@ -78,19 +70,19 @@ Add to **Settings > Secrets and variables > Actions**:
 |--------|-------------|
 | `BASE_DOMAIN` | Your domain (e.g., `neevs.io`) - used by chat to construct model URLs |
 | `{MODEL}_API_URL` | Override model endpoint URLs (e.g., `QWEN_API_URL=https://qwen.neevs.io`). If `BASE_DOMAIN` is set, these are auto-constructed. |
-| `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents/Council modes. Uses free quota by default. [Create your own](https://github.com/settings/personal-access-tokens/new) for dedicated quota. |
+| `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents/Council modes. [Create token](https://github.com/settings/personal-access-tokens/new) with `user_models:read` permission. |
 | `CLOUDFLARE_TUNNEL_TOKEN_CHAT` | **Legacy fallback** for chat tunnel (not needed if using `TUNNELS_JSON`) |
 
 
 ### 2. Create Cloudflare Tunnels
 
 **Automated (Recommended):**
-1. Add GitHub Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+1. Add secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 2. Run: `python scripts/setup_tunnels.py --domain yourdomain.com`
-3. Copy output JSON to GitHub Secret: `TUNNELS_JSON`
+3. Copy output JSON to secret: `TUNNELS_JSON`
 
 **Manual:**
-Create tunnels in Cloudflare Zero Trust dashboard and add tokens to GitHub Secrets.
+Create tunnels in Cloudflare Zero Trust dashboard and add tokens to secrets.
 
 See [Tunnel Automation](.docs/TUNNEL_AUTOMATION.md) for details.
 
@@ -129,7 +121,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 
 ```
 serverless-llm/
-├── .github/workflows/          # GitHub Actions workflows
+├── .github/workflows/          # CI/CD workflows
 ├── app/
 │   ├── shared/                 # Shared inference server (base code for all models)
 │   ├── lfm2-inference/         # LFM2.5 model config (native llama-server)
@@ -147,12 +139,11 @@ serverless-llm/
 
 | Component | Technology |
 |-----------|------------|
-| Compute | GitHub Actions (ARM64 runners, 4 vCPU, 16GB RAM) |
+| Compute | ARM64 runners (4 vCPU, 16GB RAM) |
 | LLM Runtime | llama-cpp-python (GGUF) for most models; native llama-server for LFM2.5, RNJ |
 | API Framework | FastAPI |
 | Streaming | Server-Sent Events |
 | Tunneling | Cloudflare Zero Trust |
-| Caching | GitHub Actions Cache (models) |
 | Frontend | React + TypeScript |
 | Hand Tracking | MediaPipe GestureRecognizer |
 
@@ -160,7 +151,7 @@ serverless-llm/
 
 **Centralized Config**: All model and inference settings are managed in `config/models.py`:
 - `n_ctx`: Context window size (default: 4096)
-- `n_threads`: CPU threads (default: 4, matches runner vCPUs)
+- `n_threads`: CPU threads (default: 4)
 - `n_batch`: Batch size (default: 256)
 - `max_concurrent`: Parallel requests per instance (default: 2)
 
@@ -171,7 +162,7 @@ serverless-llm/
 
 ## Local Development
 
-Run models and the web interface locally without GitHub Actions.
+Run models and the web interface locally.
 
 ### Prerequisites
 
@@ -190,7 +181,7 @@ For local development with multiple models on the same machine:
 | 82XX | Medium (7B-30B) | gemma (8200), llama (8201), mistral (8202), rnj (8203) |
 | 83XX | Reasoning | r1qwen (8300), nanbeige (8301), gptoss (8303) |
 
-GitHub Actions uses port 8000 for all inference models (each runs on a separate runner).
+Production deployment uses port 8000 for all inference models (each runs in a separate container).
 
 See `config/models.py` for the authoritative configuration.
 
@@ -225,7 +216,7 @@ docker-compose --profile all up
 
 ## Limitations
 
-- **CPU Inference**: No GPU on GitHub-hosted runners (slower generation, ~10-50 tokens/sec depending on model)
+- **CPU Inference**: No GPU support currently (slower generation, ~10-50 tokens/sec depending on model)
 - **First Run**: Initial model download (~2-5 min), subsequent runs use cached models
 
 ## License
