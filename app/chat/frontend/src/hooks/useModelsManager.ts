@@ -96,11 +96,12 @@ export function useModelsManager() {
         isSelectionInitialized.current = true;
       }
 
-      // Initialize chat model with default model, fallback to first github, then first available
+      // Initialize chat model with gpt-4o, fallback to default model, then first github, then first available
       if (!isChatModelInitialized.current) {
+        const gpt4o = apiModels.find(m => m.id === 'gpt-4o');
         const defaultModel = apiModels.find(m => m.default);
         const firstApiModel = apiModels.find(m => m.type === 'github');
-        setChatModelId(defaultModel?.id || firstApiModel?.id || apiModels[0]?.id || null);
+        setChatModelId(gpt4o?.id || defaultModel?.id || firstApiModel?.id || apiModels[0]?.id || null);
         isChatModelInitialized.current = true;
       }
 
