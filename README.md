@@ -46,22 +46,6 @@ Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro,
 | Llama 3.2 3B | [NVIDIA](https://developer.nvidia.com/), [Meta](https://huggingface.co/meta-llama/) |
 | FunctionGemma 270M | [Google Blog](https://developers.googleblog.com/), [Unsloth](https://docs.unsloth.ai/models/functiongemma) |
 
-## Quick Start
-
-### Configure Secrets
-
-**Required:**
-| Secret | Description |
-|--------|-------------|
-| `HF_TOKEN` | Hugging Face token for downloading gated models |
-
-**Optional:**
-| Secret | Description |
-|--------|-------------|
-| `BASE_DOMAIN` | Your domain (e.g., `neevs.io`) - used by chat to construct model URLs |
-| `{MODEL}_API_URL` | Override model endpoint URLs (e.g., `QWEN_API_URL=https://qwen.neevs.io`). If `BASE_DOMAIN` is set, these are auto-constructed. |
-| `GH_MODELS_TOKEN` | GitHub token for Discussion/Agents/Council modes. [Create token](https://github.com/settings/personal-access-tokens/new) with `user_models:read` permission. |
-
 ## API
 
 ### Endpoints
@@ -108,17 +92,6 @@ serverless-llm/
 ├── scripts/                    # Automation scripts
 └── README.md
 ```
-
-## Technologies
-
-| Component | Technology |
-|-----------|------------|
-| Compute | ARM64 runners (4 vCPU, 16GB RAM) |
-| LLM Runtime | llama-cpp-python (GGUF) for most models; native llama-server for LFM2.5, RNJ |
-| API Framework | FastAPI |
-| Streaming | Server-Sent Events |
-| Frontend | React + TypeScript |
-| Hand Tracking | MediaPipe GestureRecognizer |
 
 ## Configuration
 
@@ -181,11 +154,6 @@ docker-compose --profile qwen --profile phi up
 # All services
 docker-compose --profile all up
 ```
-
-## Limitations
-
-- **CPU Inference**: No GPU support currently (slower generation, ~10-50 tokens/sec depending on model)
-- **First Run**: Initial model download (~2-5 min), subsequent runs use cached models
 
 ## License
 
