@@ -1,5 +1,5 @@
 {
-  "name": "serverless-llm-playground",
+  "name": "llm-playground",
   "private": true,
   "version": "1.0.0",
   "type": "module",

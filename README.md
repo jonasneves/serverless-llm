@@ -1,4 +1,4 @@
-# Serverless LLM
+# LLM Playground
 
 <!-- Live API Health Status -->
 [![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
@@ -80,7 +80,7 @@ curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
 ## Project Structure
 
 ```
-serverless-llm/
+llm-playground/
 ├── .github/workflows/          # CI/CD workflows
 ├── app/
 │   ├── shared/                 # Shared inference server (base code for all models)
