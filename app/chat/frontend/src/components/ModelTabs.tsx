@@ -118,69 +118,29 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
 
             {/* Model selector bar */}
             <div className="relative flex items-center gap-1 bg-slate-800/90 rounded-lg p-1 border border-slate-700/50 backdrop-blur-md shadow-lg">
-                {/* Self-Hosted */}
-                {localModels.length > 0 && (
+                {/* GitHub Models */}
+                {apiModels.length > 0 && (
                     <>
                         <div className="relative flex items-center">
                             <button
-                                onClick={() => handleDropdownToggle('self-hosted')}
+                                onClick={() => handleDropdownToggle('github')}
                                 disabled={isGenerating}
                                 className={`h-7 px-2.5 flex items-center gap-2 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                    selectedLocalCount > 0
-                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                    selectedApiCount > 0
+                                        ? 'bg-blue-500/20 text-blue-300'
                                         : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
                                 }`}
                             >
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <span>{getGroupName('self-hosted')}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] leading-none ${selectedLocalCount > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                                    {selectedLocalCount}/{localModels.length}
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                                <span>{getGroupName('github')}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] leading-none ${selectedApiCount > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                                    {selectedApiCount}/{apiModels.length}
                                 </span>
-                                <ChevronIcon size={10} className={`shrink-0 opacity-50 transition-transform ${chevronRotation(expandedDropdown === 'self-hosted')}`} />
+                                <ChevronIcon size={10} className={`shrink-0 opacity-50 transition-transform ${chevronRotation(expandedDropdown === 'github')}`} />
                             </button>
 
-                            {expandedDropdown === 'self-hosted' && (
+                            {expandedDropdown === 'github' && (
                                 <ModelDropdown
-                                    models={filteredLocalModels}
-                                    allModels={localModels}
-                                    selectedModels={selectedModels}
-                                    onToggleModel={onToggleModel}
-                                    onToggleAll={() => toggleAllInCategory(localModels)}
-                                    searchQuery={searchQuery}
-                                    setSearchQuery={setSearchQuery}
-                                    searchInputRef={searchInputRef}
-                                    color="emerald"
-                                    showSearch={localModels.length > 5}
-                                    direction={dropDirection}
-                                />
-                            )}
-                        </div>
-                        <div className="w-px h-5 bg-slate-600/50" />
-                    </>
-                )}
-
-                {/* GitHub */}
-                {apiModels.length > 0 && (
-                    <div className="relative flex items-center">
-                        <button
-                            onClick={() => handleDropdownToggle('github')}
-                            disabled={isGenerating}
-                            className={`h-7 px-2.5 flex items-center gap-2 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
-                                selectedApiCount > 0
-                                    ? 'bg-blue-500/20 text-blue-300'
-                                    : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
-                            }`}
-                        >
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                            <span>{getGroupName('github')}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] leading-none ${selectedApiCount > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                                {selectedApiCount}/{apiModels.length}
-                            </span>
-                            <ChevronIcon size={10} className={`shrink-0 opacity-50 transition-transform ${chevronRotation(expandedDropdown === 'github')}`} />
-                        </button>
-
-                        {expandedDropdown === 'github' && (
-                            <ModelDropdown
                                 models={filteredApiModels}
                                 allModels={apiModels}
                                 selectedModels={selectedModels}
@@ -191,6 +151,46 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                                 searchInputRef={searchInputRef}
                                 color="blue"
                                 showSearch={apiModels.length > 5}
+                                direction={dropDirection}
+                            />
+                        )}
+                    </div>
+                    <div className="w-px h-5 bg-slate-600/50" />
+                </>
+                )}
+
+                {/* Self-Hosted */}
+                {localModels.length > 0 && (
+                    <div className="relative flex items-center">
+                        <button
+                            onClick={() => handleDropdownToggle('self-hosted')}
+                            disabled={isGenerating}
+                            className={`h-7 px-2.5 flex items-center gap-2 rounded-md transition-all active:scale-95 text-xs font-medium whitespace-nowrap ${
+                                selectedLocalCount > 0
+                                    ? 'bg-emerald-500/20 text-emerald-300'
+                                    : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
+                            }`}
+                        >
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span>{getGroupName('self-hosted')}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] leading-none ${selectedLocalCount > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                                {selectedLocalCount}/{localModels.length}
+                            </span>
+                            <ChevronIcon size={10} className={`shrink-0 opacity-50 transition-transform ${chevronRotation(expandedDropdown === 'self-hosted')}`} />
+                        </button>
+
+                        {expandedDropdown === 'self-hosted' && (
+                            <ModelDropdown
+                                models={filteredLocalModels}
+                                allModels={localModels}
+                                selectedModels={selectedModels}
+                                onToggleModel={onToggleModel}
+                                onToggleAll={() => toggleAllInCategory(localModels)}
+                                searchQuery={searchQuery}
+                                setSearchQuery={setSearchQuery}
+                                searchInputRef={searchInputRef}
+                                color="emerald"
+                                showSearch={localModels.length > 5}
                                 direction={dropDirection}
                             />
                         )}
