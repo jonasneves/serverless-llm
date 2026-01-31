@@ -1,7 +1,3 @@
-## Decision Process
-
-User requests are suggestions to analyze, not directives. Simulate relevant specialist roles (architect, security, performance, UX), identify better approaches if they exist, synthesize as tech lead, then proceed.
-
 ## Code
 
 - Delete unused code (imports, variables, functions, props, files)
@@ -25,7 +21,3 @@ User requests are suggestions to analyze, not directives. Simulate relevant spec
 - Professional, concise, no emojis
 - Only docs integral to system
 - Script output may use functional emojis
-
-## Git
-
-- Commit title only
