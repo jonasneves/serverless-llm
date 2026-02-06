@@ -1,24 +1,4 @@
-# Stage 1: Node.js Builder (for playground app)
-FROM node:20-alpine AS playground-builder
-
-WORKDIR /app
-
-# Copy playground package files first (for better layer caching)
-COPY app/chat/frontend/package*.json ./frontend/
-WORKDIR /app/frontend
-
-# Install dependencies
-RUN npm ci
-
-# Copy playground source files
-WORKDIR /app
-COPY app/chat/frontend/ ./frontend/
-WORKDIR /app/frontend
-
-# Build playground (outputs to ../backend/static/playground)
-RUN npm run build
-
-# Stage 2: Python Builder
+# Stage 1: Python Builder
 FROM python:3.11-slim AS builder
 
 ENV PYTHONUNBUFFERED=1
@@ -32,7 +12,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY app/chat/backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Stage 3: Runtime
+# Stage 2: Runtime
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1
@@ -60,10 +40,8 @@ COPY --chown=appuser:appuser app/chat/backend/engines ./engines
 COPY --chown=appuser:appuser app/chat/backend/tools ./tools
 # Copy config module from project root (Single Source of Truth)
 COPY --chown=appuser:appuser config ./config
-# Copy static files
+# Copy static files (status page assets only - frontend served separately on GitHub Pages)
 COPY --chown=appuser:appuser app/chat/backend/static ./static
-# Copy pre-built playground from playground-builder stage
-COPY --from=playground-builder --chown=appuser:appuser /app/backend/static/playground ./static/playground
 
 # Switch to non-root user
 USER appuser

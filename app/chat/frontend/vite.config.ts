@@ -22,7 +22,7 @@ export default defineConfig(({ command }) => ({
     },
   },
   build: {
-    outDir: '../backend/static/playground',
+    outDir: 'dist',
     emptyOutDir: true,
     assetsInlineLimit: 0,
     rollupOptions: {
@@ -49,9 +49,6 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
-  // Dev should be served at `/`, prod assets are served by FastAPI under `/static/playground/`.
-  // For GitHub Pages, use VITE_BASE env var (e.g., /serverless-llm/)
-  base: command === 'serve'
-    ? '/'
-    : (process.env.VITE_BASE || '/static/playground/'),
+  // GitHub Pages deployment uses VITE_BASE env var (e.g., / for custom domain)
+  base: command === 'serve' ? '/' : (process.env.VITE_BASE || '/'),
 }))

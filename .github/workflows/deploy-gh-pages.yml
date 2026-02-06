@@ -37,7 +37,7 @@ jobs:
 
       - name: Build frontend
         working-directory: app/chat/frontend
-        run: npm run build:pages
+        run: npm run build
         env:
           # Custom domain uses root path
           VITE_BASE: /

@@ -13,7 +13,7 @@ import hashlib
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from typing import Dict, List, Optional, AsyncGenerator
@@ -295,16 +295,15 @@ def get_model_endpoint_or_error(model_id: str, *, status_code: int = 400) -> str
 
 
 @app.get("/")
-async def playground_interface():
-    """Serve React Playground SPA with no-cache to ensure fresh builds are always served"""
-    playground_html = static_dir / "playground" / "index.html"
-    response = FileResponse(playground_html)
-    # Prevent caching of index.html so new deployments are picked up immediately
-    # The JS/CSS chunks have content hashes in filenames, so they can be cached forever
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
+async def root():
+    """API root - frontend is served separately on GitHub Pages"""
+    return {
+        "service": "LLM Playground API",
+        "status": "healthy",
+        "frontend": "https://chat.neevs.io",
+        "docs": "/docs",
+        "health": "/health"
+    }
 
 @app.get("/status")
 async def status_page(request: Request):
