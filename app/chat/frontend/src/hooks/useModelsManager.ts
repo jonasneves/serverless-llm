@@ -236,6 +236,65 @@ export function useModelsManager() {
     }
   }, [modelsData, chatModelId, setChatModelId]);
 
+  const getModelEndpoints = useCallback((models: Model[]): Record<string, string> => {
+    const endpoints: Record<string, string> = {};
+    const isDev = window.location.hostname === 'localhost';
+
+    const subdomainMap: Record<string, string> = {
+      'qwen3-4b': 'qwen',
+      'phi-3-mini': 'phi',
+      'functiongemma-270m-it': 'functiongemma',
+      'smollm3-3b': 'smollm3',
+      'lfm2.5-1.2b-instruct': 'lfm2',
+      'dasd-4b-thinking': 'dasd',
+      'agentcpm-explore-4b': 'agentcpm',
+      'gemma-3-12b-it': 'gemma',
+      'llama-3.2-3b': 'llama',
+      'mistral-7b-instruct-v0.3': 'mistral',
+      'rnj-1-instruct': 'rnj',
+      'deepseek-r1-distill-qwen-1.5b': 'r1qwen',
+      'nanbeige4-3b-thinking': 'nanbeige',
+      'z-ai/glm-4.5-air:free': 'glm',
+      'gpt-oss-20b': 'gptoss',
+    };
+
+    const portMap: Record<string, number> = {
+      'qwen3-4b': 8100,
+      'phi-3-mini': 8110,
+      'functiongemma-270m-it': 8120,
+      'smollm3-3b': 8130,
+      'lfm2.5-1.2b-instruct': 8140,
+      'dasd-4b-thinking': 8300,
+      'agentcpm-explore-4b': 8310,
+      'gemma-3-12b-it': 8200,
+      'llama-3.2-3b': 8210,
+      'mistral-7b-instruct-v0.3': 8220,
+      'rnj-1-instruct': 8230,
+      'deepseek-r1-distill-qwen-1.5b': 8320,
+      'nanbeige4-3b-thinking': 8330,
+      'z-ai/glm-4.5-air:free': 8340,
+      'gpt-oss-20b': 8350,
+    };
+
+    models.forEach(model => {
+      if (model.type === 'self-hosted') {
+        if (isDev) {
+          const port = portMap[model.id] || 8000;
+          endpoints[model.id] = `http://localhost:${port}`;
+        } else {
+          const subdomain = subdomainMap[model.id];
+          if (subdomain) {
+            endpoints[model.id] = `https://${subdomain}.neevs.io`;
+          }
+        }
+      } else if (model.type === 'github') {
+        endpoints[model.id] = 'https://models.inference.ai.azure.com';
+      }
+    });
+
+    return endpoints;
+  }, []);
+
   return {
     modelsData,
     setModelsData,
@@ -254,5 +313,6 @@ export function useModelsManager() {
     loadError,
     retryCount,
     retryNow,
+    getModelEndpoints,
   };
 }

@@ -96,38 +96,6 @@ export const fetchChatStream = async (
   }, signal);
 };
 
-export interface AnalyzeStreamPayload {
-  query: string;
-  participants: string[];
-  max_tokens: number;
-  github_token?: string | null;
-  system_prompt?: string | null;
-}
-
-export const fetchAnalyzeStream = async (
-  payload: AnalyzeStreamPayload,
-  signal?: AbortSignal
-): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/chat/analyze/stream', payload, signal);
-};
-
-export interface DebateStreamPayload {
-  query: string;
-  participants?: string[] | null;
-  turns?: number;
-  max_tokens: number;
-  temperature: number;
-  github_token?: string | null;
-  system_prompt?: string | null;
-}
-
-export const fetchDebateStream = async (
-  payload: DebateStreamPayload,
-  signal?: AbortSignal
-): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/chat/debate/stream', payload, signal);
-};
-
 export const streamSseEvents = async (
   eventStream: AsyncGenerator<ChatStreamEvent>,
   onEvent: (data: ChatStreamEvent) => void,

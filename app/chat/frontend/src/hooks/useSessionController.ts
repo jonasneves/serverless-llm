@@ -1,9 +1,11 @@
 import { Dispatch, SetStateAction } from 'react';
 import { GENERATION_DEFAULTS, isThinkingModel } from '../constants';
-import { fetchChatStream, fetchAnalyzeStream, fetchDebateStream, streamSseEvents } from '../utils/streaming';
+import { fetchChatStream, streamSseEvents } from '../utils/streaming';
 import { ChatHistoryEntry, Mode, Model } from '../types';
 import { ExecutionTimeData } from '../components/ExecutionTimeDisplay';
 import { parseThinkingChunk, ThinkingState } from '../utils/thinkingParser';
+import { runAnalyze } from '../engines/analyzeEngine';
+import { runDebate } from '../engines/debateEngine';
 
 type DiscussionTurn = {
   turn_number: number;
@@ -45,6 +47,8 @@ interface SessionControllerParams {
   enqueueStreamDelta: (modelId: string, answerAdd: string, thinkingAdd: string) => void;
   clearPendingStreamForModel: (modelId: string) => void;
   resetPendingStream: () => void;
+  getModelEndpoints: (models: Model[]) => Record<string, string>;
+  modelsData: Model[];
 }
 
 interface SendMessageOptions {
@@ -86,6 +90,8 @@ export function useSessionController(params: SessionControllerParams) {
     enqueueStreamDelta,
     clearPendingStreamForModel,
     resetPendingStream,
+    getModelEndpoints,
+    modelsData,
   } = params;
 
   const sendMessage = async (
@@ -311,25 +317,28 @@ export function useSessionController(params: SessionControllerParams) {
         }
         setSpeaking(new Set(participants));
 
-        const response = await fetchAnalyzeStream({
-          query: contextualQuery,
-          participants,
-          max_tokens: GENERATION_DEFAULTS.maxTokens,
-          github_token: githubToken || null,
-          system_prompt: systemPrompt || null,
-        }, currentController.signal);
+        const modelEndpoints = getModelEndpoints(modelsData);
 
         let analyzeSynthesis = '';
 
-        await streamSseEvents(response, (data) => {
-          const eventType = data.event;
+        for await (const event of runAnalyze({
+          query: contextualQuery,
+          participants,
+          maxTokens: GENERATION_DEFAULTS.maxTokens,
+          systemPrompt: systemPrompt || null,
+          githubToken: githubToken || null,
+          signal: currentController.signal,
+          modelEndpoints,
+          modelIdToName,
+        })) {
+          const eventType = event.type;
 
           if (eventType === 'analyze_start') {
             setPhaseLabel('Collecting Responses');
           }
 
-          if (eventType === 'model_start' && data.model_id) {
-            const modelId = data.model_id as string;
+          if (eventType === 'model_start' && event.model_id) {
+            const modelId = event.model_id;
             setSpeaking(prev => {
               const next = new Set(prev);
               next.add(modelId);
@@ -337,8 +346,8 @@ export function useSessionController(params: SessionControllerParams) {
             });
           }
 
-          if (eventType === 'model_chunk' && data.model_id) {
-            const modelId = data.model_id as string;
+          if (eventType === 'model_chunk' && event.model_id) {
+            const modelId = event.model_id;
             const now = performance.now();
             if (!firstTokenReceived.has(modelId)) {
               firstTokenReceived.add(modelId);
@@ -347,11 +356,11 @@ export function useSessionController(params: SessionControllerParams) {
                 [modelId]: { ...prev[modelId], firstTokenTime: now },
               }));
             }
-            applyThinkingChunk(modelId, String((data as any).chunk ?? ''));
+            applyThinkingChunk(modelId, event.chunk ?? '');
           }
 
-          if (eventType === 'model_response' && data.model_id) {
-            const modelId = data.model_id as string;
+          if (eventType === 'model_response' && event.model_id) {
+            const modelId = event.model_id;
             const now = performance.now();
             setExecutionTimes(prev => ({
               ...prev,
@@ -363,7 +372,7 @@ export function useSessionController(params: SessionControllerParams) {
               return next;
             });
 
-            const responseText = String((data as any).response ?? '');
+            const responseText = event.response ?? '';
             recordResponse(modelId, responseText, { replace: true });
             if (!(previousResponses && previousResponses[modelId])) {
               setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: responseText } : model));
@@ -371,8 +380,8 @@ export function useSessionController(params: SessionControllerParams) {
             }
           }
 
-          if (eventType === 'model_error' && data.model_id) {
-            const modelId = data.model_id as string;
+          if (eventType === 'model_error' && event.model_id) {
+            const modelId = event.model_id;
             const now = performance.now();
             setExecutionTimes(prev => ({
               ...prev,
@@ -383,7 +392,7 @@ export function useSessionController(params: SessionControllerParams) {
               next.delete(modelId);
               return next;
             });
-            const errorText = String((data as any).error ?? 'Error generating response.');
+            const errorText = event.error ?? 'Error generating response.';
             clearPendingStreamForModel(modelId);
             setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: errorText, error: errorText } : model));
             markModelFailed(modelId);
@@ -392,8 +401,8 @@ export function useSessionController(params: SessionControllerParams) {
 
           if (eventType === 'analysis_complete') {
             setPhaseLabel('Analysis Complete');
-            const consensus = (data as any).consensus || [];
-            const unique = (data as any).unique_contributions || {};
+            const consensus = event.consensus || [];
+            const unique = event.unique_contributions || {};
 
             let analysis = 'Analysis:\n\n';
             if (consensus.length > 0) {
@@ -419,11 +428,11 @@ export function useSessionController(params: SessionControllerParams) {
           }
 
           if (eventType === 'error') {
-            const message = String((data as any).error ?? 'Analyze error.');
+            const message = event.error ?? 'Analyze error.';
             setModeratorSynthesis(message);
             setPhaseLabel('Error');
           }
-        });
+        }
 
         if (!skipHistory) {
           const trimmed = analyzeSynthesis.trim();
@@ -446,39 +455,42 @@ export function useSessionController(params: SessionControllerParams) {
           return;
         }
 
-        const response = await fetchDebateStream({
+        const modelEndpoints = getModelEndpoints(modelsData);
+
+        for await (const event of runDebate({
           query: contextualQuery,
           participants,
-          turns: 2,
-          max_tokens: GENERATION_DEFAULTS.maxTokens,
+          rounds: 2,
+          maxTokens: GENERATION_DEFAULTS.maxTokens,
           temperature: GENERATION_DEFAULTS.temperature,
-          github_token: githubToken || null,
-          system_prompt: systemPrompt || null,
-        }, currentController.signal);
-
-        await streamSseEvents(response, (data) => {
-          const eventType = data.event;
+          systemPrompt: systemPrompt || null,
+          githubToken: githubToken || null,
+          signal: currentController.signal,
+          modelEndpoints,
+          modelIdToName,
+        })) {
+          const eventType = event.type;
 
           if (eventType === 'debate_start') {
             setPhaseLabel('Debate Starting');
           }
 
           if (eventType === 'round_start') {
-            const roundNum = (data as any).round_number ?? 0;
+            const roundNum = event.round_number ?? 0;
             setPhaseLabel(`Round ${roundNum + 1}`);
           }
 
-          if (eventType === 'turn_start' && data.model_id) {
-            const modelId = data.model_id as string;
-            const turnNum = (data as any).turn_number ?? 0;
-            const roundNum = (data as any).round_number ?? 0;
+          if (eventType === 'turn_start' && event.model_id) {
+            const modelId = event.model_id;
+            const turnNum = event.turn_number ?? 0;
+            const roundNum = event.round_number ?? 0;
             setSpeaking(new Set([modelId]));
             setPhaseLabel(`Round ${roundNum + 1} · Turn ${turnNum + 1}`);
             currentDiscussionTurnRef.current = { modelId, turnNumber: turnNum };
           }
 
-          if (eventType === 'turn_chunk' && data.model_id) {
-            const modelId = data.model_id as string;
+          if (eventType === 'turn_chunk' && event.model_id) {
+            const modelId = event.model_id;
             const now = performance.now();
             if (!firstTokenReceived.has(modelId)) {
               firstTokenReceived.add(modelId);
@@ -487,11 +499,11 @@ export function useSessionController(params: SessionControllerParams) {
                 [modelId]: { ...prev[modelId], firstTokenTime: now },
               }));
             }
-            applyThinkingChunk(modelId, String((data as any).chunk ?? ''));
+            applyThinkingChunk(modelId, event.chunk ?? '');
           }
 
-          if (eventType === 'turn_complete' && data.model_id) {
-            const modelId = data.model_id as string;
+          if (eventType === 'turn_complete' && event.model_id) {
+            const modelId = event.model_id;
             const now = performance.now();
             setExecutionTimes(prev => ({
               ...prev,
@@ -503,8 +515,8 @@ export function useSessionController(params: SessionControllerParams) {
               return next;
             });
 
-            const responseText = String((data as any).response ?? '');
-            const turnNum = (data as any).turn_number ?? 0;
+            const responseText = event.response ?? '';
+            const turnNum = event.turn_number ?? 0;
             recordResponse(modelId, responseText, { replace: true });
             setModelsData(prev => prev.map(model =>
               model.id === modelId ? { ...model, response: responseText } : model
@@ -518,8 +530,8 @@ export function useSessionController(params: SessionControllerParams) {
             appendEventHistory(`${modelIdToName(modelId)}:\n${responseText}`, 'debate_turn');
           }
 
-          if (eventType === 'turn_error' && data.model_id) {
-            const modelId = data.model_id as string;
+          if (eventType === 'turn_error' && event.model_id) {
+            const modelId = event.model_id;
             const now = performance.now();
             setExecutionTimes(prev => ({
               ...prev,
@@ -530,7 +542,7 @@ export function useSessionController(params: SessionControllerParams) {
               next.delete(modelId);
               return next;
             });
-            const errorText = String((data as any).error ?? 'Turn error.');
+            const errorText = event.error ?? 'Turn error.';
             clearPendingStreamForModel(modelId);
             setModelsData(prev => prev.map(model =>
               model.id === modelId ? { ...model, response: errorText, error: errorText } : model
@@ -544,11 +556,11 @@ export function useSessionController(params: SessionControllerParams) {
           }
 
           if (eventType === 'error') {
-            const message = String((data as any).error ?? 'Debate error.');
+            const message = event.error ?? 'Debate error.';
             setPhaseLabel('Error');
             setModeratorSynthesis(message);
           }
-        });
+        }
 
         return;
       }

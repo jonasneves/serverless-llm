@@ -61,6 +61,7 @@ function PlaygroundInner() {
     loadError: modelsLoadError,
     retryCount: modelsRetryCount,
     retryNow: retryModelsNow,
+    getModelEndpoints,
   } = useModelsManager();
 
   // Check health status of self-hosted models
@@ -880,6 +881,8 @@ function PlaygroundInner() {
     enqueueStreamDelta,
     clearPendingStreamForModel,
     resetPendingStream,
+    getModelEndpoints,
+    modelsData,
   });
 
   // Keyboard shortcuts
