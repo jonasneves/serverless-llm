@@ -221,6 +221,21 @@ export function useModelsManager() {
     );
   }, []);
 
+  // Auto-switch to API model when all self-hosted models are offline
+  useEffect(() => {
+    const currentModel = modelsData.find(m => m.id === chatModelId);
+    const allSelfHosted = modelsData.filter(m => m.type === 'self-hosted');
+    const allSelfHostedOffline = allSelfHosted.length > 0 && allSelfHosted.every(m => m.available === false);
+
+    // If current model is offline or null, and all self-hosted models are offline, switch to first API model
+    if (allSelfHostedOffline && (!currentModel || currentModel.available === false)) {
+      const firstApiModel = modelsData.find(m => m.type === 'github' && m.available !== false);
+      if (firstApiModel && firstApiModel.id !== chatModelId) {
+        setChatModelId(firstApiModel.id);
+      }
+    }
+  }, [modelsData, chatModelId, setChatModelId]);
+
   return {
     modelsData,
     setModelsData,
