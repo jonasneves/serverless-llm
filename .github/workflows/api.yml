@@ -1,6 +1,6 @@
-name: Chat
+name: API Backend
 
-run-name: "Chat Interface"
+run-name: "API Backend"
 
 on:
   workflow_dispatch:
@@ -17,8 +17,8 @@ on:
         type: string
 
 jobs:
-  chat:
-    name: Chat Interface
+  api:
+    name: API Backend
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 350
     permissions:
@@ -35,7 +35,7 @@ jobs:
           API_RESPONSE=$(curl -s \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/chat.yml/runs?status=in_progress")
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/api.yml/runs?status=in_progress")
 
           PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r ".workflow_runs[] | select(.id < ${{ github.run_id }}) | .id" | head -1)
 

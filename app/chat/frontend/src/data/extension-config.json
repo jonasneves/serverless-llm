@@ -123,8 +123,8 @@
   ],
   "workflows": [
     {
-      "name": "Chat",
-      "path": "chat.yml",
+      "name": "API Backend",
+      "path": "api.yml",
       "category": "core"
     },
     {
@@ -356,6 +356,6 @@
       "category": "reasoning"
     }
   ],
-  "generatedAt": "2026-02-06T18:04:02.898835Z",
+  "generatedAt": "2026-02-06T19:30:07.900851Z",
   "sourceFile": "config/models.py"
 }
