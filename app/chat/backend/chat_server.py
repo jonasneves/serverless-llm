@@ -126,8 +126,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "*",  # Allow all origins for development
-        # In production, you may want to restrict to:
-        # "https://chat.neevs.io",  # Frontend (GitHub Pages)
+        # In production, restrict to frontend domain:
+        # "https://chat.neevs.io",
     ],
     allow_credentials=True,
     allow_methods=["*"],

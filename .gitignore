@@ -53,7 +53,8 @@ npm-debug.log
 yarn-error.log
 
 # Build artifacts
-app/chat/static/playground/
+app/chat/frontend/dist/
+app/chat/backend/static/playground/
 
 # Temporary
 tmp/
