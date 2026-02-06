@@ -122,13 +122,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# CORS configuration
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+if allowed_origins == ["*"]:
+    logger.warning("⚠️  CORS allows all origins - set ALLOWED_ORIGINS env var for production")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*",  # Allow all origins for development
-        # In production, restrict to frontend domain:
-        # "https://chat.neevs.io",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
