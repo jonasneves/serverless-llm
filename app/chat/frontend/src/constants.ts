@@ -17,22 +17,10 @@ export const THINKING_MODELS: string[] = [
   'nanbeige',         // Nanbeige4-3B Thinking
 ];
 
-// Models that use Harmony format with <|channel|>analysis/final markers
-export const HARMONY_FORMAT_MODELS: string[] = [];
-
-// Check if a model ID matches any thinking model pattern
 export const isThinkingModel = (modelId: string): boolean => {
   const lower = modelId.toLowerCase();
   return THINKING_MODELS.some(pattern => lower.includes(pattern.toLowerCase()));
 };
-
-// Check if a model uses Harmony format (GPT-OSS)
-export const isHarmonyFormatModel = (modelId: string): boolean => {
-  const lower = modelId.toLowerCase();
-  return HARMONY_FORMAT_MODELS.some(pattern => lower.includes(pattern.toLowerCase()));
-};
-
-
 
 export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github', dynamicPriority?: number): number {
   if (dynamicPriority !== undefined) {

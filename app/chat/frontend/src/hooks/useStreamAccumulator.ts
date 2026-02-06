@@ -57,8 +57,6 @@ export function useStreamAccumulator(
   }, []);
 
   return {
-    pendingStreamRef,
-    flushStreamRafRef,
     enqueueStreamDelta,
     clearPendingStreamForModel,
     resetPendingStream,

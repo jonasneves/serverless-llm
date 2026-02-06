@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from 'react';
-import { GENERATION_DEFAULTS, isThinkingModel, isHarmonyFormatModel } from '../constants';
+import { GENERATION_DEFAULTS, isThinkingModel } from '../constants';
 import { fetchChatStream, fetchAnalyzeStream, fetchDebateStream, streamSseEvents } from '../utils/streaming';
 import { ChatHistoryEntry, Mode, Model } from '../types';
 import { ExecutionTimeData } from '../components/ExecutionTimeDisplay';
@@ -31,7 +31,7 @@ interface SessionControllerParams {
   currentDiscussionTurnRef: React.MutableRefObject<{ modelId: string; turnNumber: number } | null>;
   sessionModelIdsRef: React.MutableRefObject<string[]>;
   abortControllerRef: React.MutableRefObject<AbortController | null>;
-  thinkingStateRef: React.MutableRefObject<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean; harmonyFormat?: boolean }>>;
+  thinkingStateRef: React.MutableRefObject<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean }>>;
   conversationHistoryRef: React.MutableRefObject<ChatHistoryEntry[]>;
   pushHistoryEntries: (entries: ChatHistoryEntry[]) => void;
   historyToText: (history: ChatHistoryEntry[]) => string;
@@ -175,31 +175,15 @@ export function useSessionController(params: SessionControllerParams) {
     const thinkingResetIds = new Set(sessionModelIds);
     if (moderator) thinkingResetIds.add(moderator);
     thinkingResetIds.forEach(modelId => {
-      // Thinking models (DeepSeek R1, SmolLM3, etc.) start in thinking mode by default
       const startsInThinkingMode = isThinkingModel(modelId);
-      // Harmony format models (GPT-OSS) use channel markers instead of think tags
-      const usesHarmonyFormat = isHarmonyFormatModel(modelId);
       thinkingStateRef.current[modelId] = {
-        inThink: startsInThinkingMode || usesHarmonyFormat, // Both start in "thinking" mode
+        inThink: startsInThinkingMode,
         carry: '',
         implicitThinking: startsInThinkingMode,
-        harmonyFormat: usesHarmonyFormat,
       };
     });
 
     const firstTokenReceived = new Set<string>();
-
-    const formatDomainLabel = (value: string) =>
-      value
-        ? value
-          .replace(/_/g, ' ')
-          .replace(/\b\w/g, char => char.toUpperCase())
-        : '';
-
-    const formatPercentage = (value?: number) =>
-      typeof value === 'number' && Number.isFinite(value)
-        ? `${Math.round(value * 100)}%`
-        : '—';
 
     const appendEventHistory = (content: string, kind: ChatHistoryEntry['kind']) => {
       const trimmed = content?.trim();
@@ -225,8 +209,6 @@ export function useSessionController(params: SessionControllerParams) {
         enqueueStreamDelta(modelId, answerAdd, thinkingAdd);
       }
     };
-
-
 
     const addIconToMessage = (message: string): string => {
       const lowerMsg = message.toLowerCase();

@@ -37,14 +37,11 @@ const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="b
 const ARENA_MODES: Mode[] = ['compare', 'analyze', 'debate'];
 const SMART_DEFAULT_LIMITS: Record<string, number> = { compare: Infinity, analyze: 4, debate: 3 };
 
-// Inner component that uses GestureContext
 function PlaygroundInner() {
-  // Access gesture context for HandBackground rendering
   const gestureCtx = useGesture();
 
-  // Load extension configuration (endpoints, github token) from chrome.storage
-  // This configures the apiClient with user's saved settings on startup
-  const { config: _extensionConfig, isLoaded: _extensionConfigLoaded } = useExtensionConfig();
+  // Configures the apiClient with user's saved settings on startup
+  useExtensionConfig();
 
   const {
     modelsData,
@@ -80,7 +77,6 @@ function PlaygroundInner() {
     }
   }, [modelsData, setSelected]);
 
-  // Mode persists across page refreshes
   const [mode, setMode] = usePersistedSetting<Mode>(
     'playground_mode',
     'chat',
@@ -95,12 +91,11 @@ function PlaygroundInner() {
   const [linesTransitioning, setLinesTransitioning] = useState(false);
   const lineTransitionTimeoutRef = useRef<number | null>(null);
 
-  // Dock Drag & Drop State (HTML5 DnD for Dock -> Arena)
   const [draggedDockModelId, setDraggedDockModelId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const [showDock, setShowDock] = useState(false);
-  const [gridCols, setGridCols] = useState(2); // State for dynamic grid columns
+  const [gridCols, setGridCols] = useState(2);
   const [showSettings, setShowSettings] = useState(false);
   const [githubAuth, setGithubAuth] = usePersistedSetting<GitHubAuth | null>('github_auth', null);
 
@@ -113,17 +108,13 @@ function PlaygroundInner() {
     }
   }, [setGithubAuth]);
 
-  // UI Builder setting - resets on page refresh (not persisted)
   const [uiBuilderEnabled, setUiBuilderEnabled] = useState(false);
-
-  // Execution time tracking: { modelId: { startTime, firstTokenTime, endTime } }
   const [executionTimes, setExecutionTimes] = useState<Record<string, ExecutionTimeData>>({});
-  const dockRef = useRef<HTMLDivElement>(null); // Ref for the Model Dock
+  const dockRef = useRef<HTMLDivElement>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastQuery, setLastQuery] = useState('');
 
-  // Toast notification for API limit
   const [apiLimitToast, setApiLimitToast] = useState<string | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
 
@@ -138,29 +129,17 @@ function PlaygroundInner() {
     }, 5000);
   }, []);
 
-  // Check if user can add an API model (requires GitHub token for multi-model modes)
+  // In multi-model modes, GitHub models require a token
   const canAddApiModel = useCallback((modelId: string): boolean => {
-    // Chat mode doesn't have this restriction
-    if (mode === 'chat') return true;
-    // If they have a token, allow it
-    if (githubAuth?.token) return true;
-    // Check if the model is a github model
+    if (mode === 'chat' || githubAuth?.token) return true;
     const model = modelsData.find(m => m.id === modelId);
-    if (!model || model.type !== 'github') return true;
-    // No token + github model = blocked
-    return false;
+    return !model || model.type !== 'github';
   }, [mode, githubAuth, modelsData]);
 
   const canAddApiGroup = useCallback((): boolean => {
-    // Chat mode doesn't have this restriction
-    if (mode === 'chat') return true;
-    // If they have a token, allow it
-    if (githubAuth?.token) return true;
-    // No token = blocked for API group
-    return false;
+    return mode === 'chat' || !!githubAuth?.token;
   }, [mode, githubAuth]);
 
-  // Chat state - simplified: just selectedModels + messages
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [persistedChatModels, setPersistedChatModels] = usePersistedSetting<string[]>(
     'playground_chat_selected_models',
@@ -184,7 +163,6 @@ function PlaygroundInner() {
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
   const prevGestureActiveRef = useRef(false);
 
-  // Per-mode persisted selections for arena modes
   const [persistedCompareModels, setPersistedCompareModels] = usePersistedSetting<string[]>(
     'playground_compare_selected_models',
     [],
@@ -255,21 +233,15 @@ function PlaygroundInner() {
 
   const summarizeSessionResponses = (responses: Record<string, string>, order: string[]) => {
     const seen = new Set<string>();
-    const uniqueOrder = order.filter(Boolean).filter((id, idx, arr) => arr.indexOf(id) === idx);
     const entries: Array<{ id: string; text: string }> = [];
 
-    uniqueOrder.forEach(id => {
-      const text = responses[id];
-      if (text && text.trim()) {
-        entries.push({ id, text: text.trim() });
-        seen.add(id);
-      }
-    });
-
-    Object.entries(responses).forEach(([id, text]) => {
-      if (seen.has(id) || !text || !text.trim()) return;
-      entries.push({ id, text: text.trim() });
-    });
+    // Add ordered models first, then any remaining responses
+    for (const id of [...order, ...Object.keys(responses)]) {
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const text = responses[id]?.trim();
+      if (text) entries.push({ id, text });
+    }
 
     if (!entries.length) return null;
     return entries.map(({ id, text }) => `${modelIdToName(id)}:\n${text}`).join('\n\n');
@@ -288,7 +260,6 @@ function PlaygroundInner() {
     .map(id => modelsData.find(m => m.id === id))
     .filter((m): m is Model => !!m && (mode === 'compare' || m.id !== moderator));
 
-  // In Compare mode, sort models by response time (first to respond appears first)
   const selectedModels = useMemo(() => {
     if (mode !== 'compare') return selectedModelsBase;
 
@@ -306,7 +277,6 @@ function PlaygroundInner() {
     });
   }, [mode, selectedModelsBase, executionTimes]);
 
-  // Calculate fastest TTFT and fastest total time for Compare mode badges
   const { fastestTTFT, fastestTotal } = useMemo(() => {
     if (mode !== 'compare') return { fastestTTFT: null, fastestTotal: null };
 
@@ -369,7 +339,6 @@ function PlaygroundInner() {
     return { x, y, angle };
   };
 
-  /* HTML5 Drag & Drop Handlers (Dock -> Arena) */
   const handleDockDragStart = (e: React.DragEvent, modelId: string) => {
     setDraggedDockModelId(modelId);
     e.dataTransfer.effectAllowed = 'move';
@@ -490,18 +459,15 @@ function PlaygroundInner() {
   const handleClearAll = useCallback(() => {
     setSelected([]);
   }, [setSelected]);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null); // For tiny preview on hover
-  const [expandedModelId, setExpandedModelId] = useState<string | null>(null); // For full response modal
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
   const [inputFocused, setInputFocused] = useState<boolean>(false);
-  // Card selection state (for arena modes)
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const clearSelection = () => setSelectedCardIds(new Set());
 
   const [arenaSize, setArenaSize] = useState<{ width: number; height: number } | null>(null);
 
-  // Dynamic layout radius calculation
-  // Expand to fill available space but enforce minimums to prevent overlap
   const layoutRadius = useMemo(() => {
     if (mode === 'compare') return 0;
 
@@ -519,7 +485,6 @@ function PlaygroundInner() {
     return Math.max(minRequiredRadius, safeMaxRadius);
   }, [mode, selectedModels.length, arenaSize]);
 
-  // Dynamic grid column calculation - placed here after activeInspectorId is declared
   useEffect(() => {
     const calculateLayout = () => {
       if (!visualizationAreaRef.current) return;
@@ -562,7 +527,7 @@ function PlaygroundInner() {
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const lastSelectedCardRef = useRef<string | null>(null);
   const suppressClickRef = useRef({ card: false, background: false });
-  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean; harmonyFormat?: boolean }>>({});
+  const thinkingStateRef = useRef<Record<string, { inThink: boolean; carry: string; implicitThinking?: boolean }>>({});
   const sessionModelIdsRef = useRef<string[]>([]);
   const {
     enqueueStreamDelta,
@@ -570,7 +535,6 @@ function PlaygroundInner() {
     resetPendingStream,
   } = useStreamAccumulator(setModelsData);
 
-  // Initialize a temporary ref for drag selection - will be set by useSelectionBox
   const dragSelectionActiveRefTemp = useRef(false);
 
   const {
@@ -601,7 +565,6 @@ function PlaygroundInner() {
     suppressClickRef,
   });
 
-  // Sync the drag selection ref
   dragSelectionActiveRefTemp.current = dragSelectionActiveRef.current;
 
   const { dragState, handlePointerDown } = useCardReorder({
@@ -712,17 +675,10 @@ function PlaygroundInner() {
     setMode(nextMode);
   }, [mode, triggerLineTransition, selected, modelsData, getSmartDefaults, persistedByMode, setSelected]);
 
-  // Cleanup toast timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => () => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-  }, []);
-
-  useEffect(() => () => {
-    if (lineTransitionTimeoutRef.current) {
-      clearTimeout(lineTransitionTimeoutRef.current);
-    }
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    if (lineTransitionTimeoutRef.current) clearTimeout(lineTransitionTimeoutRef.current);
   }, []);
 
   useEffect(() => {
@@ -735,38 +691,29 @@ function PlaygroundInner() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [moderatorSynthesis, setModeratorSynthesis] = useState<string>('');
 
-  // Reset session state for a new round (Analyze, Debate)
   const handleNewSession = useCallback(() => {
-    // Clear conversation history
     clearHistory();
-    // Reset generation state
     setIsGenerating(false);
     setIsSynthesizing(false);
     setModeratorSynthesis('');
     setPhaseLabel(null);
-    // Reset discussion state
     setDiscussionTurnsByModel({});
-    // Reset model responses
     setModelsData(prev => prev.map(model => ({
       ...model,
       response: '',
       thinking: undefined,
       error: undefined,
     })));
-    // Clear execution times
     setExecutionTimes({});
-    // Clear any speaking state
     setSpeaking(new Set());
   }, [clearHistory, setModelsData]);
 
-  // Orchestrator auto mode state
   type OrchestratorAutoScope = 'all' | 'self-hosted' | 'api';
   const [orchestratorAutoMode, setOrchestratorAutoMode] = useState(true);
   const [orchestratorAutoScope, setOrchestratorAutoScope] = useState<OrchestratorAutoScope>('api');
   const [showOrchestratorMenu, setShowOrchestratorMenu] = useState(false);
   const orchestratorMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close orchestrator menu on click outside or ESC
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (orchestratorMenuRef.current && !orchestratorMenuRef.current.contains(e.target as Node)) {
@@ -819,8 +766,6 @@ function PlaygroundInner() {
     });
   };
 
-  // Store per-mode state for arena modes (compare/analyze/debate)
-  // Each mode persists its own transcript within the session
   type ArenaModeState = {
     responses: Record<string, { response: string; thinking?: string; error?: string }>;
     moderatorSynthesis: string;
@@ -835,7 +780,6 @@ function PlaygroundInner() {
     debate: { responses: {}, moderatorSynthesis: '', phaseLabel: null, executionTimes: {}, isGenerating: false, speaking: new Set() },
   });
 
-  // Refs to access current values without triggering effect
   const modelsDataRef = useRef(modelsData);
   const moderatorSynthesisRef = useRef(moderatorSynthesis);
   const phaseLabelRef = useRef(phaseLabel);
@@ -849,12 +793,10 @@ function PlaygroundInner() {
   useEffect(() => { isGeneratingRef.current = isGenerating; }, [isGenerating]);
   useEffect(() => { speakingRef.current = speaking; }, [speaking]);
 
-  // Save/restore state when switching between compare/analyze/debate modes
   useEffect(() => {
     const prevMode = prevModeForClearRef.current;
 
     if (ARENA_MODES.includes(prevMode) && ARENA_MODES.includes(mode) && prevMode !== mode) {
-      // Save current mode's state using refs (including generation status)
       const currentResponses: Record<string, { response: string; thinking?: string; error?: string }> = {};
       modelsDataRef.current.forEach(m => {
         currentResponses[m.id] = { response: m.response, thinking: m.thinking, error: m.error };
@@ -868,12 +810,10 @@ function PlaygroundInner() {
         speaking: new Set(speakingRef.current),
       };
 
-      // Restore new mode's state (or start fresh if empty)
       const savedState = arenaModeStateRef.current[mode];
       const hasContent = Object.values(savedState.responses).some(r => r.response && r.response !== '');
 
       if (hasContent || savedState.isGenerating) {
-        // Restore saved state (including generation status)
         setModelsData(prev => prev.map(model => ({
           ...model,
           response: savedState.responses[model.id]?.response || '',
@@ -886,7 +826,6 @@ function PlaygroundInner() {
         setIsGenerating(savedState.isGenerating);
         setSpeaking(new Set(savedState.speaking));
       } else {
-        // Start fresh
         clearHistory();
         setModelsData(prev => prev.map(model => ({
           ...model,
@@ -943,8 +882,6 @@ function PlaygroundInner() {
     resetPendingStream,
   });
 
-  // Analyze/Debate synthesis is handled by backend streams.
-
   // Keyboard shortcuts
   useKeyboardShortcuts({
     mode,
@@ -978,13 +915,12 @@ function PlaygroundInner() {
 
   const moderatorModel = modelsData.find(m => m.id === moderator);
 
-  const orchestratorStatus = isSynthesizing
-    ? 'responding'
-    : isGenerating
-      ? 'waiting'
-      : moderatorSynthesis
-        ? 'done'
-        : 'idle';
+  const orchestratorStatus = (() => {
+    if (isSynthesizing) return 'responding';
+    if (isGenerating) return 'waiting';
+    if (moderatorSynthesis) return 'done';
+    return 'idle';
+  })();
 
   const orchestratorTransform = orchestratorEntryOffset
     ? `translate(-50%, -50%) translate(${orchestratorEntryOffset.x}px, ${orchestratorEntryOffset.y}px)`
@@ -1052,11 +988,6 @@ function PlaygroundInner() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
-      {/*
-       * HandBackground rendered at Playground level for correct z-index stacking.
-       * This is controlled by GestureControl (in Header) via GestureContext.
-       * Renders BEHIND UI elements with glass-like effect.
-       */}
       {gestureCtx.isActive && (
         <Suspense fallback={null}>
           <HandBackground
@@ -1301,32 +1232,30 @@ function PlaygroundInner() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <>
-            <div className="flex h-screen w-full relative z-[10]">
-              <div className="flex-1 relative px-2 sm:px-6 pt-20 pb-6">
-                <ErrorBoundary>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
-                    <ChatView
-                      ref={chatViewRef}
-                      models={modelsData}
-                      selectedModels={chatSelectedModels}
-                      onToggleModel={handleToggleModel}
-                      githubToken={githubAuth?.token}
-                      githubUsername={githubAuth?.name || githubAuth?.username}
-                      onConnectGitHub={handleConnectGitHub}
-                      messages={chatMessages}
-                      setMessages={setChatMessages}
-                      isGenerating={chatIsGenerating}
-                      setIsGenerating={setChatIsGenerating}
-                      gesturesActive={gestureCtx.isActive}
-                      uiBuilderEnabled={uiBuilderEnabled}
-                      setUiBuilderEnabled={setUiBuilderEnabled}
-                    />
-                  </Suspense>
-                </ErrorBoundary>
-              </div>
+          <div className="flex h-screen w-full relative z-[10]">
+            <div className="flex-1 relative px-2 sm:px-6 pt-20 pb-6">
+              <ErrorBoundary>
+                <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
+                  <ChatView
+                    ref={chatViewRef}
+                    models={modelsData}
+                    selectedModels={chatSelectedModels}
+                    onToggleModel={handleToggleModel}
+                    githubToken={githubAuth?.token}
+                    githubUsername={githubAuth?.name || githubAuth?.username}
+                    onConnectGitHub={handleConnectGitHub}
+                    messages={chatMessages}
+                    setMessages={setChatMessages}
+                    isGenerating={chatIsGenerating}
+                    setIsGenerating={setChatIsGenerating}
+                    gesturesActive={gestureCtx.isActive}
+                    uiBuilderEnabled={uiBuilderEnabled}
+                    setUiBuilderEnabled={setUiBuilderEnabled}
+                  />
+                </Suspense>
+              </ErrorBoundary>
             </div>
-          </>
+          </div>
         )}
 
         {/* Main Content Area (Arena/Transcript) - Hidden in Chat Mode */}
@@ -1517,7 +1446,7 @@ function PlaygroundInner() {
 
       {/* Fixed Prompt Input for Compare, Analyze, and Debate Modes */}
       {
-        (mode === 'compare' || mode === 'analyze' || mode === 'debate') && (
+        ARENA_MODES.includes(mode) && (
           <PromptInput
             inputRef={inputRef}
             inputFocused={inputFocused}
@@ -1606,11 +1535,10 @@ function PlaygroundInner() {
         )
       }
 
-    </div >
+    </div>
   );
 }
 
-// Wrapper component that provides GestureContext
 export default function Playground() {
   return (
     <GestureProvider>

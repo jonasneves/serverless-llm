@@ -10,7 +10,6 @@ interface UseArenaScrollReturn {
   arenaOffsetYRef: MutableRefObject<number>;
   arenaTargetYRef: MutableRefObject<number>;
   wheelRafRef: MutableRefObject<number | null>;
-  applyOffset: (offset: number) => void;
   clampTarget: (value: number) => number;
   ensureRaf: () => void;
 }
@@ -130,7 +129,6 @@ export function useArenaScroll({
     arenaOffsetYRef,
     arenaTargetYRef,
     wheelRafRef,
-    applyOffset,
     clampTarget,
     ensureRaf,
   };
