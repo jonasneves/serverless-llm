@@ -652,7 +652,16 @@ function PlaygroundInner() {
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
     triggerLineTransition();
-    // Chat mode uses separate selection (chatModelId) - no cross-mode selection sync needed
+    // Auto-activate Chat mode's self-hosted models when switching to Compare mode
+    if (mode === 'chat' && nextMode === 'compare') {
+      const chatSelfHostedModels = Array.from(chatSelectedModels).filter(id => {
+        const model = modelsData.find(m => m.id === id);
+        return model?.type === 'self-hosted' && model?.available !== false;
+      });
+      if (chatSelfHostedModels.length > 0) {
+        setSelected(chatSelfHostedModels);
+      }
+    }
     // For arena modes (compare/analyze/debate), state is saved/restored by useEffect
     // Only reset generating when switching to/from chat mode
     const arenaModes: Mode[] = ['compare', 'analyze', 'debate'];
@@ -661,7 +670,7 @@ function PlaygroundInner() {
       setIsGenerating(false);
     }
     setMode(nextMode);
-  }, [mode, triggerLineTransition]);
+  }, [mode, triggerLineTransition, chatSelectedModels, modelsData, setSelected]);
 
   // Cleanup toast timeout on unmount
   useEffect(() => () => {

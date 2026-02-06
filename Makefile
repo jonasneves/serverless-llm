@@ -12,6 +12,7 @@ help:
 	@echo "  make build                             Build frontend"
 	@echo "  make lint                              Check Python code"
 	@echo "  make format                            Format Python code"
+	@echo "  make clean                             Remove venv and caches"
 	@echo ""
 	@echo "Tunnels (requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID):"
 	@echo "  make tunnels DOMAIN=neevs.io           Setup all tunnels"
