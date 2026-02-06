@@ -80,6 +80,7 @@ jobs:
         env:
           PORT: "8080"
           BASE_DOMAIN: ${{ secrets.BASE_DOMAIN }}
+          ALLOWED_ORIGINS: "https://chat.neevs.io,https://jonasneves.github.io"
           QWEN_API_URL: ${{ secrets.QWEN_API_URL }}
           PHI_API_URL: ${{ secrets.PHI_API_URL }}
           LLAMA_API_URL: ${{ secrets.LLAMA_API_URL }}
@@ -101,7 +102,7 @@ jobs:
             --name chat-server \
             --network chat-network \
             -p 8080:8080 \
-            -e PORT -e BASE_DOMAIN \
+            -e PORT -e BASE_DOMAIN -e ALLOWED_ORIGINS \
             -e QWEN_API_URL -e PHI_API_URL -e LLAMA_API_URL -e MISTRAL_API_URL -e GEMMA_API_URL \
             -e LFM2_API_URL -e GPTOSS_API_URL -e R1QWEN_API_URL -e SMOLLM3_API_URL \
             -e FUNCTIONGEMMA_API_URL -e RNJ_API_URL -e AGENTCPM_API_URL -e NANBEIGE_API_URL \
