@@ -28,7 +28,7 @@ const ResponseModal = lazy(() => import('./components/ResponseModal'));
 const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscript'));
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const HandBackground = lazy(() => import('./components/HandBackground'));
-const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.default })));
+const ChatView = lazy(() => import('./components/ChatView'));
 import ErrorBoundary from './components/ErrorBoundary';
 
 import type { ChatViewHandle, ChatMessage } from './components/ChatView';
@@ -187,9 +187,8 @@ function PlaygroundInner() {
   }, [setPersistedChatModels, modelsData]);
 
   const handleToggleChatGroup = useCallback((type: 'self-hosted' | 'github') => {
-    // Filter out offline self-hosted models
     const idsOfType = modelsData
-      .filter(m => m.type === type && !(m.type === 'self-hosted' && m.available === false))
+      .filter(m => m.type === type && m.available !== false)
       .map(m => m.id);
     const otherType = type === 'self-hosted' ? 'github' : 'self-hosted';
     const idsOfOtherType = modelsData.filter(m => m.type === otherType).map(m => m.id);
@@ -248,11 +247,6 @@ function PlaygroundInner() {
     prevGestureActiveRef.current = gestureCtx.isActive;
   }, [gestureCtx.isActive, setPersistedChatModels]);
 
-
-
-  // Local state for GitHub Models token is persisted via usePersistedSetting
-
-  // Map selected IDs to models to preserve user-defined order (important for drag-and-drop)
   const selectedModelsBase = selected
     .map(id => modelsData.find(m => m.id === id))
     .filter((m): m is Model => !!m && (mode === 'compare' || m.id !== moderator));
@@ -318,8 +312,6 @@ function PlaygroundInner() {
     };
   }, [mode, selectedModelsBase, executionTimes]);
 
-
-
   const getCirclePosition = (index: number, total: number, currentMode: Mode, radius: number): Position => {
     if (currentMode === 'analyze') {
       const startAngle = 250;
@@ -383,8 +375,6 @@ function PlaygroundInner() {
     }
 
     if (selected.includes(modelId)) {
-      // Removing is always allowed
-      // Removing a model
       const isRemovingActive = isGenerating && sessionModelIdsRef.current.includes(modelId);
 
       if (isRemovingActive && lastQuery) {
@@ -439,30 +429,24 @@ function PlaygroundInner() {
   };
 
   const handleAddGroup = (type: 'self-hosted' | 'github') => {
-    // Filter out offline self-hosted models
-    const availableModelsOfType = modelsData.filter(m =>
-      m.type === type && !(m.type === 'self-hosted' && m.available === false)
-    );
-    const idsOfType = availableModelsOfType.map(m => m.id);
+    const idsOfType = modelsData
+      .filter(m => m.type === type && m.available !== false)
+      .map(m => m.id);
     const isAllSelected = idsOfType.length > 0 && idsOfType.every(id => selected.includes(id));
 
     if (isAllSelected) {
-      // Removing is always allowed
       setSelected(prev => prev.filter(id => !idsOfType.includes(id)));
       return;
     }
 
-    // Check API limit for multi-model modes when adding github group
     if (type === 'github' && !canAddApiGroup()) {
       showApiLimitToast('Connect GitHub in Settings to use API models');
       return;
     }
 
-    const modelsToAdd = availableModels
-      .filter(m => m.type === type && !(m.type === 'self-hosted' && m.available === false))
-      .map(m => m.id);
-    if (modelsToAdd.length > 0) {
-      setSelected(prev => [...prev, ...modelsToAdd]);
+    const newIds = idsOfType.filter(id => !selected.includes(id));
+    if (newIds.length > 0) {
+      setSelected(prev => [...prev, ...newIds]);
     }
   };
   const [hoveredCard, setHoveredCard] = useState<string | null>(null); // For tiny preview on hover
@@ -1090,15 +1074,8 @@ function PlaygroundInner() {
                   return;
                 }
 
-                // Don't populate input box for gesture-triggered messages - just send directly
-                const activeIds = mode === 'compare'
-                  ? selected
-                  : mode === 'analyze' || mode === 'debate'
-                    ? selected
-                    : [];
-
-                if (activeIds.length > 0) {
-                  sendMessage(msg, {}, activeIds);
+                if (selected.length > 0) {
+                  sendMessage(msg, {}, selected);
                 }
               }}
               onScroll={(deltaY) => {
@@ -1265,8 +1242,6 @@ function PlaygroundInner() {
           onToggleChatModel={handleToggleModel}
           onToggleChatGroup={handleToggleChatGroup}
         />
-
-
 
         {/* Chat View */}
         {mode === 'chat' && (
