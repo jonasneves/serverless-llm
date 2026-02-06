@@ -37,7 +37,6 @@ COPY --chown=appuser:appuser app/chat/backend/prompts ./prompts
 COPY --chown=appuser:appuser app/chat/backend/clients ./clients
 COPY --chown=appuser:appuser app/chat/backend/middleware ./middleware
 COPY --chown=appuser:appuser app/chat/backend/engines ./engines
-COPY --chown=appuser:appuser app/chat/backend/tools ./tools
 # Copy config module from project root (Single Source of Truth)
 COPY --chown=appuser:appuser config ./config
 # Copy static files (status page assets)
