@@ -10,6 +10,7 @@ interface ModelDockProps {
   handleDragStart: (e: React.DragEvent, modelId: string) => void;
   handleModelToggle: (modelId: string) => void;
   handleAddGroup: (type: 'self-hosted' | 'github') => void;
+  handleClearAll?: () => void;
   dockRef: React.RefObject<HTMLDivElement>;
   mode: Mode;
   allModels: Model[];
@@ -28,6 +29,7 @@ export default function ModelDock({
   handleDragStart,
   handleModelToggle,
   handleAddGroup,
+  handleClearAll,
   dockRef,
   mode,
   allModels,
@@ -139,6 +141,32 @@ export default function ModelDock({
           />
         </div>
       </div>
+
+      {/* Quick Selection Presets (Arena modes only) */}
+      {!isInChatMode && (
+        <div className="px-4 py-2 border-b border-slate-700/50">
+          {availableModels.filter(m => m.type === 'self-hosted' && m.available !== false).length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleAddGroup('self-hosted')}
+                className="px-2 py-1.5 text-[10px] font-medium rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+              >
+                {allSelectedByType['self-hosted'] ? '✓ All Self-Hosted' : '+ All Self-Hosted'}
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="px-2 py-1.5 text-[10px] font-medium rounded bg-slate-600/40 text-slate-300 hover:bg-slate-600/60 transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          ) : (
+            <div className="px-2 py-1.5 text-[10px] text-slate-500 text-center">
+              No self-hosted models online
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Model list */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">

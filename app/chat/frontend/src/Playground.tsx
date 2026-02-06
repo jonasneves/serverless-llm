@@ -162,11 +162,39 @@ function PlaygroundInner() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [persistedChatModels, setPersistedChatModels] = usePersistedSetting<string[]>(
     'playground_chat_selected_models',
-    ['gemma-3-12b-it', 'gpt-oss-20b', 'lfm2.5-1.2b-instruct'],
+    ['lfm2.5-1.2b-instruct'], // Default to fastest model (will fallback if offline)
   );
-  const chatSelectedModels = useMemo(() => new Set(persistedChatModels), [persistedChatModels]);
+  const chatSelectedModels = useMemo(() => {
+    // Filter out offline models
+    const available = persistedChatModels.filter(id => {
+      const model = modelsData.find(m => m.id === id);
+      return model && model.available !== false;
+    });
+    // If all persisted models are offline, auto-select first available
+    if (available.length === 0 && modelsData.length > 0) {
+      const firstAvailable = modelsData.find(m => m.type === 'self-hosted' && m.available !== false);
+      if (firstAvailable) {
+        return new Set([firstAvailable.id]);
+      }
+    }
+    return new Set(available);
+  }, [persistedChatModels, modelsData]);
   const [chatIsGenerating, setChatIsGenerating] = useState(false);
   const prevGestureActiveRef = useRef(false);
+
+  // Per-mode persisted selections for arena modes
+  const [persistedCompareModels, setPersistedCompareModels] = usePersistedSetting<string[]>(
+    'playground_compare_selected_models',
+    [],
+  );
+  const [persistedAnalyzeModels, setPersistedAnalyzeModels] = usePersistedSetting<string[]>(
+    'playground_analyze_selected_models',
+    [],
+  );
+  const [persistedDebateModels, setPersistedDebateModels] = usePersistedSetting<string[]>(
+    'playground_debate_selected_models',
+    [],
+  );
 
   const handleToggleModel = useCallback((modelId: string) => {
     const model = modelsData.find(m => m.id === modelId);
@@ -449,6 +477,10 @@ function PlaygroundInner() {
       setSelected(prev => [...prev, ...newIds]);
     }
   };
+
+  const handleClearAll = useCallback(() => {
+    setSelected([]);
+  }, [setSelected]);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null); // For tiny preview on hover
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null); // For full response modal
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
@@ -633,20 +665,65 @@ function PlaygroundInner() {
   }, []);
 
   const prevModeForClearRef = useRef<Mode>(mode);
+  const getSmartDefaults = useCallback((targetMode: Mode): string[] => {
+    const availableSelfHosted = modelsData
+      .filter(m => m.type === 'self-hosted' && m.available !== false)
+      .map(m => m.id);
+
+    // If no self-hosted models are available, return empty
+    if (availableSelfHosted.length === 0) {
+      return [];
+    }
+
+    switch (targetMode) {
+      case 'compare':
+        // All available self-hosted models
+        return availableSelfHosted;
+
+      case 'analyze':
+        // 3-4 diverse models: small + medium + reasoning
+        return availableSelfHosted.slice(0, Math.min(4, availableSelfHosted.length));
+
+      case 'debate':
+        // 2-3 models with different strengths
+        return availableSelfHosted.slice(0, Math.min(3, availableSelfHosted.length));
+
+      default:
+        return [];
+    }
+  }, [modelsData]);
+
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
     triggerLineTransition();
-    // Auto-activate Chat mode's self-hosted models when switching to Compare mode
-    if (mode === 'chat' && nextMode === 'compare') {
-      const chatSelfHostedModels = Array.from(chatSelectedModels).filter(id => {
-        const model = modelsData.find(m => m.id === id);
-        return model?.type === 'self-hosted' && model?.available !== false;
-      });
-      if (chatSelfHostedModels.length > 0) {
-        setSelected(chatSelfHostedModels);
-      }
+
+    // Save current arena mode selection before switching
+    if (mode === 'compare' && selected.length > 0) {
+      setPersistedCompareModels(selected);
+    } else if (mode === 'analyze' && selected.length > 0) {
+      setPersistedAnalyzeModels(selected);
+    } else if (mode === 'debate' && selected.length > 0) {
+      setPersistedDebateModels(selected);
     }
-    // For arena modes (compare/analyze/debate), state is saved/restored by useEffect
+
+    // Load persisted selection or apply smart defaults for arena modes
+    if (nextMode === 'compare') {
+      const persisted = persistedCompareModels.filter(id =>
+        modelsData.find(m => m.id === id && m.available !== false)
+      );
+      setSelected(persisted.length > 0 ? persisted : getSmartDefaults('compare'));
+    } else if (nextMode === 'analyze') {
+      const persisted = persistedAnalyzeModels.filter(id =>
+        modelsData.find(m => m.id === id && m.available !== false)
+      );
+      setSelected(persisted.length > 0 ? persisted : getSmartDefaults('analyze'));
+    } else if (nextMode === 'debate') {
+      const persisted = persistedDebateModels.filter(id =>
+        modelsData.find(m => m.id === id && m.available !== false)
+      );
+      setSelected(persisted.length > 0 ? persisted : getSmartDefaults('debate'));
+    }
+
     // Only reset generating when switching to/from chat mode
     const arenaModes: Mode[] = ['compare', 'analyze', 'debate'];
     const isArenaToArena = arenaModes.includes(mode) && arenaModes.includes(nextMode);
@@ -654,7 +731,9 @@ function PlaygroundInner() {
       setIsGenerating(false);
     }
     setMode(nextMode);
-  }, [mode, triggerLineTransition, chatSelectedModels, modelsData, setSelected]);
+  }, [mode, triggerLineTransition, selected, modelsData, getSmartDefaults,
+      persistedCompareModels, persistedAnalyzeModels, persistedDebateModels,
+      setPersistedCompareModels, setPersistedAnalyzeModels, setPersistedDebateModels, setSelected]);
 
   // Cleanup toast timeout on unmount
   useEffect(() => () => {
@@ -1234,6 +1313,7 @@ function PlaygroundInner() {
           handleDragStart={handleDockDragStart}
           handleModelToggle={handleModelToggle}
           handleAddGroup={handleAddGroup}
+          handleClearAll={handleClearAll}
           dockRef={dockRef}
           mode={mode}
           allModels={modelsData}
