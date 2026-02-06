@@ -95,7 +95,7 @@ MODELS: dict[str, ModelConfig] = {
     "chat": ModelConfig(
         name="chat",
         port=8080,
-        subdomain="chat",
+        subdomain="api",  # Backend API at api.neevs.io (frontend on GitHub Pages)
         category=ModelCategory.CORE,
         inference_dir="chat",
         description="Main chat interface and API gateway",
