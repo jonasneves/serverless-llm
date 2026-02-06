@@ -8,44 +8,57 @@ export interface AppConfig {
   isProduction: boolean;
 }
 
+let cachedConfig: AppConfig | null = null;
+
 function getConfig(): AppConfig {
+  // Return cached config if already computed
+  if (cachedConfig) return cachedConfig;
+
   // Priority 1: Runtime config (set by config.js loaded in index.html)
   const runtimeConfig = (window as any).__APP_CONFIG__;
   if (runtimeConfig?.apiBaseUrl) {
-    return {
+    cachedConfig = {
       apiBaseUrl: runtimeConfig.apiBaseUrl,
       isProduction: true,
     };
+    console.log('[Config] Using runtime config:', cachedConfig.apiBaseUrl);
+    return cachedConfig;
   }
 
-  // Priority 2: Build-time environment variable
+  // Priority 2: Extension mode (from setApiBase)
+  const extensionApi = (window as any).__API_BASE__;
+  if (extensionApi) {
+    cachedConfig = {
+      apiBaseUrl: extensionApi,
+      isProduction: true,
+    };
+    console.log('[Config] Using extension config:', cachedConfig.apiBaseUrl);
+    return cachedConfig;
+  }
+
+  // Priority 3: Build-time environment variable
   const buildTimeApi = import.meta.env.VITE_API_BASE_URL;
   if (buildTimeApi) {
-    return {
+    cachedConfig = {
       apiBaseUrl: buildTimeApi,
       isProduction: import.meta.env.PROD,
     };
-  }
-
-  // Priority 3: Extension mode (from extension config)
-  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-    const extensionApi = (window as any).__API_BASE__;
-    return {
-      apiBaseUrl: extensionApi || 'https://chat.neevs.io',
-      isProduction: true,
-    };
+    console.log('[Config] Using build-time config:', cachedConfig.apiBaseUrl);
+    return cachedConfig;
   }
 
   // Fallback: Same-origin (development or bundled deployment)
-  return {
+  cachedConfig = {
     apiBaseUrl: '',
     isProduction: import.meta.env.PROD,
   };
+  console.log('[Config] Using same-origin (fallback)');
+  return cachedConfig;
 }
 
-export const config = getConfig();
-
-// Log config in development
-if (!config.isProduction) {
-  console.log('[Config]', config);
-}
+// Export as getter property to ensure latest config
+export const config = new Proxy({} as AppConfig, {
+  get(_target, prop) {
+    return getConfig()[prop as keyof AppConfig];
+  }
+});
