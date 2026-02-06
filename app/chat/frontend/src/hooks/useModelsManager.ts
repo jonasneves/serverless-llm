@@ -203,7 +203,10 @@ export function useModelsManager() {
   }, [loadModels]);
 
   const availableModels = useMemo(
-    () => modelsData.filter(m => !selected.includes(m.id)),
+    () => modelsData.filter(m =>
+      !selected.includes(m.id) &&
+      (m.type !== 'self-hosted' || m.available !== false)
+    ),
     [modelsData, selected],
   );
 
