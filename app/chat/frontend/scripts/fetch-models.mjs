@@ -1,21 +1,27 @@
 #!/usr/bin/env node
 /**
  * Fetch GitHub Models catalog at build time and save as static JSON
- * This allows the extension to work without a backend
+ * Local models are read from config/models.py (single source of truth)
  */
+
+import { execSync } from 'child_process';
 
 const GITHUB_MODELS_CATALOG_URL = 'https://models.github.ai/catalog/models';
 
-// Local models that run on inference servers
-const LOCAL_MODELS = [
-    { id: 'qwen3-4b', name: 'Qwen3 4B', type: 'local', priority: 1, context_length: 128000 },
-    { id: 'deepseek-r1-distill-qwen-1.5b', name: 'DeepSeek R1 1.5B', type: 'local', priority: 2, context_length: 64000 },
-    { id: 'gemma-3-12b-it', name: 'Gemma 3 12B', type: 'local', priority: 3, context_length: 8192 },
-    { id: 'mistral-7b-instruct-v0.3', name: 'Mistral 7B v0.3', type: 'local', priority: 4, context_length: 32768 },
-    { id: 'phi-3-mini', name: 'Phi-3 Mini', type: 'local', priority: 5, context_length: 128000 },
-    { id: 'rnj-1-instruct', name: 'RNJ-1 Instruct', type: 'local', priority: 6, context_length: 8192 },
-    { id: 'llama-3.2-3b', name: 'Llama 3.2-3B', type: 'local', priority: 7, context_length: 128000 },
-];
+function getLocalModels() {
+    try {
+        const output = execSync('python3 ../../../scripts/generate_models_json.py', {
+            encoding: 'utf-8',
+            cwd: new URL('.', import.meta.url).pathname
+        });
+        const data = JSON.parse(output);
+        return data.models;
+    } catch (error) {
+        console.error('❌ Failed to generate local models from config:', error.message);
+        console.log('⚠️ Using empty local models list');
+        return [];
+    }
+}
 
 async function fetchGitHubModels() {
     console.log('📡 Fetching GitHub Models catalog...');
@@ -66,10 +72,11 @@ async function fetchGitHubModels() {
 }
 
 async function main() {
+    const localModels = getLocalModels();
     const apiModels = await fetchGitHubModels();
 
     const allModels = {
-        models: [...LOCAL_MODELS, ...apiModels],
+        models: [...localModels, ...apiModels],
         fetchedAt: new Date().toISOString(),
         source: 'build-time',
     };

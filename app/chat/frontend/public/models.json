@@ -1,65 +1,9 @@
 {
   "models": [
     {
-      "id": "qwen3-4b",
-      "name": "Qwen3 4B",
-      "type": "self-hosted",
-      "priority": 1,
-      "context_length": 128000
-    },
-    {
-      "id": "deepseek-r1-distill-qwen-1.5b",
-      "name": "DeepSeek R1 1.5B",
-      "type": "self-hosted",
-      "priority": 2,
-      "context_length": 64000
-    },
-    {
-      "id": "gemma-3-12b-it",
-      "name": "Gemma 3 12B",
-      "type": "self-hosted",
-      "priority": 3,
-      "context_length": 8192
-    },
-    {
-      "id": "mistral-7b-instruct-v0.3",
-      "name": "Mistral 7B v0.3",
-      "type": "self-hosted",
-      "priority": 4,
-      "context_length": 32768
-    },
-    {
-      "id": "lfm2.5-1.2b-instruct",
-      "name": "LFM2.5 1.2B",
-      "type": "self-hosted",
-      "priority": 5,
-      "context_length": 32768
-    },
-    {
-      "id": "phi-3-mini",
-      "name": "Phi-3 Mini",
-      "type": "self-hosted",
-      "priority": 6,
-      "context_length": 128000
-    },
-    {
-      "id": "rnj-1-instruct",
-      "name": "RNJ-1 Instruct",
-      "type": "self-hosted",
-      "priority": 7,
-      "context_length": 8192
-    },
-    {
-      "id": "llama-3.2-3b",
-      "name": "Llama 3.2-3B",
-      "type": "self-hosted",
-      "priority": 8,
-      "context_length": 128000
-    },
-    {
       "id": "openai/gpt-4.1",
       "name": "OpenAI GPT-4.1",
-      "type": "external",
+      "type": "api",
       "priority": 1,
       "context_length": 1048576,
       "publisher": "OpenAI",
@@ -74,7 +18,7 @@
     {
       "id": "openai/gpt-4.1-mini",
       "name": "OpenAI GPT-4.1-mini",
-      "type": "external",
+      "type": "api",
       "priority": 2,
       "context_length": 1048576,
       "publisher": "OpenAI",
@@ -89,7 +33,7 @@
     {
       "id": "openai/gpt-4.1-nano",
       "name": "OpenAI GPT-4.1-nano",
-      "type": "external",
+      "type": "api",
       "priority": 3,
       "context_length": 1048576,
       "publisher": "OpenAI",
@@ -104,7 +48,7 @@
     {
       "id": "openai/gpt-4o",
       "name": "OpenAI GPT-4o",
-      "type": "external",
+      "type": "api",
       "priority": 4,
       "context_length": 131072,
       "publisher": "OpenAI",
@@ -120,7 +64,7 @@
     {
       "id": "openai/gpt-4o-mini",
       "name": "OpenAI GPT-4o mini",
-      "type": "external",
+      "type": "api",
       "priority": 5,
       "context_length": 131072,
       "publisher": "OpenAI",
@@ -136,7 +80,7 @@
     {
       "id": "openai/gpt-5",
       "name": "OpenAI gpt-5",
-      "type": "external",
+      "type": "api",
       "priority": 6,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -152,7 +96,7 @@
     {
       "id": "openai/gpt-5-chat",
       "name": "OpenAI gpt-5-chat (preview)",
-      "type": "external",
+      "type": "api",
       "priority": 7,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -168,7 +112,7 @@
     {
       "id": "openai/gpt-5-mini",
       "name": "OpenAI gpt-5-mini",
-      "type": "external",
+      "type": "api",
       "priority": 8,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -184,7 +128,7 @@
     {
       "id": "openai/gpt-5-nano",
       "name": "OpenAI gpt-5-nano",
-      "type": "external",
+      "type": "api",
       "priority": 9,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -200,7 +144,7 @@
     {
       "id": "openai/o1",
       "name": "OpenAI o1",
-      "type": "external",
+      "type": "api",
       "priority": 10,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -215,7 +159,7 @@
     {
       "id": "openai/o1-mini",
       "name": "OpenAI o1-mini",
-      "type": "external",
+      "type": "api",
       "priority": 11,
       "context_length": 128000,
       "publisher": "OpenAI",
@@ -229,7 +173,7 @@
     {
       "id": "openai/o1-preview",
       "name": "OpenAI o1-preview",
-      "type": "external",
+      "type": "api",
       "priority": 12,
       "context_length": 128000,
       "publisher": "OpenAI",
@@ -242,7 +186,7 @@
     {
       "id": "openai/o3",
       "name": "OpenAI o3",
-      "type": "external",
+      "type": "api",
       "priority": 13,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -258,7 +202,7 @@
     {
       "id": "openai/o3-mini",
       "name": "OpenAI o3-mini",
-      "type": "external",
+      "type": "api",
       "priority": 14,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -274,7 +218,7 @@
     {
       "id": "openai/o4-mini",
       "name": "OpenAI o4-mini",
-      "type": "external",
+      "type": "api",
       "priority": 15,
       "context_length": 200000,
       "publisher": "OpenAI",
@@ -290,7 +234,7 @@
     {
       "id": "ai21-labs/ai21-jamba-1.5-large",
       "name": "AI21 Jamba 1.5 Large",
-      "type": "external",
+      "type": "api",
       "priority": 16,
       "context_length": 262144,
       "publisher": "AI21 Labs",
@@ -303,7 +247,7 @@
     {
       "id": "cohere/cohere-command-a",
       "name": "Cohere Command A",
-      "type": "external",
+      "type": "api",
       "priority": 17,
       "context_length": 131072,
       "publisher": "Cohere",
@@ -313,7 +257,7 @@
     {
       "id": "cohere/cohere-command-r-08-2024",
       "name": "Cohere Command R 08-2024",
-      "type": "external",
+      "type": "api",
       "priority": 18,
       "context_length": 131072,
       "publisher": "Cohere",
@@ -325,7 +269,7 @@
     {
       "id": "cohere/cohere-command-r-plus-08-2024",
       "name": "Cohere Command R+ 08-2024",
-      "type": "external",
+      "type": "api",
       "priority": 19,
       "context_length": 131072,
       "publisher": "Cohere",
@@ -338,7 +282,7 @@
     {
       "id": "deepseek/deepseek-r1",
       "name": "DeepSeek-R1",
-      "type": "external",
+      "type": "api",
       "priority": 20,
       "context_length": 128000,
       "publisher": "DeepSeek",
@@ -352,7 +296,7 @@
     {
       "id": "deepseek/deepseek-r1-0528",
       "name": "DeepSeek-R1-0528",
-      "type": "external",
+      "type": "api",
       "priority": 21,
       "context_length": 128000,
       "publisher": "DeepSeek",
@@ -367,7 +311,7 @@
     {
       "id": "deepseek/deepseek-v3-0324",
       "name": "DeepSeek-V3-0324",
-      "type": "external",
+      "type": "api",
       "priority": 22,
       "context_length": 128000,
       "publisher": "DeepSeek",
@@ -381,7 +325,7 @@
     {
       "id": "meta/llama-3.2-11b-vision-instruct",
       "name": "Llama-3.2-11B-Vision-Instruct",
-      "type": "external",
+      "type": "api",
       "priority": 23,
       "context_length": 128000,
       "publisher": "Meta",
@@ -393,7 +337,7 @@
     {
       "id": "meta/llama-3.2-90b-vision-instruct",
       "name": "Llama-3.2-90B-Vision-Instruct",
-      "type": "external",
+      "type": "api",
       "priority": 24,
       "context_length": 128000,
       "publisher": "Meta",
@@ -405,7 +349,7 @@
     {
       "id": "meta/llama-3.3-70b-instruct",
       "name": "Llama-3.3-70B-Instruct",
-      "type": "github",
+      "type": "api",
       "priority": 25,
       "context_length": 128000,
       "publisher": "Meta",
@@ -418,7 +362,7 @@
     {
       "id": "meta/llama-4-maverick-17b-128e-instruct-fp8",
       "name": "Llama 4 Maverick 17B 128E Instruct FP8",
-      "type": "external",
+      "type": "api",
       "priority": 26,
       "context_length": 1000000,
       "publisher": "Meta",
@@ -434,7 +378,7 @@
     {
       "id": "meta/llama-4-scout-17b-16e-instruct",
       "name": "Llama 4 Scout 17B 16E Instruct",
-      "type": "external",
+      "type": "api",
       "priority": 27,
       "context_length": 10000000,
       "publisher": "Meta",
@@ -449,7 +393,7 @@
     {
       "id": "meta/meta-llama-3.1-405b-instruct",
       "name": "Meta-Llama-3.1-405B-Instruct",
-      "type": "external",
+      "type": "api",
       "priority": 28,
       "context_length": 131072,
       "publisher": "Meta",
@@ -461,7 +405,7 @@
     {
       "id": "meta/meta-llama-3.1-8b-instruct",
       "name": "Meta-Llama-3.1-8B-Instruct",
-      "type": "external",
+      "type": "api",
       "priority": 29,
       "context_length": 131072,
       "publisher": "Meta",
@@ -473,7 +417,7 @@
     {
       "id": "mistral-ai/codestral-2501",
       "name": "Codestral 25.01",
-      "type": "external",
+      "type": "api",
       "priority": 30,
       "context_length": 256000,
       "publisher": "Mistral AI",
@@ -485,7 +429,7 @@
     {
       "id": "mistral-ai/ministral-3b",
       "name": "Ministral 3B",
-      "type": "external",
+      "type": "api",
       "priority": 31,
       "context_length": 131072,
       "publisher": "Mistral AI",
@@ -498,7 +442,7 @@
     {
       "id": "mistral-ai/mistral-medium-2505",
       "name": "Mistral Medium 3 (25.05)",
-      "type": "external",
+      "type": "api",
       "priority": 32,
       "context_length": 128000,
       "publisher": "Mistral AI",
@@ -511,7 +455,7 @@
     {
       "id": "mistral-ai/mistral-small-2503",
       "name": "Mistral Small 3.1",
-      "type": "external",
+      "type": "api",
       "priority": 33,
       "context_length": 128000,
       "publisher": "Mistral AI",
@@ -526,7 +470,7 @@
     {
       "id": "xai/grok-3",
       "name": "Grok 3",
-      "type": "external",
+      "type": "api",
       "priority": 34,
       "context_length": 131072,
       "publisher": "xAI",
@@ -538,7 +482,7 @@
     {
       "id": "xai/grok-3-mini",
       "name": "Grok 3 Mini",
-      "type": "external",
+      "type": "api",
       "priority": 35,
       "context_length": 131072,
       "publisher": "xAI",
@@ -550,7 +494,7 @@
     {
       "id": "microsoft/mai-ds-r1",
       "name": "MAI-DS-R1",
-      "type": "external",
+      "type": "api",
       "priority": 36,
       "context_length": 128000,
       "publisher": "Microsoft",
@@ -564,7 +508,7 @@
     {
       "id": "microsoft/phi-4",
       "name": "Phi-4",
-      "type": "external",
+      "type": "api",
       "priority": 37,
       "context_length": 16384,
       "publisher": "Microsoft",
@@ -574,7 +518,7 @@
     {
       "id": "microsoft/phi-4-mini-instruct",
       "name": "Phi-4-mini-instruct",
-      "type": "external",
+      "type": "api",
       "priority": 38,
       "context_length": 128000,
       "publisher": "Microsoft",
@@ -584,7 +528,7 @@
     {
       "id": "microsoft/phi-4-mini-reasoning",
       "name": "Phi-4-mini-reasoning",
-      "type": "external",
+      "type": "api",
       "priority": 39,
       "context_length": 128000,
       "publisher": "Microsoft",
@@ -596,7 +540,7 @@
     {
       "id": "microsoft/phi-4-multimodal-instruct",
       "name": "Phi-4-multimodal-instruct",
-      "type": "external",
+      "type": "api",
       "priority": 40,
       "context_length": 128000,
       "publisher": "Microsoft",
@@ -608,7 +552,7 @@
     {
       "id": "microsoft/phi-4-reasoning",
       "name": "Phi-4-reasoning",
-      "type": "external",
+      "type": "api",
       "priority": 41,
       "context_length": 32768,
       "publisher": "Microsoft",
@@ -617,23 +561,8 @@
         "reasoning",
         "streaming"
       ]
-    },
-    {
-      "id": "z-ai/glm-4.5-air:free",
-      "name": "GLM-4.5-Air (Free)",
-      "type": "external",
-      "priority": 42,
-      "context_length": 131072,
-      "publisher": "Z.AI",
-      "summary": "Lightweight MoE model with thinking mode for reasoning and tool use",
-      "capabilities": [
-        "reasoning",
-        "coding",
-        "tool-calling",
-        "streaming"
-      ]
     }
   ],
-  "fetchedAt": "2025-12-20T23:43:46.448Z",
+  "fetchedAt": "2026-02-06T17:21:47.546Z",
   "source": "build-time"
 }
