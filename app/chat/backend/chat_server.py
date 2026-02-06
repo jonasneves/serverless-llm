@@ -124,7 +124,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "*",  # Allow all origins for development
+        # In production, you may want to restrict to:
+        # "https://chat.neevs.io",  # Frontend (GitHub Pages)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

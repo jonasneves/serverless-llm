@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:local": "tsc && vite build --base=/ --outDir dist",
+    "build:pages": "tsc && vite build --outDir dist",
     "fetch-models": "node scripts/fetch-models.mjs",
     "fetch-mediapipe": "node scripts/fetch-mediapipe.mjs",
     "build:extension": "npm run fetch-models && npm run fetch-mediapipe && tsc && vite build --config vite.config.extension.ts",

@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { Model } from '../types';
+import { config } from '../config';
 
 const HEALTH_CHECK_INTERVAL = 30000; // Check every 30 seconds
 const INITIAL_CHECK_DELAY = 2000; // Wait 2s after initial load
@@ -19,7 +20,7 @@ export function useModelHealth(
     }
 
     try {
-      const response = await fetch(`/api/models/${modelId}/status`, {
+      const response = await fetch(`${config.apiBaseUrl}/api/models/${modelId}/status`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });

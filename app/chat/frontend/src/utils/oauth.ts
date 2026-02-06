@@ -11,7 +11,14 @@ export interface GitHubAuth {
 
 export async function connectGitHub(): Promise<GitHubAuth> {
   return new Promise((resolve, reject) => {
-    const redirectUri = `${window.location.origin}/static/playground/oauth-callback.html`;
+    // Determine correct callback path based on deployment
+    // - GitHub Pages (chat.neevs.io): /oauth-callback.html
+    // - Bundled with backend: /static/playground/oauth-callback.html
+    const base = import.meta.env.BASE_URL || '/';
+    const callbackPath = base.includes('/static/playground/')
+      ? '/static/playground/oauth-callback.html'
+      : '/oauth-callback.html';
+    const redirectUri = `${window.location.origin}${callbackPath}`;
 
     // State must be base64-encoded JSON for the oauth proxy
     const state = btoa(JSON.stringify({

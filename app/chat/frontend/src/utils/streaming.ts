@@ -3,15 +3,11 @@
  * Uses backend proxy endpoints - works for both web and extension
  */
 
-// Detect if running in extension context and get API base URL
+import { config } from '../config';
+
+// Get API base URL from centralized config
 function getApiBase(): string {
-  // In extension mode, use configured backend
-  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-    // This will be set from extension config - default to hosted backend
-    return (window as any).__API_BASE__ || 'https://chat.neevs.io';
-  }
-  // In web mode, use relative URLs (same origin)
-  return '';
+  return config.apiBaseUrl;
 }
 
 export type ChatStreamEvent = {

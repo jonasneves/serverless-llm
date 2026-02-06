@@ -50,5 +50,8 @@ export default defineConfig(({ command }) => ({
     },
   },
   // Dev should be served at `/`, prod assets are served by FastAPI under `/static/playground/`.
-  base: command === 'serve' ? '/' : '/static/playground/',
+  // For GitHub Pages, use VITE_BASE env var (e.g., /serverless-llm/)
+  base: command === 'serve'
+    ? '/'
+    : (process.env.VITE_BASE || '/static/playground/'),
 }))

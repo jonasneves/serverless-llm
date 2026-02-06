@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Model } from '../types';
 import { MODEL_META } from '../constants';
 import { usePersistedSetting } from './usePersistedSetting';
+import { config } from '../config';
 
 interface ModelsApiModel {
   id: string;
@@ -120,7 +121,7 @@ export function useModelsManager() {
 
     try {
       // Try backend API first
-      const response = await fetch('/api/models');
+      const response = await fetch(`${config.apiBaseUrl}/api/models`);
 
       // Check if this fetch is still relevant
       if (fetchId !== fetchIdRef.current) return;
