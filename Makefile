@@ -4,17 +4,17 @@
 export
 
 help:
-	@echo "Serverless LLM"
+	@echo "LLM Playground"
 	@echo ""
 	@echo "  make setup       Create .env from template"
 	@echo "  make install     Install Python dependencies"
-	@echo "  make dev         Run chat interface locally"
-	@echo "  make build       Build React frontend"
+	@echo "  make dev         Run backend API server locally (port 8080)"
+	@echo "  make build       Build frontend (outputs to dist/)"
 	@echo "  make lint        Check Python code"
 	@echo "  make format      Format Python code"
 	@echo ""
 	@echo "Tunnels (requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in .env):"
-	@echo "  make tunnels DOMAIN=neevs.io           Setup all tunnels"
+	@echo "  make tunnels DOMAIN=neevs.io           Setup all tunnels (chat→api.DOMAIN)"
 	@echo "  make tunnel MODEL=glm DOMAIN=neevs.io  Setup single model tunnel"
 	@echo "  make tunnels-dry-run DOMAIN=neevs.io   Preview tunnel setup"
 	@echo "  make tunnels-list                      List models and ports"
