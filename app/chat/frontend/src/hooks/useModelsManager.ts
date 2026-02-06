@@ -21,6 +21,16 @@ interface ModelsApiResponse {
 const INITIAL_RETRY_DELAY = 800;   // Start with 800ms
 const MAX_RETRY_DELAY = 3000;      // Cap at 3s
 const MAX_RETRIES = 8;             // Give up after ~20s total
+const FETCH_TIMEOUT = 8000;        // 8s timeout for each fetch attempt
+
+// Helper to fetch with timeout
+function fetchWithTimeout(url: string, timeout: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  return fetch(url, { signal: controller.signal })
+    .finally(() => clearTimeout(timeoutId));
+}
 
 export function useModelsManager() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
@@ -120,8 +130,8 @@ export function useModelsManager() {
     };
 
     try {
-      // Try backend API first
-      const response = await fetch(`${config.apiBaseUrl}/api/models`);
+      // Try backend API first (with timeout to prevent hanging)
+      const response = await fetchWithTimeout(`${config.apiBaseUrl}/api/models`, FETCH_TIMEOUT);
 
       // Check if this fetch is still relevant
       if (fetchId !== fetchIdRef.current) return;
@@ -151,7 +161,7 @@ export function useModelsManager() {
       // Try static models.json (for extension mode)
       try {
         console.log('Trying static models.json...');
-        const staticResponse = await fetch('/models.json');
+        const staticResponse = await fetchWithTimeout('/models.json', FETCH_TIMEOUT);
 
         if (staticResponse.ok) {
           const staticData = await staticResponse.json();
