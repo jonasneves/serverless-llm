@@ -129,7 +129,6 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
             "--cont-batching",
             "--flash-attn", "auto",
             "--mmap",
-            "--no-mlock",
         ]
 
         if KV_CACHE_QUANT:
