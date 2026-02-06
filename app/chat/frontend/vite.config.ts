@@ -49,6 +49,6 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
-  // GitHub Pages deployment uses VITE_BASE env var (e.g., / for custom domain)
+  // Production base path can be configured via VITE_BASE env var
   base: command === 'serve' ? '/' : (process.env.VITE_BASE || '/'),
 }))

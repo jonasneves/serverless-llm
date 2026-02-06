@@ -296,7 +296,7 @@ def get_model_endpoint_or_error(model_id: str, *, status_code: int = 400) -> str
 
 @app.get("/")
 async def root():
-    """API root - frontend is served separately on GitHub Pages"""
+    """API root endpoint"""
     return {
         "service": "LLM Playground API",
         "status": "healthy",

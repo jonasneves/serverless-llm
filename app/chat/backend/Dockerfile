@@ -40,7 +40,7 @@ COPY --chown=appuser:appuser app/chat/backend/engines ./engines
 COPY --chown=appuser:appuser app/chat/backend/tools ./tools
 # Copy config module from project root (Single Source of Truth)
 COPY --chown=appuser:appuser config ./config
-# Copy static files (status page assets only - frontend served separately on GitHub Pages)
+# Copy static files (status page assets)
 COPY --chown=appuser:appuser app/chat/backend/static ./static
 
 # Switch to non-root user

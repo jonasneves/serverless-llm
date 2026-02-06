@@ -11,9 +11,7 @@ export interface GitHubAuth {
 
 export async function connectGitHub(): Promise<GitHubAuth> {
   return new Promise((resolve, reject) => {
-    // Determine correct callback path based on deployment
-    // - GitHub Pages (chat.neevs.io): /oauth-callback.html
-    // - Bundled with backend: /static/playground/oauth-callback.html
+    // Determine callback path based on base URL
     const base = import.meta.env.BASE_URL || '/';
     const callbackPath = base.includes('/static/playground/')
       ? '/static/playground/oauth-callback.html'
