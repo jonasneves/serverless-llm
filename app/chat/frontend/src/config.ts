@@ -5,22 +5,17 @@
 
 export interface AppConfig {
   apiBaseUrl: string;
-  isProduction: boolean;
 }
 
 let cachedConfig: AppConfig | null = null;
 
 function getConfig(): AppConfig {
-  // Return cached config if already computed
   if (cachedConfig) return cachedConfig;
 
   // Priority 1: Runtime config (set by config.js loaded in index.html)
   const runtimeConfig = (window as any).__APP_CONFIG__;
   if (runtimeConfig?.apiBaseUrl) {
-    cachedConfig = {
-      apiBaseUrl: runtimeConfig.apiBaseUrl,
-      isProduction: true,
-    };
+    cachedConfig = { apiBaseUrl: runtimeConfig.apiBaseUrl };
     console.log('[Config] Using runtime config:', cachedConfig.apiBaseUrl);
     return cachedConfig;
   }
@@ -28,10 +23,7 @@ function getConfig(): AppConfig {
   // Priority 2: Extension mode (from setApiBase)
   const extensionApi = (window as any).__API_BASE__;
   if (extensionApi) {
-    cachedConfig = {
-      apiBaseUrl: extensionApi,
-      isProduction: true,
-    };
+    cachedConfig = { apiBaseUrl: extensionApi };
     console.log('[Config] Using extension config:', cachedConfig.apiBaseUrl);
     return cachedConfig;
   }
@@ -39,19 +31,13 @@ function getConfig(): AppConfig {
   // Priority 3: Build-time environment variable
   const buildTimeApi = import.meta.env.VITE_API_BASE_URL;
   if (buildTimeApi) {
-    cachedConfig = {
-      apiBaseUrl: buildTimeApi,
-      isProduction: import.meta.env.PROD,
-    };
+    cachedConfig = { apiBaseUrl: buildTimeApi };
     console.log('[Config] Using build-time config:', cachedConfig.apiBaseUrl);
     return cachedConfig;
   }
 
   // Fallback: Same-origin (development or bundled deployment)
-  cachedConfig = {
-    apiBaseUrl: '',
-    isProduction: import.meta.env.PROD,
-  };
+  cachedConfig = { apiBaseUrl: '' };
   console.log('[Config] Using same-origin (fallback)');
   return cachedConfig;
 }

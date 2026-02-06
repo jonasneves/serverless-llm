@@ -67,10 +67,10 @@ export function useModelsManager() {
     // Helper to process models response
     const processModels = (data: ModelsApiResponse) => {
       const apiModels = data.models
-        .filter((model) => model.type !== 'external') // Filter out external models
+        .filter((model) => model.type !== 'external')
         .map((model) => {
           const modelType: 'self-hosted' | 'github' =
-            model.type === 'github' ? 'github' : 'self-hosted';
+            (model.type === 'github' || model.type === 'api') ? 'github' : 'self-hosted';
           const meta = MODEL_META[modelType];
           return {
             id: model.id,

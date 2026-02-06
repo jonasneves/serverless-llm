@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
 
-# Build output (already in ../static/playground/)
+# Build output
 dist/
 
 # Environment

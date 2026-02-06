@@ -5,6 +5,8 @@
  */
 
 import { execSync } from 'child_process';
+import { writeFileSync } from 'fs';
+import { join } from 'path';
 
 const GITHUB_MODELS_CATALOG_URL = 'https://models.github.ai/catalog/models';
 
@@ -14,8 +16,7 @@ function getLocalModels() {
             encoding: 'utf-8',
             cwd: new URL('.', import.meta.url).pathname
         });
-        const data = JSON.parse(output);
-        return data.models;
+        return JSON.parse(output).models;
     } catch (error) {
         console.error('❌ Failed to generate local models from config:', error.message);
         console.log('⚠️ Using empty local models list');
@@ -35,13 +36,11 @@ async function fetchGitHubModels() {
         const catalog = await response.json();
         console.log(`✅ Fetched ${catalog.length} models from GitHub catalog`);
 
-        // Filter to chat-capable models (exclude embeddings)
         const chatModels = catalog.filter(m =>
             m.supported_output_modalities?.includes('text') &&
             !m.supported_output_modalities?.includes('embeddings')
         );
 
-        // Transform to our format
         const apiModels = chatModels.map((m, index) => ({
             id: m.id,
             name: m.name,
@@ -60,7 +59,6 @@ async function fetchGitHubModels() {
         console.error('❌ Failed to fetch GitHub Models catalog:', error.message);
         console.log('⚠️ Using fallback API models list');
 
-        // Fallback static list
         return [
             { id: 'openai/gpt-4o', name: 'OpenAI GPT-4o', type: 'api', priority: 1, context_length: 131072 },
             { id: 'openai/gpt-4.1', name: 'OpenAI GPT-4.1', type: 'api', priority: 2, context_length: 1048576 },
@@ -81,17 +79,9 @@ async function main() {
         source: 'build-time',
     };
 
-    // Output JSON to stdout (will be captured by build script)
-    console.log('\n📦 Models data:');
-    console.log(JSON.stringify(allModels, null, 2));
-
-    // Write to file
-    const fs = await import('fs');
-    const path = await import('path');
-    const outPath = path.join(process.cwd(), 'public', 'models.json');
-
-    fs.writeFileSync(outPath, JSON.stringify(allModels, null, 2));
-    console.log(`\n✅ Wrote ${allModels.models.length} models to ${outPath}`);
+    const outPath = join(process.cwd(), 'public', 'models.json');
+    writeFileSync(outPath, JSON.stringify(allModels, null, 2));
+    console.log(`✅ Wrote ${allModels.models.length} models to ${outPath}`);
 }
 
 main().catch(console.error);

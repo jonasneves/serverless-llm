@@ -13,14 +13,11 @@ import hashlib
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from typing import Dict, List, Optional, AsyncGenerator
 import uvicorn
 import pathlib
-from urllib.parse import urlparse
-
 from clients.model_client import ModelClient
 from clients.model_profiles import MODEL_PROFILES
 from services.health_service import fetch_model_capacity
@@ -238,9 +235,6 @@ def get_static_versions() -> dict:
         "common_css": get_file_version("common.css"),
     }
 
-# Models ordered by capability (Dec 2025 benchmarks)
-
-
 # Log configured endpoints at startup
 logger.info("=" * 60)
 logger.info("MODEL ENDPOINTS CONFIGURED:")
@@ -250,16 +244,7 @@ for model_id, endpoint in MODEL_ENDPOINTS.items():
 logger.info("Request queueing enabled: 1 concurrent request per model")
 logger.info("=" * 60)
 
-# Import Pydantic models from api.models
-from api.models import (
-    ChatMessage,
-    GenerationParams,
-    ChatRequest,
-    MultiChatRequest,
-    ModelStatus,
-)
-
-
+from api.models import ChatMessage
 
 
 def serialize_messages(messages: List[ChatMessage]) -> List[dict]:
@@ -318,8 +303,6 @@ async def status_page(request: Request):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
-
-
 
 
 
@@ -447,10 +430,6 @@ async def stream_multiple_models(
                 task.cancel()
 
     yield f"data: {json.dumps({'event': 'all_done'})}\n\n"
-
-
-# NOTE: /api/chat/stream endpoint is defined in api/routes/chat.py
-# It uses stream_multiple_models() which properly handles both local and API models
 
 
 if __name__ == "__main__":

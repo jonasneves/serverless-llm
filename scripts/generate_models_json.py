@@ -30,11 +30,9 @@ def main():
 
     output = {
         "models": local_models,
-        "generatedAt": None,  # Will be set by fetch-models.mjs
         "source": "config/models.py"
     }
 
-    # Output to stdout for piping
     print(json.dumps(output, indent=2))
 
 if __name__ == "__main__":
