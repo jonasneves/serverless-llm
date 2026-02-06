@@ -18,6 +18,7 @@ from typing import Optional, List
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from huggingface_hub import hf_hub_download
 
@@ -72,6 +73,14 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
     app = FastAPI(
         title=f"{config.display_name} Inference API",
         description=f"REST API for {config.display_name} model inference using native llama.cpp",
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Global state
