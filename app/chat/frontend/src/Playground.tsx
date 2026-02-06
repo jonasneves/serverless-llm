@@ -34,6 +34,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import type { ChatViewHandle, ChatMessage } from './components/ChatView';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
+const ARENA_MODES: Mode[] = ['compare', 'analyze', 'debate'];
+const SMART_DEFAULT_LIMITS: Record<string, number> = { compare: Infinity, analyze: 4, debate: 3 };
 
 // Inner component that uses GestureContext
 function PlaygroundInner() {
@@ -195,6 +197,13 @@ function PlaygroundInner() {
     'playground_debate_selected_models',
     [],
   );
+
+  const persistedByMode = useMemo(() => ({
+    compare: { get: persistedCompareModels, set: setPersistedCompareModels },
+    analyze: { get: persistedAnalyzeModels, set: setPersistedAnalyzeModels },
+    debate: { get: persistedDebateModels, set: setPersistedDebateModels },
+  }), [persistedCompareModels, persistedAnalyzeModels, persistedDebateModels,
+       setPersistedCompareModels, setPersistedAnalyzeModels, setPersistedDebateModels]);
 
   const handleToggleModel = useCallback((modelId: string) => {
     const model = modelsData.find(m => m.id === modelId);
@@ -666,31 +675,14 @@ function PlaygroundInner() {
 
   const prevModeForClearRef = useRef<Mode>(mode);
   const getSmartDefaults = useCallback((targetMode: Mode): string[] => {
+    const limit = SMART_DEFAULT_LIMITS[targetMode];
+    if (limit === undefined) return [];
+
     const availableSelfHosted = modelsData
       .filter(m => m.type === 'self-hosted' && m.available !== false)
       .map(m => m.id);
 
-    // If no self-hosted models are available, return empty
-    if (availableSelfHosted.length === 0) {
-      return [];
-    }
-
-    switch (targetMode) {
-      case 'compare':
-        // All available self-hosted models
-        return availableSelfHosted;
-
-      case 'analyze':
-        // 3-4 diverse models: small + medium + reasoning
-        return availableSelfHosted.slice(0, Math.min(4, availableSelfHosted.length));
-
-      case 'debate':
-        // 2-3 models with different strengths
-        return availableSelfHosted.slice(0, Math.min(3, availableSelfHosted.length));
-
-      default:
-        return [];
-    }
+    return availableSelfHosted.slice(0, limit);
   }, [modelsData]);
 
   const handleModeChange = useCallback((nextMode: Mode) => {
@@ -698,42 +690,27 @@ function PlaygroundInner() {
     triggerLineTransition();
 
     // Save current arena mode selection before switching
-    if (mode === 'compare' && selected.length > 0) {
-      setPersistedCompareModels(selected);
-    } else if (mode === 'analyze' && selected.length > 0) {
-      setPersistedAnalyzeModels(selected);
-    } else if (mode === 'debate' && selected.length > 0) {
-      setPersistedDebateModels(selected);
+    const current = persistedByMode[mode as keyof typeof persistedByMode];
+    if (current && selected.length > 0) {
+      current.set(selected);
     }
 
     // Load persisted selection or apply smart defaults for arena modes
-    if (nextMode === 'compare') {
-      const persisted = persistedCompareModels.filter(id =>
+    const next = persistedByMode[nextMode as keyof typeof persistedByMode];
+    if (next) {
+      const persisted = next.get.filter(id =>
         modelsData.find(m => m.id === id && m.available !== false)
       );
-      setSelected(persisted.length > 0 ? persisted : getSmartDefaults('compare'));
-    } else if (nextMode === 'analyze') {
-      const persisted = persistedAnalyzeModels.filter(id =>
-        modelsData.find(m => m.id === id && m.available !== false)
-      );
-      setSelected(persisted.length > 0 ? persisted : getSmartDefaults('analyze'));
-    } else if (nextMode === 'debate') {
-      const persisted = persistedDebateModels.filter(id =>
-        modelsData.find(m => m.id === id && m.available !== false)
-      );
-      setSelected(persisted.length > 0 ? persisted : getSmartDefaults('debate'));
+      setSelected(persisted.length > 0 ? persisted : getSmartDefaults(nextMode));
     }
 
     // Only reset generating when switching to/from chat mode
-    const arenaModes: Mode[] = ['compare', 'analyze', 'debate'];
-    const isArenaToArena = arenaModes.includes(mode) && arenaModes.includes(nextMode);
+    const isArenaToArena = ARENA_MODES.includes(mode) && ARENA_MODES.includes(nextMode);
     if (!isArenaToArena) {
       setIsGenerating(false);
     }
     setMode(nextMode);
-  }, [mode, triggerLineTransition, selected, modelsData, getSmartDefaults,
-      persistedCompareModels, persistedAnalyzeModels, persistedDebateModels,
-      setPersistedCompareModels, setPersistedAnalyzeModels, setPersistedDebateModels, setSelected]);
+  }, [mode, triggerLineTransition, selected, modelsData, getSmartDefaults, persistedByMode, setSelected]);
 
   // Cleanup toast timeout on unmount
   useEffect(() => () => {
@@ -874,10 +851,9 @@ function PlaygroundInner() {
 
   // Save/restore state when switching between compare/analyze/debate modes
   useEffect(() => {
-    const arenaModes: Mode[] = ['compare', 'analyze', 'debate'];
     const prevMode = prevModeForClearRef.current;
 
-    if (arenaModes.includes(prevMode) && arenaModes.includes(mode) && prevMode !== mode) {
+    if (ARENA_MODES.includes(prevMode) && ARENA_MODES.includes(mode) && prevMode !== mode) {
       // Save current mode's state using refs (including generation status)
       const currentResponses: Record<string, { response: string; thinking?: string; error?: string }> = {};
       modelsDataRef.current.forEach(m => {
