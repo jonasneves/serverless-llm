@@ -155,41 +155,6 @@ class RateLimiter:
 
         return _controlled_execution()
 
-    def get_wait_message(self) -> Optional[str]:
-        """Get the last wait message (if any) and clear it"""
-        msg = self.last_wait_message
-        self.last_wait_message = None
-        return msg
-
-    async def check_will_wait(self) -> Optional[str]:
-        """
-        Check if we will need to wait and return a message immediately.
-        This should be called BEFORE acquire() to notify users proactively.
-        """
-        async with self.lock:
-            now = time.time()
-
-            # Check minimum interval
-            if self.last_request_time > 0:
-                time_since_last = now - self.last_request_time
-                if time_since_last < self.config.min_request_interval:
-                    wait_time = int(self.config.min_request_interval - time_since_last)
-                    msg = f"Rate limiting: waiting ~{wait_time}s (GitHub free tier limit). Add your own token in Settings for higher quota."
-                    logger.info(f"check_will_wait: Will need to wait {wait_time}s due to minimum interval")
-                    return msg
-
-            # Check exponential backoff
-            if self.consecutive_429s > 0:
-                time_since_429 = now - self.last_429_time
-                if time_since_429 < 60:
-                    backoff = min(2 ** self.consecutive_429s, 32)
-                    msg = f"Rate limited! Waiting ~{backoff}s (attempt {self.consecutive_429s + 1}). Add your own token in Settings to avoid this."
-                    logger.info(f"check_will_wait: Will need exponential backoff of {backoff}s")
-                    return msg
-
-            logger.debug("check_will_wait: No waiting needed")
-            return None
-
     def record_429(self):
         """Record that we received a 429 error"""
         self.consecutive_429s += 1

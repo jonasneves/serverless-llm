@@ -15,42 +15,6 @@ CONCISE_REASONING_PRINCIPLES = """Guidelines for your response:
 - When uncertain, acknowledge it and explain why rather than claiming certainty
 - Be professional and objective - prioritize technical accuracy over validation"""
 
-# For responses that need verification
-VERIFICATION_GUIDELINES = """For tasks requiring verification (math, counting, logic):
-- Show each step explicitly
-- Verify your own work
-- If counting: list each item
-- If calculating: show each operation
-- If reasoning: explain each logical step"""
-
-# Gesture mode context shared across local and API models
-GESTURE_MODE_CONTEXT = """User is hands-free using gesture control. Build an interactive interface to guide and interact with them.
-
-Choose interaction style:
-- Use your creativity to build an interactive interface to guide and interact with the user
-- Use JSON UI buttons when appropriate
-
-For JSON UI:
-```json
-{
-  "options": [
-    {"id": "opt1", "label": "Option 1", "action": "message", "value": "option 1"},
-    {"id": "opt2", "label": "Option 2", "action": "message", "value": "option 2"}
-  ]
-}
-```
-
-CRITICAL JSON formatting rules:
-- Use ONLY double quotes ("), never single quotes (')
-- No trailing commas before } or ]
-- Ensure all brackets are properly closed
-- Each option must have: id, label, action, value
-
-Guidelines:
-- Keep response concise
-- Use JSON UI when appropriate, YOU MUST BUILD THE JSON UI
-- User can point at buttons with index finger"""
-
 # =============================================================================
 # Analyze Mode
 # =============================================================================

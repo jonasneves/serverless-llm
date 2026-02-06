@@ -4,16 +4,16 @@ import httpx
 import logging
 from typing import Dict, Any
 
-from core.state import get_http_client
 from core.config import DEFAULT_MODEL_CAPACITY, MODEL_DISPLAY_NAMES, MODEL_ENDPOINTS
-from core.state import LIVE_CONTEXT_LENGTHS, is_inference_fresh, get_last_inference_age
+from core.state import LIVE_CONTEXT_LENGTHS, get_http_client, is_inference_fresh, get_last_inference_age
 
 logger = logging.getLogger(__name__)
 
 async def fetch_model_capacity(model_id: str, endpoint: str) -> int:
     """
     Query a model's /health/details endpoint to get its max_concurrent capacity.
-    Returns the model's reported capacity, or a default of 1 if unavailable.
+    Also caches n_ctx if available.
+    Returns the model's reported capacity, or a default if unavailable.
     """
     try:
         client = get_http_client()
@@ -21,6 +21,8 @@ async def fetch_model_capacity(model_id: str, endpoint: str) -> int:
         if response.status_code == 200:
             data = response.json()
             capacity = data.get("max_concurrent", DEFAULT_MODEL_CAPACITY)
+            if "n_ctx" in data:
+                LIVE_CONTEXT_LENGTHS[model_id] = data["n_ctx"]
             logger.info(f"✓ {model_id}: max_concurrent={capacity}")
             return capacity
         else:

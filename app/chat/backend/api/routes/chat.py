@@ -72,12 +72,9 @@ async def chat_stream(request: MultiChatRequest):
         serialize_messages,
         stream_multiple_models
     )
-    from utils.github_token import get_default_github_token
-
     messages = serialize_messages(request.messages)
 
-    # Get GitHub token from request or environment
-    github_token = request.github_token or get_default_github_token()
+    github_token = request.github_token
     openrouter_key = request.openrouter_key
 
     return create_sse_response(
@@ -97,23 +94,19 @@ async def chat_multi(request: MultiChatRequest):
     """
     Query multiple models in parallel (synchronous responses)
     """
+    import asyncio
     from chat_server import (
         serialize_messages,
         query_model
     )
-    from core.state import get_http_client
 
     messages = serialize_messages(request.messages)
 
-    client = get_http_client()
-
     # Query all models in parallel
     tasks = [
-        query_model(client, model_id, messages, request.max_tokens, request.temperature)
+        query_model(model_id, messages, request.max_tokens, request.temperature)
         for model_id in request.models
     ]
-
-    import asyncio
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     # Format results

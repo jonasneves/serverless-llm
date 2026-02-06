@@ -11,7 +11,7 @@ Flow:
 4. Continue for N rounds
 """
 
-from typing import List, Dict, Any, AsyncGenerator, Optional
+from typing import List, Dict, Any, AsyncGenerator
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime

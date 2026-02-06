@@ -8,52 +8,37 @@ import time
 import asyncio
 import json
 import logging
-import httpx
 import hashlib
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from typing import Dict, List, Optional, AsyncGenerator
+from typing import List, Optional, AsyncGenerator
 import uvicorn
 import pathlib
 from clients.model_client import ModelClient
-from clients.model_profiles import MODEL_PROFILES
 from services.health_service import fetch_model_capacity
 from core.config import (
     MODEL_CONFIG,
     MODEL_ENDPOINTS,
     MODEL_DISPLAY_NAMES,
-    DEFAULT_MODEL_ID,
     DEFAULT_LOCAL_ENDPOINTS,
     DEFAULT_MODEL_CAPACITY,
-    get_endpoint,
 )
-from middleware.error_utils import sanitize_error_message
-from middleware.rate_limiter import get_rate_limiter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 model_client = ModelClient()
-
-# Cache of GitHub Models that returned "unknown_model".
-# Prevents repeated network calls/log spam for invalid IDs.
 from core.state import (
-    LIVE_CONTEXT_LENGTHS,
-    MODEL_CAPACITIES,
     MODEL_SEMAPHORES,
-    UNSUPPORTED_GITHUB_MODELS,
     close_http_client,
     get_http_client,
     init_model_semaphores,
     update_model_capacity,
 )
-
-# Import GitHub token utility
-from utils.github_token import get_default_github_token
 
 
 @asynccontextmanager
@@ -76,11 +61,8 @@ async def lifespan(app: FastAPI):
     if missing:
         logger.info(f"○ Optional endpoints not set: {', '.join(missing)}")
 
-    # Check for GitHub token
-    if get_default_github_token():
-        logger.info("✓ GitHub Models token configured")
-    else:
-        logger.info("○ GH_MODELS_TOKEN not set - Discussion/Agents modes may have limited functionality")
+    # GitHub OAuth is now required; no default server-side token
+    logger.info("○ GitHub Models: OAuth required (user provides token via Settings)")
 
     # Initialize model semaphores
     await init_model_semaphores(MODEL_ENDPOINTS, DEFAULT_MODEL_CAPACITY, logger)
@@ -148,11 +130,6 @@ def validate_environment():
 
     if not configured_models:
         warnings.append("No model endpoints explicitly configured - using defaults (localhost)")
-
-    # Check GitHub token for Discussion/Agents modes
-    gh_token = get_default_github_token()
-    if not gh_token:
-        warnings.append("GH_MODELS_TOKEN not set - Discussion and Agents modes will have limited functionality")
 
     # Check for misconfigured URLs (common mistake)
     for config in MODEL_CONFIG:
@@ -279,7 +256,6 @@ def get_model_endpoint_or_error(model_id: str, *, status_code: int = 400) -> str
     return MODEL_ENDPOINTS[model_id]
 
 
-
 @app.get("/")
 async def root():
     """API root endpoint"""
@@ -305,8 +281,7 @@ async def status_page(request: Request):
     return response
 
 
-
-async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, max_tokens: int, temperature: float):
+async def query_model(model_id: str, messages: list, max_tokens: int, temperature: float):
     """Query a single model and return results with timing (with request queueing)"""
     display_name = MODEL_DISPLAY_NAMES.get(model_id, model_id)
 
@@ -346,8 +321,6 @@ async def query_model(client: httpx.AsyncClient, model_id: str, messages: list, 
             "error": True,
             "time": time.time() - start_time
         }
-
-
 
 
 async def stream_multiple_models(

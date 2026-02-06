@@ -59,13 +59,6 @@ DEFAULT_LOCAL_ENDPOINTS = {
     for m in MODELS.values() if m.category != ModelCategory.CORE
 }
 
-# Remote hosted defaults (derived from config/models.py)
-# Uses neevs.io as the default domain
-DEFAULT_REMOTE_ENDPOINTS = {
-    m.env_var: m.remote_url("neevs.io")
-    for m in MODELS.values() if m.category != ModelCategory.CORE
-}
-
 # GitHub Models API endpoint
 GITHUB_MODELS_API_URL = "https://models.github.ai/inference/chat/completions"
 
@@ -74,24 +67,6 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Default capacity for models when health checks are unavailable
 DEFAULT_MODEL_CAPACITY = 2
-
-# Generation defaults
-GENERATION_DEFAULTS = {
-    "max_tokens": 1024,
-    "temperature": 0.7,
-}
-
-# Standard event types for streaming
-EVENT_TYPES = {
-    "START": "start",
-    "CHUNK": "chunk",
-    "TOKEN": "token",
-    "DONE": "done",
-    "COMPLETE": "complete",
-    "ERROR": "error",
-    "INFO": "info",
-    "USAGE": "usage",
-}
 
 
 # Build MODEL_CONFIG tuple for backward compatibility

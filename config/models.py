@@ -352,21 +352,6 @@ def get_model(name: str) -> ModelConfig:
     return MODELS[name]
 
 
-def get_port(name: str) -> int:
-    """Get port for a model."""
-    return get_model(name).port
-
-
-def get_subdomain(name: str) -> str:
-    """Get subdomain for a model."""
-    return get_model(name).subdomain
-
-
-def get_models_by_category(category: ModelCategory) -> list[ModelConfig]:
-    """Get all models in a category."""
-    return [m for m in MODELS.values() if m.category == category]
-
-
 def get_inference_models() -> list[ModelConfig]:
     """Get all inference models (excludes core services), sorted by rank."""
     models = [m for m in MODELS.values() if m.category != ModelCategory.CORE]
@@ -395,12 +380,6 @@ MODEL_CONFIGS: dict[str, dict[str, int | str]] = {
 DEFAULT_LOCAL_ENDPOINTS: dict[str, str] = {
     m.env_var: m.service_url
     for m in MODELS.values() if m.category != ModelCategory.CORE
-}
-
-# Model ID to service name mapping
-MODEL_ID_TO_SERVICE: dict[str, str] = {
-    m.model_id: m.name
-    for m in MODELS.values() if m.model_id
 }
 
 
