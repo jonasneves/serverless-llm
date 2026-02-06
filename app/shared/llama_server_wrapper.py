@@ -7,7 +7,6 @@ llama-cpp-python bindings (due to architecture incompatibilities).
 Used by: LFM2, RNJ
 """
 
-import asyncio
 import atexit
 import logging
 import os
@@ -18,7 +17,6 @@ from dataclasses import dataclass
 from typing import Optional, List
 
 import httpx
-import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from huggingface_hub import hf_hub_download
@@ -63,7 +61,6 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
     """
     MODEL_REPO = os.getenv("MODEL_REPO", config.default_repo)
     MODEL_FILE = os.getenv("MODEL_FILE", config.default_file)
-    PORT = int(os.getenv("PORT", str(config.default_port)))
     N_CTX = int(os.getenv("N_CTX", str(config.n_ctx)))
     N_THREADS = int(os.getenv("N_THREADS", str(config.n_threads)))
     N_BATCH = int(os.getenv("N_BATCH", str(config.n_batch)))
@@ -113,6 +110,18 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
         logger.info(f"Model downloaded to: {model_path}")
         return model_path
 
+    LOG_PATH = "/tmp/llama-server.log"
+
+    def read_server_log() -> str:
+        """Read and return the llama-server log contents."""
+        if log_file:
+            log_file.flush()
+        try:
+            with open(LOG_PATH, "r") as f:
+                return f.read()
+        except Exception:
+            return "(log unavailable)"
+
     def start_llama_server(model_path: str) -> subprocess.Popen:
         """Start the llama-server process"""
         nonlocal log_file
@@ -139,7 +148,7 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
 
         logger.info(f"Starting llama-server: {' '.join(cmd)}")
 
-        log_file = open("/tmp/llama-server.log", "w", buffering=1)
+        log_file = open(LOG_PATH, "w", buffering=1)
 
         process = subprocess.Popen(
             cmd,
@@ -149,7 +158,6 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
             bufsize=1,
         )
 
-        # Wait for server to be ready
         start_time = time.time()
         check_count = 0
 
@@ -162,36 +170,19 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
                 if response.status_code == 200:
                     logger.info(f"llama-server is ready (took {elapsed}s)")
                     return process
-                elif response.status_code == 503:
-                    if check_count % 10 == 0:
-                        logger.info(f"llama-server still loading model... ({elapsed}s elapsed)")
+                if response.status_code == 503 and check_count % 10 == 0:
+                    logger.info(f"llama-server still loading model... ({elapsed}s elapsed)")
             except Exception:
                 if check_count % 10 == 0:
                     logger.info(f"Waiting for llama-server to start... ({elapsed}s elapsed)")
 
-            # Check if process died
             if process.poll() is not None:
-                log_file.flush()
-                try:
-                    with open("/tmp/llama-server.log", "r") as f:
-                        output = f.read()
-                    logger.error(f"llama-server died during startup. Exit code: {process.returncode}")
-                    logger.error(f"Output:\n{output}")
-                except Exception as e:
-                    logger.error(f"Could not read log file: {e}")
-
+                logger.error(f"llama-server died (exit code: {process.returncode})\n{read_server_log()}")
                 raise RuntimeError(f"llama-server failed to start (exit code: {process.returncode})")
 
             time.sleep(1)
 
-        log_file.flush()
-        try:
-            with open("/tmp/llama-server.log", "r") as f:
-                output = f.read()
-            logger.error(f"llama-server timeout. Output so far:\n{output}")
-        except Exception:
-            pass
-
+        logger.error(f"llama-server timeout after {STARTUP_TIMEOUT}s\n{read_server_log()}")
         raise RuntimeError(f"llama-server did not become healthy in {STARTUP_TIMEOUT}s")
 
     def cleanup():
@@ -232,18 +223,18 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
 
     @app.get("/health")
     async def health():
-        """Health check endpoint"""
         if llama_process is None or llama_process.poll() is not None:
             raise HTTPException(status_code=503, detail="llama-server not running")
 
         try:
             response = await http_client.get("/health")
-            if response.status_code == 200:
-                return {"status": "healthy", "model": config.display_name, "format": "GGUF"}
         except Exception as e:
             raise HTTPException(status_code=503, detail=str(e))
 
-        raise HTTPException(status_code=503, detail="llama-server unhealthy")
+        if response.status_code != 200:
+            raise HTTPException(status_code=503, detail="llama-server unhealthy")
+
+        return {"status": "healthy", "model": config.display_name, "format": "GGUF"}
 
     @app.get("/health/details")
     async def health_details():
@@ -306,14 +297,14 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
                 stream_response(),
                 media_type="text/event-stream",
             )
-        else:
-            response = await http_client.post("/v1/chat/completions", json=body)
-            if response.status_code != 200:
-                raise HTTPException(status_code=response.status_code, detail=response.text)
-            data = response.json()
-            if not isinstance(data, dict) or "choices" not in data:
-                raise HTTPException(status_code=502, detail="Invalid response from model server")
-            return data
+
+        response = await http_client.post("/v1/chat/completions", json=body)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        data = response.json()
+        if not isinstance(data, dict) or "choices" not in data:
+            raise HTTPException(status_code=502, detail="Invalid response from model server")
+        return data
 
     @app.post("/v1/completions")
     async def completions(request: Request):

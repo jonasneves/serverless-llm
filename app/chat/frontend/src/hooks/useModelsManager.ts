@@ -3,6 +3,7 @@ import { Model } from '../types';
 import { MODEL_META } from '../constants';
 import { usePersistedSetting } from './usePersistedSetting';
 import { config } from '../config';
+import { fetchWithTimeout } from '../utils/fetch';
 
 interface ModelsApiModel {
   id: string;
@@ -22,15 +23,6 @@ const INITIAL_RETRY_DELAY = 800;   // Start with 800ms
 const MAX_RETRY_DELAY = 3000;      // Cap at 3s
 const MAX_RETRIES = 8;             // Give up after ~20s total
 const FETCH_TIMEOUT = 8000;        // 8s timeout for each fetch attempt
-
-// Helper to fetch with timeout
-function fetchWithTimeout(url: string, timeout: number): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  return fetch(url, { signal: controller.signal })
-    .finally(() => clearTimeout(timeoutId));
-}
 
 export function useModelsManager() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
@@ -95,84 +87,61 @@ export function useModelsManager() {
           };
         });
 
-      // Success! Update state
       setModelsData(apiModels);
       setIsLoading(false);
       setLoadError(null);
       setRetryCount(0);
 
-      // Initialize multi-model selection (for Compare, Analyze, etc.) - start with empty selection
-      // Users will manually select models they want to use
       if (!isSelectionInitialized.current) {
         setPersistedSelected([]);
         isSelectionInitialized.current = true;
       }
 
-      // Initialize chat model with gpt-4o, fallback to default model, then first github, then first available
+      // Initialize chat model: gpt-4o > default > first github > first available
       if (!isChatModelInitialized.current) {
         const gpt4o = apiModels.find(m => m.id === 'gpt-4o');
         const defaultModel = apiModels.find(m => m.default);
         const firstApiModel = apiModels.find(m => m.type === 'github');
-        setChatModelId(gpt4o?.id || defaultModel?.id || firstApiModel?.id || apiModels[0]?.id || null);
+        setChatModelId(gpt4o?.id ?? defaultModel?.id ?? firstApiModel?.id ?? apiModels[0]?.id ?? null);
         isChatModelInitialized.current = true;
       }
 
-      // Migrate existing users to gpt-4o if available and they're using a different model
-      const gpt4o = apiModels.find(m => m.id === 'gpt-4o');
-      if (gpt4o && chatModelId && chatModelId !== 'gpt-4o') {
-        setChatModelId(gpt4o.id);
-      }
-
-      const apiModeratorCandidate = apiModels.find(m => m.type === 'github');
-      const defaultModerator = apiModels.find(m => m.default);
-      const fallbackModerator = apiModels[0]?.id || '';
-      setModerator(apiModeratorCandidate?.id || defaultModerator?.id || fallbackModerator);
+      // Set moderator: prefer github model, then default, then first available
+      const moderatorId = apiModels.find(m => m.type === 'github')?.id
+        ?? apiModels.find(m => m.default)?.id
+        ?? apiModels[0]?.id
+        ?? '';
+      setModerator(moderatorId);
     };
 
     try {
-      // Try backend API first (with timeout to prevent hanging)
-      const response = await fetchWithTimeout(`${config.apiBaseUrl}/api/models`, FETCH_TIMEOUT);
-
-      // Check if this fetch is still relevant
+      const response = await fetchWithTimeout(`${config.apiBaseUrl}/api/models`, undefined, FETCH_TIMEOUT);
       if (fetchId !== fetchIdRef.current) return;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data: ModelsApiResponse = await response.json();
-
-      // Check again after parsing
       if (fetchId !== fetchIdRef.current) return;
 
-      // Check if we got actual models (backend might return empty during startup)
-      if (!data.models || data.models.length === 0) {
-        throw new Error('No models available yet');
-      }
+      if (!data.models?.length) throw new Error('No models available yet');
 
       processModels(data);
 
-    } catch (backendError) {
-      // Check if this fetch is still relevant
+    } catch {
       if (fetchId !== fetchIdRef.current) return;
 
-      console.warn(`Backend fetch failed:`, backendError);
-
-      // Try static models.json (for extension mode)
+      // Fallback: try static models.json (for extension mode)
       try {
-        console.log('Trying static models.json...');
-        const staticResponse = await fetchWithTimeout('/models.json', FETCH_TIMEOUT);
-
+        const staticResponse = await fetchWithTimeout('/models.json', undefined, FETCH_TIMEOUT);
         if (staticResponse.ok) {
           const staticData = await staticResponse.json();
-          if (staticData.models && staticData.models.length > 0) {
-            console.log(`Loaded ${staticData.models.length} models from static file`);
+          if (staticData.models?.length > 0) {
             processModels(staticData);
             return;
           }
         }
-      } catch (staticError) {
-        console.warn('Static models.json not available:', staticError);
+      } catch {
+        // Static fallback also unavailable
       }
 
       // Both failed - retry or give up
@@ -181,7 +150,7 @@ export function useModelsManager() {
 
       if (nextRetry < MAX_RETRIES) {
         const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(1.4, currentRetry), MAX_RETRY_DELAY);
-        setLoadError(`Connecting to backend...`);
+        setLoadError('Connecting to backend...');
         retryTimeoutRef.current = setTimeout(() => {
           loadModels(fetchId, nextRetry);
         }, delay);
