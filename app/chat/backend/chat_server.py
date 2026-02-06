@@ -159,12 +159,10 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(static_dir))
 
 # Include API routers
-from api.routes import chat, models, debate, analyze, health
+from api.routes import chat, models, health
 
 app.include_router(chat.router)
 app.include_router(models.router)
-app.include_router(debate.router)
-app.include_router(analyze.router)
 app.include_router(health.router)
 
 # Cache file versions based on content hash for automatic cache busting
