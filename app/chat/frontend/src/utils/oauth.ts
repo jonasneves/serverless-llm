@@ -31,6 +31,7 @@ export async function connectGitHub(): Promise<GitHubAuth> {
   authUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('scope', 'models:read');
   authUrl.searchParams.set('code_challenge', challenge);
   authUrl.searchParams.set('code_challenge_method', 'S256');
 
