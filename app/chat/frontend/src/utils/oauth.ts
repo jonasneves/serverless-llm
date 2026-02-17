@@ -1,5 +1,6 @@
 const CORS_PROXY_URL = 'https://cors-proxy.jonasneves.workers.dev';
 const GITHUB_CLIENT_ID = 'Iv23li8Xfyh6abiZA3Gx';
+const OAUTH_CALLBACK_ORIGIN = 'https://neevs.io';
 
 export interface GitHubAuth {
   token: string;
@@ -24,7 +25,7 @@ export async function connectGitHub(): Promise<GitHubAuth> {
   const verifier = generateVerifier();
   const challenge = await sha256Base64Url(verifier);
   const state = crypto.randomUUID();
-  const redirectUri = `${window.location.origin}/oauth-callback.html`;
+  const redirectUri = `${OAUTH_CALLBACK_ORIGIN}/`;
 
   const authUrl = new URL('https://github.com/login/oauth/authorize');
   authUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
@@ -51,7 +52,7 @@ export async function connectGitHub(): Promise<GitHubAuth> {
     }
 
     const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      if (event.origin !== OAUTH_CALLBACK_ORIGIN) return;
       const { type, code, error } = event.data || {};
       if (type !== 'oauth-callback') return;
 
