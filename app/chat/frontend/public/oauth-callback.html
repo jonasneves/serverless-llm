@@ -15,25 +15,17 @@
       min-height: 100vh;
       margin: 0;
     }
-    .container {
-      text-align: center;
-      padding: 2rem;
-    }
+    .container { text-align: center; padding: 2rem; }
     .spinner {
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       border: 3px solid #334155;
       border-top-color: #3b82f6;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto 1rem;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .error {
-      color: #f87171;
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error { color: #f87171; }
   </style>
 </head>
 <body>
@@ -44,44 +36,28 @@
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
+      const code = params.get('code');
       const error = params.get('error');
 
-      const statusEl = document.getElementById('status');
-      const spinnerEl = document.getElementById('spinner');
+      if (!window.opener) {
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('status').textContent = 'Unable to communicate with parent window';
+        document.getElementById('status').className = 'error';
+        return;
+      }
 
-      if (error) {
-        spinnerEl.style.display = 'none';
-        statusEl.textContent = 'Authentication failed: ' + error;
-        statusEl.className = 'error';
-        if (window.opener) {
-          window.opener.postMessage({ type: 'oauth-callback', error: error }, window.location.origin);
-        }
+      if (error || !code) {
+        window.opener.postMessage({ type: 'oauth-callback', error: error || 'No code received' }, window.location.origin);
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('status').textContent = 'Authentication failed';
+        document.getElementById('status').className = 'error';
         setTimeout(() => window.close(), 2000);
         return;
       }
 
-      if (!token) {
-        spinnerEl.style.display = 'none';
-        statusEl.textContent = 'No token received';
-        statusEl.className = 'error';
-        if (window.opener) {
-          window.opener.postMessage({ type: 'oauth-callback', error: 'No token received' }, window.location.origin);
-        }
-        setTimeout(() => window.close(), 2000);
-        return;
-      }
-
-      // Send token to parent window
-      if (window.opener) {
-        window.opener.postMessage({ type: 'oauth-callback', token: token }, window.location.origin);
-        statusEl.textContent = 'Connected! Closing...';
-        setTimeout(() => window.close(), 500);
-      } else {
-        spinnerEl.style.display = 'none';
-        statusEl.textContent = 'Unable to communicate with parent window';
-        statusEl.className = 'error';
-      }
+      window.opener.postMessage({ type: 'oauth-callback', code: code }, window.location.origin);
+      document.getElementById('status').textContent = 'Connected! Closing...';
+      setTimeout(() => window.close(), 500);
     })();
   </script>
 </body>

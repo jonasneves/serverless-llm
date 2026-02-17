@@ -1,37 +1,44 @@
-// OAuth configuration - reusing the existing oauth.neevs.io proxy
-const OAUTH_PROXY_URL = 'https://oauth.neevs.io';
-const GITHUB_CLIENT_ID = 'Ov23lianHkw0Uog0VGxT';
-const GITHUB_SCOPES = 'read:user';
+const CORS_PROXY_URL = 'https://cors-proxy.jonasneves.workers.dev';
+const GITHUB_CLIENT_ID = 'Iv23li8Xfyh6abiZA3Gx';
 
 export interface GitHubAuth {
   token: string;
   username: string;
-  name?: string; // Display name (may be null if not set)
+  name?: string;
+}
+
+function generateVerifier(): string {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256Base64Url(plain: string): Promise<string> {
+  const encoded = new TextEncoder().encode(plain);
+  const hash = await crypto.subtle.digest('SHA-256', encoded);
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(hash)));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export async function connectGitHub(): Promise<GitHubAuth> {
+  const verifier = generateVerifier();
+  const challenge = await sha256Base64Url(verifier);
+  const state = crypto.randomUUID();
+  const redirectUri = `${window.location.origin}/oauth-callback.html`;
+
+  const authUrl = new URL('https://github.com/login/oauth/authorize');
+  authUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('code_challenge', challenge);
+  authUrl.searchParams.set('code_challenge_method', 'S256');
+
+  const width = 500;
+  const height = 600;
+  const left = window.screenX + (window.innerWidth - width) / 2;
+  const top = window.screenY + (window.innerHeight - height) / 2;
+
   return new Promise((resolve, reject) => {
-    const redirectUri = `${window.location.origin}/oauth-callback.html`;
-
-    // State must be base64-encoded JSON for the oauth proxy
-    const state = btoa(JSON.stringify({
-      provider: 'github',
-      client_id: GITHUB_CLIENT_ID,
-      redirect_url: redirectUri,
-    }));
-
-    // Go directly to GitHub, with proxy callback as redirect_uri
-    const authUrl = new URL('https://github.com/login/oauth/authorize');
-    authUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
-    authUrl.searchParams.set('scope', GITHUB_SCOPES);
-    authUrl.searchParams.set('redirect_uri', `${OAUTH_PROXY_URL}/callback`);
-    authUrl.searchParams.set('state', state);
-
-    const width = 500;
-    const height = 600;
-    const left = window.screenX + (window.innerWidth - width) / 2;
-    const top = window.screenY + (window.innerHeight - height) / 2;
-
     const popup = window.open(
       authUrl.toString(),
       'github-oauth',
@@ -45,35 +52,38 @@ export async function connectGitHub(): Promise<GitHubAuth> {
 
     const handleMessage = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
+      const { type, code, error } = event.data || {};
+      if (type !== 'oauth-callback') return;
 
-      const { type, token, error } = event.data || {};
+      window.removeEventListener('message', handleMessage);
+      clearInterval(pollTimer);
 
-      if (type === 'oauth-callback') {
-        window.removeEventListener('message', handleMessage);
-        clearInterval(pollTimer);
+      if (error) { reject(new Error(error)); return; }
+      if (!code) { reject(new Error('No code received')); return; }
 
-        if (error) {
-          reject(new Error(error));
-          return;
-        }
+      try {
+        const res = await fetch(`${CORS_PROXY_URL}/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, code, code_verifier: verifier, redirect_uri: redirectUri })
+        });
+        const data = await res.json();
+        if (data.error || !data.access_token) throw new Error(data.error_description || data.error);
 
-        if (!token) {
-          reject(new Error('No token received'));
-          return;
-        }
+        const userRes = await fetch('https://api.github.com/user', {
+          headers: { Authorization: `Bearer ${data.access_token}`, Accept: 'application/vnd.github+json' }
+        });
+        if (!userRes.ok) throw new Error('Failed to fetch GitHub user info');
+        const user = await userRes.json();
 
-        try {
-          const userInfo = await fetchGitHubUser(token);
-          resolve({ token, ...userInfo });
-        } catch (err) {
-          reject(err);
-        }
+        resolve({ token: data.access_token, username: user.login, name: user.name || undefined });
+      } catch (err) {
+        reject(err);
       }
     };
 
     window.addEventListener('message', handleMessage);
 
-    // Poll to detect if popup was closed without completing
     const pollTimer = setInterval(() => {
       if (popup.closed) {
         clearInterval(pollTimer);
@@ -82,23 +92,4 @@ export async function connectGitHub(): Promise<GitHubAuth> {
       }
     }, 500);
   });
-}
-
-async function fetchGitHubUser(token: string): Promise<{ username: string; name?: string }> {
-  const response = await fetch('https://api.github.com/user', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch GitHub user info');
-  }
-
-  const data = await response.json();
-  return {
-    username: data.login,
-    name: data.name || undefined, // Display name, may be null
-  };
 }
