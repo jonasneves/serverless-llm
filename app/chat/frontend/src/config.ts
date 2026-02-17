@@ -36,9 +36,9 @@ function getConfig(): AppConfig {
     return cachedConfig;
   }
 
-  // Fallback: Same-origin (development or bundled deployment)
-  cachedConfig = { apiBaseUrl: '' };
-  console.log('[Config] Using same-origin (fallback)');
+  // Fallback: Worker proxy (production default)
+  cachedConfig = { apiBaseUrl: 'https://llm-api.jonasneves.workers.dev' };
+  console.log('[Config] Using Worker proxy (fallback)');
   return cachedConfig;
 }
 

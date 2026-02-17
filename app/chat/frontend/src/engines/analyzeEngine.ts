@@ -132,13 +132,11 @@ async function* streamModelDirect(
   githubToken: string | null,
   signal: AbortSignal
 ): AsyncGenerator<{ type: 'chunk' | 'done' | 'error'; content?: string; error?: string }> {
-  const isGitHub = modelUrl.includes('models.inference.ai.azure.com');
-
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  if (isGitHub && githubToken) {
+  if (githubToken) {
     headers['Authorization'] = `Bearer ${githubToken}`;
   }
 

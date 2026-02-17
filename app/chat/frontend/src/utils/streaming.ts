@@ -1,11 +1,10 @@
 /**
  * Streaming utilities for all modes
- * Uses backend proxy endpoints - works for both web and extension
+ * Makes per-model requests to the Worker proxy, parses OpenAI-compatible SSE
  */
 
 import { config } from '../config';
 
-// Get API base URL from centralized config
 function getApiBase(): string {
   return config.apiBaseUrl;
 }
@@ -15,6 +14,7 @@ export type ChatStreamEvent = {
   model_id?: string;
   model?: string;
   content?: string;
+  error?: boolean;
   [key: string]: unknown;
 };
 
@@ -26,29 +26,38 @@ export interface ChatStreamPayload {
   github_token?: string | null;
 }
 
-async function* streamFromBackend(
-  endpoint: string,
-  payload: any,
-  signal?: AbortSignal
+async function* streamModel(
+  model: string,
+  payload: Omit<ChatStreamPayload, 'models'>,
+  signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent> {
-  const apiBase = getApiBase();
-  const url = `${apiBase}${endpoint}`;
+  const url = `${getApiBase()}/api/chat/stream`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      model,
+      messages: payload.messages,
+      max_tokens: payload.max_tokens,
+      temperature: payload.temperature,
+      github_token: payload.github_token,
+    }),
     signal,
   });
 
   if (!response.ok) {
-    yield { event: 'error', error: `HTTP ${response.status}: ${response.statusText}` };
+    let msg = response.statusText;
+    try { msg = (await response.json()).error?.message || msg; } catch {}
+    yield { event: 'error', model_id: model, error: true, content: msg };
     return;
   }
 
+  yield { event: 'start', model_id: model, model };
+
   const reader = response.body?.getReader();
   if (!reader) {
-    yield { event: 'error', error: 'No response body' };
+    yield { event: 'error', model_id: model, error: true, content: 'No response body' };
     return;
   }
 
@@ -65,35 +74,69 @@ async function* streamFromBackend(
       buffer = lines.pop() || '';
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr) {
-            try {
-              const data = JSON.parse(jsonStr);
-              yield data;
-            } catch {
-              // Skip malformed JSON
-            }
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (!data || data === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            yield { event: 'token', model_id: model, model, content };
           }
+        } catch {
+          // Skip malformed JSON
         }
       }
     }
   } finally {
     reader.releaseLock();
   }
+
+  yield { event: 'done', model_id: model, model };
+}
+
+async function* mergeStreams(
+  generators: AsyncGenerator<ChatStreamEvent>[],
+): AsyncGenerator<ChatStreamEvent> {
+  type Entry = {
+    gen: AsyncGenerator<ChatStreamEvent>;
+    idx: number;
+    next: Promise<{ result: IteratorResult<ChatStreamEvent>; idx: number }>;
+  };
+
+  const active: Entry[] = generators.map((gen, idx) => ({
+    gen,
+    idx,
+    next: gen.next().then(result => ({ result, idx })),
+  }));
+
+  while (active.length > 0) {
+    const { result, idx } = await Promise.race(active.map(e => e.next));
+    const entryIdx = active.findIndex(e => e.idx === idx);
+
+    if (result.done) {
+      active.splice(entryIdx, 1);
+    } else {
+      yield result.value;
+      active[entryIdx].next = active[entryIdx].gen.next().then(result => ({ result, idx }));
+    }
+  }
 }
 
 export const fetchChatStream = async (
   payload: ChatStreamPayload,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<AsyncGenerator<ChatStreamEvent>> => {
-  return streamFromBackend('/api/chat/stream', {
-    models: payload.models,
-    messages: payload.messages,
-    max_tokens: payload.max_tokens,
-    temperature: payload.temperature,
-    github_token: payload.github_token,
-  }, signal);
+  const { models, ...rest } = payload;
+
+  if (models.length === 1) {
+    return streamModel(models[0], rest, signal);
+  }
+
+  return mergeStreams(
+    models.map(model => streamModel(model, rest, signal)),
+  );
 };
 
 export const streamSseEvents = async (

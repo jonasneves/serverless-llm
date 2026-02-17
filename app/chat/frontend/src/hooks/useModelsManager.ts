@@ -288,7 +288,7 @@ export function useModelsManager() {
           }
         }
       } else if (model.type === 'github') {
-        endpoints[model.id] = 'https://models.inference.ai.azure.com';
+        endpoints[model.id] = config.apiBaseUrl || 'https://llm-api.jonasneves.workers.dev';
       }
     });
 
