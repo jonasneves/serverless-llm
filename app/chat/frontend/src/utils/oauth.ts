@@ -1,5 +1,5 @@
 const CORS_PROXY_URL = 'https://cors-proxy.jonasneves.workers.dev';
-const GITHUB_CLIENT_ID = 'Iv23li8Xfyh6abiZA3Gx';
+const GITHUB_CLIENT_ID = 'Ov23lioKDt8Os7hdiSEh';
 const OAUTH_CALLBACK_ORIGIN = 'https://neevs.io';
 
 export interface GitHubAuth {
@@ -8,22 +8,7 @@ export interface GitHubAuth {
   name?: string;
 }
 
-function generateVerifier(): string {
-  const array = new Uint8Array(64);
-  crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function sha256Base64Url(plain: string): Promise<string> {
-  const encoded = new TextEncoder().encode(plain);
-  const hash = await crypto.subtle.digest('SHA-256', encoded);
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(hash)));
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 export async function connectGitHub(): Promise<GitHubAuth> {
-  const verifier = generateVerifier();
-  const challenge = await sha256Base64Url(verifier);
   const state = crypto.randomUUID();
   const redirectUri = `${OAUTH_CALLBACK_ORIGIN}/`;
 
@@ -31,9 +16,6 @@ export async function connectGitHub(): Promise<GitHubAuth> {
   authUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('state', state);
-  authUrl.searchParams.set('scope', 'models:read');
-  authUrl.searchParams.set('code_challenge', challenge);
-  authUrl.searchParams.set('code_challenge_method', 'S256');
 
   const width = 500;
   const height = 600;
@@ -67,7 +49,7 @@ export async function connectGitHub(): Promise<GitHubAuth> {
         const res = await fetch(`${CORS_PROXY_URL}/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, code, code_verifier: verifier, redirect_uri: redirectUri })
+          body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, code, redirect_uri: redirectUri })
         });
         const data = await res.json();
         if (data.error || !data.access_token) throw new Error(data.error_description || data.error);
