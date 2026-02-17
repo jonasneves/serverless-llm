@@ -110,7 +110,7 @@ async function* streamModelDirect(
   }
 
   try {
-    const response = await fetch(`${modelUrl}/v1/chat/completions`, {
+    const response = await fetch(`${modelUrl}/chat/completions`, {
       method: 'POST',
       headers,
       body: JSON.stringify({

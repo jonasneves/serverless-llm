@@ -280,15 +280,15 @@ export function useModelsManager() {
       if (model.type === 'self-hosted') {
         if (isDev) {
           const port = portMap[model.id] || 8000;
-          endpoints[model.id] = `http://localhost:${port}`;
+          endpoints[model.id] = `http://localhost:${port}/v1`;
         } else {
           const subdomain = subdomainMap[model.id];
           if (subdomain) {
-            endpoints[model.id] = `https://${subdomain}.neevs.io`;
+            endpoints[model.id] = `https://${subdomain}.neevs.io/v1`;
           }
         }
       } else if (model.type === 'github') {
-        endpoints[model.id] = config.apiBaseUrl || 'https://llm-api.jonasneves.workers.dev';
+        endpoints[model.id] = 'https://models.github.ai/inference';
       }
     });
 

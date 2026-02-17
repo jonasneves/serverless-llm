@@ -1,13 +1,9 @@
 /**
  * Streaming utilities for all modes
- * Makes per-model requests to the Worker proxy, parses OpenAI-compatible SSE
+ * Calls GitHub Models API directly from the browser (CORS supported)
  */
 
-import { config } from '../config';
-
-function getApiBase(): string {
-  return config.apiBaseUrl;
-}
+const GITHUB_MODELS_URL = 'https://models.github.ai/inference/chat/completions';
 
 export type ChatStreamEvent = {
   event: string;
@@ -31,17 +27,22 @@ async function* streamModel(
   payload: Omit<ChatStreamPayload, 'models'>,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent> {
-  const url = `${getApiBase()}/api/chat/stream`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (payload.github_token) {
+    headers['Authorization'] = `Bearer ${payload.github_token}`;
+  }
 
-  const response = await fetch(url, {
+  const response = await fetch(GITHUB_MODELS_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       model,
       messages: payload.messages,
       max_tokens: payload.max_tokens,
       temperature: payload.temperature,
-      github_token: payload.github_token,
+      stream: true,
     }),
     signal,
   });
