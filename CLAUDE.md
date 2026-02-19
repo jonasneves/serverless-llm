@@ -1,23 +1,20 @@
-## Code
+# Serverless LLM
 
-- Delete unused code (imports, variables, functions, props, files)
-- No abstractions for single use
-- No handling for impossible errors
-- Minimal and direct solutions
-- Consolidate duplicate code immediately
-- Replace multiple similar functions with configuration objects
-- Remove trailing whitespace and excess blank lines
-- Prefer direct solutions over complex patterns
-- Simplify conditional logic where possible
-- After making significant code changes, run @agent-code-simplifier:code-simplifier to identify and remove cruft
+LLM playground with Cloudflare tunnel routing. Python backend + static frontend.
 
-## CSS
+## Commands
 
-- Never use `@import` (breaks cache-busting)
-- Individual `<link>` tags with `?v={{ hash }}`
+- `make install` — create venv + install deps (Python 3.11 required)
+- `make dev` — run backend API locally (port 8080)
+- `make preview` — preview frontend against api.neevs.io
+- `make build` — build frontend
+- `make lint` / `make format` — Python code quality
+- `make tunnels DOMAIN=neevs.io` — set up all Cloudflare tunnels
+- `source venv/bin/activate` — activate venv (after install)
 
-## Documentation
+## Architecture
 
-- Professional, concise, no emojis
-- Only docs integral to system
-- Script output may use functional emojis
+`app/chat/backend/` — Python FastAPI
+`config/` — model and tunnel configuration
+`docker/` + `docker-compose.yml` — container setup
+`tunnels.json` — Cloudflare tunnel map (copy from `tunnels.json.example`)
