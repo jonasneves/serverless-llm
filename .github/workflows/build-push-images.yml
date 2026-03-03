@@ -127,51 +127,52 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
 
-      - name: Compute cache key
-        id: cache-key
+      - name: Compute build config
+        id: config
         run: |
-          # Determine which Dockerfile to use
-          if [ "${{ matrix.model }}" = "cloudflared" ]; then
+          LLAMA_SERVER_MODELS="rnj-inference lfm2-inference glm-inference"
+          MODEL="${{ matrix.model }}"
+
+          if [ "$MODEL" = "cloudflared" ]; then
             DOCKERFILE="./docker/cloudflared/Dockerfile"
-          elif [ "${{ matrix.model }}" = "rnj-inference" ]; then
-            # RNJ has its own Dockerfile (builds llama.cpp from source)
-            DOCKERFILE="./app/rnj-inference/Dockerfile"
-          elif [ "${{ matrix.model }}" = "lfm2-inference" ]; then
-            # LFM2 has its own Dockerfile (builds llama.cpp from master for lfm2 arch)
-            DOCKERFILE="./app/lfm2-inference/Dockerfile"
-          elif [ "${{ matrix.model }}" = "glm-inference" ]; then
-            # GLM has its own Dockerfile (builds llama.cpp from master for Glm4MoeLite arch)
-            DOCKERFILE="./app/glm-inference/Dockerfile"
+            CONTEXT="./docker/cloudflared"
+            BUILD_ARGS=""
+          elif echo "$LLAMA_SERVER_MODELS" | grep -qw "$MODEL"; then
+            DOCKERFILE="./app/shared/Dockerfile.llama-server"
+            CONTEXT="."
+            BUILD_ARGS="MODEL_DIR=$MODEL"
           else
-            # All other models use shared Dockerfile
             DOCKERFILE="./app/shared/Dockerfile.inference"
+            CONTEXT="."
+            BUILD_ARGS="MODEL_DIR=$MODEL"
           fi
-          
-          # Create a short hash of the Dockerfile for cache scoping
+
           if [ -f "$DOCKERFILE" ]; then
             HASH=$(sha256sum "$DOCKERFILE" | cut -c1-8)
           else
             HASH="missing"
           fi
-          
-          echo "scope=${{ matrix.model }}-$HASH" >> $GITHUB_OUTPUT
-          echo "Cache scope: ${{ matrix.model }}-$HASH"
-          echo "Using Dockerfile: $DOCKERFILE"
+
+          echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "context=$CONTEXT" >> $GITHUB_OUTPUT
+          echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
+          echo "scope=$MODEL-$HASH" >> $GITHUB_OUTPUT
+          echo "Using Dockerfile: $DOCKERFILE (scope: $MODEL-$HASH)"
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.model == 'cloudflared' && './docker/cloudflared' || '.' }}
-          file: ${{ matrix.model == 'cloudflared' && './docker/cloudflared/Dockerfile' || matrix.model == 'rnj-inference' && './app/rnj-inference/Dockerfile' || matrix.model == 'lfm2-inference' && './app/lfm2-inference/Dockerfile' || matrix.model == 'glm-inference' && './app/glm-inference/Dockerfile' || './app/shared/Dockerfile.inference' }}
-          build-args: ${{ matrix.model != 'cloudflared' && matrix.model != 'rnj-inference' && matrix.model != 'lfm2-inference' && matrix.model != 'glm-inference' && format('MODEL_DIR={0}', matrix.model) || '' }}
+          context: ${{ steps.config.outputs.context }}
+          file: ${{ steps.config.outputs.dockerfile }}
+          build-args: ${{ steps.config.outputs.build_args }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           no-cache: ${{ github.event.inputs.no_cache == 'true' }}
           # Cache scope includes Dockerfile hash - auto-invalidates when Dockerfile changes
           # Skip cache if no_cache is enabled
-          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=gha,scope={0}', steps.cache-key.outputs.scope) || '' }}
-          cache-to: ${{ github.event.inputs.no_cache != 'true' && format('type=gha,mode=max,scope={0}', steps.cache-key.outputs.scope) || '' }}
+          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=gha,scope={0}', steps.config.outputs.scope) || '' }}
+          cache-to: ${{ github.event.inputs.no_cache != 'true' && format('type=gha,mode=max,scope={0}', steps.config.outputs.scope) || '' }}
 
       - name: Image summary
         run: |
