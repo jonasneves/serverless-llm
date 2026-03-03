@@ -12,7 +12,6 @@ on:
       - 'app/*/requirements.txt'
       - 'app/*/inference_server.py'
       - 'config/**'
-      - 'docker/cloudflared/**'
       - '.github/workflows/build-push-images.yml'
   workflow_dispatch:
     inputs:
@@ -83,7 +82,7 @@ jobs:
             INFERENCE_MODELS=$(python3 config/models.py --inference-dirs)
 
             # Combine inference models with core services
-            MATRIX=$(echo "$INFERENCE_MODELS" | jq -c '. + ["cloudflared"]')
+            MATRIX=$(echo "$INFERENCE_MODELS" | jq -c '.')
           else
             # Build only specified models (use -c for compact output)
             MATRIX=$(echo "$MODELS" | jq -cR 'split(",") | map(select(length > 0))')
@@ -131,11 +130,7 @@ jobs:
           MODEL="${{ matrix.model }}"
           LLAMA_COMMIT=""
 
-          if [ "$MODEL" = "cloudflared" ]; then
-            DOCKERFILE="./docker/cloudflared/Dockerfile"
-            CONTEXT="./docker/cloudflared"
-            BUILD_ARGS=""
-          elif [ "$MODEL" = "rnj-inference" ]; then
+          if [ "$MODEL" = "rnj-inference" ]; then
             # rnj1 architecture requires a specific llama.cpp commit
             DOCKERFILE="./app/shared/Dockerfile.llama-server"
             CONTEXT="."

@@ -150,44 +150,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull images and setup network (parallel)
+      - name: Pull inference image
         run: |
-          # Pull both images in parallel
-          echo "Pulling images in parallel..."
-          
-          docker pull "ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest" &
-          CLOUDFLARED_PID=$!
-          
-          docker pull "ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest" &
-          INFERENCE_PID=$!
-          
-          # Create network while images are pulling
-          docker network create inference-network || true
-          echo "✓ Network created"
-          
-          # Wait for both pulls to complete
-          echo "Waiting for image pulls..."
-          wait $CLOUDFLARED_PID
-          CLOUDFLARED_EXIT=$?
-          wait $INFERENCE_PID
-          INFERENCE_EXIT=$?
-          
-          # Check results
-          if [ $CLOUDFLARED_EXIT -ne 0 ]; then
-            echo "❌ Failed to pull cloudflared image"
-            exit 1
-          fi
-          
-          if [ $INFERENCE_EXIT -ne 0 ]; then
-            echo "❌ Failed to pull inference image"
-            exit 1
-          fi
-          
-          # Tag images
-          docker tag "ghcr.io/${{ github.repository_owner }}/serverless-llm/cloudflared:latest" "cloudflared:latest"
+          docker pull "ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest"
           docker tag "ghcr.io/${{ github.repository_owner }}/serverless-llm/${{ inputs.model_dir }}:latest" "${{ inputs.model_name }}-inference:latest"
-          
-          echo "✓ All images pulled and tagged"
+          echo "✓ Image pulled and tagged"
 
       - name: Start inference server
         env:
@@ -204,7 +171,6 @@ jobs:
           # Start inference server with config from config/inference.yaml
           docker run -d \
             --name inference-server \
-            --network inference-network \
             -p ${{ inputs.port }}:${{ inputs.port }} \
             -e MODEL_NAME="${{ inputs.model_name }}" \
             -e MODEL_REPO="$MODEL_REPO" \
@@ -288,14 +254,12 @@ jobs:
         env:
           TUNNEL_TOKEN: ${{ steps.tunnel_token.outputs.token }}
         run: |
-          docker run -d \
-            --name cloudflared \
-            --network host \
-            cloudflared:latest \
-            tunnel --no-autoupdate run --token "$TUNNEL_TOKEN"
-
-          sleep 10
-          docker logs cloudflared | head -20
+          curl -fsSL -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
+          sudo dpkg -i cloudflared.deb
+          cloudflared tunnel --no-autoupdate run --token "$TUNNEL_TOKEN" > /tmp/cloudflared.log 2>&1 &
+          sleep 5
+          cat /tmp/cloudflared.log
+          echo "✓ Cloudflared started"
 
       - name: Cancel previous workflow
         if: steps.find_previous.outputs.previous_run_id != ''
@@ -313,16 +277,16 @@ jobs:
       - name: Monitor
         env:
           PORT: ${{ inputs.port }}
+          TUNNEL_TOKEN: ${{ steps.tunnel_token.outputs.token }}
         run: |
           cleanup() {
-            docker stop inference-server cloudflared 2>/dev/null || true
-            docker rm inference-server cloudflared 2>/dev/null || true
-            docker network rm inference-network 2>/dev/null || true
+            docker stop inference-server 2>/dev/null || true
+            docker rm inference-server 2>/dev/null || true
+            pkill cloudflared 2>/dev/null || true
             exit 0
           }
           trap cleanup SIGTERM SIGINT
 
-          # Get duration from inputs
           DURATION_HOURS="${{ inputs.duration_hours }}"
           DURATION=$(awk "BEGIN {printf \"%.0f\", $DURATION_HOURS * 3600}")
           START_TIME=$(date +%s)
@@ -334,13 +298,13 @@ jobs:
             REMAINING=$((DURATION - ELAPSED))
 
             SERVER_STATUS=$(docker inspect -f '{{.State.Status}}' inference-server 2>/dev/null || echo "stopped")
-            TUNNEL_STATUS=$(docker inspect -f '{{.State.Status}}' cloudflared 2>/dev/null || echo "stopped")
+            TUNNEL_STATUS=$(pgrep -x cloudflared > /dev/null 2>&1 && echo "running" || echo "stopped")
 
             printf "[%s] Server: %s | Tunnel: %s | %dm elapsed | %dm remaining\n" \
               "$(date '+%H:%M:%S')" "$SERVER_STATUS" "$TUNNEL_STATUS" "$((ELAPSED/60))" "$((REMAINING/60))"
 
             [ "$SERVER_STATUS" != "running" ] && docker start inference-server
-            [ "$TUNNEL_STATUS" != "running" ] && docker start cloudflared
+            [ "$TUNNEL_STATUS" != "running" ] && cloudflared tunnel --no-autoupdate run --token "$TUNNEL_TOKEN" >> /tmp/cloudflared.log 2>&1 &
 
             [ "$ELAPSED" -gt "$DURATION" ] && break
             sleep 30
@@ -352,4 +316,4 @@ jobs:
         if: failure()
         run: |
           docker logs inference-server 2>&1 | tail -100
-          docker logs cloudflared 2>&1 | tail -50
+          cat /tmp/cloudflared.log 2>/dev/null | tail -50
