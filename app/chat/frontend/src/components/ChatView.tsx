@@ -112,6 +112,8 @@ const ChatMessageItem = memo(({ msg, idx, gesturesActive, uiBuilderEnabled, isCo
     );
 });
 
+ChatMessageItem.displayName = 'ChatMessageItem';
+
 const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     models,
     selectedModels,
@@ -384,7 +386,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                 style={{ paddingBottom: messages.length > 0 ? '160px' : '80px' }}
             >
                 <div className="max-w-3xl mx-auto space-y-4">
-                    {/* Empty state - centered vertically */}
                     {messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
                             {isMiddleFinger ? (
@@ -425,7 +426,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         />
                     ))}
 
-                    {/* Streaming responses */}
                     {isGenerating && streamingEntries.map(([modelId, content]) => {
                         const model = modelMap.get(modelId);
                         const timing = streamingTiming.get(modelId);

@@ -36,7 +36,6 @@ permissions:
   packages: write
 
 jobs:
-  # Determine which models need to be built
   detect-changes:
     runs-on: ubuntu-24.04-arm
     outputs:
@@ -52,7 +51,6 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MODELS="${{ inputs.models }}"
           else
-            # Get changed files
             CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
             echo "Changed files:"
             echo "$CHANGED_FILES"
@@ -67,7 +65,6 @@ jobs:
             if echo "$CHANGED_FILES" | grep -q '^app/shared/'; then
               MODELS="all"
             elif [ -n "$CHANGED_MODELS" ] || [ -n "$CLOUDFLARED_CHANGED" ]; then
-              # Combine changed models and cloudflared
               MODELS=$(echo "${CHANGED_MODELS}${CHANGED_MODELS:+,}${CLOUDFLARED_CHANGED}" | sed 's/^,//' | sed 's/,$//')
             else
               MODELS=""

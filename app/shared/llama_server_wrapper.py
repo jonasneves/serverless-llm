@@ -45,7 +45,7 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
     n_threads = int(os.getenv("N_THREADS", str(config.n_threads)))
     n_batch = int(os.getenv("N_BATCH", str(config.n_batch)))
     max_concurrent = int(os.getenv("MAX_CONCURRENT", str(config.max_concurrent)))
-    kv_cache_quant = os.getenv("KV_CACHE_QUANT", "true").lower() in ("true", "1", "yes")
+    kv_cache_quant = os.getenv("KV_CACHE_QUANT", "true").lower() in {"1", "true", "yes", "on"}
     hf_token = os.getenv("HF_TOKEN")
     startup_timeout = int(os.getenv("STARTUP_TIMEOUT", str(config.startup_timeout)))
 

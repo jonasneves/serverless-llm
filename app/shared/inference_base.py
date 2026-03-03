@@ -71,6 +71,10 @@ class GenerateRequest(BaseModel):
         extra = 'ignore'  # allow OpenAI-style extra fields like 'model', 'tools', etc.
 
 
+def _env_bool(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _download_model(default_repo: str, default_file: str) -> str:
     repo_id = os.getenv("MODEL_REPO", default_repo)
     filename = os.getenv("MODEL_FILE", default_file)
@@ -86,15 +90,7 @@ def _download_model(default_repo: str, default_file: str) -> str:
 
 
 def create_app_for_model(model_name: str) -> FastAPI:
-    """Create an inference app for a model by reading config from config/models.py.
-
-    This is the simplified factory function that eliminates boilerplate in
-    individual inference_server.py files. Just call:
-
-        app = create_app_for_model("qwen")
-
-    Instead of manually specifying all the ModelConfig fields.
-    """
+    """Create an inference app for a model by reading config from config/models.py."""
     # Import here to avoid circular imports
     import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -137,9 +133,6 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         allow_headers=["*"],
     )
 
-    def _env_bool(name: str) -> bool:
-        return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
-
     # Model state and concurrency gate
     llm: Optional[Llama] = None
     n_ctx = int(os.getenv("N_CTX", str(config.default_n_ctx)))
@@ -181,7 +174,6 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
         if config.chat_format:
             llama_kwargs["chat_format"] = config.chat_format
 
-        # Add KV-cache quantization if enabled (requires flash_attn)
         if type_k is not None:
             llama_kwargs["type_k"] = type_k
             llama_kwargs["type_v"] = type_v
@@ -280,7 +272,6 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
 
                 generation_done = time.perf_counter()
 
-                # Compute token usage
                 prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
                 prompt_tokens = len(llm.tokenize(prompt_text.encode()))
                 completion_tokens = len(llm.tokenize(generated_text.encode()))

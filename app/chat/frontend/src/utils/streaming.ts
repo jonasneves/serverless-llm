@@ -1,8 +1,3 @@
-/**
- * Streaming utilities for all modes
- * Calls GitHub Models API directly from the browser (CORS supported)
- */
-
 const GITHUB_MODELS_URL = 'https://models.github.ai/inference/chat/completions';
 
 export type ChatStreamEvent = {

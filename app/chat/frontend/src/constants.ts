@@ -17,10 +17,10 @@ export const THINKING_MODELS: string[] = [
   'nanbeige',         // Nanbeige4-3B Thinking
 ];
 
-export const isThinkingModel = (modelId: string): boolean => {
+export function isThinkingModel(modelId: string): boolean {
   const lower = modelId.toLowerCase();
   return THINKING_MODELS.some(pattern => lower.includes(pattern.toLowerCase()));
-};
+}
 
 export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github', dynamicPriority?: number): number {
   if (dynamicPriority !== undefined) {
