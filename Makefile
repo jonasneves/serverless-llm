@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help build lint format clean update-models tunnels-secret tunnels-list inference deploy build-images up down
+.PHONY: help build lint format clean update-models tunnels-secret inference deploy build-images up down
 
 -include .env
 export
@@ -25,7 +25,6 @@ help:
 	@echo ""
 	@echo "\033[2mTunnels\033[0m"
 	@echo "  \033[36mtunnels-secret\033[0m  Collect tokens and set TUNNELS_JSON secret"
-	@echo "  \033[36mtunnels-list\033[0m    List models and ports"
 	@echo ""
 
 build:
@@ -72,6 +71,3 @@ down:
 
 tunnels-secret:
 	python3 scripts/tunnels_secret.py
-
-tunnels-list:
-	@python3 config/models.py
