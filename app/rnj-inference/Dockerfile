@@ -24,13 +24,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /build
 
-# Clone llama.cpp with RNJ-1 'rnj1' architecture support
-# IMPORTANT: The GGUF on HuggingFace uses 'rnj1' architecture (not 'gemma3').
-# Essential AI never updated the GGUF after the PR refactored rnj1 -> gemma3.
-# We must use commit e1b7d46 which has the original rnj1 architecture support.
+# TEST: trying master to see if rnj1 arch is now supported
+# If this fails with "unsupported architecture: rnj1", revert to e1b7d46.
 RUN git clone https://github.com/ggml-org/llama.cpp.git . \
-    && git fetch origin pull/17811/head:rnj-pr \
-    && git checkout e1b7d46e8c3364cad6d3d17059e9748911726881 \
     && git submodule update --init --recursive
 
 # Configure cmake build (using options compatible with this older codebase)
