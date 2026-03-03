@@ -1,45 +1,25 @@
-# LLM Playground
+# Frontend
 
-React interface for comparing LLM models with multiple visualization modes.
+Vite + React interface for comparing and chatting with self-hosted and GitHub-hosted LLMs.
 
 ## Tech Stack
 
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Fast build tool
-- **Tailwind CSS** - Styling
+- React 18, TypeScript, Vite, Tailwind CSS
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Run dev server (hot reload)
-npm run dev
-
-# Type check
+npm run dev       # hot reload at localhost:5173
 npm run type-check
-```
-
-`npm run dev` proxies `/api/*` to `http://localhost:8080`, so run the FastAPI server on port 8080 for full functionality.
-
-## Production Build
-
-```bash
 npm run build
 ```
 
-Outputs to `dist/`. Deployed to GitHub Pages at `chat.neevs.io`.
-
-## Local Preview
-
-```bash
-npm run preview
-```
+The dev server calls inference servers directly at their `cfargotunnel.com` URLs in production, and at `localhost:<port>` when running locally.
 
 ## Features
 
-- **Compare Mode**: Side-by-side grid comparison
-- **Council Mode**: Circular layout with chairman model in center
-- **Roundtable Mode**: Collaborative discussion visualization
+- **Chat**: single or multi-model streaming
+- **Compare**: side-by-side grid
+- **Council**: circular layout with chairman model in center
+- **Roundtable**: collaborative discussion visualization

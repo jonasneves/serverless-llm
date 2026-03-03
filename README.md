@@ -1,159 +1,141 @@
-# LLM Playground
+# Serverless LLM
 
-<!-- Live API Health Status -->
-[![API Status](https://img.shields.io/endpoint?style=social&url=https://chat.neevs.io/api/badge/system)](https://chat.neevs.io/status)
-
-## Overview
-
-Self-hosted LLM inference platform serving 15 models (270M to 12B parameters) with OpenAI-compatible APIs. Experimental testbed for gesture-based interaction, AI-generated UIs, and multi-model collaboration modes (discussion, council, roundtable).
+Self-hosted LLM inference using GitHub Actions as compute. Each model runs in a Docker container on a GitHub Actions runner, exposed via Cloudflare Tunnel. Frontend is a static React app on GitHub Pages.
 
 ## Models
 
-Models ranked by overall capability based on December 2025 benchmarks (MMLU-Pro, GPQA, AIME, MATH, HumanEval):
-
 | Rank | Model | Size | Key Benchmarks | Best For |
 |:-----|:------|:-----|:---------------|:---------|
-| 1 | **Nanbeige4-3B-Thinking** | 3B | AIME 2024: 90.4%, GPQA-Diamond: 82.2% (outperforms Qwen3-32B) | Step-by-step reasoning, complex math, competitive programming |
-| 2 | **DASD-4B Thinking** | 4B | Reasoning with thinking capabilities | Step-by-step reasoning, problem solving |
-| 2 | **Qwen3-4B-Instruct-2507** | 4B | MMLU-Pro: 69.6%, GPQA: 62.0%, 262K context, 119 languages | Multilingual tasks, long-context analysis, agent workflows |
-| 3 | **AgentCPM-Explore 4B** | 4B | Autonomous task exploration, agentic operations | Autonomous exploration, task planning |
-| 3 | **SmolLM3 3B** | 3B | AIME 2025: 36.7%, BFCL: 92.3%, 64K context, hybrid reasoning | Tool-calling, reasoning with /think mode, multilingual (6 langs) |
-| 4 | **LFM2.5 1.2B** | 1.2B | 8 languages, 32K context, hybrid LFM2 architecture, RL tuning | Edge deployment, instruction following, multilingual |
-| 5 | **DeepSeek R1 1.5B** | 1.5B | AIME 2024: 28.9%, MATH-500: 83.9%, Codeforces: 954 rating | Math reasoning, algorithmic problems, code generation |
-| 6 | **Gemma 3 12B** | 12B | Safety-aligned IT checkpoint, stronger instruction following, ~8K context | Fact-checking, educational content, safe generation |
-| 7 | **Mistral 7B v0.3** | 7B | MMLU: 63%, 32K context, native function calling | JSON generation, tool use, structured output |
-| 8 | **Phi-4 Mini** | 3.8B | GSM8K: 88.6%, 128K context, 22 languages, function calling | Math reasoning, multilingual, tool use |
-| 9 | **RNJ-1 Instruct** | 8B | SWE-Bench Verified: 20.8%, strong tool-use (BFCL ranked) | Code automation, agentic workflows, tool calling |
-| 10 | **Llama 3.2 3B** | 3B | MMLU: 63.4%, 128K context, multilingual (8 languages) | Casual conversation, summarization, creative writing |
-| 11 | **FunctionGemma 270M** | 270M | Edge-optimized (50 t/s on Pixel 8), 240MB RAM (Q4), 32K context | Edge device agents, mobile actions, offline function calling |
-| 12 | **GPT-OSS 20B** | 20B MoE (~3.6B active) | Function calling, agentic operations | Experimental MoE, agent operations (slow on CPU) |
+| 1 | **Nanbeige4-3B Thinking** | 3B | AIME 90.4%, GPQA-Diamond 82.2% | Complex reasoning, math, competitive programming |
+| 2 | **GLM-4.7 Flash** | 30B MoE (3B active) | AIME 91.6%, SWE-bench 59.2% | Reasoning, code, function calling |
+| 2 | **DASD-4B Thinking** | 4B | Thinking-mode reasoning | Step-by-step reasoning, problem solving |
+| 2 | **Qwen3-4B** | 4B | MMLU-Pro 69.6%, GPQA 62.0%, 262K context | Multilingual (119 langs), long-context, agents |
+| 3 | **SmolLM3 3B** | 3B | AIME 36.7%, BFCL 92.3%, 64K context | Tool-calling, reasoning, multilingual |
+| 3 | **AgentCPM-Explore 4B** | 4B | Agentic exploration | Autonomous task planning and execution |
+| 4 | **LFM2.5 1.2B** | 1.2B | 8 languages, 32K context, RL-tuned | Edge deployment, instruction following |
+| 5 | **DeepSeek R1 1.5B** | 1.5B | MATH-500 83.9%, Codeforces 954 | Math reasoning, algorithmic problems |
+| 6 | **Gemma 3 12B** | 12B | Safety-aligned, 8K context | Instruction following, safe generation |
+| 7 | **Mistral 7B v0.3** | 7B | MMLU 63%, 32K context | JSON generation, tool use, structured output |
+| 9 | **Phi-4 Mini** | 3.8B | GSM8K 88.6%, 128K context, 22 languages | Math, multilingual, function calling |
+| 9 | **RNJ-1 Instruct** | 8B | SWE-Bench Verified 20.8% | Code automation, agentic workflows |
+| 10 | **Llama 3.2 3B** | 3B | MMLU 63.4%, 128K context | Conversation, summarization, creative writing |
+| 12 | **FunctionGemma 270M** | 270M | 50 t/s on Pixel 8, 32K context | Edge agents, mobile function calling |
+| 13 | **GPT-OSS 20B** | 20B MoE (3.6B active) | Function calling, agentic operations | Experimental MoE, agent operations |
 
-### Sources
+## How it works
 
-| Model | Source |
-|:------|:-------|
-| Nanbeige4-3B-Thinking | [arXiv](https://arxiv.org/abs/2411.xxxxx), [Hugging Face](https://huggingface.co/Nanbeige/Nanbeige4-3B-Thinking-2511), [MarkTechPost](https://www.marktechpost.com/) |
-| DASD-4B Thinking | [Hugging Face](https://huggingface.co/mradermacher/DASD-4B-Thinking-GGUF) |
-| Qwen3-4B-Instruct-2507 | [Hugging Face Model Card](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) |
-| AgentCPM-Explore 4B | [Hugging Face](https://huggingface.co/openbmb/AgentCPM-Explore-GGUF) |
-| SmolLM3 3B | [Hugging Face](https://huggingface.co/HuggingFaceTB/SmolLM3-3B), [Blog](https://hf.co/blog/smollm3) |
-| LFM2.5 1.2B | [Liquid AI Docs](https://docs.liquid.ai/lfm), [Hugging Face](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF), [Playground](https://playground.liquid.ai/) |
-| DeepSeek R1 1.5B | [OpenRouter](https://openrouter.ai/), [DataCamp](https://www.datacamp.com/) |
-| Gemma 3 12B | [Google Blog](https://blog.google/), [Unsloth](https://huggingface.co/unsloth/gemma-3-12b-it-GGUF) |
-| Mistral 7B v0.3 | [Mistral AI](https://mistral.ai/), [Hugging Face](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3) |
-| Phi-4 Mini | [Hugging Face](https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF), [Microsoft](https://www.microsoft.com/) |
-| RNJ-1 Instruct | [Hugging Face](https://huggingface.co/EssentialAI/rnj-1-instruct), [Ollama](https://ollama.com/) |
-| Llama 3.2 3B | [NVIDIA](https://developer.nvidia.com/), [Meta](https://huggingface.co/meta-llama/) |
-| FunctionGemma 270M | [Google Blog](https://developers.googleblog.com/), [Unsloth](https://docs.unsloth.ai/models/functiongemma) |
+```
+GitHub Actions runner
+  └── Docker: inference server (llama-cpp-python or llama-server)
+        └── cloudflared tunnel → <uuid>.cfargotunnel.com
 
-## API
-
-### Endpoints
-
-Each model exposes OpenAI-compatible endpoints:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check and model status |
-| `/v1/models` | GET | List available models |
-| `/v1/chat/completions` | POST | Chat completion (streaming supported) |
-
-### Example Request
-
-```bash
-curl -X POST <YOUR_MODEL_API_URL>/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Explain quantum computing"}],
-    "max_tokens": 512,
-    "temperature": 0.7,
-    "stream": true
-  }'
+GitHub Pages (static frontend)
+  └── fetches models list from llm-api Worker
+  └── streams chat directly to inference tunnel URLs
 ```
 
-### Performance Debugging
-
-- Check runtime settings via `GET /health/details` (includes `n_ctx`, `n_threads`, `n_batch`, `max_concurrent`)
-- Add `"include_perf": true` to `/v1/chat/completions` to return queue/compute timing (and TTFT for streaming)
-- Compare models with `python3 scripts/bench_models.py --models qwen phi llama --stream --include-perf`
+- **Inference**: each `make inference MODEL=<name>` triggers a workflow run on `ubuntu-24.04-arm`. The runner downloads the model from Hugging Face, starts the server, and connects via Cloudflare Tunnel.
+- **Frontend**: static Vite + React app. No backend — calls inference servers and GitHub Models API directly.
+- **Tunnel tokens**: stored as a single `TUNNELS_JSON` GitHub secret (`make tunnels-secret` to refresh).
 
 ## Project Structure
 
 ```
-llm-playground/
-├── .github/workflows/          # CI/CD workflows
+├── .github/workflows/
+│   ├── inference.yml                       # Dispatch: reads config, calls reusable workflow
+│   ├── reusable-inference-containerized.yml  # Core: pull image, run server, start tunnel, monitor
+│   ├── build-push-images.yml               # Build and push Docker images to GHCR
+│   └── deploy.yml                          # Deploy frontend to GitHub Pages
 ├── app/
-│   ├── shared/                 # Shared inference server (base code for all models)
-│   ├── lfm2-inference/         # LFM2.5 model config (native llama-server)
-│   ├── rnj-inference/          # RNJ model config (native llama-server)
-│   └── chat/                   # Web interface + API proxy
+│   ├── shared/                             # Dockerfile.inference, Dockerfile.llama-server, inference_server.py
+│   ├── glm-inference/                      # GLM inference_server.py (llama-server)
+│   ├── lfm2-inference/                     # LFM2 inference_server.py (llama-server)
+│   ├── rnj-inference/                      # RNJ inference_server.py (llama-server, pinned commit)
+│   └── chat/frontend/                      # Vite + React frontend
 ├── config/
-│   └── models.py               # Model ports, metadata, and inference settings
-├── scripts/                    # Automation scripts
-└── README.md
+│   └── models.py                           # Single source of truth: ports, tunnel IDs, HF repos, inference settings
+├── scripts/
+│   ├── tunnels_secret.py                   # Collect tunnel tokens → TUNNELS_JSON secret
+│   ├── get_tunnel_token.py                 # Read token for a model (used by inference workflow)
+│   └── update_github_models.py             # Refresh GitHub Models catalog
+├── docker-compose.yml                      # Local development
+└── tunnels.json                            # {model: token} map (gitignored)
+```
+
+## Make Commands
+
+```
+Frontend
+  build           Build frontend
+  deploy          Trigger deploy workflow
+
+Code
+  lint            Check Python code
+  format          Format Python code
+  update-models   Refresh GitHub models in models.json
+  clean           Remove caches
+
+Inference (GitHub Actions)
+  inference       Run MODEL=<name> [HOURS=5]
+  build-images    Build Docker images [MODELS=all] [NO_CACHE=false]
+  up              Launch all inference models [HOURS=5]
+  down            Cancel all in-progress workflow runs
+
+Tunnels
+  tunnels-secret  Collect tokens and set TUNNELS_JSON secret
+  tunnels-list    List models and ports
+```
+
+## Local Development
+
+```bash
+# Run a model server
+docker compose --profile qwen up
+
+# Run multiple
+docker compose --profile qwen --profile phi up
+
+# Run frontend (calls inference servers directly)
+cd app/chat/frontend
+npm install
+npm run dev
 ```
 
 ## Configuration
 
-**Centralized Config**: All model and inference settings are managed in `config/models.py`:
-- `n_ctx`: Context window size (default: 4096)
-- `n_threads`: CPU threads (default: 4)
-- `n_batch`: Batch size (default: 256)
-- `max_concurrent`: Parallel requests per instance (default: 2)
+All model settings live in `config/models.py`:
 
-## Local Development
+| Field | Description |
+|-------|-------------|
+| `tunnel_id` | Cloudflare Tunnel UUID → `<id>.cfargotunnel.com` |
+| `hf_repo` / `hf_file` | Hugging Face GGUF source |
+| `n_ctx` | Context window (default: 4096) |
+| `n_threads` | CPU threads (default: 4) |
+| `n_batch` | Batch size (default: 256) |
+| `max_concurrent` | Parallel requests (default: 2) |
 
-Run models and the web interface locally.
+## API
 
-### Prerequisites
+Each inference server exposes an OpenAI-compatible API:
 
-```bash
-pip install -r app/qwen-inference/requirements.txt
-```
-
-### Port Scheme (Local Development)
-
-For local development with multiple models on the same machine:
-
-| Range | Category | Models |
-|-------|----------|--------|
-| 8080 | Core | Chat Interface |
-| 81XX | Small (<7B) | qwen (8100), phi (8101), functiongemma (8103), smollm3 (8104), lfm2 (8105), dasd (8106), agentcpm (8107) |
-| 82XX | Medium (7B-30B) | gemma (8200), llama (8201), mistral (8202), rnj (8203) |
-| 83XX | Reasoning | r1qwen (8300), nanbeige (8301), gptoss (8303) |
-
-Production deployment uses port 8000 for all inference models (each runs in a separate container).
-
-See `config/models.py` for the authoritative configuration.
-
-### Start a Model Server
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /v1/models` | List models |
+| `POST /v1/chat/completions` | Chat completion (streaming supported) |
 
 ```bash
-cd app/qwen-inference
-python inference_server.py  # Runs on port 8100
+curl -X POST https://<tunnel-id>.cfargotunnel.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Hello"}],
+    "max_tokens": 512,
+    "stream": true
+  }'
 ```
 
-### Start the Web Interface
-
-```bash
-cd app/chat
-export QWEN_API_URL=http://localhost:8100
-python chat_server.py  # Runs on port 8080
-```
-
-### Run with Docker Compose
-
-```bash
-# Chat interface only
-docker-compose up
-
-# Chat + specific models
-docker-compose --profile qwen --profile phi up
-
-# All services
-docker-compose --profile all up
-```
+Add `"include_perf": true` to get queue/compute timing in the response.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details
+MIT
