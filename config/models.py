@@ -36,7 +36,6 @@ class ModelConfig:
     description: str | None = None
     rank: int = 99
     default: bool = False
-    tunnel_id: str | None = None
     hf_repo: str | None = None
     hf_file: str | None = None
     owned_by: str | None = None
@@ -62,13 +61,6 @@ class ModelConfig:
     def internal_url(self) -> str:
         """URL for docker-compose internal networking."""
         return f"http://{self.name}:8000"
-
-    @property
-    def public_url(self) -> str | None:
-        """Public URL via Cloudflare Tunnel."""
-        if self.tunnel_id:
-            return f"https://{self.tunnel_id}.cfargotunnel.com"
-        return None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization and chat backend config."""
@@ -107,7 +99,6 @@ MODELS: dict[str, ModelConfig] = {
     "qwen": ModelConfig(
         name="qwen",
         port=8100,
-        tunnel_id="e962064c-c15b-426a-8f10-8787d4a801af",
         category=ModelCategory.SMALL,
         model_id="qwen3-4b",
         display_name="Qwen3 4B",
@@ -121,7 +112,6 @@ MODELS: dict[str, ModelConfig] = {
     "phi": ModelConfig(
         name="phi",
         port=8101,
-        tunnel_id="f69a59b8-7e30-4275-8760-7839fc8414d1",
         category=ModelCategory.SMALL,
         model_id="phi-4-mini",
         display_name="Phi-4 Mini",
@@ -136,7 +126,6 @@ MODELS: dict[str, ModelConfig] = {
     "functiongemma": ModelConfig(
         name="functiongemma",
         port=8103,
-        tunnel_id="64741385-fe1b-4114-96cf-d60c881093c3",
         category=ModelCategory.SMALL,
         model_id="functiongemma-270m-it",
         display_name="FunctionGemma 270M",
@@ -150,7 +139,6 @@ MODELS: dict[str, ModelConfig] = {
     "smollm3": ModelConfig(
         name="smollm3",
         port=8104,
-        tunnel_id="4922d311-cd56-4421-9f9b-690d974b6a5e",
         category=ModelCategory.SMALL,
         model_id="smollm3-3b",
         display_name="SmolLM3 3B",
@@ -166,7 +154,6 @@ MODELS: dict[str, ModelConfig] = {
     "lfm2": ModelConfig(
         name="lfm2",
         port=8105,
-        tunnel_id="1b213ae7-692d-4719-a67d-282e1b9e4d22",
         category=ModelCategory.SMALL,
         model_id="lfm2.5-1.2b-instruct",
         display_name="LFM2.5 1.2B",
@@ -181,7 +168,6 @@ MODELS: dict[str, ModelConfig] = {
     "dasd": ModelConfig(
         name="dasd",
         port=8106,
-        tunnel_id="d0e212f9-12dd-4c6d-af12-ee17113ea68b",
         category=ModelCategory.SMALL,
         model_id="dasd-4b-thinking",
         display_name="DASD-4B Thinking",
@@ -197,7 +183,6 @@ MODELS: dict[str, ModelConfig] = {
     "agentcpm": ModelConfig(
         name="agentcpm",
         port=8107,
-        tunnel_id="8150bbd6-180d-4e09-a377-de412b7e93e9",
         category=ModelCategory.SMALL,
         model_id="agentcpm-explore-4b",
         display_name="AgentCPM-Explore 4B",
@@ -216,7 +201,6 @@ MODELS: dict[str, ModelConfig] = {
     "gemma": ModelConfig(
         name="gemma",
         port=8200,
-        tunnel_id="880943b4-ffc9-491b-964e-7350cbea3d52",
         category=ModelCategory.MEDIUM,
         model_id="gemma-3-12b-it",
         display_name="Gemma 3 12B",
@@ -231,7 +215,6 @@ MODELS: dict[str, ModelConfig] = {
     "llama": ModelConfig(
         name="llama",
         port=8201,
-        tunnel_id="defebdbb-46c8-4c86-8cfc-492ce5c22d33",
         category=ModelCategory.MEDIUM,
         model_id="llama-3.2-3b",
         display_name="Llama 3.2-3B",
@@ -246,7 +229,6 @@ MODELS: dict[str, ModelConfig] = {
     "mistral": ModelConfig(
         name="mistral",
         port=8202,
-        tunnel_id="88d60f4d-3ef6-490f-bc72-71528f530af5",
         category=ModelCategory.MEDIUM,
         model_id="mistral-7b-instruct-v0.3",
         display_name="Mistral 7B v0.3",
@@ -260,7 +242,6 @@ MODELS: dict[str, ModelConfig] = {
     "rnj": ModelConfig(
         name="rnj",
         port=8203,
-        tunnel_id="a534603f-4b07-49aa-9e9e-ad6526fa6232",
         category=ModelCategory.MEDIUM,
         model_id="rnj-1-instruct",
         display_name="RNJ-1 Instruct",
@@ -279,7 +260,6 @@ MODELS: dict[str, ModelConfig] = {
     "r1qwen": ModelConfig(
         name="r1qwen",
         port=8300,
-        tunnel_id="e251134b-de3c-43cf-ad99-4f5c49cc1c48",
         category=ModelCategory.REASONING,
         model_id="deepseek-r1-distill-qwen-1.5b",
         display_name="DeepSeek R1 1.5B",
@@ -294,7 +274,6 @@ MODELS: dict[str, ModelConfig] = {
     "nanbeige": ModelConfig(
         name="nanbeige",
         port=8301,
-        tunnel_id="476cf4a6-34cc-45b5-939b-e2bae41b6eab",
         category=ModelCategory.REASONING,
         model_id="nanbeige4-3b-thinking",
         display_name="Nanbeige4-3B Thinking",
@@ -311,7 +290,6 @@ MODELS: dict[str, ModelConfig] = {
     "gptoss": ModelConfig(
         name="gptoss",
         port=8303,
-        tunnel_id="cb81911a-a0ea-484a-bb0d-9544619ce00b",
         category=ModelCategory.REASONING,
         model_id="gpt-oss-20b",
         display_name="GPT-OSS 20B",

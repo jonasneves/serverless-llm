@@ -38,7 +38,6 @@ def generate_services_config() -> list[dict]:
             "category": model.category.value,
             "modelId": model.model_id,
             "rank": model.rank,
-            "tunnelId": model.tunnel_id,
         })
     return services
 
