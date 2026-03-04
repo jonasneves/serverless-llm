@@ -96,10 +96,12 @@ jobs:
 
       - name: Setup swap
         run: |
-          sudo fallocate -l 16G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          if [ ! -f /swapfile ]; then
+            sudo fallocate -l 16G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+          fi
           sudo sysctl -w vm.swappiness=1 > /dev/null
           sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
           echo "✓ Swap enabled: 16GB"
