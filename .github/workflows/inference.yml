@@ -1,5 +1,5 @@
 name: Inference
-run-name: "${{ inputs.model }} \u2022 ${{ inputs.duration_hours || '5' }}h"
+run-name: "${{ inputs.model }}"
 'on':
   workflow_dispatch:
     inputs:
@@ -22,11 +22,6 @@ run-name: "${{ inputs.model }} \u2022 ${{ inputs.duration_hours || '5' }}h"
         - r1qwen
         - rnj
         - smollm3
-      duration_hours:
-        description: Duration (max 5.5 hours)
-        required: false
-        default: '5'
-        type: string
 permissions:
   actions: write
   contents: read
@@ -73,15 +68,18 @@ jobs:
   inference:
     name: ${{ needs.lookup.outputs.display_name }}
     needs: lookup
-    uses: ./.github/workflows/reusable-inference-containerized.yml
-    with:
-      model_name: ${{ needs.lookup.outputs.model_name }}
-      model_dir: ${{ needs.lookup.outputs.model_dir }}
-      model_repo: ${{ needs.lookup.outputs.model_repo }}
-      model_file: ${{ needs.lookup.outputs.model_file }}
-      cache_key_prefix: gguf-${{ needs.lookup.outputs.model_name }}
-      workflow_file: inference.yml
-      duration_hours: ${{ inputs.duration_hours || '5' }}
-    secrets:
-      hf_token: ${{ secrets.HF_TOKEN }}
-      tunnel_write_key: ${{ secrets.TUNNEL_WRITE_KEY }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/inference
+        with:
+          model_name: ${{ needs.lookup.outputs.model_name }}
+          model_dir: ${{ needs.lookup.outputs.model_dir }}
+          model_repo: ${{ needs.lookup.outputs.model_repo }}
+          model_file: ${{ needs.lookup.outputs.model_file }}
+          workflow_file: inference.yml
+          duration_hours: '5'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          hf_token: ${{ secrets.HF_TOKEN }}
+          tunnel_write_key: ${{ secrets.TUNNEL_WRITE_KEY }}

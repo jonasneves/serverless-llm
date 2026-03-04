@@ -1,0 +1,283 @@
+name: Run inference server
+description: Starts a containerized inference server with a Cloudflare tunnel
+
+inputs:
+  model_name:
+    required: true
+  model_dir:
+    required: true
+  model_repo:
+    required: true
+  model_file:
+    required: true
+  workflow_file:
+    required: true
+  duration_hours:
+    default: '5'
+  port:
+    default: '8000'
+  github_token:
+    required: true
+  hf_token:
+    required: true
+  tunnel_write_key:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Find previous workflow
+      id: find_previous
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        API_RESPONSE=$(curl -s \
+          -H "Authorization: token $GH_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ inputs.workflow_file }}/runs?status=in_progress")
+
+        PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r \
+          ".workflow_runs[] | select(.id < ${{ github.run_id }} and (.display_title | startswith(\"${{ inputs.model_name }}\"))) | .id" \
+          | head -1)
+
+        if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ]; then
+          echo "previous_run_id=$PREVIOUS_RUN_ID" >> $GITHUB_OUTPUT
+          echo "Found previous run of ${{ inputs.model_name }}: $PREVIOUS_RUN_ID"
+        else
+          echo "previous_run_id=" >> $GITHUB_OUTPUT
+          echo "No previous run of ${{ inputs.model_name }} found"
+        fi
+
+    - name: Read inference config
+      id: config
+      shell: bash
+      run: |
+        MODEL="${{ inputs.model_name }}"
+
+        CONFIG=$(python3 config/models.py "$MODEL")
+
+        N_CTX=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_ctx'])")
+        N_THREADS=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_threads'])")
+        N_BATCH=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_batch'])")
+        MAX_CONCURRENT=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['max_concurrent'])")
+        KV_CACHE_QUANT=$(echo "$CONFIG" | python3 -c "import sys,json; c=json.load(sys.stdin); print('true' if c['kv_cache_quant'] else 'false')")
+
+        echo "n_ctx=$N_CTX" >> $GITHUB_OUTPUT
+        echo "n_threads=$N_THREADS" >> $GITHUB_OUTPUT
+        echo "n_batch=$N_BATCH" >> $GITHUB_OUTPUT
+        echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
+        echo "kv_cache_quant=$KV_CACHE_QUANT" >> $GITHUB_OUTPUT
+
+        echo "✓ Config for $MODEL: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
+
+    - name: Setup swap
+      shell: bash
+      run: |
+        if [ ! -f /swapfile ]; then
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+        fi
+        sudo sysctl -w vm.swappiness=1 > /dev/null
+        sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
+        echo "✓ Swap enabled: 16GB"
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.github_token }}
+
+    - name: Pull inference image
+      shell: bash
+      run: |
+        docker pull "ghcr.io/${{ github.repository_owner }}/lm-arena/${{ inputs.model_dir }}:latest"
+        docker tag "ghcr.io/${{ github.repository_owner }}/lm-arena/${{ inputs.model_dir }}:latest" "${{ inputs.model_name }}-inference:latest"
+        echo "✓ Image pulled and tagged"
+
+    - name: Start inference server
+      shell: bash
+      env:
+        MODEL_REPO: ${{ inputs.model_repo }}
+        MODEL_FILE: ${{ inputs.model_file }}
+        PORT: ${{ inputs.port }}
+        HF_TOKEN: ${{ inputs.hf_token }}
+        N_CTX: ${{ steps.config.outputs.n_ctx }}
+        N_THREADS: ${{ steps.config.outputs.n_threads }}
+        N_BATCH: ${{ steps.config.outputs.n_batch }}
+        MAX_CONCURRENT: ${{ steps.config.outputs.max_concurrent }}
+        KV_CACHE_QUANT: ${{ steps.config.outputs.kv_cache_quant }}
+      run: |
+        docker run -d \
+          --name inference-server \
+          -p ${{ inputs.port }}:${{ inputs.port }} \
+          -e MODEL_NAME="${{ inputs.model_name }}" \
+          -e MODEL_REPO="$MODEL_REPO" \
+          -e MODEL_FILE="$MODEL_FILE" \
+          -e PORT="$PORT" \
+          -e HF_TOKEN="$HF_TOKEN" \
+          -e INSTANCE_ID="1" \
+          -e GITHUB_SHA="${{ github.sha }}" \
+          -e N_CTX="$N_CTX" \
+          -e N_THREADS="$N_THREADS" \
+          -e N_BATCH="$N_BATCH" \
+          -e MAX_CONCURRENT="$MAX_CONCURRENT" \
+          -e KV_CACHE_QUANT="$KV_CACHE_QUANT" \
+          ${{ inputs.model_name }}-inference:latest
+
+        echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
+
+        HEALTHY=false
+        for i in {1..30}; do
+          if ! docker ps | grep -q inference-server; then
+            echo "Container stopped unexpectedly"
+            echo ""
+            echo "=== Full container logs ==="
+            docker logs inference-server 2>&1
+            echo ""
+            echo "=== Container exit code ==="
+            docker inspect inference-server --format='{{.State.ExitCode}}'
+            echo ""
+            echo "=== Memory usage before crash ==="
+            free -h
+            exit 1
+          fi
+
+          RESPONSE=$(curl -s http://localhost:${{ inputs.port }}/health || echo "")
+          if echo "$RESPONSE" | grep -q "healthy"; then
+            echo "Server ready"
+            HEALTHY=true
+            break
+          fi
+
+          echo "Waiting... ($i/30)"
+          sleep 10
+        done
+
+        if [ "$HEALTHY" = "false" ]; then
+          docker logs inference-server
+          exit 1
+        fi
+
+    - name: Start cloudflared
+      id: cloudflared
+      shell: bash
+      env:
+        TUNNEL_WRITE_KEY: ${{ inputs.tunnel_write_key }}
+      run: |
+        curl -fsSL -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
+        sudo dpkg -i cloudflared.deb
+        cloudflared tunnel --no-autoupdate --url http://localhost:${{ inputs.port }} > /tmp/cloudflared.log 2>&1 &
+
+        TUNNEL_URL=""
+        for i in {1..30}; do
+          TUNNEL_URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/cloudflared.log | head -1)
+          [ -n "$TUNNEL_URL" ] && break
+          sleep 2
+        done
+
+        if [ -z "$TUNNEL_URL" ]; then
+          echo "❌ Failed to get tunnel URL"
+          cat /tmp/cloudflared.log
+          exit 1
+        fi
+
+        echo "::add-mask::$TUNNEL_URL"
+        echo "tunnel_url=$TUNNEL_URL" >> $GITHUB_OUTPUT
+        echo "✓ Tunnel ready: $TUNNEL_URL"
+
+        curl -fsSL -X PUT \
+          -H "Authorization: Bearer $TUNNEL_WRITE_KEY" \
+          -H "Content-Type: application/json" \
+          -d "{\"url\": \"$TUNNEL_URL\"}" \
+          "https://tunnel-registry.jonasneves.workers.dev/tunnel/${{ inputs.model_name }}"
+        echo "✓ Registered tunnel for ${{ inputs.model_name }}"
+
+    - name: Cancel previous workflow
+      if: steps.find_previous.outputs.previous_run_id != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        curl -s -X POST \
+          -H "Authorization: token $GH_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ steps.find_previous.outputs.previous_run_id }}/cancel"
+
+        echo "Graceful handoff: waiting 60s for previous instance to shutdown"
+        sleep 60
+
+    - name: Monitor
+      shell: bash
+      env:
+        PORT: ${{ inputs.port }}
+        TUNNEL_WRITE_KEY: ${{ inputs.tunnel_write_key }}
+        MODEL_NAME: ${{ inputs.model_name }}
+      run: |
+        REGISTRY="https://tunnel-registry.jonasneves.workers.dev"
+
+        register_tunnel() {
+          local url
+          for i in {1..15}; do
+            url=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/cloudflared.log | tail -1)
+            [ -n "$url" ] && break
+            sleep 2
+          done
+          [ -z "$url" ] && return
+          curl -fsSL -X PUT \
+            -H "Authorization: Bearer $TUNNEL_WRITE_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"url\": \"$url\"}" \
+            "$REGISTRY/tunnel/$MODEL_NAME" > /dev/null || true
+          echo "✓ Re-registered tunnel: $url"
+        }
+
+        cleanup() {
+          curl -fsSL -X DELETE \
+            -H "Authorization: Bearer $TUNNEL_WRITE_KEY" \
+            "$REGISTRY/tunnel/$MODEL_NAME" > /dev/null || true
+          docker stop inference-server 2>/dev/null || true
+          docker rm inference-server 2>/dev/null || true
+          pkill cloudflared 2>/dev/null || true
+          exit 0
+        }
+        trap cleanup SIGTERM SIGINT
+
+        DURATION_HOURS="${{ inputs.duration_hours }}"
+        DURATION=$(awk "BEGIN {printf \"%.0f\", $DURATION_HOURS * 3600}")
+        START_TIME=$(date +%s)
+
+        echo "Duration: ${DURATION_HOURS}h"
+
+        while true; do
+          ELAPSED=$(($(date +%s) - START_TIME))
+          REMAINING=$((DURATION - ELAPSED))
+
+          SERVER_STATUS=$(docker inspect -f '{{.State.Status}}' inference-server 2>/dev/null || echo "stopped")
+          TUNNEL_STATUS=$(pgrep -x cloudflared > /dev/null 2>&1 && echo "running" || echo "stopped")
+
+          printf "[%s] Server: %s | Tunnel: %s | %dm elapsed | %dm remaining\n" \
+            "$(date '+%H:%M:%S')" "$SERVER_STATUS" "$TUNNEL_STATUS" "$((ELAPSED/60))" "$((REMAINING/60))"
+
+          [ "$SERVER_STATUS" != "running" ] && docker start inference-server
+          if [ "$TUNNEL_STATUS" != "running" ]; then
+            > /tmp/cloudflared.log
+            cloudflared tunnel --no-autoupdate --url http://localhost:$PORT >> /tmp/cloudflared.log 2>&1 &
+            register_tunnel
+          fi
+
+          [ "$ELAPSED" -gt "$DURATION" ] && break
+          sleep 30
+        done
+
+        cleanup
+
+    - name: Show logs on failure
+      if: failure()
+      shell: bash
+      run: |
+        docker logs inference-server 2>&1 | tail -100
+        cat /tmp/cloudflared.log 2>/dev/null | tail -50
