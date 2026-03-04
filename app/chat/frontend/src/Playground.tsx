@@ -59,6 +59,7 @@ function PlaygroundInner() {
     loadError: modelsLoadError,
     retryNow: retryModelsNow,
     getModelEndpoints,
+    onlineModelIds,
   } = useModelsManager();
 
   const [mode, setMode] = usePersistedSetting<Mode>(
@@ -1222,6 +1223,7 @@ function PlaygroundInner() {
                     uiBuilderEnabled={uiBuilderEnabled}
                     setUiBuilderEnabled={setUiBuilderEnabled}
                     getModelEndpoints={getModelEndpoints}
+                    onlineModelIds={onlineModelIds}
                   />
                 </Suspense>
               </ErrorBoundary>

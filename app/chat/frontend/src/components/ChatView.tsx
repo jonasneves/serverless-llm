@@ -42,6 +42,7 @@ interface ChatViewProps {
     uiBuilderEnabled: boolean;
     setUiBuilderEnabled: React.Dispatch<React.SetStateAction<boolean>>;
     getModelEndpoints: (models: Model[]) => Record<string, string>;
+    onlineModelIds?: Set<string>;
 }
 
 interface ChatMessageItemProps {
@@ -129,6 +130,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
     uiBuilderEnabled,
     setUiBuilderEnabled,
     getModelEndpoints,
+    onlineModelIds,
 }, ref) => {
     const [inputFocused, setInputFocused] = useState(false);
     const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
@@ -409,6 +411,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                                 githubToken={githubToken}
                                 onConnectGitHub={onConnectGitHub}
                                 dropDirection="down"
+                                onlineModelIds={onlineModelIds}
                             />
                         </div>
                     )}

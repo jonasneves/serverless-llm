@@ -167,6 +167,16 @@ export function useModelsManager() {
     return endpoints;
   }, [tunnelUrls]);
 
+  const onlineModelIds = useMemo(() => {
+    const isDev = window.location.hostname === 'localhost';
+    if (isDev) return new Set(modelsData.filter(m => m.type === 'self-hosted').map(m => m.id));
+    const online = new Set<string>();
+    for (const service of SERVICES) {
+      if (tunnelUrls[service.key]) online.add(service.modelId);
+    }
+    return online;
+  }, [tunnelUrls, modelsData]);
+
   return {
     modelsData,
     setModelsData,
@@ -184,5 +194,6 @@ export function useModelsManager() {
     loadError,
     retryNow,
     getModelEndpoints,
+    onlineModelIds,
   };
 }

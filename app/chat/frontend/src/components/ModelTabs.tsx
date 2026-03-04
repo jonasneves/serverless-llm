@@ -10,11 +10,12 @@ interface ModelTabsProps {
     githubToken?: string;
     onConnectGitHub?: () => void;
     dropDirection?: 'up' | 'down';
+    onlineModelIds?: Set<string>;
 }
 
 type ExpandedDropdown = 'self-hosted' | 'github' | null;
 
-export default function ModelTabs({ models, selectedModels, onToggleModel, isGenerating, githubToken, onConnectGitHub, dropDirection = 'up' }: ModelTabsProps) {
+export default function ModelTabs({ models, selectedModels, onToggleModel, isGenerating, githubToken, onConnectGitHub, dropDirection = 'up', onlineModelIds }: ModelTabsProps) {
     const [expandedDropdown, setExpandedDropdown] = useState<ExpandedDropdown>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -32,7 +33,8 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
         [apiModels, searchQuery]
     );
 
-    const selectedLocalCount = localModels.filter(m => selectedModels.has(m.id)).length;
+    const onlineLocalModels = onlineModelIds ? localModels.filter(m => onlineModelIds.has(m.id)) : localModels;
+    const selectedLocalCount = onlineLocalModels.filter(m => selectedModels.has(m.id)).length;
     const selectedApiCount = apiModels.filter(m => selectedModels.has(m.id)).length;
 
     useEffect(() => {
@@ -68,9 +70,12 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
         }
     };
 
-    const toggleAllInCategory = (categoryModels: Model[]) => {
-        const allSelected = categoryModels.every(m => selectedModels.has(m.id));
-        categoryModels.forEach(m => {
+    const toggleAllInCategory = (categoryModels: Model[], type: 'self-hosted' | 'github') => {
+        const selectable = type === 'self-hosted' && onlineModelIds
+            ? categoryModels.filter(m => onlineModelIds.has(m.id))
+            : categoryModels;
+        const allSelected = selectable.every(m => selectedModels.has(m.id));
+        selectable.forEach(m => {
             if (allSelected || !selectedModels.has(m.id)) {
                 onToggleModel(m.id);
             }
@@ -141,7 +146,7 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                                 allModels={apiModels}
                                 selectedModels={selectedModels}
                                 onToggleModel={onToggleModel}
-                                onToggleAll={() => toggleAllInCategory(apiModels)}
+                                onToggleAll={() => toggleAllInCategory(apiModels, 'github')}
                                 searchQuery={searchQuery}
                                 setSearchQuery={setSearchQuery}
                                 searchInputRef={searchInputRef}
@@ -170,7 +175,7 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                             <span>{getGroupName('self-hosted')}</span>
                             <span className={`px-1.5 py-0.5 rounded text-[10px] leading-none ${selectedLocalCount > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                                {selectedLocalCount}/{localModels.length}
+                                {selectedLocalCount}/{onlineLocalModels.length}
                             </span>
                             <ChevronIcon size={10} className={`shrink-0 opacity-50 transition-transform ${chevronRotation(expandedDropdown === 'self-hosted')}`} />
                         </button>
@@ -181,13 +186,14 @@ export default function ModelTabs({ models, selectedModels, onToggleModel, isGen
                                 allModels={localModels}
                                 selectedModels={selectedModels}
                                 onToggleModel={onToggleModel}
-                                onToggleAll={() => toggleAllInCategory(localModels)}
+                                onToggleAll={() => toggleAllInCategory(localModels, 'self-hosted')}
                                 searchQuery={searchQuery}
                                 setSearchQuery={setSearchQuery}
                                 searchInputRef={searchInputRef}
                                 color="emerald"
                                 showSearch={localModels.length > 5}
                                 direction={dropDirection}
+                                onlineModelIds={onlineModelIds}
                             />
                         )}
                     </div>
@@ -212,6 +218,7 @@ function ModelDropdown({
     color,
     showSearch,
     direction,
+    onlineModelIds,
 }: {
     models: Model[];
     allModels: Model[];
@@ -224,8 +231,10 @@ function ModelDropdown({
     color: 'emerald' | 'blue';
     showSearch: boolean;
     direction: 'up' | 'down';
+    onlineModelIds?: Set<string>;
 }) {
-    const allSelected = allModels.length > 0 && allModels.every(m => selectedModels.has(m.id));
+    const selectableModels = onlineModelIds ? allModels.filter(m => onlineModelIds.has(m.id)) : allModels;
+    const allSelected = selectableModels.length > 0 && selectableModels.every(m => selectedModels.has(m.id));
     const colorClasses = {
         emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', check: 'text-emerald-400', dot: 'bg-emerald-500/50', border: 'focus:border-emerald-500/50' },
         blue: { bg: 'bg-blue-500/20', text: 'text-blue-300', check: 'text-blue-400', dot: 'bg-blue-500/50', border: 'focus:border-blue-500/50' },
@@ -288,22 +297,26 @@ function ModelDropdown({
             >
                 {models.map(model => {
                     const isSelected = selectedModels.has(model.id);
+                    const isOffline = onlineModelIds != null && !onlineModelIds.has(model.id);
 
                     return (
                         <button
                             key={model.id}
-                            onClick={() => onToggleModel(model.id)}
+                            onClick={() => !isOffline && onToggleModel(model.id)}
+                            disabled={isOffline}
                             className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${
-                                isSelected
-                                    ? `${colorClasses.bg} text-slate-200`
-                                    : 'text-slate-300 hover:bg-slate-700/50'
+                                isOffline
+                                    ? 'text-slate-600 cursor-not-allowed'
+                                    : isSelected
+                                        ? `${colorClasses.bg} text-slate-200`
+                                        : 'text-slate-300 hover:bg-slate-700/50'
                             }`}
                         >
                             <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${colorClasses.dot}`} />
+                                <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-slate-700' : colorClasses.dot}`} />
                                 <span>{model.name}</span>
                             </div>
-                            {isSelected && <span className={colorClasses.check}>✓</span>}
+                            {isSelected && !isOffline && <span className={colorClasses.check}>✓</span>}
                         </button>
                     );
                 })}
