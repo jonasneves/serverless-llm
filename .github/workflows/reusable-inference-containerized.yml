@@ -94,50 +94,15 @@ jobs:
 
           echo "✓ Config for $MODEL: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
 
-      - name: Move Docker data to /mnt
+      - name: Setup swap
         run: |
-          echo "=== Available storage ==="
-          df -h / /mnt
-          
-          # Stop Docker
-          sudo systemctl stop docker
-          
-          # Move Docker data directory to /mnt (has ~66GB free)
-          sudo mkdir -p /mnt/docker
-          sudo rsync -aP /var/lib/docker/ /mnt/docker/ || true
-          sudo rm -rf /var/lib/docker
-          sudo ln -s /mnt/docker /var/lib/docker
-          
-          # Restart Docker
-          sudo systemctl start docker
-          
-          echo "✓ Docker configured to use /mnt"
-
-      - name: Setup environment (parallel)
-        run: |
-          # Run swap setup in background
-          (
-            sudo fallocate -l 16G /swapfile
-            sudo chmod 600 /swapfile
-            sudo mkswap /swapfile
-            sudo swapon /swapfile
-            sudo sysctl -w vm.swappiness=1 > /dev/null
-            sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
-            echo "✓ Swap enabled: 16GB"
-          ) &
-          SWAP_PID=$!
-          
-          # Setup cache directory in background
-          (
-            sudo mkdir -p /mnt/huggingface-cache
-            sudo chown -R 10000:10000 /mnt/huggingface-cache
-            echo "✓ Cache directory ready"
-          ) &
-          CACHE_PID=$!
-          
-          # Wait for both
-          wait $SWAP_PID $CACHE_PID
-          echo "✓ Environment setup complete"
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          sudo sysctl -w vm.swappiness=1 > /dev/null
+          sudo sysctl -w vm.vfs_cache_pressure=50 > /dev/null
+          echo "✓ Swap enabled: 16GB"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -173,7 +138,6 @@ jobs:
             -e MODEL_FILE="$MODEL_FILE" \
             -e PORT="$PORT" \
             -e HF_TOKEN="$HF_TOKEN" \
-            -e HF_HOME=/app/.cache/huggingface \
             -e INSTANCE_ID="1" \
             -e GITHUB_SHA="${{ github.sha }}" \
             -e N_CTX="$N_CTX" \
@@ -181,7 +145,6 @@ jobs:
             -e N_BATCH="$N_BATCH" \
             -e MAX_CONCURRENT="$MAX_CONCURRENT" \
             -e KV_CACHE_QUANT="$KV_CACHE_QUANT" \
-            -v /mnt/huggingface-cache:/app/.cache/huggingface \
             ${{ inputs.model_name }}-inference:latest
 
           echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
