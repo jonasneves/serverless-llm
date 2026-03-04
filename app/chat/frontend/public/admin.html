@@ -49,6 +49,32 @@
     .header-sep   { flex: 1; }
     #user-area    { display: flex; align-items: center; gap: 10px; }
 
+    /* ── Write key input ── */
+    .write-key-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .write-key-wrap input {
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      width: 160px;
+    }
+    .write-key-wrap input:focus { outline: none; border-color: var(--accent); }
+    .write-key-wrap input::placeholder { color: var(--text-secondary); }
+    .key-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .key-indicator.set { background: var(--success); }
+
     /* ── Main ── */
     main {
       flex: 1;
@@ -136,6 +162,7 @@
     }
     .status-dot.running  { background: var(--success); box-shadow: 0 0 6px rgba(63,185,80,.5); }
     .status-dot.starting { background: var(--warning); animation: pulse 1.2s ease-in-out infinite; }
+    .status-dot.stopping { background: var(--danger); animation: pulse 1.2s ease-in-out infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 
     .model-info  { flex: 1; min-width: 0; }
@@ -186,7 +213,9 @@
 <script>
   const REPO     = 'jonasneves/lm-arena';
   const API      = 'https://api.github.com';
-  const AUTH_KEY = 'github_auth'; // shared with main app (usePersistedSetting)
+  const REGISTRY = 'https://tunnel-registry.jonasneves.workers.dev';
+  const AUTH_KEY      = 'github_auth';      // shared with main app
+  const WRITE_KEY_KEY = 'tunnel_write_key';
 
   const MODELS = [
     { key: 'nanbeige',      name: 'Nanbeige4.1-3B' },
@@ -212,9 +241,11 @@
   const $footer = document.getElementById('footer');
   const $uarea  = document.getElementById('user-area');
 
-  let token    = null;
-  let runMap   = {};    // model key → run id
-  let pending  = new Set();
+  let token     = null;
+  let writeKey  = null;
+  let tunnelMap = {};   // model key → url (truthy = running)
+  let pending   = new Set();
+  let stopping  = new Set();
   let pollTimer = null;
 
   function setChrome(visible) {
@@ -231,22 +262,48 @@
       const stored = localStorage.getItem(AUTH_KEY);
       if (stored) token = JSON.parse(stored).token;
     } catch {}
+    writeKey = localStorage.getItem(WRITE_KEY_KEY) || null;
 
     if (token) {
       setChrome(true);
-      $uarea.innerHTML = `<button class="btn-ghost" onclick="signOut()">Sign out</button>`;
-      loadRuns();
+      renderUserArea();
+      loadStatus();
     } else {
       renderNotLoggedIn();
     }
+  }
+
+  function renderUserArea() {
+    $uarea.innerHTML = `
+      <div class="write-key-wrap">
+        <div class="key-indicator${writeKey ? ' set' : ''}" id="key-dot" title="${writeKey ? 'Write key set' : 'Write key not set'}"></div>
+        <input
+          id="write-key-input"
+          type="password"
+          placeholder="Tunnel write key"
+          value="${writeKey || ''}"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <button class="btn-ghost" onclick="signOut()">Sign out</button>`;
+
+    document.getElementById('write-key-input').addEventListener('change', e => {
+      writeKey = e.target.value.trim() || null;
+      if (writeKey) localStorage.setItem(WRITE_KEY_KEY, writeKey);
+      else localStorage.removeItem(WRITE_KEY_KEY);
+      document.getElementById('key-dot').className = 'key-indicator' + (writeKey ? ' set' : '');
+    });
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────
 
   function signOut() {
     token = null;
-    runMap = {};
+    writeKey = null;
+    tunnelMap = {};
     pending.clear();
+    stopping.clear();
     clearInterval(pollTimer);
     setChrome(false);
     renderNotLoggedIn();
@@ -268,35 +325,34 @@
     return res;
   }
 
-  async function fetchRuns() {
-    const res = await ghFetch(
-      `/repos/${REPO}/actions/workflows/inference.yml/runs?status=in_progress&per_page=100`
-    );
+  async function fetchTunnels() {
+    const res = await fetch(`${REGISTRY}/tunnels`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const map = {};
-    for (const run of data.workflow_runs) {
-      // run-name is set to the model key in inference.yml
-      map[run.display_title] = run.id;
-    }
-    return map;
+    return res.json(); // { model: url }
   }
 
-  async function loadRuns() {
+  async function loadStatus() {
     renderLoading('Loading…');
     try {
-      runMap = await fetchRuns();
+      tunnelMap = await fetchTunnels();
       renderModels();
       schedulePoll();
     } catch (e) {
-      if (e.message !== 'Unauthorized')
-        showToast('Failed to load runs: ' + e.message, 'error');
+      showToast('Failed to load status: ' + e.message, 'error');
     }
   }
 
-  async function refreshRuns() {
+  async function refreshStatus() {
     try {
-      runMap = await fetchRuns();
+      tunnelMap = await fetchTunnels();
+      // Clear pending for models that are now running
+      for (const key of [...pending]) {
+        if (tunnelMap[key]) pending.delete(key);
+      }
+      // Clear stopping for models that are now stopped
+      for (const key of [...stopping]) {
+        if (!tunnelMap[key]) stopping.delete(key);
+      }
       renderModels();
     } catch {}
   }
@@ -315,54 +371,94 @@
       );
       if (!res.ok) throw new Error('HTTP ' + res.status);
       showToast(`Started ${key}`);
-      setTimeout(refreshRuns, 4000);
-      setTimeout(refreshRuns, 10000);
+      // Poll more frequently while starting
+      setTimeout(refreshStatus, 5000);
+      setTimeout(refreshStatus, 15000);
+      setTimeout(refreshStatus, 30000);
     } catch (e) {
       if (e.message !== 'Unauthorized')
         showToast(`Failed to start ${key}: ` + e.message, 'error');
-    } finally {
       pending.delete(key);
       renderModels();
     }
   }
 
   async function stopModel(key) {
-    const runId = runMap[key];
-    if (!runId) return;
-    pending.add(key);
+    if (!writeKey) {
+      showToast('Set the tunnel write key first', 'error');
+      return;
+    }
+    stopping.add(key);
     renderModels();
     try {
-      const res = await ghFetch(`/repos/${REPO}/actions/runs/${runId}/cancel`, { method: 'POST' });
-      if (!res.ok && res.status !== 409) throw new Error('HTTP ' + res.status);
-      delete runMap[key];
-      showToast(`Stopped ${key}`);
+      // Send stop signal (runner picks up within 30s)
+      // Also delete tunnel immediately so status updates now
+      await Promise.all([
+        fetch(`${REGISTRY}/signal/${key}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${writeKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ signal: 'stop' }),
+        }),
+        fetch(`${REGISTRY}/tunnel/${key}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${writeKey}` },
+        }),
+      ]);
+      delete tunnelMap[key];
+      showToast(`Stopping ${key}…`);
     } catch (e) {
-      if (e.message !== 'Unauthorized')
-        showToast(`Failed to stop ${key}: ` + e.message, 'error');
+      showToast(`Failed to stop ${key}: ` + e.message, 'error');
     } finally {
-      pending.delete(key);
+      stopping.delete(key);
       renderModels();
     }
   }
 
   async function startAll() {
-    for (const m of MODELS) {
-      if (!runMap[m.key] && !pending.has(m.key)) {
-        await startModel(m.key);
-        await new Promise(r => setTimeout(r, 400));
+    pending.add('__all__');
+    renderModels();
+    try {
+      const res = await ghFetch(
+        `/repos/${REPO}/actions/workflows/inference-all.yml/dispatches`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref: 'main' }),
+        }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      // Mark all non-running models as pending
+      for (const m of MODELS) {
+        if (!tunnelMap[m.key]) pending.add(m.key);
       }
+      showToast('Starting all models…');
+      setTimeout(refreshStatus, 10000);
+      setTimeout(refreshStatus, 30000);
+    } catch (e) {
+      if (e.message !== 'Unauthorized')
+        showToast('Failed to start all: ' + e.message, 'error');
+    } finally {
+      pending.delete('__all__');
+      renderModels();
     }
   }
 
   async function stopAll() {
+    if (!writeKey) {
+      showToast('Set the tunnel write key first', 'error');
+      return;
+    }
     await Promise.all(
-      MODELS.filter(m => runMap[m.key]).map(m => stopModel(m.key))
+      MODELS.filter(m => tunnelMap[m.key]).map(m => stopModel(m.key))
     );
   }
 
   function schedulePoll() {
     clearInterval(pollTimer);
-    pollTimer = setInterval(refreshRuns, 30000);
+    pollTimer = setInterval(refreshStatus, 30000);
   }
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -384,16 +480,21 @@
   }
 
   function renderModels() {
-    const runningCount = MODELS.filter(m => runMap[m.key]).length;
+    const runningCount = MODELS.filter(m => tunnelMap[m.key]).length;
 
     const cards = MODELS.map(m => {
-      const isRunning = !!runMap[m.key];
-      const isPending = pending.has(m.key);
-      const dotClass  = isPending ? 'starting' : isRunning ? 'running' : '';
-      const statusText = isPending ? 'pending…' : isRunning ? 'running' : '';
+      const isRunning  = !!tunnelMap[m.key];
+      const isPending  = pending.has(m.key);
+      const isStopping = stopping.has(m.key);
+
+      let dotClass, statusText;
+      if (isStopping)    { dotClass = 'stopping'; statusText = 'stopping…'; }
+      else if (isPending) { dotClass = 'starting'; statusText = 'starting…'; }
+      else if (isRunning) { dotClass = 'running';  statusText = 'running'; }
+      else                { dotClass = '';          statusText = ''; }
 
       let btn;
-      if (isPending) {
+      if (isStopping || isPending) {
         btn = `<button class="btn-ghost" disabled>…</button>`;
       } else if (isRunning) {
         btn = `<button class="btn-danger" onclick="stopModel('${m.key}')">Stop</button>`;
@@ -420,7 +521,7 @@
           <span class="run-count">${runningCount} / ${MODELS.length} running</span>
         </div>
         <div class="controls-right">
-          <button class="btn-secondary" onclick="refreshRuns()">Refresh</button>
+          <button class="btn-secondary" onclick="refreshStatus()">Refresh</button>
           <button class="btn-secondary" onclick="stopAll()">Stop all</button>
           <button class="btn-primary" onclick="startAll()">Start all</button>
         </div>

@@ -1,0 +1,43 @@
+name: Inference (all models)
+run-name: "all models"
+'on':
+  workflow_dispatch: {}
+permissions:
+  actions: write
+  contents: read
+  packages: read
+jobs:
+  inference:
+    name: "${{ matrix.model }}"
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - agentcpm
+          - dasd
+          - functiongemma
+          - gemma
+          - gptoss
+          - jancode
+          - lfm2
+          - lfm2thinking
+          - llama
+          - mistral
+          - nanbeige
+          - phi
+          - qwen
+          - r1qwen
+          - rnj
+          - smollm3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/inference
+        with:
+          model_name: ${{ matrix.model }}
+          workflow_file: inference.yml
+          duration_hours: '5'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          hf_token: ${{ secrets.HF_TOKEN }}
+          tunnel_write_key: ${{ secrets.TUNNEL_WRITE_KEY }}

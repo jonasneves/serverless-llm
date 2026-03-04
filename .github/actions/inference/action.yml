@@ -4,12 +4,6 @@ description: Starts a containerized inference server with a Cloudflare tunnel
 inputs:
   model_name:
     required: true
-  model_dir:
-    required: true
-  model_repo:
-    required: true
-  model_file:
-    required: true
   workflow_file:
     required: true
   duration_hours:
@@ -57,19 +51,25 @@ runs:
 
         CONFIG=$(python3 config/models.py "$MODEL")
 
+        MODEL_DIR=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_dir'])")
+        MODEL_REPO=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_repo'])")
+        MODEL_FILE=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_file'])")
         N_CTX=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_ctx'])")
         N_THREADS=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_threads'])")
         N_BATCH=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_batch'])")
         MAX_CONCURRENT=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['max_concurrent'])")
         KV_CACHE_QUANT=$(echo "$CONFIG" | python3 -c "import sys,json; c=json.load(sys.stdin); print('true' if c['kv_cache_quant'] else 'false')")
 
+        echo "model_dir=$MODEL_DIR" >> $GITHUB_OUTPUT
+        echo "model_repo=$MODEL_REPO" >> $GITHUB_OUTPUT
+        echo "model_file=$MODEL_FILE" >> $GITHUB_OUTPUT
         echo "n_ctx=$N_CTX" >> $GITHUB_OUTPUT
         echo "n_threads=$N_THREADS" >> $GITHUB_OUTPUT
         echo "n_batch=$N_BATCH" >> $GITHUB_OUTPUT
         echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
         echo "kv_cache_quant=$KV_CACHE_QUANT" >> $GITHUB_OUTPUT
 
-        echo "✓ Config for $MODEL: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
+        echo "✓ Config for $MODEL: dir=$MODEL_DIR, n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
 
     - name: Setup swap
       shell: bash
@@ -94,15 +94,15 @@ runs:
     - name: Pull inference image
       shell: bash
       run: |
-        docker pull "ghcr.io/${{ github.repository_owner }}/lm-arena/${{ inputs.model_dir }}:latest"
-        docker tag "ghcr.io/${{ github.repository_owner }}/lm-arena/${{ inputs.model_dir }}:latest" "${{ inputs.model_name }}-inference:latest"
+        docker pull "ghcr.io/${{ github.repository_owner }}/lm-arena/${{ steps.config.outputs.model_dir }}:latest"
+        docker tag "ghcr.io/${{ github.repository_owner }}/lm-arena/${{ steps.config.outputs.model_dir }}:latest" "${{ inputs.model_name }}-inference:latest"
         echo "✓ Image pulled and tagged"
 
     - name: Start inference server
       shell: bash
       env:
-        MODEL_REPO: ${{ inputs.model_repo }}
-        MODEL_FILE: ${{ inputs.model_file }}
+        MODEL_REPO: ${{ steps.config.outputs.model_repo }}
+        MODEL_FILE: ${{ steps.config.outputs.model_file }}
         PORT: ${{ inputs.port }}
         HF_TOKEN: ${{ inputs.hf_token }}
         N_CTX: ${{ steps.config.outputs.n_ctx }}
@@ -215,7 +215,9 @@ runs:
       env:
         PORT: ${{ inputs.port }}
         TUNNEL_WRITE_KEY: ${{ inputs.tunnel_write_key }}
+        GH_TOKEN: ${{ inputs.github_token }}
         MODEL_NAME: ${{ inputs.model_name }}
+        WORKFLOW_FILE: ${{ inputs.workflow_file }}
       run: |
         REGISTRY="https://tunnel-registry.jonasneves.workers.dev"
 
@@ -246,6 +248,23 @@ runs:
         }
         trap cleanup SIGTERM SIGINT
 
+        dispatch_restart() {
+          # Clear signal before dispatching to avoid restart loop
+          curl -fsSL -X PUT \
+            -H "Authorization: Bearer $TUNNEL_WRITE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"signal": null}' \
+            "$REGISTRY/signal/$MODEL_NAME" > /dev/null || true
+
+          curl -fsSL -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            -d "{\"ref\": \"main\", \"inputs\": {\"model\": \"$MODEL_NAME\"}}" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/inference.yml/dispatches" > /dev/null || true
+          echo "✓ Restart dispatched for $MODEL_NAME"
+        }
+
         DURATION_HOURS="${{ inputs.duration_hours }}"
         DURATION=$(awk "BEGIN {printf \"%.0f\", $DURATION_HOURS * 3600}")
         START_TIME=$(date +%s)
@@ -255,6 +274,17 @@ runs:
         while true; do
           ELAPSED=$(($(date +%s) - START_TIME))
           REMAINING=$((DURATION - ELAPSED))
+
+          # Check for control signal
+          SIGNAL=$(curl -sf "$REGISTRY/tunnel/$MODEL_NAME" | jq -r '.signal // empty' 2>/dev/null || echo "")
+          if [ "$SIGNAL" = "stop" ]; then
+            echo "Stop signal received — shutting down"
+            cleanup
+          elif [ "$SIGNAL" = "restart" ]; then
+            echo "Restart signal received — re-dispatching"
+            dispatch_restart
+            cleanup
+          fi
 
           SERVER_STATUS=$(docker inspect -f '{{.State.Status}}' inference-server 2>/dev/null || echo "stopped")
           TUNNEL_STATUS=$(pgrep -x cloudflared > /dev/null 2>&1 && echo "running" || echo "stopped")

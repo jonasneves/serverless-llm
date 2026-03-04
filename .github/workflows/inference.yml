@@ -29,57 +29,15 @@ permissions:
   contents: read
   packages: read
 jobs:
-  lookup:
-    name: Lookup model config
-    runs-on: ubuntu-24.04-arm
-    outputs:
-      model_name: ${{ steps.config.outputs.model_name }}
-      model_dir: ${{ steps.config.outputs.model_dir }}
-      model_repo: ${{ steps.config.outputs.model_repo }}
-      model_file: ${{ steps.config.outputs.model_file }}
-      display_name: ${{ steps.config.outputs.display_name }}
-    steps:
-    - uses: actions/checkout@v4
-    - name: Read model config
-      id: config
-      run: |
-        MODEL="${{ github.event.client_payload.model || inputs.model }}"
-
-        # Read config from Python (single source of truth)
-        CONFIG=$(python3 config/models.py "$MODEL")
-        if [ $? -ne 0 ]; then
-          echo "Error: Model '$MODEL' not found in config/models.py"
-          exit 1
-        fi
-
-        # Parse JSON output
-        MODEL_DIR=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_dir'])")
-        MODEL_REPO=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_repo'])")
-        MODEL_FILE=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['model_file'])")
-        DISPLAY_NAME=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['display_name'])")
-
-        echo "model_name=$MODEL" >> $GITHUB_OUTPUT
-        echo "model_dir=$MODEL_DIR" >> $GITHUB_OUTPUT
-        echo "model_repo=$MODEL_REPO" >> $GITHUB_OUTPUT
-        echo "model_file=$MODEL_FILE" >> $GITHUB_OUTPUT
-        echo "display_name=$DISPLAY_NAME" >> $GITHUB_OUTPUT
-
-        echo "Model: $DISPLAY_NAME"
-        echo "Repo: $MODEL_REPO"
-        echo "File: $MODEL_FILE"
   inference:
-    name: ${{ needs.lookup.outputs.display_name }}
-    needs: lookup
+    name: "${{ inputs.model }}"
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/inference
         with:
-          model_name: ${{ needs.lookup.outputs.model_name }}
-          model_dir: ${{ needs.lookup.outputs.model_dir }}
-          model_repo: ${{ needs.lookup.outputs.model_repo }}
-          model_file: ${{ needs.lookup.outputs.model_file }}
+          model_name: ${{ inputs.model }}
           workflow_file: inference.yml
           duration_hours: '5'
           github_token: ${{ secrets.GITHUB_TOKEN }}
