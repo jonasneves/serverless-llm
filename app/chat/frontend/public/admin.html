@@ -70,31 +70,6 @@
     .signin-wrap h1 { font-size: 24px; font-weight: 600; }
     .signin-wrap p  { font-size: 13px; color: var(--text-secondary); }
 
-    .token-form {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-      max-width: 400px;
-    }
-    .token-input {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      padding: 8px 12px;
-      outline: none;
-    }
-    .token-input:focus { border-color: var(--accent); }
-    .token-input::placeholder { color: var(--text-secondary); }
-
-    .hint { font-size: 11.5px; color: var(--text-secondary); }
-    .hint a { color: var(--accent-hover); }
-    .mono { font-family: var(--font-mono); font-size: 11px;
-      background: var(--surface-raised); padding: 1px 5px; border-radius: 3px; }
-
     /* ── Loading ── */
     .state-wrap {
       display: flex;
@@ -211,7 +186,7 @@
 <script>
   const REPO     = 'jonasneves/lm-arena';
   const API      = 'https://api.github.com';
-  const AUTH_KEY = 'lm-arena-admin-token';
+  const AUTH_KEY = 'github_auth'; // shared with main app (usePersistedSetting)
 
   const MODELS = [
     { key: 'nanbeige',      name: 'Nanbeige4.1-3B' },
@@ -252,36 +227,29 @@
   // ── Init ──────────────────────────────────────────────────────────────
 
   function init() {
-    token = localStorage.getItem(AUTH_KEY);
+    try {
+      const stored = localStorage.getItem(AUTH_KEY);
+      if (stored) token = JSON.parse(stored).token;
+    } catch {}
+
     if (token) {
       setChrome(true);
       $uarea.innerHTML = `<button class="btn-ghost" onclick="signOut()">Sign out</button>`;
       loadRuns();
     } else {
-      renderSignIn();
+      renderNotLoggedIn();
     }
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────
 
-  function signIn() {
-    const val = document.getElementById('token-input').value.trim();
-    if (!val) return;
-    token = val;
-    localStorage.setItem(AUTH_KEY, token);
-    setChrome(true);
-    $uarea.innerHTML = `<button class="btn-ghost" onclick="signOut()">Sign out</button>`;
-    loadRuns();
-  }
-
   function signOut() {
-    localStorage.removeItem(AUTH_KEY);
     token = null;
     runMap = {};
     pending.clear();
     clearInterval(pollTimer);
     setChrome(false);
-    renderSignIn();
+    renderNotLoggedIn();
   }
 
   // ── API ───────────────────────────────────────────────────────────────
@@ -399,23 +367,12 @@
 
   // ── Render ────────────────────────────────────────────────────────────
 
-  function renderSignIn() {
+  function renderNotLoggedIn() {
     $main.innerHTML = `
       <div class="signin-wrap">
-        <div>
-          <h1>lm-arena admin</h1>
-          <p style="margin-top:8px">GitHub PAT with <span class="mono">workflow</span> scope</p>
-        </div>
-        <div class="token-form">
-          <input id="token-input" class="token-input" type="password" placeholder="ghp_…"
-            onkeydown="if(event.key==='Enter')signIn()">
-          <button class="btn-primary" onclick="signIn()">Sign in</button>
-        </div>
-        <span class="hint">
-          <a href="https://github.com/settings/tokens/new?scopes=workflow" target="_blank">Create token</a>
-        </span>
+        <h1>lm-arena admin</h1>
+        <p>Sign in to GitHub on the <a href="/" style="color:var(--accent-hover)">main page</a> first.</p>
       </div>`;
-    document.getElementById('token-input').focus();
   }
 
   function renderLoading(msg) {
