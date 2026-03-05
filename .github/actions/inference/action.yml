@@ -162,15 +162,15 @@ runs:
           exit 1
         fi
 
+    - name: Install cloudflared
+      uses: AnimMouse/setup-cloudflared@v2
+
     - name: Start cloudflared
       id: cloudflared
       shell: bash
       env:
         TUNNEL_WRITE_KEY: ${{ inputs.tunnel_write_key }}
       run: |
-        curl -fsSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
-        dpkg-deb --extract /tmp/cloudflared.deb /tmp/cloudflared-pkg
-        sudo cp /tmp/cloudflared-pkg/usr/bin/cloudflared /usr/local/bin/
         cloudflared tunnel --no-autoupdate --url http://localhost:${{ inputs.port }} > /tmp/cloudflared.log 2>&1 &
 
         TUNNEL_URL=""
