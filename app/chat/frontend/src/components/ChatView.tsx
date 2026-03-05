@@ -497,19 +497,6 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
             </div>
 
             <div className="fixed bottom-0 left-0 right-0 z-[99] flex flex-col items-center gap-2 px-4 pb-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
-                <div className="w-full max-w-2xl flex justify-end pr-1">
-                    <button
-                        onClick={toggleRouteDebug}
-                        title="Toggle auto-routing debug pills"
-                        className={`text-[9px] font-mono px-1.5 py-px rounded border transition-colors ${
-                            routeDebug
-                                ? 'border-violet-500/50 bg-violet-500/10 text-violet-400'
-                                : 'border-slate-700/40 text-slate-600 hover:text-slate-500'
-                        }`}
-                    >
-                        route dbg
-                    </button>
-                </div>
                 <PromptInput
                     inputRef={inputRef}
                     inputFocused={inputFocused}
@@ -520,6 +507,8 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                     placeholder={selectedModels.size === 0 ? "Select a model above..." : "Type a message..."}
                     uiBuilderEnabled={uiBuilderEnabled}
                     onToggleUiBuilder={() => setUiBuilderEnabled(!uiBuilderEnabled)}
+                    routeDebugEnabled={routeDebug}
+                    onToggleRouteDebug={toggleRouteDebug}
                 />
             </div>
         </div>

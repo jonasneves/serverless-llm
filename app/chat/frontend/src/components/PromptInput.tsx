@@ -1,4 +1,5 @@
-import { Square, ArrowUp, Puzzle } from 'lucide-react';
+import { Square, ArrowUp, Puzzle, SlidersHorizontal, Shuffle, Check } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 
 interface PromptInputProps {
   inputRef: React.RefObject<HTMLInputElement>;
@@ -12,6 +13,8 @@ interface PromptInputProps {
   onStop?: () => void;
   uiBuilderEnabled?: boolean;
   onToggleUiBuilder?: () => void;
+  routeDebugEnabled?: boolean;
+  onToggleRouteDebug?: () => void;
 }
 
 export default function PromptInput({
@@ -26,7 +29,22 @@ export default function PromptInput({
   onStop,
   uiBuilderEnabled,
   onToggleUiBuilder,
+  routeDebugEnabled,
+  onToggleRouteDebug,
 }: PromptInputProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const hasOptions = !!(onToggleUiBuilder || onToggleRouteDebug);
+  const anyActive = !!(uiBuilderEnabled || routeDebugEnabled);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (!dropdownRef.current?.contains(e.target as Node)) setDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [dropdownOpen]);
 
   return (
     <div
@@ -39,18 +57,45 @@ export default function PromptInput({
         <div
           className={`rounded-xl p-2.5 transition-all duration-300 flex items-center gap-2 border border-slate-700/40 header-shell ${inputFocused ? 'prompt-panel-focused' : ''}`}
         >
-          {onToggleUiBuilder && (
-            <button
-              onClick={onToggleUiBuilder}
-              className={`p-2 rounded-lg transition-colors ${
-                uiBuilderEnabled
-                  ? 'text-violet-400 bg-violet-500/20'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/50'
-              }`}
-              title="UI Builder - Enable interactive UI elements in responses"
-            >
-              <Puzzle size={16} />
-            </button>
+          {hasOptions && (
+            <div ref={dropdownRef} className="relative">
+              <button
+                onClick={() => setDropdownOpen(v => !v)}
+                className={`p-2 rounded-lg transition-colors ${
+                  anyActive || dropdownOpen
+                    ? 'text-violet-400 bg-violet-500/20'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/50'
+                }`}
+                title="Options"
+              >
+                <SlidersHorizontal size={16} />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-44 rounded-lg border border-slate-700/60 bg-slate-900 shadow-xl py-1 z-10">
+                  {onToggleUiBuilder && (
+                    <button
+                      onClick={onToggleUiBuilder}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-left text-xs transition-colors hover:bg-slate-800 text-slate-300"
+                    >
+                      <Puzzle size={13} className={uiBuilderEnabled ? 'text-violet-400' : 'text-slate-500'} />
+                      <span>UI Builder</span>
+                      {uiBuilderEnabled && <Check size={11} className="ml-auto text-violet-400" />}
+                    </button>
+                  )}
+                  {onToggleRouteDebug && (
+                    <button
+                      onClick={onToggleRouteDebug}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-left text-xs transition-colors hover:bg-slate-800 text-slate-300"
+                    >
+                      <Shuffle size={13} className={routeDebugEnabled ? 'text-violet-400' : 'text-slate-500'} />
+                      <span>Route debug</span>
+                      {routeDebugEnabled && <Check size={11} className="ml-auto text-violet-400" />}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           <input
             ref={inputRef}
