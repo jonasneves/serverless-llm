@@ -88,23 +88,57 @@ All model settings live in `config/models.py`:
 
 ## API
 
-Each inference server exposes an OpenAI-compatible API:
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /health` | Health check |
-| `GET /v1/models` | List models |
-| `POST /v1/chat/completions` | Chat completion (streaming supported) |
+The tunnel registry at `tunnel-registry.jonasneves.workers.dev` exposes a unified OpenAI-compatible gateway over the entire fleet. No auth required.
 
 ```bash
-curl -X POST https://<random>.trycloudflare.com/v1/chat/completions \
+# List online models
+curl https://tunnel-registry.jonasneves.workers.dev/v1/models
+
+# Chat with a specific model
+curl -X POST https://tunnel-registry.jonasneves.workers.dev/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Hello"}],
-    "max_tokens": 512,
-    "stream": true
-  }'
+  -d '{"model": "gemma", "messages": [{"role": "user", "content": "Hello"}]}'
+
+# Auto-route to the best model for the task
+curl -X POST https://tunnel-registry.jonasneves.workers.dev/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "auto", "messages": [{"role": "user", "content": "Write a binary search in Python"}]}'
 ```
+
+Streaming is supported — set `"stream": true`. If a model is offline the response is `503`.
+
+### Auto-routing
+
+`"model": "auto"` classifies the prompt using FunctionGemma 270M and routes to the best available model:
+
+| Category | Preferred models |
+|---|---|
+| `coding` | jancode |
+| `reasoning` | nanbeige, r1qwen |
+| `function_calling` | functiongemma, agentcpm |
+| `general` | gemma, llama |
+
+Falls back to any available model if the classifier is offline.
+
+### Python
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://tunnel-registry.jonasneves.workers.dev/v1",
+    api_key="unused",
+)
+response = client.chat.completions.create(
+    model="auto",
+    messages=[{"role": "user", "content": "Explain transformers"}],
+)
+print(response.choices[0].message.content)
+```
+
+### Per-model tunnel API
+
+Each inference server also exposes its own OpenAI-compatible API directly at its tunnel URL. Tunnel URLs are ephemeral — fetch the current URL from `GET /tunnel/{model}` first.
 
 Add `"include_perf": true` to get queue/compute timing in the response.
 
