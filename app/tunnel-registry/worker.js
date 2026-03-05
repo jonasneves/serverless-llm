@@ -25,6 +25,20 @@ function isAuthorized(request, env) {
   return auth === `Bearer ${env.TUNNEL_WRITE_KEY}`;
 }
 
+// Validate a GitHub token by checking push access to this repo
+async function isGitHubAdmin(token) {
+  try {
+    const res = await fetch('https://api.github.com/repos/jonasneves/lm-arena', {
+      headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'lm-arena-worker' },
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return !!(data.permissions?.push || data.permissions?.admin);
+  } catch {
+    return false;
+  }
+}
+
 // Supports both legacy plain-URL strings and new JSON format { url, runner_account }
 function parseTunnelValue(raw) {
   if (!raw) return null;
@@ -104,7 +118,12 @@ async function handlePurge(env) {
 }
 
 async function handleSignalPut(request, env, model) {
-  if (!isAuthorized(request, env)) return jsonResponse({ error: 'unauthorized' }, 401);
+  const auth = request.headers.get('Authorization') || '';
+  const isWriteKey = auth === `Bearer ${env.TUNNEL_WRITE_KEY}`;
+  if (!isWriteKey) {
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token || !(await isGitHubAdmin(token))) return jsonResponse({ error: 'unauthorized' }, 401);
+  }
   const body = await request.json();
   const signal = body.signal ?? null;
   if (!['stop', 'restart', null].includes(signal)) return jsonResponse({ error: 'invalid signal' }, 400);

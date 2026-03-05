@@ -224,8 +224,7 @@
   const $uarea  = document.getElementById('user-area');
 
   let token     = null;
-  let tunnelMap = {};   // model key → url (truthy = running)
-  let runMap    = {};   // model key → run id (for GH API cancel)
+  let tunnelMap = {};   // model key → { url, runner_account } (truthy = running)
   let pending   = new Set();
   let stopping  = new Set();
   let pollTimer = null;
@@ -259,7 +258,6 @@
   function signOut() {
     token = null;
     tunnelMap = {};
-    runMap = {};
     pending.clear();
     stopping.clear();
     clearInterval(pollTimer);
@@ -289,19 +287,10 @@
     return res.json(); // { model: { url, runner_account } }
   }
 
-  async function fetchRuns() {
-    const res = await ghFetch(
-      `/repos/${REPO}/actions/workflows/inference.yml/runs?status=in_progress&per_page=100`
-    );
-    if (!res.ok) return {};
-    const { workflow_runs } = await res.json();
-    return Object.fromEntries(workflow_runs.map(r => [r.display_title, r.id]));
-  }
-
   async function loadStatus() {
     renderLoading('Loading…');
     try {
-      [tunnelMap, runMap] = await Promise.all([fetchTunnels(), fetchRuns()]);
+      tunnelMap = await fetchTunnels();
       // Auto-purge stale entries silently on load
       fetch(`${REGISTRY}/purge`, { method: 'POST' })
         .then(r => r.json())
@@ -316,7 +305,7 @@
 
   async function refreshStatus() {
     try {
-      [tunnelMap, runMap] = await Promise.all([fetchTunnels(), fetchRuns()]);
+      tunnelMap = await fetchTunnels();
       for (const key of [...pending])  { if (tunnelMap[key])  pending.delete(key); }
       for (const key of [...stopping]) { if (!tunnelMap[key]) stopping.delete(key); }
       renderModels();
@@ -350,20 +339,21 @@
   }
 
   async function stopModel(key) {
-    const runId = runMap[key];
-    if (!runId) return;
     stopping.add(key);
     renderModels();
     try {
-      const res = await ghFetch(`/repos/${REPO}/actions/runs/${runId}/cancel`, { method: 'POST' });
-      if (!res.ok && res.status !== 409) throw new Error('HTTP ' + res.status);
-      delete runMap[key];
-      showToast(`Stopped ${key}`);
-      setTimeout(refreshStatus, 5000);
+      const res = await fetch(`${REGISTRY}/signal/${key}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signal: 'stop' }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      showToast(`Stop signal sent to ${key} — shuts down within ~30s`);
+      // Runner deletes its tunnel entry on shutdown; poll to confirm
+      setTimeout(refreshStatus, 15000);
+      setTimeout(refreshStatus, 35000);
     } catch (e) {
-      if (e.message !== 'Unauthorized')
-        showToast(`Failed to stop ${key}: ` + e.message, 'error');
-    } finally {
+      showToast(`Failed to stop ${key}: ` + e.message, 'error');
       stopping.delete(key);
       renderModels();
     }
@@ -439,15 +429,11 @@
       else if (isRunning) { dotClass = 'running';  statusText = 'running'; }
       else                { dotClass = '';          statusText = ''; }
 
-      const canStop = !!runMap[m.key];
-
       let btn;
       if (isStopping || isPending) {
         btn = `<button class="btn-ghost" disabled>…</button>`;
-      } else if (isRunning && canStop) {
-        btn = `<button class="btn-danger" onclick="stopModel('${m.key}')">Stop</button>`;
       } else if (isRunning) {
-        btn = `<button class="btn-ghost" disabled title="No individual run to cancel">Running</button>`;
+        btn = `<button class="btn-danger" onclick="stopModel('${m.key}')">Stop</button>`;
       } else {
         btn = `<button class="btn-success" onclick="startModel('${m.key}')">Start</button>`;
       }
