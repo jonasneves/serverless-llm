@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallba
 import { Model } from '../types';
 import FormattedContent from './FormattedContent';
 import PromptInput from './PromptInput';
-import { Bot, AlertTriangle, User, Check, Copy } from 'lucide-react';
+import { Bot, AlertTriangle, User, Check, Copy, Shuffle, ChevronDown } from 'lucide-react';
 import { extractTextWithoutJSON } from '../hooks/useGestureOptions';
 import GestureOptions from './GestureOptions';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
@@ -52,11 +52,11 @@ interface ChatViewProps {
     onlineModelIds?: Set<string>;
 }
 
-const CATEGORY_STYLE: Record<string, string> = {
-    coding:           'border-violet-500/40 bg-violet-500/10 text-violet-300',
-    reasoning:        'border-sky-500/40 bg-sky-500/10 text-sky-300',
-    function_calling: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-    general:          'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+const CATEGORY_STYLE: Record<string, { border: string; bg: string; text: string; label: string }> = {
+    coding:           { border: 'border-violet-500/30', bg: 'bg-violet-500/10', text: 'text-violet-300', label: 'Coding' },
+    reasoning:        { border: 'border-sky-500/30',    bg: 'bg-sky-500/10',    text: 'text-sky-300',    label: 'Reasoning' },
+    function_calling: { border: 'border-amber-500/30',  bg: 'bg-amber-500/10',  text: 'text-amber-300',  label: 'Function calling' },
+    general:          { border: 'border-emerald-500/30',bg: 'bg-emerald-500/10',text: 'text-emerald-300',label: 'General' },
 };
 
 interface ChatMessageItemProps {
@@ -93,12 +93,29 @@ const ChatMessageItem = memo(({ msg, idx, gesturesActive, uiBuilderEnabled, isCo
                     {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
                     {msg.role === 'user' ? 'You' : msg.modelName || 'Assistant'}
                     {msg.error && <AlertTriangle size={12} className="text-red-400" />}
-                    {showRouting && msg.routingInfo && (
-                        <span className={`inline-flex items-center gap-1 font-mono normal-case tracking-normal rounded px-1.5 py-px border ${CATEGORY_STYLE[msg.routingInfo.category] ?? CATEGORY_STYLE.general}`}>
-                            auto · {msg.routingInfo.category} · {msg.routingInfo.routed_to}
-                        </span>
-                    )}
                 </div>
+                {showRouting && msg.routingInfo && (() => {
+                    const cat = CATEGORY_STYLE[msg.routingInfo.category] ?? CATEGORY_STYLE.general;
+                    return (
+                        <details className={`mb-2 rounded-lg border ${cat.border} overflow-hidden`}>
+                            <summary className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium cursor-pointer select-none list-none ${cat.bg} ${cat.text}`}>
+                                <Shuffle size={11} />
+                                <span>Auto-routed</span>
+                                <ChevronDown size={11} className="ml-auto opacity-60" />
+                            </summary>
+                            <div className="px-3 py-2 bg-slate-950/40 font-mono text-[11px] space-y-1.5">
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-slate-500">model</span>
+                                    <span className="text-slate-200">{msg.routingInfo.routed_to}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-slate-500">category</span>
+                                    <span className={cat.text}>{cat.label}</span>
+                                </div>
+                            </div>
+                        </details>
+                    );
+                })()}
                 <div className="prose prose-invert prose-sm max-w-none">
                     <FormattedContent text={msg.role === 'user' ? msg.content : extractTextWithoutJSON(msg.content)} />
                 </div>
