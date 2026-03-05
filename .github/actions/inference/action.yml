@@ -172,10 +172,15 @@ runs:
         gh release download --repo cloudflare/cloudflared --pattern 'cloudflared-linux-arm64' -D /tmp
         mv /tmp/cloudflared-linux-arm64 /tmp/cloudflared
         chmod +x /tmp/cloudflared
-        echo "✓ cloudflared downloaded: $(/tmp/cloudflared --version 2>&1 || true)"
+
+        # set +e: cloudflared --version exits 1 in some versions; also protects background launch from set -e
+        set +e
+        CLOUDFLARED_VERSION=$(/tmp/cloudflared --version 2>&1)
+        echo "✓ cloudflared downloaded: $CLOUDFLARED_VERSION"
 
         /tmp/cloudflared tunnel --no-autoupdate --url http://localhost:${{ inputs.port }} > /tmp/cloudflared.log 2>&1 &
         CLOUDFLARED_PID=$!
+        set -e
 
         TUNNEL_URL=""
         for i in {1..30}; do
