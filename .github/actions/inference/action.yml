@@ -170,7 +170,6 @@ runs:
       run: |
         curl -fsSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
         sudo dpkg -i /tmp/cloudflared.deb || true  # post-install service setup fails on Actions, binary is still installed
-        cloudflared --version
         cloudflared tunnel --no-autoupdate --url http://localhost:${{ inputs.port }} > /tmp/cloudflared.log 2>&1 &
 
         TUNNEL_URL=""
