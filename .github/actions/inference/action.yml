@@ -168,7 +168,8 @@ runs:
       env:
         TUNNEL_WRITE_KEY: ${{ inputs.tunnel_write_key }}
       run: |
-        curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o /usr/local/bin/cloudflared
+        curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o /tmp/cloudflared
+        sudo mv /tmp/cloudflared /usr/local/bin/cloudflared
         sudo chmod +x /usr/local/bin/cloudflared
         cloudflared tunnel --no-autoupdate --url http://localhost:${{ inputs.port }} > /tmp/cloudflared.log 2>&1 &
 
