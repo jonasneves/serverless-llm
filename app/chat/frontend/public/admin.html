@@ -47,6 +47,8 @@
     .header-title { font-size: 14px; font-weight: 600; }
     .header-sub   { font-size: 12px; color: var(--text-secondary); }
     .header-sep   { flex: 1; }
+    .header-nav a { font-size: 12px; color: var(--text-secondary); text-decoration: none; margin-left: 16px; }
+    .header-nav a:hover { color: var(--text); }
     #user-area    { display: flex; align-items: center; gap: 10px; }
 
     /* ── Main ── */
@@ -180,6 +182,10 @@
   <span class="header-title">lm-arena</span>
   <span class="header-sub">/ admin</span>
   <div class="header-sep"></div>
+  <nav class="header-nav">
+    <a href="/">Chat</a>
+    <a href="/benchmarks.html">Benchmarks</a>
+  </nav>
   <div id="user-area"></div>
 </header>
 
