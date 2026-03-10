@@ -1,34 +1,12 @@
-"""
-LFM2.5 1.2B Inference Server
-
-Uses llama-server wrapper due to llama-cpp-python binding incompatibilities.
-"""
-
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 import uvicorn
-from shared.llama_server_wrapper import LlamaServerConfig, create_llama_server_app
+from shared.llama_server_wrapper import create_llama_server_app_for_model
 from config.models import MODELS
 
-m = MODELS["lfm2"]
-
-config = LlamaServerConfig(
-    model_id=m.model_id,
-    display_name=m.display_name,
-    owned_by=m.owned_by,
-    default_repo=m.hf_repo,
-    default_file=m.hf_file,
-    default_port=m.port,
-    n_ctx=m.n_ctx,
-    n_threads=m.n_threads,
-    n_batch=m.n_batch,
-    max_concurrent=m.max_concurrent,
-)
-
-app = create_llama_server_app(config)
+app = create_llama_server_app_for_model("lfm2")
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", str(config.default_port)))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", str(MODELS["lfm2"].port))))

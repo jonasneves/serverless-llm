@@ -425,7 +425,7 @@ export function useSessionController(params: SessionControllerParams) {
           const commonPhrases = event.commonPhrases || [];
           const distinctPhrases = event.distinctPhrases || {};
 
-          let analysis = 'Analysis:\nBased on shared vocabulary across responses\n\n';
+          let analysis = 'Vocabulary overlap (not semantic analysis):\n\n';
           if (commonPhrases.length > 0) {
             analysis += 'Shared phrasing:\n' + commonPhrases.map((c: string) => `• ${c}`).join('\n') + '\n\n';
           }

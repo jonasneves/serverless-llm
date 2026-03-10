@@ -126,7 +126,7 @@ jobs:
       - name: Compute build config
         id: config
         run: |
-          LLAMA_SERVER_MODELS="rnj-inference lfm2-inference lfm2mini-inference lfm2thinking-inference falcon-inference qwen-inference"
+          LLAMA_SERVER_MODELS="rnj-inference lfm2-inference lfm2mini-inference lfm2thinking-inference falcon-inference qwen-inference jancode-inference"
           # Pinned llama.cpp release: update when new architecture support is needed
           LLAMA_COMMIT="b8261"
           MODEL="${{ matrix.model }}"

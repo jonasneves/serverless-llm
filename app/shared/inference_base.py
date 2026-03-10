@@ -3,7 +3,7 @@ Shared GGUF Inference Server base
 
 Provides a factory to create FastAPI apps for llama.cpp-backed models with
 consistent APIs and streaming behavior. Model-specific servers should import
-this module and supply a ModelConfig.
+this module and supply a InferenceAppConfig.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ if not os.getenv("OMP_NUM_THREADS"):
     os.environ["OMP_NUM_THREADS"] = "1"
 
 @dataclass
-class ModelConfig:
+class InferenceAppConfig:
     # FastAPI metadata
     title: str
     description: str
@@ -103,7 +103,7 @@ def create_app_for_model(model_name: str) -> FastAPI:
     if not model.hf_repo or not model.hf_file:
         raise ValueError(f"Model '{model_name}' missing hf_repo or hf_file in config/models.py")
 
-    config = ModelConfig(
+    config = InferenceAppConfig(
         title=f"{model.display_name} Inference API",
         description=f"REST API for {model.display_name} model inference using GGUF",
         model_name=model.display_name or model.name,
@@ -120,7 +120,7 @@ def create_app_for_model(model_name: str) -> FastAPI:
     return create_inference_app(config)
 
 
-def create_inference_app(config: ModelConfig) -> FastAPI:
+def create_inference_app(config: InferenceAppConfig) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         _load_model()
@@ -222,8 +222,6 @@ def create_inference_app(config: ModelConfig) -> FastAPI:
             "n_threads": n_threads,
             "n_batch": n_batch,
             "max_concurrent": max_concurrent,
-            "active_requests": max_concurrent - inference_lock._value,
-            "available_capacity": inference_lock._value,
             "openblas_num_threads": os.getenv("OPENBLAS_NUM_THREADS"),
             "omp_num_threads": os.getenv("OMP_NUM_THREADS"),
             "instance_id": os.getenv("INSTANCE_ID", "1"),
