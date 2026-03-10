@@ -8,7 +8,7 @@ import { ANALYZE_RESPONSE_SYSTEM } from '../constants';
 import { streamCompletion } from '../utils/streaming';
 
 export interface AnalyzeEvent {
-  type: 'analyze_start' | 'model_start' | 'model_chunk' | 'model_response' | 'model_error' | 'analysis_complete' | 'analyze_complete' | 'error';
+  type: 'analyze_start' | 'model_start' | 'model_chunk' | 'model_response' | 'model_error' | 'analyze_complete' | 'error';
   participants?: string[];
   model_id?: string;
   model_name?: string;
@@ -16,8 +16,8 @@ export interface AnalyzeEvent {
   full_response?: string;
   response?: string;
   error?: string;
-  consensus?: string[];
-  unique_contributions?: Record<string, string[]>;
+  commonPhrases?: string[];
+  distinctPhrases?: Record<string, string[]>;
   total_responses?: number;
   results?: Array<{ model_id: string; model_name: string; response: string }>;
 }
@@ -267,16 +267,10 @@ export async function* runAnalyze(params: AnalyzeParams): AsyncGenerator<Analyze
   const distinctPhrases = findDistinctPhrases(results);
 
   yield {
-    type: 'analysis_complete',
-    consensus: commonPhrases,
-    unique_contributions: distinctPhrases,
-    total_responses: results.length,
-  };
-
-  yield {
     type: 'analyze_complete',
     results,
-    consensus: commonPhrases,
-    unique_contributions: distinctPhrases,
+    commonPhrases,
+    distinctPhrases,
+    total_responses: results.length,
   };
 }

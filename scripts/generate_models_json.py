@@ -27,6 +27,7 @@ def main():
             "context_length": m.n_ctx,
             "owned_by": m.owned_by,
             "description": m.description,
+            "routing_category": m.routing_category,
         }
         for m in models
     ]

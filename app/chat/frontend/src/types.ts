@@ -15,6 +15,7 @@ export interface Model {
   priority?: number;
   context_length?: number;
   default?: boolean;
+  routing_category?: string | null;
 }
 
 export type Mode = 'compare' | 'analyze' | 'debate' | 'chat';

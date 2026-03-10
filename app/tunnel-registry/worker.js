@@ -95,6 +95,10 @@ async function handleTunnelDelete(request, env, model) {
   return jsonResponse({ ok: true, model });
 }
 
+// Intentionally unauthenticated: purge only removes tunnels that fail their own
+// health check, so it cannot remove healthy models. Worst-case abuse: an attacker
+// could flood a tunnel to make it temporarily unreachable, but models re-register
+// on next heartbeat.
 async function handlePurge(env) {
   const list = await env.TUNNELS_KV.list({ prefix: 'tunnel:' });
   const purged = [];

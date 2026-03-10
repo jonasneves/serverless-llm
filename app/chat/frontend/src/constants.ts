@@ -1,4 +1,4 @@
-import { BackgroundStyle, Mode, TopicPack, TopicPrompt, TrendingTopic } from './types';
+import { BackgroundStyle, Mode, Model, TopicPack, TopicPrompt, TrendingTopic } from './types';
 
 export const MODEL_META: Record<string, { color: string; name?: string }> = {
   'self-hosted': { color: '#10b981' }, // Green for self-hosted models
@@ -8,25 +8,9 @@ export const MODEL_META: Record<string, { color: string; name?: string }> = {
 export const SELF_HOSTED_DEFAULT_PRIORITY = 50;
 export const GITHUB_DEFAULT_PRIORITY = 100;
 
-// Must match reasoning models in config/models.py — run `python3 config/models.py --route-map` to verify
-// Models that output thinking content wrapped in <think>...</think> tags
-export const THINKING_MODELS: string[] = [
-  'deepseek-r1-distill-qwen-1.5b',
-  'r1qwen',               // Alternate match for r1qwen
-  'nanbeige',             // Nanbeige4.1-3B
-  'phi-4-mini-reasoning',
-  'phireasoning',         // Alternate match for phireasoning
-  'lfm2.5-1.2b-thinking',
-  'lfm2thinking',         // Alternate match for lfm2thinking
-  'dasd-4b-thinking',
-  'dasd',                 // Alternate match for dasd
-  'falcon-h1r-7b',
-  'falcon',               // Alternate match for falcon
-];
-
-export function isThinkingModel(modelId: string): boolean {
-  const lower = modelId.toLowerCase();
-  return THINKING_MODELS.some(pattern => lower.includes(pattern.toLowerCase()));
+// Derived at runtime from models.json routing_category field — no manual sync needed
+export function isThinkingModel(modelId: string, models: Model[]): boolean {
+  return models.find(m => m.id === modelId)?.routing_category === 'reasoning';
 }
 
 export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github', dynamicPriority?: number): number {

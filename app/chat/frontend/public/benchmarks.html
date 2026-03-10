@@ -175,18 +175,18 @@
       label: 'mmlu · 10q',
       name: 'mini-MMLU',
       full: 'mini-MMLU (10 questions)',
-      desc: 'Factual knowledge across science, history, and math. 10-question proxy — not comparable to published MMLU scores (57 subjects, 14k questions).',
+      desc: 'Factual knowledge across science, history, and math. 10-question proxy — not comparable to published MMLU scores (57 subjects, 14k questions). Grading: word-boundary substring match (e.g. "Au" in response).',
     },
     instruct: {
       label: 'instruct · 8q',
       name: 'Instruct',
-      desc: 'Instruction following — 8 prompts requiring precise format compliance (single word, exact number). Tests whether the model follows directions without rambling.',
+      desc: 'Instruction following — 8 prompts requiring precise format compliance (single word, exact number). Tests whether the model follows directions without rambling. Grading: strict — word-boundary match AND response is 3 words or fewer.',
     },
     gsm8k: {
       label: 'gsm8k · 5q',
       name: 'mini-GSM8K',
       full: 'mini-GSM8K (5 questions)',
-      desc: 'Arithmetic word problems requiring multi-step reasoning. 5-question proxy — not comparable to published GSM8K scores (8,500 problems).',
+      desc: 'Arithmetic word problems requiring multi-step reasoning. 5-question proxy — not comparable to published GSM8K scores (8,500 problems). Grading: word-boundary substring match for the numeric answer.',
     },
   };
 
