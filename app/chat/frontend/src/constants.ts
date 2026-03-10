@@ -155,7 +155,7 @@ export const TRENDING_FALLBACK: TrendingTopic[] = [
     summary: 'Draft policy proposes reporting training data provenance, evals for autonomous behavior, and emergency off-switch requirements.',
     source: 'PolicyWire',
     tags: ['AI', 'governance'],
-    publishedAt: '2025-01-05',
+    publishedAt: '2026-03-05',
   },
   {
     id: 'chips-3nm',
@@ -163,7 +163,7 @@ export const TRENDING_FALLBACK: TrendingTopic[] = [
     summary: 'Vendors claim 2× energy efficiency for 70B-parameter quantized models on consumer hardware.',
     source: 'SemiDaily',
     tags: ['hardware', 'ai'],
-    publishedAt: '2025-01-04',
+    publishedAt: '2026-03-04',
   },
   {
     id: 'open-weights',
@@ -171,7 +171,7 @@ export const TRENDING_FALLBACK: TrendingTopic[] = [
     summary: 'Competition encourages transparent training recipes and evals instead of closed checkpoints.',
     source: 'MLHub',
     tags: ['open-source', 'models'],
-    publishedAt: '2025-01-03',
+    publishedAt: '2026-03-03',
   },
   {
     id: 'security-supply-chain',
@@ -179,7 +179,7 @@ export const TRENDING_FALLBACK: TrendingTopic[] = [
     summary: 'Requires signed artifacts, provenance attestations, and runtime monitoring for critical infra.',
     source: 'CyberBrief',
     tags: ['security', 'devsecops'],
-    publishedAt: '2025-01-02',
+    publishedAt: '2026-03-02',
   },
   {
     id: 'creator-tools',
@@ -187,7 +187,7 @@ export const TRENDING_FALLBACK: TrendingTopic[] = [
     summary: 'WebGPU-first editors ship video, audio, and 3D pipelines without native installs.',
     source: 'CreatorBeat',
     tags: ['media', 'webgpu'],
-    publishedAt: '2025-01-01',
+    publishedAt: '2026-03-01',
   },
 ];
 
@@ -239,17 +239,20 @@ export const LAYOUT = {
   scrollClamp: 200,     // Max scroll offset in either direction (px)
 };
 
-// System prompts for orchestration modes
-export const ANALYZE_RESPONSE_SYSTEM = `You are participating in a multi-model analysis session.
-
-Guidelines for your response:
+// Shared response guidelines used in both analyze and debate modes
+const RESPONSE_GUIDELINES = `Guidelines for your response:
 - Focus on facts and problem-solving with direct, objective information
 - Show your reasoning step-by-step, but keep each step concise
 - Avoid unnecessary superlatives, praise, or emotional validation
 - Do not repeat the question or add meta-commentary
 - Get straight to the analysis - no preamble like "Let me think about this"
 - When uncertain, acknowledge it and explain why rather than claiming certainty
-- Be professional and objective - prioritize technical accuracy over validation
+- Be professional and objective - prioritize technical accuracy over validation`;
+
+// System prompts for orchestration modes
+export const ANALYZE_RESPONSE_SYSTEM = `You are participating in a multi-model analysis session.
+
+${RESPONSE_GUIDELINES}
 
 Your task:
 - Provide your independent analysis of the question
@@ -261,14 +264,7 @@ Target length: 100-200 words.`;
 
 export const DEBATE_TURN_SYSTEM = `You are participating in a multi-model debate.
 
-Guidelines for your response:
-- Focus on facts and problem-solving with direct, objective information
-- Show your reasoning step-by-step, but keep each step concise
-- Avoid unnecessary superlatives, praise, or emotional validation
-- Do not repeat the question or add meta-commentary
-- Get straight to the analysis - no preamble like "Let me think about this"
-- When uncertain, acknowledge it and explain why rather than claiming certainty
-- Be professional and objective - prioritize technical accuracy over validation
+${RESPONSE_GUIDELINES}
 
 Your task:
 - Respond to the question considering previous responses (if any)

@@ -2,6 +2,9 @@ import { Dispatch, SetStateAction } from 'react';
 
 const ICON_CLOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: text-bottom; margin-right: 6px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const ICON_WARNING = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: text-bottom; margin-right: 6px;"><path d="M12 2L2 20h20L12 2z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+const escapeHtml = (t: string) =>
+  t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 import { GENERATION_DEFAULTS, isThinkingModel } from '../constants';
 import { fetchChatStream, streamSseEvents } from '../utils/streaming';
 import { ChatHistoryEntry, Mode, Model } from '../types';
@@ -224,10 +227,10 @@ export function useSessionController(params: SessionControllerParams) {
     const addIconToMessage = (message: string): string => {
       const lowerMsg = message.toLowerCase();
       if (lowerMsg.includes('rate limit') || lowerMsg.includes('waiting')) {
-        return ICON_CLOCK + message;
+        return ICON_CLOCK + escapeHtml(message);
       }
       if (lowerMsg.includes('error') || lowerMsg.includes('failed')) {
-        return ICON_WARNING + message;
+        return ICON_WARNING + escapeHtml(message);
       }
       return message;
     };
