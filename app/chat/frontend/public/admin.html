@@ -287,11 +287,6 @@
     renderLoading('Loading…');
     try {
       [MODELS, tunnelMap] = await Promise.all([fetchModels(), fetchTunnels()]);
-      // Auto-purge stale entries silently on load
-      fetch(`${REGISTRY}/purge`, { method: 'POST' })
-        .then(r => r.json())
-        .then(({ purged }) => { if (purged.length) refreshStatus(); })
-        .catch(() => {});
       renderModels();
       schedulePoll();
     } catch (e) {
@@ -388,6 +383,18 @@
     await Promise.all(MODELS.filter(m => tunnelMap[m.key]).map(m => stopModel(m.key)));
   }
 
+  async function purgeStale() {
+    try {
+      const res = await fetch(`${REGISTRY}/purge`, { method: 'POST' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const { purged } = await res.json();
+      showToast(purged.length ? `Purged ${purged.length} stale ${purged.length === 1 ? 'entry' : 'entries'}` : 'Nothing to purge');
+      if (purged.length) refreshStatus();
+    } catch (e) {
+      showToast('Purge failed: ' + e.message, 'error');
+    }
+  }
+
   function schedulePoll() {
     clearInterval(pollTimer);
     pollTimer = setInterval(refreshStatus, 30000);
@@ -458,6 +465,7 @@
           <span class="run-count">${runningCount} / ${MODELS.length} running</span>
         </div>
         <div class="controls-right">
+          <button class="btn-secondary" onclick="purgeStale()">Purge stale</button>
           <button class="btn-secondary" onclick="refreshStatus()">Refresh</button>
           <button class="btn-secondary" onclick="stopAll()">Stop all</button>
           <button class="btn-primary" onclick="startAll()">Start all</button>

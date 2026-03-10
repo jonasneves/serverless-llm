@@ -235,7 +235,7 @@ def benchmark_model(model_id):
             "prompts":  len(prompts),
             "answered": answered,
             "correct":  correct_count,
-            "accuracy": round(correct_count / answered, 3) if answered else 0,
+            "accuracy": round(correct_count / len(prompts), 3),
             "p50_ms":   round(statistics.median(suite_latencies), 1) if suite_latencies else None,
             "max_ms":   round(max(suite_latencies), 1) if suite_latencies else None,
             "traces":   traces,

@@ -458,7 +458,7 @@
         const isOpen = expanded.has(key);
 
         const accCell = acc != null
-          ? fmt(pct + '%') + (s.answered != null ? ` <span style="color:var(--text-secondary);font-size:11px">(${s.answered}/${s.prompts})</span>` : '')
+          ? fmt(pct + '%') + (s.prompts != null ? ` <span style="color:var(--text-secondary);font-size:11px">(${Math.round(acc * s.prompts)}/${s.prompts})</span>` : '')
           : fmt(null);
 
         const meta = modelMeta[m.model] || {};
