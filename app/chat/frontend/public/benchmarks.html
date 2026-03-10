@@ -183,6 +183,8 @@
     }
     .badge-pass { background: rgba(63,185,80,.15); color: var(--success); }
     .badge-fail { background: rgba(248,81,73,.12); color: var(--danger); }
+    .badge-offline { background: rgba(139,148,158,.12); color: var(--text-secondary); }
+    .row-offline td { opacity: .45; }
 
     footer {
       border-top: 1px solid var(--border);
@@ -337,7 +339,11 @@
         <div class="trace-prompt">${escHtml(t.prompt)}</div>
         ${responseHtml}
         <div class="trace-meta">
-          <span class="badge ${t.correct ? 'badge-pass' : 'badge-fail'}">${t.correct ? 'pass' : 'fail'}</span>
+          ${t.timed_out
+            ? `<span class="badge badge-offline">timeout</span>`
+            : !t.responded
+            ? `<span class="badge badge-offline">empty</span>`
+            : `<span class="badge ${t.correct ? 'badge-pass' : 'badge-fail'}">${t.correct ? 'pass' : 'fail'}</span>`}
           <span>expected: <span style="font-family:var(--font-mono)">${escHtml(t.expected)}</span></span>
           ${t.latency_ms != null ? `<span>${t.latency_ms} ms</span>` : ''}
         </div>
@@ -392,15 +398,16 @@
         const tps = o.avg_tokens_per_sec ?? 0;
         const pct = Math.round((tps / maxTps) * 100);
         const meta = modelMeta[m.model] || {};
-        return `<tr>
+        const offline = m.functional === false;
+        return `<tr${offline ? ' class="row-offline"' : ''}>
           <td>
-            <div class="model-name">${meta.name ?? m.model}</div>
+            <div class="model-name">${meta.name ?? m.model}${offline ? ' <span class="badge badge-offline">not responding</span>' : ''}</div>
             ${meta.description ? `<div class="model-sub">${escHtml(meta.description)}</div>` : ''}
           </td>
           <td>${o.p50_ms != null ? fmt(o.p50_ms + ' ms') : fmt(null)}</td>
           <td>${o.max_ms != null ? fmt(o.max_ms + ' ms') : fmt(null)}</td>
           <td>${tps ? fmt(tps + ' t/s') : fmt(null)}</td>
-          <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+          <td class="bar-cell">${offline ? '' : `<div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>`}</td>
         </tr>`;
       }).join('');
     } else {
@@ -423,9 +430,10 @@
           : fmt(null);
 
         const meta = modelMeta[m.model] || {};
-        const summaryRow = `<tr>
+        const offline = m.functional === false;
+        const summaryRow = `<tr${offline ? ' class="row-offline"' : ''}>
           <td>
-            <div class="model-name">${meta.name ?? m.model}</div>
+            <div class="model-name">${meta.name ?? m.model}${offline ? ' <span class="badge badge-offline">not responding</span>' : ''}</div>
             ${meta.description ? `<div class="model-sub">${escHtml(meta.description)}</div>` : ''}
           </td>
           <td>${accCell}</td>

@@ -68,6 +68,8 @@ jobs:
         env:
           REGISTRY: https://tunnel-registry.jonasneves.workers.dev
         run: python scripts/benchmark.py --merge /tmp/results
+      - name: Quality gate
+        run: python scripts/benchmark.py --quality-gate "app/chat/frontend/public/benchmarks/$(date -u +%Y-%m-%d).json"
       - name: Commit results
         run: |
           git config user.name "github-actions[bot]"

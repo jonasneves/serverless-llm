@@ -8,6 +8,7 @@ Modes:
   --list-models          Print JSON array of online model IDs and exit
   --model <id>           Benchmark a single model, write result to /tmp/benchmark-result.json
   --merge <dir>          Merge per-model result files into the final dated JSON + index
+  --quality-gate <file>  Exit 1 if no functional models in the results file (for CI)
   (no args)              Sequential: benchmark all online models (local dev)
 
 Writes results to:
@@ -28,12 +29,15 @@ from pathlib import Path
 
 import requests
 
-REGISTRY   = os.environ.get("REGISTRY", "https://tunnel-registry.jonasneves.workers.dev")
-WRITE_KEY  = os.environ.get("TUNNEL_WRITE_KEY", "")
-TIMEOUT    = 60
-MAX_TOKENS = 256
-OUT_DIR    = Path("app/chat/frontend/public/benchmarks")
+REGISTRY    = os.environ.get("REGISTRY", "https://tunnel-registry.jonasneves.workers.dev")
+WRITE_KEY   = os.environ.get("TUNNEL_WRITE_KEY", "")
+TIMEOUT     = 60
+MAX_TOKENS  = 256
+OUT_DIR     = Path("app/chat/frontend/public/benchmarks")
 RESULT_FILE = Path("/tmp/benchmark-result.json")
+
+# Warmup probe sent before the suites. If it returns empty, the model is skipped.
+WARMUP_PROMPT = "Respond with exactly one word: hello."
 
 
 # ---------------------------------------------------------------------------
@@ -55,7 +59,6 @@ MMLU_PROMPTS = [
 ]
 
 # Instruction-following: model must respond with exactly the requested word/phrase.
-# Expected is the exact string the response must contain (case-insensitive).
 INSTRUCT_PROMPTS = [
     ("Respond with exactly one word: the color of the sky.", "blue"),
     ("Respond with exactly one word: the opposite of hot.", "cold"),
@@ -97,11 +100,19 @@ def get_online_models():
 
 
 def run_prompt(model_id, prompt):
+    """
+    Send a single prompt via streaming SSE and return a result dict:
+      text       — full response text, or None on request failure
+      latency_ms — wall-clock time from request start to stream end
+      tps        — completion tokens per second (0 if unavailable)
+      timed_out  — True if the request hit the timeout
+      error      — error message string, or None
+    """
     payload = {
         "model": model_id,
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": MAX_TOKENS,
-        "stream": False,
+        "stream": True,
     }
     t0 = time.monotonic()
     try:
@@ -109,17 +120,54 @@ def run_prompt(model_id, prompt):
             f"{REGISTRY}/v1/chat/completions",
             json=payload,
             timeout=TIMEOUT,
+            stream=True,
         )
-        latency_ms = (time.monotonic() - t0) * 1000
         res.raise_for_status()
-        data = res.json()
-        text = data["choices"][0]["message"]["content"]
-        completion_tokens = data.get("usage", {}).get("completion_tokens", 0)
+
+        text = ""
+        completion_tokens = 0
+
+        for raw in res.iter_lines():
+            if not raw:
+                continue
+            line = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+            if not line.startswith("data: "):
+                continue
+            data = line[6:]
+            if data == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data)
+                delta = chunk["choices"][0]["delta"].get("content") or ""
+                if delta:
+                    text += delta
+                    completion_tokens += 1
+            except Exception:
+                pass
+
+        latency_ms = (time.monotonic() - t0) * 1000
         tps = (completion_tokens / (latency_ms / 1000)) if latency_ms > 0 and completion_tokens else 0
-        return text, latency_ms, tps
+        return {"text": text, "latency_ms": latency_ms, "tps": tps, "timed_out": False, "error": None}
+
+    except requests.exceptions.Timeout:
+        latency_ms = (time.monotonic() - t0) * 1000
+        print(f"  timeout after {latency_ms:.0f}ms")
+        return {"text": None, "latency_ms": latency_ms, "tps": 0, "timed_out": True, "error": "timeout"}
+
     except Exception as e:
+        latency_ms = (time.monotonic() - t0) * 1000
         print(f"  error: {e}")
-        return None
+        return {"text": None, "latency_ms": latency_ms, "tps": 0, "timed_out": False, "error": str(e)}
+
+
+def check_model_responsive(model_id):
+    """Quick warmup probe. Returns True if the model returns a non-empty response."""
+    print(f"  warmup probe...")
+    result = run_prompt(model_id, WARMUP_PROMPT)
+    text = result.get("text") or ""
+    ok = bool(text.strip())
+    print(f"  warmup: {'ok' if ok else 'EMPTY — skipping'} ({result['latency_ms']:.0f}ms)")
+    return ok
 
 
 def exact_match(response, expected):
@@ -133,6 +181,17 @@ def exact_match(response, expected):
 
 def benchmark_model(model_id):
     print(f"\n=== {model_id} ===")
+
+    if not check_model_responsive(model_id):
+        return {
+            "model": model_id,
+            "date": date.today().isoformat(),
+            "run_at": datetime.now(timezone.utc).isoformat(),
+            "functional": False,
+            "suites": {},
+            "overall": {"p50_ms": None, "max_ms": None, "avg_tokens_per_sec": None},
+        }
+
     all_latencies = []
     all_tps = []
     suites_out = {}
@@ -143,52 +202,58 @@ def benchmark_model(model_id):
 
         for prompt, expected in prompts:
             result = run_prompt(model_id, prompt)
-            if result is None:
-                traces.append({
-                    "prompt": prompt,
-                    "expected": expected,
-                    "response": None,
-                    "correct": False,
-                    "latency_ms": None,
-                })
-                continue
+            text      = result["text"]
+            lat       = result["latency_ms"]
+            tps       = result["tps"]
+            timed_out = result["timed_out"]
 
-            text, lat, tps = result
-            correct = exact_match(text, expected)
+            responded = text is not None and bool(text.strip())
+            correct   = exact_match(text, expected) if responded else False
+
             traces.append({
-                "prompt": prompt,
-                "expected": expected,
-                "response": text,
-                "correct": correct,
-                "latency_ms": round(lat, 1),
+                "prompt":     prompt,
+                "expected":   expected,
+                "response":   text,
+                "responded":  responded,
+                "timed_out":  timed_out,
+                "correct":    correct,
+                "latency_ms": round(lat, 1) if lat else None,
             })
-            suite_latencies.append(lat)
-            all_latencies.append(lat)
+
+            if lat:
+                suite_latencies.append(lat)
+                all_latencies.append(lat)
             if tps > 0:
                 all_tps.append(tps)
 
-            print(f"  [{suite_name}] {lat:.0f}ms  correct={correct}  response={text[:60]!r}")
+            status = "timeout" if timed_out else ("empty" if not responded else f"correct={correct}")
+            print(f"  [{suite_name}] {lat:.0f}ms  {status}  {str(text or '')[:60]!r}")
 
-        answered = len(suite_latencies)
+        answered      = sum(1 for t in traces if t["responded"])
         correct_count = sum(1 for t in traces if t["correct"])
         suites_out[suite_name] = {
-            "prompts": len(prompts),
+            "prompts":  len(prompts),
             "answered": answered,
-            "correct": correct_count,
+            "correct":  correct_count,
             "accuracy": round(correct_count / answered, 3) if answered else 0,
-            "p50_ms": round(statistics.median(suite_latencies), 1) if suite_latencies else None,
-            "max_ms": round(max(suite_latencies), 1) if suite_latencies else None,
-            "traces": traces,
+            "p50_ms":   round(statistics.median(suite_latencies), 1) if suite_latencies else None,
+            "max_ms":   round(max(suite_latencies), 1) if suite_latencies else None,
+            "traces":   traces,
         }
 
+    total_prompts   = sum(len(p) for _, p in SUITES)
+    total_responded = sum(t["responded"] for s in suites_out.values() for t in s["traces"])
+    functional      = (total_responded / total_prompts) > 0.5 if total_prompts else False
+
     return {
-        "model": model_id,
-        "date": date.today().isoformat(),
-        "run_at": datetime.now(timezone.utc).isoformat(),
-        "suites": suites_out,
+        "model":    model_id,
+        "date":     date.today().isoformat(),
+        "run_at":   datetime.now(timezone.utc).isoformat(),
+        "functional": functional,
+        "suites":   suites_out,
         "overall": {
-            "p50_ms": round(statistics.median(all_latencies), 1) if all_latencies else None,
-            "max_ms": round(max(all_latencies), 1) if all_latencies else None,
+            "p50_ms":            round(statistics.median(all_latencies), 1) if all_latencies else None,
+            "max_ms":            round(max(all_latencies), 1) if all_latencies else None,
             "avg_tokens_per_sec": round(statistics.mean(all_tps), 1) if all_tps else None,
         },
     }
@@ -202,11 +267,10 @@ def push_to_kv(model_id, metrics):
     if not WRITE_KEY:
         print("  (skipping KV push — TUNNEL_WRITE_KEY not set)")
         return
-    # Push aggregate only (no traces) to KV
     payload = {k: v for k, v in metrics.items() if k != "suites"}
     payload["suites"] = {
         name: {k: v for k, v in suite.items() if k != "traces"}
-        for name, suite in metrics["suites"].items()
+        for name, suite in metrics.get("suites", {}).items()
     }
     try:
         res = requests.put(
@@ -279,6 +343,29 @@ def cmd_merge(results_dir):
     write_results(today, all_results)
 
 
+def cmd_quality_gate(results_file):
+    """Exit 1 and print a summary if no models in the run are functional."""
+    data = json.loads(Path(results_file).read_text())
+    total      = len(data)
+    functional = [m for m, v in data.items() if v.get("functional", False)]
+    non_functional = [m for m in data if m not in functional]
+
+    print(f"Quality gate: {len(functional)}/{total} models functional")
+    if non_functional:
+        print(f"  not functional: {', '.join(non_functional)}")
+
+    if not functional:
+        print("FAILED — no functional models. Data may be unreliable.")
+        # Write a warning to step summary if running in GitHub Actions
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with open(summary, "a") as f:
+                f.write(f"## ⚠️ Quality gate warning\n")
+                f.write(f"0/{total} models returned non-empty responses in this run.\n")
+                f.write(f"Models: {', '.join(non_functional)}\n")
+        raise SystemExit(1)
+
+
 def cmd_all():
     models = get_online_models()
     if not models:
@@ -300,9 +387,10 @@ def cmd_all():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--list-models", action="store_true", help="Print JSON array of online model IDs")
-    parser.add_argument("--model", metavar="ID", help="Benchmark a single model")
-    parser.add_argument("--merge", metavar="DIR", help="Merge per-model result files from artifact directory")
+    parser.add_argument("--list-models",   action="store_true", help="Print JSON array of online model IDs")
+    parser.add_argument("--model",         metavar="ID",  help="Benchmark a single model")
+    parser.add_argument("--merge",         metavar="DIR", help="Merge per-model result files from artifact directory")
+    parser.add_argument("--quality-gate",  metavar="FILE", help="Exit 1 if no functional models in results file")
     args = parser.parse_args()
 
     if args.list_models:
@@ -311,6 +399,8 @@ def main():
         cmd_single(args.model)
     elif args.merge:
         cmd_merge(args.merge)
+    elif args.quality_gate:
+        cmd_quality_gate(args.quality_gate)
     else:
         cmd_all()
 
