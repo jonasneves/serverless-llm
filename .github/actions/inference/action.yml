@@ -59,6 +59,7 @@ runs:
         N_BATCH=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['n_batch'])")
         MAX_CONCURRENT=$(echo "$CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['max_concurrent'])")
         KV_CACHE_QUANT=$(echo "$CONFIG" | python3 -c "import sys,json; c=json.load(sys.stdin); print('true' if c['kv_cache_quant'] else 'false')")
+        FLASH_ATTN=$(echo "$CONFIG" | python3 -c "import sys,json; c=json.load(sys.stdin); print('true' if c['flash_attn'] else 'false')")
 
         echo "model_dir=$MODEL_DIR" >> $GITHUB_OUTPUT
         echo "model_repo=$MODEL_REPO" >> $GITHUB_OUTPUT
@@ -68,8 +69,9 @@ runs:
         echo "n_batch=$N_BATCH" >> $GITHUB_OUTPUT
         echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
         echo "kv_cache_quant=$KV_CACHE_QUANT" >> $GITHUB_OUTPUT
+        echo "flash_attn=$FLASH_ATTN" >> $GITHUB_OUTPUT
 
-        echo "✓ Config for $MODEL: dir=$MODEL_DIR, n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
+        echo "✓ Config for $MODEL: dir=$MODEL_DIR, n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT, flash_attn=$FLASH_ATTN"
 
     - name: Setup swap
       shell: bash
@@ -110,6 +112,7 @@ runs:
         N_BATCH: ${{ steps.config.outputs.n_batch }}
         MAX_CONCURRENT: ${{ steps.config.outputs.max_concurrent }}
         KV_CACHE_QUANT: ${{ steps.config.outputs.kv_cache_quant }}
+        FLASH_ATTN: ${{ steps.config.outputs.flash_attn }}
       run: |
         docker run -d \
           --name inference-server \
@@ -126,9 +129,10 @@ runs:
           -e N_BATCH="$N_BATCH" \
           -e MAX_CONCURRENT="$MAX_CONCURRENT" \
           -e KV_CACHE_QUANT="$KV_CACHE_QUANT" \
+          -e FLASH_ATTN="$FLASH_ATTN" \
           ${{ inputs.model_name }}-inference:latest
 
-        echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT"
+        echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT, flash_attn=$FLASH_ATTN"
 
         HEALTHY=false
         for i in {1..30}; do

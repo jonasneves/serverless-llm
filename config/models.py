@@ -45,6 +45,7 @@ class ModelConfig:
     n_batch: int = 256
     max_concurrent: int = 2
     kv_cache_quant: bool = True
+    flash_attn: bool = True
     # Routing category for auto-routing (general/coding/reasoning/function_calling)
     routing_category: str | None = None
     
@@ -240,6 +241,8 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="LiquidAI/LFM2.5-1.2B-Thinking-GGUF",
         hf_file="LFM2.5-1.2B-Thinking-Q4_K_M.gguf",
         owned_by="liquidai",
+        kv_cache_quant=False,
+        flash_attn=False,
         routing_category="reasoning",
     ),
     "jancode": ModelConfig(
@@ -483,6 +486,7 @@ if __name__ == "__main__":
                     "n_batch": m.n_batch,
                     "max_concurrent": m.max_concurrent,
                     "kv_cache_quant": m.kv_cache_quant,
+                    "flash_attn": m.flash_attn,
                 }))
         except KeyError as e:
             print(str(e), file=sys.stderr)
