@@ -66,42 +66,19 @@ async function* streamModel(
 
   yield { event: 'start', model_id: model, model };
 
-  const reader = response.body?.getReader();
-  if (!reader) {
+  if (!response.body) {
     yield { event: 'error', model_id: model, error: true, content: 'No response body' };
     return;
   }
 
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (!data || data === '[DONE]') continue;
-
-        try {
-          const parsed = JSON.parse(data);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) {
-            yield { event: 'token', model_id: model, model, content };
-          }
-        } catch {
-          // Skip malformed JSON
-        }
-      }
+  for await (const ev of readSseStream(response.body)) {
+    if (ev.type === 'chunk') {
+      yield { event: 'token', model_id: model, model, content: ev.content };
+    } else if (ev.type === 'error') {
+      yield { event: 'error', model_id: model, error: true, content: ev.error };
+      return;
     }
-  } finally {
-    reader.releaseLock();
+    // 'done' from readSseStream just signals end-of-stream; fall through
   }
 
   yield { event: 'done', model_id: model, model };

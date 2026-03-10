@@ -233,364 +233,363 @@ export function useSessionController(params: SessionControllerParams) {
       return message;
     };
 
+    const handleCompare = async () => {
+      setSpeaking(new Set(sessionModelIds));
+
+      const baseMessages = baseHistory.map(msg => ({ role: msg.role, content: msg.content }));
+      const messages = systemPrompt
+        ? [{ role: 'system', content: systemPrompt }, ...baseMessages]
+        : baseMessages;
+
+      const modelEndpoints = getModelEndpoints(modelsData);
+      const response = await fetchChatStream({
+        models: sessionModelIds,
+        messages,
+        max_tokens: GENERATION_DEFAULTS.maxTokens,
+        temperature: GENERATION_DEFAULTS.temperature,
+        github_token: githubToken || null,
+        modelEndpoints,
+        modelKeys: modelKeyMap,
+      }, currentController.signal);
+
+      await streamSseEvents(response, (data) => {
+        if (data.event === 'info' && data.content) {
+          const rawMessage = String(data.content);
+          const messageWithIcon = addIconToMessage(rawMessage);
+          setPhaseLabel(messageWithIcon);
+          if (data.model_id) {
+            setModelsData(prev => prev.map(model =>
+              model.id === data.model_id
+                ? { ...model, statusMessage: messageWithIcon }
+                : model,
+            ));
+          }
+        }
+
+        if (data.event === 'token' && data.model_id) {
+          const modelId = data.model_id as string;
+          const now = performance.now();
+
+          if (!firstTokenReceived.has(modelId)) {
+            firstTokenReceived.add(modelId);
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], firstTokenTime: now },
+            }));
+            setModelsData(prev => prev.map(model =>
+              model.id === modelId ? { ...model, statusMessage: undefined } : model,
+            ));
+          }
+
+          applyThinkingChunk(modelId, String(data.content ?? ''));
+        }
+
+        if (data.event === 'error' && data.model_id) {
+          const modelId = data.model_id as string;
+          const now = performance.now();
+          const errorText = String(data.content ?? 'Error generating response.');
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now },
+          }));
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+          setModelsData(prev => prev.map(model =>
+            model.id === modelId ? { ...model, response: errorText, error: errorText } : model,
+          ));
+          markModelFailed(modelId);
+        }
+
+        if (data.event === 'done' && data.model_id) {
+          const now = performance.now();
+          const modelId = data.model_id as string;
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now },
+          }));
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+        }
+      });
+
+      if (!skipHistory) {
+        const summary = summarizeSessionResponses(sessionResponses, sessionModelIds);
+        if (summary) {
+          pushHistoryEntries([{ role: 'assistant', content: summary, kind: 'compare_summary' }]);
+        }
+      }
+    };
+
+    const handleAnalyze = async () => {
+      const participants = sessionModelIds;
+      if (participants.length < 2) {
+        const msg = 'Select at least 2 participants for Analyze mode.';
+        setModeratorSynthesis(msg);
+        if (moderator) {
+          setModelsData(prev => prev.map(model => model.id === moderator ? { ...model, response: msg } : model));
+        }
+        setPhaseLabel('Error');
+        return;
+      }
+      setSpeaking(new Set(participants));
+
+      const modelEndpoints = getModelEndpoints(modelsData);
+
+      let analyzeSynthesis = '';
+
+      for await (const event of runAnalyze({
+        query: contextualQuery,
+        participants,
+        maxTokens: GENERATION_DEFAULTS.maxTokens,
+        systemPrompt: systemPrompt || null,
+        githubToken: githubToken || null,
+        signal: currentController.signal,
+        modelEndpoints,
+        modelKeys: modelKeyMap,
+        modelIdToName,
+      })) {
+        const eventType = event.type;
+
+        if (eventType === 'analyze_start') {
+          setPhaseLabel('Collecting Responses');
+        }
+
+        if (eventType === 'model_start' && event.model_id) {
+          const modelId = event.model_id;
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.add(modelId);
+            return next;
+          });
+        }
+
+        if (eventType === 'model_chunk' && event.model_id) {
+          const modelId = event.model_id;
+          const now = performance.now();
+          if (!firstTokenReceived.has(modelId)) {
+            firstTokenReceived.add(modelId);
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], firstTokenTime: now },
+            }));
+          }
+          applyThinkingChunk(modelId, event.chunk ?? '');
+        }
+
+        if (eventType === 'model_response' && event.model_id) {
+          const modelId = event.model_id;
+          const now = performance.now();
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now },
+          }));
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+
+          const responseText = event.response ?? '';
+          recordResponse(modelId, responseText, { replace: true });
+          if (!(previousResponses && previousResponses[modelId])) {
+            setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: responseText } : model));
+            appendEventHistory(`${modelIdToName(modelId)}:\n${responseText}`, 'analyze_response');
+          }
+        }
+
+        if (eventType === 'model_error' && event.model_id) {
+          const modelId = event.model_id;
+          const now = performance.now();
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now },
+          }));
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+          const errorText = event.error ?? 'Error generating response.';
+          clearPendingStreamForModel(modelId);
+          setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: errorText, error: errorText } : model));
+          markModelFailed(modelId);
+          recordResponse(modelId, errorText, { replace: true });
+        }
+
+        if (eventType === 'analysis_complete') {
+          setPhaseLabel('Analysis Complete');
+          const consensus = event.consensus || [];
+          const unique = event.unique_contributions || {};
+
+          let analysis = 'Analysis:\nBased on shared vocabulary across responses\n\n';
+          if (consensus.length > 0) {
+            analysis += 'Shared phrasing:\n' + consensus.map((c: string) => `• ${c}`).join('\n') + '\n\n';
+          }
+          if (Object.keys(unique).length > 0) {
+            analysis += 'Unique phrasing:\n';
+            for (const [modelId, points] of Object.entries(unique)) {
+              const modelName = modelIdToName(modelId);
+              analysis += `\n${modelName}:\n` + (points as string[]).map((p: string) => `• ${p}`).join('\n') + '\n';
+            }
+          }
+          analyzeSynthesis = analysis;
+          setModeratorSynthesis(analysis);
+          if (moderator) {
+            setModelsData(prev => prev.map(model => model.id === moderator ? { ...model, response: analysis } : model));
+          }
+        }
+
+        if (eventType === 'analyze_complete') {
+          setPhaseLabel('Complete');
+          setSpeaking(new Set());
+        }
+
+        if (eventType === 'error') {
+          const message = event.error ?? 'Analyze error.';
+          setModeratorSynthesis(message);
+          setPhaseLabel('Error');
+        }
+      }
+
+      if (!skipHistory) {
+        const trimmed = analyzeSynthesis.trim();
+        if (trimmed) {
+          pushHistoryEntries([{ role: 'assistant', content: trimmed, kind: 'analyze_synthesis' }]);
+        }
+      }
+    };
+
+    const handleDebate = async () => {
+      const participants = sessionModelIds;
+      if (participants.length < 2) {
+        const msg = 'Select at least 2 participants for Debate mode.';
+        setModeratorSynthesis(msg);
+        if (moderator) {
+          setModelsData(prev => prev.map(model => model.id === moderator ? { ...model, response: msg } : model));
+        }
+        setPhaseLabel('Error');
+        return;
+      }
+
+      const modelEndpoints = getModelEndpoints(modelsData);
+
+      for await (const event of runDebate({
+        query: contextualQuery,
+        participants,
+        rounds: 2,
+        maxTokens: GENERATION_DEFAULTS.maxTokens,
+        temperature: GENERATION_DEFAULTS.temperature,
+        systemPrompt: systemPrompt || null,
+        githubToken: githubToken || null,
+        signal: currentController.signal,
+        modelEndpoints,
+        modelKeys: modelKeyMap,
+        modelIdToName,
+      })) {
+        const eventType = event.type;
+
+        if (eventType === 'debate_start') {
+          setPhaseLabel('Debate Starting');
+        }
+
+        if (eventType === 'round_start') {
+          const roundNum = event.round_number ?? 0;
+          setPhaseLabel(`Round ${roundNum + 1}`);
+        }
+
+        if (eventType === 'turn_start' && event.model_id) {
+          const modelId = event.model_id;
+          const turnNum = event.turn_number ?? 0;
+          const roundNum = event.round_number ?? 0;
+          setSpeaking(new Set([modelId]));
+          setPhaseLabel(`Round ${roundNum + 1} · Turn ${turnNum + 1}`);
+          currentDiscussionTurnRef.current = { modelId, turnNumber: turnNum };
+        }
+
+        if (eventType === 'turn_chunk' && event.model_id) {
+          const modelId = event.model_id;
+          const now = performance.now();
+          if (!firstTokenReceived.has(modelId)) {
+            firstTokenReceived.add(modelId);
+            setExecutionTimes(prev => ({
+              ...prev,
+              [modelId]: { ...prev[modelId], firstTokenTime: now },
+            }));
+          }
+          applyThinkingChunk(modelId, event.chunk ?? '');
+        }
+
+        if (eventType === 'turn_complete' && event.model_id) {
+          const modelId = event.model_id;
+          const now = performance.now();
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now },
+          }));
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+
+          const responseText = event.response ?? '';
+          const turnNum = event.turn_number ?? 0;
+          recordResponse(modelId, responseText, { replace: true });
+          setModelsData(prev => prev.map(model =>
+            model.id === modelId ? { ...model, response: responseText } : model
+          ));
+
+          setDiscussionTurnsByModel(prev => ({
+            ...prev,
+            [modelId]: [...(prev[modelId] || []), { turn_number: turnNum, response: responseText }],
+          }));
+
+          appendEventHistory(`${modelIdToName(modelId)}:\n${responseText}`, 'debate_turn');
+        }
+
+        if (eventType === 'turn_error' && event.model_id) {
+          const modelId = event.model_id;
+          const now = performance.now();
+          setExecutionTimes(prev => ({
+            ...prev,
+            [modelId]: { ...prev[modelId], endTime: now },
+          }));
+          setSpeaking(prev => {
+            const next = new Set(prev);
+            next.delete(modelId);
+            return next;
+          });
+          const errorText = event.error ?? 'Turn error.';
+          clearPendingStreamForModel(modelId);
+          setModelsData(prev => prev.map(model =>
+            model.id === modelId ? { ...model, response: errorText, error: errorText } : model
+          ));
+          markModelFailed(modelId);
+        }
+
+        if (eventType === 'debate_complete') {
+          setPhaseLabel('Complete');
+          setSpeaking(new Set());
+        }
+
+        if (eventType === 'error') {
+          const message = event.error ?? 'Debate error.';
+          setPhaseLabel('Error');
+          setModeratorSynthesis(message);
+        }
+      }
+    };
+
     try {
-      if (mode === 'compare') {
-        setSpeaking(new Set(sessionModelIds));
-
-        const baseMessages = baseHistory.map(msg => ({ role: msg.role, content: msg.content }));
-        const messages = systemPrompt
-          ? [{ role: 'system', content: systemPrompt }, ...baseMessages]
-          : baseMessages;
-
-        const modelEndpoints = getModelEndpoints(modelsData);
-        const response = await fetchChatStream({
-          models: sessionModelIds,
-          messages,
-          max_tokens: GENERATION_DEFAULTS.maxTokens,
-          temperature: GENERATION_DEFAULTS.temperature,
-          github_token: githubToken || null,
-          modelEndpoints,
-          modelKeys: modelKeyMap,
-        }, currentController.signal);
-
-        await streamSseEvents(response, (data) => {
-          if (data.event === 'info' && data.content) {
-            const rawMessage = String(data.content);
-            const messageWithIcon = addIconToMessage(rawMessage);
-            setPhaseLabel(messageWithIcon);
-            if (data.model_id) {
-              setModelsData(prev => prev.map(model =>
-                model.id === data.model_id
-                  ? { ...model, statusMessage: messageWithIcon }
-                  : model,
-              ));
-            }
-          }
-
-          if (data.event === 'token' && data.model_id) {
-            const modelId = data.model_id as string;
-            const now = performance.now();
-
-            if (!firstTokenReceived.has(modelId)) {
-              firstTokenReceived.add(modelId);
-              setExecutionTimes(prev => ({
-                ...prev,
-                [modelId]: { ...prev[modelId], firstTokenTime: now },
-              }));
-              setModelsData(prev => prev.map(model =>
-                model.id === modelId ? { ...model, statusMessage: undefined } : model,
-              ));
-            }
-
-            applyThinkingChunk(modelId, String(data.content ?? ''));
-          }
-
-          if (data.event === 'error' && data.model_id) {
-            const modelId = data.model_id as string;
-            const now = performance.now();
-            const errorText = String(data.content ?? 'Error generating response.');
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now },
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-            setModelsData(prev => prev.map(model =>
-              model.id === modelId ? { ...model, response: errorText, error: errorText } : model,
-            ));
-            markModelFailed(modelId);
-          }
-
-          if (data.event === 'done' && data.model_id) {
-            const now = performance.now();
-            const modelId = data.model_id as string;
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now },
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-          }
-        });
-
-        if (!skipHistory) {
-          const summary = summarizeSessionResponses(sessionResponses, sessionModelIds);
-          if (summary) {
-            pushHistoryEntries([{ role: 'assistant', content: summary, kind: 'compare_summary' }]);
-          }
-        }
-        return;
-      }
-
-      if (mode === 'analyze') {
-        const participants = sessionModelIds;
-        if (participants.length < 2) {
-          const msg = 'Select at least 2 participants for Analyze mode.';
-          setModeratorSynthesis(msg);
-          if (moderator) {
-            setModelsData(prev => prev.map(model => model.id === moderator ? { ...model, response: msg } : model));
-          }
-          setPhaseLabel('Error');
-          return;
-        }
-        setSpeaking(new Set(participants));
-
-        const modelEndpoints = getModelEndpoints(modelsData);
-
-        let analyzeSynthesis = '';
-
-        for await (const event of runAnalyze({
-          query: contextualQuery,
-          participants,
-          maxTokens: GENERATION_DEFAULTS.maxTokens,
-          systemPrompt: systemPrompt || null,
-          githubToken: githubToken || null,
-          signal: currentController.signal,
-          modelEndpoints,
-          modelKeys: modelKeyMap,
-          modelIdToName,
-        })) {
-          const eventType = event.type;
-
-          if (eventType === 'analyze_start') {
-            setPhaseLabel('Collecting Responses');
-          }
-
-          if (eventType === 'model_start' && event.model_id) {
-            const modelId = event.model_id;
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.add(modelId);
-              return next;
-            });
-          }
-
-          if (eventType === 'model_chunk' && event.model_id) {
-            const modelId = event.model_id;
-            const now = performance.now();
-            if (!firstTokenReceived.has(modelId)) {
-              firstTokenReceived.add(modelId);
-              setExecutionTimes(prev => ({
-                ...prev,
-                [modelId]: { ...prev[modelId], firstTokenTime: now },
-              }));
-            }
-            applyThinkingChunk(modelId, event.chunk ?? '');
-          }
-
-          if (eventType === 'model_response' && event.model_id) {
-            const modelId = event.model_id;
-            const now = performance.now();
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now },
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-
-            const responseText = event.response ?? '';
-            recordResponse(modelId, responseText, { replace: true });
-            if (!(previousResponses && previousResponses[modelId])) {
-              setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: responseText } : model));
-              appendEventHistory(`${modelIdToName(modelId)}:\n${responseText}`, 'analyze_response');
-            }
-          }
-
-          if (eventType === 'model_error' && event.model_id) {
-            const modelId = event.model_id;
-            const now = performance.now();
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now },
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-            const errorText = event.error ?? 'Error generating response.';
-            clearPendingStreamForModel(modelId);
-            setModelsData(prev => prev.map(model => model.id === modelId ? { ...model, response: errorText, error: errorText } : model));
-            markModelFailed(modelId);
-            recordResponse(modelId, errorText, { replace: true });
-          }
-
-          if (eventType === 'analysis_complete') {
-            setPhaseLabel('Analysis Complete');
-            const consensus = event.consensus || [];
-            const unique = event.unique_contributions || {};
-
-            let analysis = 'Analysis:\nBased on shared vocabulary across responses\n\n';
-            if (consensus.length > 0) {
-              analysis += 'Common themes:\n' + consensus.map((c: string) => `• ${c}`).join('\n') + '\n\n';
-            }
-            if (Object.keys(unique).length > 0) {
-              analysis += 'Distinct points:\n';
-              for (const [modelId, points] of Object.entries(unique)) {
-                const modelName = modelIdToName(modelId);
-                analysis += `\n${modelName}:\n` + (points as string[]).map((p: string) => `• ${p}`).join('\n') + '\n';
-              }
-            }
-            analyzeSynthesis = analysis;
-            setModeratorSynthesis(analysis);
-            if (moderator) {
-              setModelsData(prev => prev.map(model => model.id === moderator ? { ...model, response: analysis } : model));
-            }
-          }
-
-          if (eventType === 'analyze_complete') {
-            setPhaseLabel('Complete');
-            setSpeaking(new Set());
-          }
-
-          if (eventType === 'error') {
-            const message = event.error ?? 'Analyze error.';
-            setModeratorSynthesis(message);
-            setPhaseLabel('Error');
-          }
-        }
-
-        if (!skipHistory) {
-          const trimmed = analyzeSynthesis.trim();
-          if (trimmed) {
-            pushHistoryEntries([{ role: 'assistant', content: trimmed, kind: 'analyze_synthesis' }]);
-          }
-        }
-        return;
-      }
-
-      if (mode === 'debate') {
-        const participants = sessionModelIds;
-        if (participants.length < 2) {
-          const msg = 'Select at least 2 participants for Debate mode.';
-          setModeratorSynthesis(msg);
-          if (moderator) {
-            setModelsData(prev => prev.map(model => model.id === moderator ? { ...model, response: msg } : model));
-          }
-          setPhaseLabel('Error');
-          return;
-        }
-
-        const modelEndpoints = getModelEndpoints(modelsData);
-
-        for await (const event of runDebate({
-          query: contextualQuery,
-          participants,
-          rounds: 2,
-          maxTokens: GENERATION_DEFAULTS.maxTokens,
-          temperature: GENERATION_DEFAULTS.temperature,
-          systemPrompt: systemPrompt || null,
-          githubToken: githubToken || null,
-          signal: currentController.signal,
-          modelEndpoints,
-          modelKeys: modelKeyMap,
-          modelIdToName,
-        })) {
-          const eventType = event.type;
-
-          if (eventType === 'debate_start') {
-            setPhaseLabel('Debate Starting');
-          }
-
-          if (eventType === 'round_start') {
-            const roundNum = event.round_number ?? 0;
-            setPhaseLabel(`Round ${roundNum + 1}`);
-          }
-
-          if (eventType === 'turn_start' && event.model_id) {
-            const modelId = event.model_id;
-            const turnNum = event.turn_number ?? 0;
-            const roundNum = event.round_number ?? 0;
-            setSpeaking(new Set([modelId]));
-            setPhaseLabel(`Round ${roundNum + 1} · Turn ${turnNum + 1}`);
-            currentDiscussionTurnRef.current = { modelId, turnNumber: turnNum };
-          }
-
-          if (eventType === 'turn_chunk' && event.model_id) {
-            const modelId = event.model_id;
-            const now = performance.now();
-            if (!firstTokenReceived.has(modelId)) {
-              firstTokenReceived.add(modelId);
-              setExecutionTimes(prev => ({
-                ...prev,
-                [modelId]: { ...prev[modelId], firstTokenTime: now },
-              }));
-            }
-            applyThinkingChunk(modelId, event.chunk ?? '');
-          }
-
-          if (eventType === 'turn_complete' && event.model_id) {
-            const modelId = event.model_id;
-            const now = performance.now();
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now },
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-
-            const responseText = event.response ?? '';
-            const turnNum = event.turn_number ?? 0;
-            recordResponse(modelId, responseText, { replace: true });
-            setModelsData(prev => prev.map(model =>
-              model.id === modelId ? { ...model, response: responseText } : model
-            ));
-
-            setDiscussionTurnsByModel(prev => ({
-              ...prev,
-              [modelId]: [...(prev[modelId] || []), { turn_number: turnNum, response: responseText }],
-            }));
-
-            appendEventHistory(`${modelIdToName(modelId)}:\n${responseText}`, 'debate_turn');
-          }
-
-          if (eventType === 'turn_error' && event.model_id) {
-            const modelId = event.model_id;
-            const now = performance.now();
-            setExecutionTimes(prev => ({
-              ...prev,
-              [modelId]: { ...prev[modelId], endTime: now },
-            }));
-            setSpeaking(prev => {
-              const next = new Set(prev);
-              next.delete(modelId);
-              return next;
-            });
-            const errorText = event.error ?? 'Turn error.';
-            clearPendingStreamForModel(modelId);
-            setModelsData(prev => prev.map(model =>
-              model.id === modelId ? { ...model, response: errorText, error: errorText } : model
-            ));
-            markModelFailed(modelId);
-          }
-
-          if (eventType === 'debate_complete') {
-            setPhaseLabel('Complete');
-            setSpeaking(new Set());
-          }
-
-          if (eventType === 'error') {
-            const message = event.error ?? 'Debate error.';
-            setPhaseLabel('Error');
-            setModeratorSynthesis(message);
-          }
-        }
-
-        return;
-      }
-
+      if (mode === 'compare') return await handleCompare();
+      if (mode === 'analyze') return await handleAnalyze();
+      if (mode === 'debate') return await handleDebate();
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
         return;

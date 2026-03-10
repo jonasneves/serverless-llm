@@ -79,9 +79,9 @@ GSM8K_PROMPTS = [
 ]
 
 SUITES = [
-    ("mmlu",     MMLU_PROMPTS),
-    ("instruct", INSTRUCT_PROMPTS),
-    ("gsm8k",    GSM8K_PROMPTS),
+    ("mmlu",     MMLU_PROMPTS,     False),
+    ("instruct", INSTRUCT_PROMPTS, True),   # strict = single-word check
+    ("gsm8k",    GSM8K_PROMPTS,    False),
 ]
 
 
@@ -125,7 +125,8 @@ def run_prompt(model_id, prompt):
         res.raise_for_status()
 
         text = ""
-        completion_tokens = 0
+        completion_chunks = 0
+        usage_tokens = None
 
         for raw in res.iter_lines():
             if not raw:
@@ -141,23 +142,31 @@ def run_prompt(model_id, prompt):
                 delta = chunk["choices"][0]["delta"].get("content") or ""
                 if delta:
                     text += delta
-                    completion_tokens += 1
+                    completion_chunks += 1
+                if chunk.get("usage") and chunk["usage"].get("completion_tokens"):
+                    usage_tokens = chunk["usage"]["completion_tokens"]
             except Exception:
                 pass
 
         latency_ms = (time.monotonic() - t0) * 1000
-        tps = (completion_tokens / (latency_ms / 1000)) if latency_ms > 0 and completion_tokens else 0
-        return {"text": text, "latency_ms": latency_ms, "tps": tps, "timed_out": False, "error": None}
+        if usage_tokens is not None:
+            tps = (usage_tokens / (latency_ms / 1000)) if latency_ms > 0 else 0
+        elif completion_chunks:
+            tps = (completion_chunks / (latency_ms / 1000)) if latency_ms > 0 else 0
+        else:
+            tps = 0
+        tps_label = "tokens/s" if usage_tokens is not None else "chunks/s"
+        return {"text": text, "latency_ms": latency_ms, "tps": tps, "tps_label": tps_label, "timed_out": False, "error": None}
 
     except requests.exceptions.Timeout:
         latency_ms = (time.monotonic() - t0) * 1000
         print(f"  timeout after {latency_ms:.0f}ms")
-        return {"text": None, "latency_ms": latency_ms, "tps": 0, "timed_out": True, "error": "timeout"}
+        return {"text": None, "latency_ms": latency_ms, "tps": 0, "tps_label": "chunks/s", "timed_out": True, "error": "timeout"}
 
     except Exception as e:
         latency_ms = (time.monotonic() - t0) * 1000
         print(f"  error: {e}")
-        return {"text": None, "latency_ms": latency_ms, "tps": 0, "timed_out": False, "error": str(e)}
+        return {"text": None, "latency_ms": latency_ms, "tps": 0, "tps_label": "chunks/s", "timed_out": False, "error": str(e)}
 
 
 def check_model_responsive(model_id):
@@ -196,7 +205,7 @@ def benchmark_model(model_id):
     all_tps = []
     suites_out = {}
 
-    for suite_name, prompts in SUITES:
+    for suite_name, prompts, strict in SUITES:
         traces = []
         suite_latencies = []
 
@@ -209,6 +218,8 @@ def benchmark_model(model_id):
 
             responded = text is not None and bool(text.strip())
             correct   = exact_match(text, expected) if responded else False
+            if correct and strict and len(text.strip().split()) > 3:
+                correct = False
 
             traces.append({
                 "prompt":     prompt,
@@ -241,7 +252,7 @@ def benchmark_model(model_id):
             "traces":   traces,
         }
 
-    total_prompts   = sum(len(p) for _, p in SUITES)
+    total_prompts   = sum(len(p) for _, p, _ in SUITES)
     total_responded = sum(t["responded"] for s in suites_out.values() for t in s["traces"])
     functional      = (total_responded / total_prompts) > 0.5 if total_prompts else False
 
