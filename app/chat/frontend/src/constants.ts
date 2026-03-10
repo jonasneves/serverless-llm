@@ -8,13 +8,20 @@ export const MODEL_META: Record<string, { color: string; name?: string }> = {
 export const SELF_HOSTED_DEFAULT_PRIORITY = 50;
 export const GITHUB_DEFAULT_PRIORITY = 100;
 
-// Models that output thinking content by default (without explicit <think> tags)
-// These models start in "thinking mode" and we treat all content as thinking until </think>
+// Must match reasoning models in config/models.py — run `python3 config/models.py --route-map` to verify
+// Models that output thinking content wrapped in <think>...</think> tags
 export const THINKING_MODELS: string[] = [
   'deepseek-r1-distill-qwen-1.5b',
-  'r1qwen',           // Alternate match
-  'smollm3',          // SmolLM3 uses <think> tags
-  'nanbeige',         // Nanbeige4-3B Thinking
+  'r1qwen',               // Alternate match for r1qwen
+  'nanbeige',             // Nanbeige4.1-3B
+  'phi-4-mini-reasoning',
+  'phireasoning',         // Alternate match for phireasoning
+  'lfm2.5-1.2b-thinking',
+  'lfm2thinking',         // Alternate match for lfm2thinking
+  'dasd-4b-thinking',
+  'dasd',                 // Alternate match for dasd
+  'falcon-h1r-7b',
+  'falcon',               // Alternate match for falcon
 ];
 
 export function isThinkingModel(modelId: string): boolean {

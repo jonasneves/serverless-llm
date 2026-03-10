@@ -7,33 +7,28 @@ permissions:
   contents: read
   packages: read
 jobs:
-  inference:
+  detect:
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      models: ${{ steps.set-matrix.outputs.models }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build model matrix
+        id: set-matrix
+        run: |
+          MATRIX=$(python3 config/models.py --inference-names)
+          echo "models=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Running models: $MATRIX"
+
+  run:
+    needs: detect
     name: "${{ matrix.model }}"
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
-        model:
-          - agentcpm
-          - dasd
-          - falcon
-          - functiongemma
-          - gemma
-          - gemma3n
-          - gptoss
-          - jancode
-          - lfm2
-          - lfm2mini
-          - lfm2thinking
-          - llama
-          - nanbeige
-          - phi
-          - phireasoning
-          - qwen
-          - r1qwen
-          - rnj
-          - smollm3
+        model: ${{ fromJson(needs.detect.outputs.models) }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/inference
