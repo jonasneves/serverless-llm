@@ -16,11 +16,9 @@
       --text-secondary: #8b949e;
       --accent:         #1f6feb;
       --success:        #3fb950;
-      --warning:        #d29922;
       --danger:         #f85149;
       --font-mono:      'JetBrains Mono', 'Fira Mono', monospace;
       --radius:         6px;
-      --radius-lg:      10px;
     }
 
     body {
@@ -55,11 +53,27 @@
       max-width: 960px;
       width: 100%;
       margin: 0 auto;
-      padding: 48px 24px;
+      padding: 40px 24px;
     }
 
-    h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
-    .subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 32px; }
+    .page-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    h1 { font-size: 20px; font-weight: 600; }
+
+    select {
+      font-size: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+    select:focus { outline: none; border-color: var(--accent); }
 
     .state-wrap {
       display: flex; flex-direction: column; align-items: center;
@@ -69,8 +83,17 @@
       border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Table */
-    .table-wrap { overflow-x: auto; }
+    .suite-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab {
+      padding: 5px 14px; border-radius: var(--radius);
+      font-size: 12.5px; cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary);
+    }
+    .tab:hover { border-color: var(--text-secondary); color: var(--text); }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* Summary table */
+    .table-wrap { overflow-x: auto; margin-bottom: 40px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     thead th {
       text-align: left; padding: 8px 12px;
@@ -80,27 +103,55 @@
     }
     tbody tr { border-bottom: 1px solid var(--border); }
     tbody tr:last-child { border-bottom: none; }
-    tbody td { padding: 10px 12px; }
-    tbody tr:hover { background: var(--surface-raised); }
+    tbody td { padding: 10px 12px; vertical-align: top; }
+    tbody tr:hover > td { background: var(--surface-raised); }
 
-    .model-id { font-family: var(--font-mono); font-size: 12px; }
-    .val      { font-family: var(--font-mono); font-size: 12.5px; }
-    .na       { color: var(--text-secondary); }
+    .model-name { font-weight: 500; font-size: 13px; }
+    .val  { font-family: var(--font-mono); font-size: 12.5px; }
+    .na   { color: var(--text-secondary); }
 
-    .bar-cell { min-width: 120px; }
-    .bar-bg   { background: var(--surface-raised); border-radius: 3px; height: 6px; }
+    .bar-cell { min-width: 100px; }
+    .bar-bg   { background: var(--surface-raised); border-radius: 3px; height: 6px; margin-top: 2px; }
     .bar-fill { height: 6px; border-radius: 3px; background: var(--accent); }
 
-    .suite-tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
-    .tab {
-      padding: 5px 14px; border-radius: var(--radius);
-      font-size: 12.5px; cursor: pointer;
-      background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary);
+    /* Expand toggle */
+    .expand-btn {
+      background: none; border: none; color: var(--text-secondary);
+      cursor: pointer; font-size: 11px; padding: 2px 0;
+      text-decoration: underline; text-underline-offset: 2px;
     }
-    .tab:hover { border-color: var(--text-secondary); color: var(--text); }
-    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .expand-btn:hover { color: var(--text); }
 
-    .date-note { font-size: 11.5px; color: var(--text-secondary); margin-bottom: 20px; }
+    /* Traces */
+    .traces-row td { padding: 0; }
+    .traces-wrap {
+      border-top: 1px solid var(--border);
+      padding: 12px 16px 16px;
+    }
+    .trace-header {
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: .04em;
+      margin-bottom: 10px;
+    }
+    .trace-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12.5px;
+    }
+    .trace-item:last-child { border-bottom: none; }
+    .trace-prompt { color: var(--text-secondary); margin-bottom: 4px; }
+    .trace-response {
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--text); white-space: pre-wrap; word-break: break-word;
+      margin-bottom: 4px;
+    }
+    .trace-meta { font-size: 11px; color: var(--text-secondary); display: flex; gap: 12px; }
+    .badge {
+      display: inline-block; padding: 1px 7px; border-radius: 10px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-pass { background: rgba(63,185,80,.15); color: var(--success); }
+    .badge-fail { background: rgba(248,81,73,.12); color: var(--danger); }
 
     footer {
       border-top: 1px solid var(--border);
@@ -126,7 +177,7 @@
 <main id="main">
   <div class="state-wrap">
     <div class="spinner"></div>
-    <p>Loading benchmark results…</p>
+    <p>Loading…</p>
   </div>
 </main>
 
@@ -136,57 +187,106 @@
 </footer>
 
 <script>
-  const REGISTRY = 'https://tunnel-registry.jonasneves.workers.dev';
-  const SUITES = ['overall', 'mmlu', 'humaneval', 'gsm8k'];
-  let data = {};
+  const SUITES = ['overall', 'mmlu', 'instruct', 'gsm8k'];
+
+  let runData    = {};   // model_id → metrics for active run
   let activeSuite = 'overall';
+  let expanded    = new Set();
+  let runs        = [];  // available run dates, newest first
 
   const $main = document.getElementById('main');
 
-  async function load() {
+  // ---------------------------------------------------------------------------
+  // Load
+  // ---------------------------------------------------------------------------
+
+  async function loadIndex() {
+    const res = await fetch('./benchmarks/index.json');
+    if (!res.ok) throw new Error('index not found');
+    runs = await res.json();
+    if (!runs.length) throw new Error('no runs yet');
+  }
+
+  async function loadRun(date) {
+    expanded.clear();
+    const res = await fetch(`./benchmarks/${date}.json`);
+    if (!res.ok) throw new Error(`run ${date} not found`);
+    runData = await res.json();
+    render(date);
+  }
+
+  async function init() {
     try {
-      const res = await fetch(`${REGISTRY}/benchmarks`);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      data = await res.json();
-      render();
+      await loadIndex();
+      await loadRun(runs[0]);
     } catch (e) {
-      $main.innerHTML = `<div class="state-wrap"><p>Failed to load: ${e.message}</p></div>`;
+      $main.innerHTML = `
+        <div class="state-wrap">
+          <p>${e.message === 'index not found' || e.message === 'no runs yet'
+            ? `No results yet. Trigger the <a href="https://github.com/lm-arena/lm-arena.github.io/actions/workflows/benchmark.yml" style="color:var(--accent)">benchmark workflow</a> to generate results.`
+            : `Failed to load: ${e.message}`
+          }</p>
+        </div>`;
     }
   }
 
-  function setTab(suite) {
-    activeSuite = suite;
-    render();
-  }
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   function fmt(v) {
     if (v == null) return '<span class="na">—</span>';
     return `<span class="val">${v}</span>`;
   }
 
-  function render() {
-    const models = Object.values(data);
-    if (models.length === 0) {
-      $main.innerHTML = `
-        <h1>Benchmarks</h1>
-        <p class="subtitle">No results yet. Trigger the <a href="https://github.com/lm-arena/lm-arena.github.io/actions/workflows/benchmark.yml" style="color:var(--accent)">benchmark workflow</a> to generate results.</p>`;
+  function renderTraces(modelId, suiteName) {
+    const suite = runData[modelId]?.suites?.[suiteName];
+    if (!suite?.traces?.length) return '<div class="traces-wrap"><p style="font-size:12px;color:var(--text-secondary)">No traces available.</p></div>';
+
+    const items = suite.traces.map(t => `
+      <div class="trace-item">
+        <div class="trace-prompt">${escHtml(t.prompt)}</div>
+        ${t.response != null
+          ? `<div class="trace-response">${escHtml(t.response)}</div>`
+          : `<div class="trace-response na">— no response —</div>`}
+        <div class="trace-meta">
+          <span class="badge ${t.correct ? 'badge-pass' : 'badge-fail'}">${t.correct ? 'pass' : 'fail'}</span>
+          <span>expected: <span style="font-family:var(--font-mono)">${escHtml(t.expected)}</span></span>
+          ${t.latency_ms != null ? `<span>${t.latency_ms} ms</span>` : ''}
+        </div>
+      </div>`).join('');
+
+    return `<div class="traces-wrap">
+      <div class="trace-header">${suiteName} — per-prompt traces</div>
+      ${items}
+    </div>`;
+  }
+
+  function render(activeDate) {
+    const models = Object.values(runData);
+    if (!models.length) {
+      $main.innerHTML = `<div class="state-wrap"><p>Run produced no results.</p></div>`;
       return;
     }
 
-    // Sort by overall p50 latency (ascending)
-    const sorted = [...models].sort((a, b) => {
-      const ap = a.overall?.p50_ms ?? Infinity;
-      const bp = b.overall?.p50_ms ?? Infinity;
-      return ap - bp;
-    });
+    const sorted = [...models].sort((a, b) =>
+      (a.overall?.p50_ms ?? Infinity) - (b.overall?.p50_ms ?? Infinity)
+    );
 
-    const sampleDate = models[0]?.date || '';
-    const tabs = SUITES.map(s => `<button class="tab${s === activeSuite ? ' active' : ''}" onclick="setTab('${s}')">${s}</button>`).join('');
+    const runSelector = runs.length > 1
+      ? `<select onchange="switchRun(this.value)">${
+          runs.map(r => `<option value="${r}"${r === activeDate ? ' selected' : ''}>${r}</option>`).join('')
+        }</select>`
+      : `<span style="font-size:12px;color:var(--text-secondary)">${activeDate}</span>`;
+
+    const tabs = SUITES.map(s =>
+      `<button class="tab${s === activeSuite ? ' active' : ''}" onclick="setTab('${s}','${activeDate}')">${s}</button>`
+    ).join('');
 
     let thead, rows;
 
     if (activeSuite === 'overall') {
-      const maxTps = Math.max(...sorted.map(m => m.overall?.avg_tokens_per_sec ?? 0));
+      const maxTps = Math.max(...sorted.map(m => m.overall?.avg_tokens_per_sec ?? 0), 1);
       thead = `<tr>
         <th>Model</th>
         <th>P50 latency</th>
@@ -197,43 +297,51 @@
       rows = sorted.map(m => {
         const o = m.overall || {};
         const tps = o.avg_tokens_per_sec ?? 0;
-        const pct = maxTps > 0 ? Math.round((tps / maxTps) * 100) : 0;
+        const pct = Math.round((tps / maxTps) * 100);
         return `<tr>
-          <td class="model-id">${m.model}</td>
+          <td><div class="model-name">${m.model}</div></td>
           <td>${o.p50_ms != null ? fmt(o.p50_ms + ' ms') : fmt(null)}</td>
           <td>${o.p95_ms != null ? fmt(o.p95_ms + ' ms') : fmt(null)}</td>
-          <td>${o.avg_tokens_per_sec != null ? fmt(o.avg_tokens_per_sec + ' t/s') : fmt(null)}</td>
+          <td>${tps ? fmt(tps + ' t/s') : fmt(null)}</td>
           <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></td>
         </tr>`;
       }).join('');
     } else {
-      const maxAcc = 1;
       thead = `<tr>
         <th>Model</th>
         <th>Accuracy</th>
         <th>Answered</th>
         <th>P50 latency</th>
         <th class="bar-cell">Accuracy</th>
+        <th></th>
       </tr>`;
-      rows = sorted.map(m => {
+      rows = sorted.flatMap(m => {
         const s = m.suites?.[activeSuite] || {};
         const acc = s.accuracy ?? null;
         const pct = acc != null ? Math.round(acc * 100) : 0;
-        return `<tr>
-          <td class="model-id">${m.model}</td>
-          <td>${acc != null ? fmt((acc * 100).toFixed(0) + '%') : fmt(null)}</td>
-          <td>${s.answered != null ? fmt(`${s.answered}/${s.prompts}`) : fmt(null)}</td>
+        const key = `${m.model}:${activeSuite}`;
+        const isOpen = expanded.has(key);
+
+        const summaryRow = `<tr>
+          <td><div class="model-name">${m.model}</div></td>
+          <td>${acc != null ? fmt(pct + '%') : fmt(null)}</td>
+          <td>${s.answered != null ? fmt(s.answered + '/' + s.prompts) : fmt(null)}</td>
           <td>${s.p50_ms != null ? fmt(s.p50_ms + ' ms') : fmt(null)}</td>
           <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+          <td><button class="expand-btn" onclick="toggleTraces('${m.model}','${activeSuite}','${activeDate}')">${isOpen ? 'hide traces' : 'show traces'}</button></td>
         </tr>`;
+
+        const traceRow = isOpen ? `<tr class="traces-row"><td colspan="6">${renderTraces(m.model, activeSuite)}</td></tr>` : '';
+        return [summaryRow, traceRow].filter(Boolean).join('');
       }).join('');
     }
 
     $main.innerHTML = `
-      <h1>Benchmarks</h1>
-      <p class="subtitle">Daily evaluation across MMLU, HumanEval, and GSM8K prompt suites.</p>
+      <div class="page-header">
+        <h1>Benchmarks</h1>
+        ${runSelector}
+      </div>
       <div class="suite-tabs">${tabs}</div>
-      ${sampleDate ? `<p class="date-note">Last run: ${sampleDate}</p>` : ''}
       <div class="table-wrap">
         <table>
           <thead>${thead}</thead>
@@ -242,7 +350,35 @@
       </div>`;
   }
 
-  load();
+  // ---------------------------------------------------------------------------
+  // Interactions
+  // ---------------------------------------------------------------------------
+
+  function setTab(suite, date) {
+    activeSuite = suite;
+    expanded.clear();
+    render(date);
+  }
+
+  function switchRun(date) {
+    $main.innerHTML = '<div class="state-wrap"><div class="spinner"></div><p>Loading…</p></div>';
+    loadRun(date);
+  }
+
+  function toggleTraces(modelId, suite, date) {
+    const key = `${modelId}:${suite}`;
+    if (expanded.has(key)) expanded.delete(key);
+    else expanded.add(key);
+    render(date);
+  }
+
+  function escHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  init();
 </script>
 </body>
 </html>

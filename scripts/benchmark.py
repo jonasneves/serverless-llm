@@ -1,36 +1,42 @@
 """
 Benchmark runner for lm-arena.
 
-Calls /v1/chat/completions for each online model across three prompt suites
-(MMLU, HumanEval, GSM8K), measures latency and throughput, writes results to
-benchmarks/YYYY-MM-DD.json and pushes metrics to KV via PUT /benchmark/:model.
+Calls /v1/chat/completions for each online model across three suites
+(MMLU, instruction-following, GSM8K), measures latency and throughput.
+
+Writes results to:
+  app/chat/frontend/public/benchmarks/YYYY-MM-DD.json   — full run with per-prompt traces
+  app/chat/frontend/public/benchmarks/index.json        — list of available runs
+
+Also pushes aggregate metrics to KV via PUT /benchmark/:model for the live page widget.
 """
 
 import json
 import os
-import re
 import statistics
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import requests
 
-REGISTRY = os.environ.get("REGISTRY", "https://tunnel-registry.jonasneves.workers.dev")
-WRITE_KEY = os.environ.get("TUNNEL_WRITE_KEY", "")
-TIMEOUT = 60  # seconds per request
+REGISTRY   = os.environ.get("REGISTRY", "https://tunnel-registry.jonasneves.workers.dev")
+WRITE_KEY  = os.environ.get("TUNNEL_WRITE_KEY", "")
+TIMEOUT    = 60
 MAX_TOKENS = 256
+OUT_DIR    = Path("app/chat/frontend/public/benchmarks")
 
 
 # ---------------------------------------------------------------------------
 # Prompt suites
 # ---------------------------------------------------------------------------
 
+# Each entry: (prompt, expected_substring)
 MMLU_PROMPTS = [
     ("What is the chemical symbol for gold?", "Au"),
     ("Which planet is closest to the Sun?", "Mercury"),
     ("What is the square root of 144?", "12"),
-    ("Who wrote 'Romeo and Juliet'?", "Shakespeare"),
+    ("Who wrote Romeo and Juliet?", "Shakespeare"),
     ("What is the capital of France?", "Paris"),
     ("How many sides does a hexagon have?", "6"),
     ("What gas do plants absorb from the atmosphere?", "CO2"),
@@ -39,40 +45,39 @@ MMLU_PROMPTS = [
     ("How many bones are in the adult human body?", "206"),
 ]
 
-HUMANEVAL_PROMPTS = [
-    (
-        "Write a Python function that returns the sum of two integers.",
-        "def",  # just check code was produced
-    ),
-    (
-        "Write a Python function to check if a string is a palindrome.",
-        "def",
-    ),
-    (
-        "Write a Python one-liner to flatten a list of lists.",
-        "[",
-    ),
-    (
-        "Write a Python function that returns the factorial of n.",
-        "def",
-    ),
-    (
-        "Write a Python function that finds the maximum element in a list.",
-        "def",
-    ),
+# Instruction-following: model must respond with exactly the requested word/phrase.
+# Expected is the exact string the response must contain (case-insensitive).
+INSTRUCT_PROMPTS = [
+    ("Respond with exactly one word: the color of the sky.", "blue"),
+    ("Respond with exactly one word: the opposite of hot.", "cold"),
+    ("Respond with exactly one word: the first month of the year.", "january"),
+    ("Respond with exactly one word: the number of days in a week.", "7"),
+    ("Respond with exactly the answer, nothing else: 2 + 2 =", "4"),
+    ("Respond with exactly one word: what metal is used in electrical wires?", "copper"),
+    ("Respond with exactly one word: the largest ocean.", "pacific"),
+    ("Respond with exactly one word: what do bees produce?", "honey"),
 ]
 
 GSM8K_PROMPTS = [
-    ("If a train travels 60 km/h for 2 hours, how many km does it travel?", "120"),
-    ("A store sells 3 apples for $2. How much do 9 apples cost?", "6"),
-    ("There are 24 students in a class. 1/3 are absent. How many are present?", "16"),
-    ("A rectangle has length 8 and width 5. What is its area?", "40"),
-    ("If 5 workers finish a job in 10 days, how many days for 10 workers?", "5"),
+    ("If a train travels 60 km/h for 2 hours, how many km does it travel? Answer with the number only.", "120"),
+    ("A store sells 3 apples for $2. How much do 9 apples cost? Answer with the number only.", "6"),
+    ("There are 24 students in a class. 1/3 are absent. How many are present? Answer with the number only.", "16"),
+    ("A rectangle has length 8 and width 5. What is its area? Answer with the number only.", "40"),
+    ("If 5 workers finish a job in 10 days, how many days for 10 workers? Answer with the number only.", "5"),
+]
+
+SUITES = [
+    ("mmlu",     MMLU_PROMPTS),
+    ("instruct", INSTRUCT_PROMPTS),
+    ("gsm8k",    GSM8K_PROMPTS),
 ]
 
 
+# ---------------------------------------------------------------------------
+# Inference
+# ---------------------------------------------------------------------------
+
 def get_online_models():
-    """Return list of model IDs currently online."""
     try:
         res = requests.get(f"{REGISTRY}/v1/models", timeout=10)
         res.raise_for_status()
@@ -82,12 +87,11 @@ def get_online_models():
         return []
 
 
-def run_prompt(model_id, prompt, max_tokens=MAX_TOKENS):
-    """Send a single prompt; return (response_text, latency_ms, tokens_per_sec) or None on failure."""
+def run_prompt(model_id, prompt):
     payload = {
         "model": model_id,
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": max_tokens,
+        "max_tokens": MAX_TOKENS,
         "stream": False,
     }
     t0 = time.monotonic()
@@ -105,84 +109,134 @@ def run_prompt(model_id, prompt, max_tokens=MAX_TOKENS):
         tps = (completion_tokens / (latency_ms / 1000)) if latency_ms > 0 and completion_tokens else 0
         return text, latency_ms, tps
     except Exception as e:
-        print(f"  Error: {e}")
+        print(f"  error: {e}")
         return None
 
 
 def exact_match(response, expected):
-    """Check if expected answer appears in the response (case-insensitive)."""
     return expected.lower() in response.lower()
 
 
+# ---------------------------------------------------------------------------
+# Benchmarking
+# ---------------------------------------------------------------------------
+
 def benchmark_model(model_id):
-    """Run all prompt suites against one model; return metrics dict."""
     print(f"\n=== {model_id} ===")
-    latencies = []
-    tps_list = []
-    results_by_suite = {}
+    all_latencies = []
+    all_tps = []
+    suites_out = {}
 
-    suites = [
-        ("mmlu",      MMLU_PROMPTS),
-        ("humaneval", HUMANEVAL_PROMPTS),
-        ("gsm8k",     GSM8K_PROMPTS),
-    ]
-
-    for suite_name, prompts in suites:
-        correct = 0
+    for suite_name, prompts in SUITES:
+        traces = []
         suite_latencies = []
 
         for prompt, expected in prompts:
             result = run_prompt(model_id, prompt)
             if result is None:
+                traces.append({
+                    "prompt": prompt,
+                    "expected": expected,
+                    "response": None,
+                    "correct": False,
+                    "latency_ms": None,
+                })
                 continue
-            text, lat, tps = result
-            suite_latencies.append(lat)
-            latencies.append(lat)
-            if tps > 0:
-                tps_list.append(tps)
-            if exact_match(text, expected):
-                correct += 1
-            print(f"  [{suite_name}] {lat:.0f}ms  correct={exact_match(text, expected)}")
 
-        n = len(prompts)
-        results_by_suite[suite_name] = {
-            "prompts": n,
-            "answered": len(suite_latencies),
-            "correct": correct,
-            "accuracy": round(correct / len(suite_latencies), 3) if suite_latencies else 0,
+            text, lat, tps = result
+            correct = exact_match(text, expected)
+            traces.append({
+                "prompt": prompt,
+                "expected": expected,
+                "response": text,
+                "correct": correct,
+                "latency_ms": round(lat, 1),
+            })
+            suite_latencies.append(lat)
+            all_latencies.append(lat)
+            if tps > 0:
+                all_tps.append(tps)
+
+            print(f"  [{suite_name}] {lat:.0f}ms  correct={correct}  response={text[:60]!r}")
+
+        answered = len(suite_latencies)
+        correct_count = sum(1 for t in traces if t["correct"])
+        suites_out[suite_name] = {
+            "prompts": len(prompts),
+            "answered": answered,
+            "correct": correct_count,
+            "accuracy": round(correct_count / answered, 3) if answered else 0,
             "p50_ms": round(statistics.median(suite_latencies), 1) if suite_latencies else None,
             "p95_ms": round(sorted(suite_latencies)[int(len(suite_latencies) * 0.95)], 1) if len(suite_latencies) >= 2 else None,
+            "traces": traces,
         }
 
     return {
         "model": model_id,
         "date": date.today().isoformat(),
-        "suites": results_by_suite,
+        "run_at": datetime.now(timezone.utc).isoformat(),
+        "suites": suites_out,
         "overall": {
-            "p50_ms": round(statistics.median(latencies), 1) if latencies else None,
-            "p95_ms": round(sorted(latencies)[int(len(latencies) * 0.95)], 1) if len(latencies) >= 2 else None,
-            "avg_tokens_per_sec": round(statistics.mean(tps_list), 1) if tps_list else None,
+            "p50_ms": round(statistics.median(all_latencies), 1) if all_latencies else None,
+            "p95_ms": round(sorted(all_latencies)[int(len(all_latencies) * 0.95)], 1) if len(all_latencies) >= 2 else None,
+            "avg_tokens_per_sec": round(statistics.mean(all_tps), 1) if all_tps else None,
         },
     }
 
 
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
 def push_to_kv(model_id, metrics):
-    """Write benchmark results to KV via the Worker."""
     if not WRITE_KEY:
         print("  (skipping KV push — TUNNEL_WRITE_KEY not set)")
         return
+    # Push aggregate only (no traces) to KV
+    payload = {k: v for k, v in metrics.items() if k != "suites"}
+    payload["suites"] = {
+        name: {k: v for k, v in suite.items() if k != "traces"}
+        for name, suite in metrics["suites"].items()
+    }
     try:
         res = requests.put(
             f"{REGISTRY}/benchmark/{model_id}",
-            data=json.dumps(metrics),
+            data=json.dumps(payload),
             headers={"Authorization": f"Bearer {WRITE_KEY}", "Content-Type": "application/json"},
             timeout=10,
         )
         res.raise_for_status()
-        print(f"  Pushed to KV: {model_id}")
+        print(f"  pushed to KV: {model_id}")
     except Exception as e:
         print(f"  KV push failed: {e}")
 
+
+def write_results(today, all_results):
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Full run with traces
+    run_file = OUT_DIR / f"{today}.json"
+    run_file.write_text(json.dumps(all_results, indent=2))
+    print(f"\nResults written to {run_file}")
+
+    # Update index
+    index_file = OUT_DIR / "index.json"
+    runs = []
+    if index_file.exists():
+        try:
+            runs = json.loads(index_file.read_text())
+        except Exception:
+            runs = []
+
+    if today not in runs:
+        runs.insert(0, today)
+    index_file.write_text(json.dumps(runs, indent=2))
+    print(f"Index updated: {runs[:5]}{'...' if len(runs) > 5 else ''}")
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main():
     models = get_online_models()
@@ -199,10 +253,7 @@ def main():
         all_results[model_id] = metrics
         push_to_kv(model_id, metrics)
 
-    out_path = Path("benchmarks") / f"{today}.json"
-    out_path.parent.mkdir(exist_ok=True)
-    out_path.write_text(json.dumps(all_results, indent=2))
-    print(f"\nResults written to {out_path}")
+    write_results(today, all_results)
 
 
 if __name__ == "__main__":
