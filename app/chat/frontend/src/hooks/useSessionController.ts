@@ -429,12 +429,12 @@ export function useSessionController(params: SessionControllerParams) {
             const consensus = event.consensus || [];
             const unique = event.unique_contributions || {};
 
-            let analysis = 'Analysis:\n\n';
+            let analysis = 'Analysis:\nBased on shared vocabulary across responses\n\n';
             if (consensus.length > 0) {
-              analysis += 'Consensus:\n' + consensus.map((c: string) => `• ${c}`).join('\n') + '\n\n';
+              analysis += 'Common themes:\n' + consensus.map((c: string) => `• ${c}`).join('\n') + '\n\n';
             }
             if (Object.keys(unique).length > 0) {
-              analysis += 'Unique Contributions:\n';
+              analysis += 'Distinct points:\n';
               for (const [modelId, points] of Object.entries(unique)) {
                 const modelName = modelIdToName(modelId);
                 analysis += `\n${modelName}:\n` + (points as string[]).map((p: string) => `• ${p}`).join('\n') + '\n';

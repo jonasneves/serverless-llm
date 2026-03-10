@@ -4,51 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin</title>
+  <link rel="stylesheet" href="./shared.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     [hidden] { display: none !important; }
 
-    :root {
-      --bg:             #0d1117;
-      --surface:        #161b22;
-      --surface-raised: #1c2128;
-      --border:         #30363d;
-      --text:           #e6edf3;
-      --text-secondary: #8b949e;
-      --accent:         #1f6feb;
-      --accent-hover:   #388bfd;
-      --success:        #3fb950;
-      --danger:         #f85149;
-      --warning:        #d29922;
-      --font-mono:      'JetBrains Mono', 'Fira Mono', monospace;
-      --radius:         6px;
-      --radius-lg:      10px;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ── Header ── */
-    header {
-      height: 52px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      padding: 0 24px;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-    .header-title { font-size: 14px; font-weight: 600; }
-    .header-sub   { font-size: 12px; color: var(--text-secondary); }
-    .header-sep   { flex: 1; }
-    .header-nav a { font-size: 12px; color: var(--text-secondary); text-decoration: none; margin-left: 16px; }
-    .header-nav a:hover { color: var(--text); }
+    /* ── Header extras ── */
+    .header-nav a { text-decoration: none; }
     #user-area    { display: flex; align-items: center; gap: 10px; }
 
     /* ── Main ── */
@@ -82,9 +44,6 @@
       text-align: center;
       color: var(--text-secondary);
     }
-    .spinner { width: 22px; height: 22px; border: 2px solid var(--border);
-      border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── Buttons ── */
     button { font-family: inherit; cursor: pointer; border: none; border-radius: var(--radius); }
@@ -153,18 +112,6 @@
       background: var(--surface-raised); border: 1px solid var(--border);
       border-radius: 4px; padding: 1px 6px; font-family: var(--font-mono);
     }
-
-    /* ── Footer ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 14px 24px;
-      font-size: 11.5px;
-      color: var(--text-secondary);
-      display: flex;
-      gap: 16px;
-    }
-    footer a { color: var(--text-secondary); }
-    footer a:hover { color: var(--text); }
 
     /* ── Toast ── */
     .toast {

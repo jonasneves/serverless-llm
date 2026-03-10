@@ -43,7 +43,9 @@ function extractKeyPoints(response: string): string[] {
   return sentences.slice(0, 5);
 }
 
-function findConsensus(responses: Array<{ model_id: string; response: string }>): string[] {
+// Identifies sentences containing words (>4 chars) that appear in >=50% of responses.
+// This is vocabulary co-occurrence, not semantic agreement.
+function findCommonPhrases(responses: Array<{ model_id: string; response: string }>): string[] {
   if (responses.length < 2) return [];
 
   const allPoints: string[] = [];
@@ -69,21 +71,22 @@ function findConsensus(responses: Array<{ model_id: string; response: string }>)
       .map(([word]) => word)
   );
 
-  const consensus: string[] = [];
+  const commonPhrases: string[] = [];
   for (const point of allPoints) {
     const words = new Set(point.toLowerCase().split(/\s+/));
     const intersection = [...words].filter(w => commonWords.has(w));
-    if (intersection.length > 0 && !consensus.includes(point)) {
-      consensus.push(point);
-      if (consensus.length >= 3) break;
+    if (intersection.length > 0 && !commonPhrases.includes(point)) {
+      commonPhrases.push(point);
+      if (commonPhrases.length >= 3) break;
     }
   }
 
-  return consensus;
+  return commonPhrases;
 }
 
-function findUniqueContributions(responses: Array<{ model_id: string; response: string }>): Record<string, string[]> {
-  const unique: Record<string, string[]> = {};
+// Identifies sentences with low word overlap relative to other models' responses.
+function findDistinctPhrases(responses: Array<{ model_id: string; response: string }>): Record<string, string[]> {
+  const distinct: Record<string, string[]> = {};
   const allPointsByModel: Record<string, string[]> = {};
 
   for (const resp of responses) {
@@ -98,33 +101,33 @@ function findUniqueContributions(responses: Array<{ model_id: string; response: 
       }
     }
 
-    const modelUnique: string[] = [];
+    const modelDistinct: string[] = [];
     for (const point of points) {
       const words = new Set(point.toLowerCase().split(/\s+/));
-      let isUnique = true;
+      let isDistinct = true;
 
       for (const otherPoint of otherPoints) {
         const otherWords = new Set(otherPoint.toLowerCase().split(/\s+/));
         const intersection = [...words].filter(w => otherWords.has(w));
         const overlap = intersection.length / Math.max(words.size, otherWords.size);
         if (overlap > 0.5) {
-          isUnique = false;
+          isDistinct = false;
           break;
         }
       }
 
-      if (isUnique) {
-        modelUnique.push(point);
-        if (modelUnique.length >= 2) break;
+      if (isDistinct) {
+        modelDistinct.push(point);
+        if (modelDistinct.length >= 2) break;
       }
     }
 
-    if (modelUnique.length > 0) {
-      unique[modelId] = modelUnique;
+    if (modelDistinct.length > 0) {
+      distinct[modelId] = modelDistinct;
     }
   }
 
-  return unique;
+  return distinct;
 }
 
 
@@ -260,20 +263,20 @@ export async function* runAnalyze(params: AnalyzeParams): AsyncGenerator<Analyze
     return;
   }
 
-  const consensus = findConsensus(results);
-  const uniqueContributions = findUniqueContributions(results);
+  const commonPhrases = findCommonPhrases(results);
+  const distinctPhrases = findDistinctPhrases(results);
 
   yield {
     type: 'analysis_complete',
-    consensus,
-    unique_contributions: uniqueContributions,
+    consensus: commonPhrases,
+    unique_contributions: distinctPhrases,
     total_responses: results.length,
   };
 
   yield {
     type: 'analyze_complete',
     results,
-    consensus,
-    unique_contributions: uniqueContributions,
+    consensus: commonPhrases,
+    unique_contributions: distinctPhrases,
   };
 }
