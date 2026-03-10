@@ -158,3 +158,53 @@ export async function streamSseEvents(
     onEvent(event);
   }
 }
+
+export type SseDeltaEvent =
+  | { type: 'chunk'; content: string }
+  | { type: 'done' }
+  | { type: 'error'; error: string };
+
+/**
+ * Reads a streaming OpenAI-compatible SSE response body and yields typed
+ * delta events. The caller is responsible for the fetch() call and for
+ * checking response.ok before passing the body here.
+ */
+export async function* readSseStream(
+  body: ReadableStream<Uint8Array>,
+): AsyncGenerator<SseDeltaEvent> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') {
+          yield { type: 'done' };
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(data);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            yield { type: 'chunk', content };
+          }
+        } catch {
+          // Skip malformed JSON
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

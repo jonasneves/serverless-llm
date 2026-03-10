@@ -388,7 +388,6 @@
       thead = `<tr>
         <th>Model</th>
         <th>Accuracy</th>
-        <th>Answered</th>
         <th>P50 latency</th>
         <th class="bar-cell">Accuracy</th>
         <th></th>
@@ -400,16 +399,19 @@
         const key = `${m.model}:${activeSuite}`;
         const isOpen = expanded.has(key);
 
+        const accCell = acc != null
+          ? fmt(pct + '%') + (s.answered != null ? ` <span style="color:var(--text-secondary);font-size:11px">(${s.answered}/${s.prompts})</span>` : '')
+          : fmt(null);
+
         const summaryRow = `<tr>
           <td><div class="model-name">${m.model}</div></td>
-          <td>${acc != null ? fmt(pct + '%') : fmt(null)}</td>
-          <td>${s.answered != null ? fmt(s.answered + '/' + s.prompts) : fmt(null)}</td>
+          <td>${accCell}</td>
           <td>${s.p50_ms != null ? fmt(s.p50_ms + ' ms') : fmt(null)}</td>
           <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></td>
           <td><button class="expand-btn" onclick="toggleTraces('${m.model}','${activeSuite}','${activeDate}')">${isOpen ? 'hide traces' : 'show traces'}</button></td>
         </tr>`;
 
-        const traceRow = isOpen ? `<tr class="traces-row"><td colspan="6">${renderTraces(m.model, activeSuite)}</td></tr>` : '';
+        const traceRow = isOpen ? `<tr class="traces-row"><td colspan="5">${renderTraces(m.model, activeSuite)}</td></tr>` : '';
         return [summaryRow, traceRow].filter(Boolean).join('');
       }).join('');
     }

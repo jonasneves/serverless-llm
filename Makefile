@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help build lint format clean update-models sync-worker-config tunnels-secret inference deploy build-images up down _purge-inference-history
+.PHONY: help build lint format clean update-models sync-worker-config route-map tunnels-secret inference deploy build-images up down _purge-inference-history
 
 -include .env
 export
@@ -16,6 +16,7 @@ help:
 	@echo "  \033[36mformat\033[0m          Format Python code"
 	@echo "  \033[36mupdate-models\033[0m   Refresh GitHub models in models.json"
 	@echo "  \033[36msync-worker-config\033[0m Regenerate ROUTE_MAP in worker.js from config/models.py"
+	@echo "  \033[36mroute-map\033[0m       Print ROUTE_MAP JSON from config/models.py for copy-paste"
 	@echo "  \033[36mclean\033[0m           Remove caches"
 	@echo ""
 	@echo "\033[2mInference (GitHub Actions)\033[0m"
@@ -44,6 +45,9 @@ update-models:
 
 sync-worker-config:
 	python3 scripts/sync_worker_config.py
+
+route-map:
+	python3 config/models.py --route-map
 
 clean:
 	rm -rf __pycache__ .pytest_cache
