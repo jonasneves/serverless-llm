@@ -95,7 +95,8 @@ async function handleTunnelDelete(request, env, model) {
   return jsonResponse({ ok: true, model });
 }
 
-async function handlePurge(env) {
+async function handlePurge(request, env) {
+  if (!isAuthorized(request, env)) return jsonResponse({ error: 'unauthorized' }, 401);
   const list = await env.TUNNELS_KV.list({ prefix: 'tunnel:' });
   const purged = [];
 
@@ -310,7 +311,7 @@ export default {
 
     if (pathname === '/tunnels' && method === 'GET') return handleTunnelsGet(env);
     if (pathname === '/health' && method === 'GET') return new Response('ok');
-    if (pathname === '/purge' && method === 'POST') return handlePurge(env);
+    if (pathname === '/purge' && method === 'POST') return handlePurge(request, env);
 
     // Feature 1: OpenAI-compatible API
     if (pathname === '/v1/models' && method === 'GET') return handleModelsGet(env);
