@@ -279,10 +279,11 @@
       const res = await fetch('./models.json');
       if (!res.ok) return;
       const data = await res.json();
+      // Index by `key` (tunnel routing key, e.g. "lfm2thinking") — matches m.model in benchmark data
       modelMeta = Object.fromEntries(
         (data.models ?? [])
-          .filter(m => m.id)
-          .map(m => [m.id, { name: m.name, description: m.description }])
+          .filter(m => m.key)
+          .map(m => [m.key, { name: m.name, description: m.description }])
       );
     } catch { /* non-fatal */ }
   }
