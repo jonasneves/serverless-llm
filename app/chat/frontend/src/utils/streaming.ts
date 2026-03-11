@@ -84,13 +84,13 @@ async function* streamModel(
   yield { event: 'done', model_id: model, model };
 }
 
-async function* mergeStreams(
-  generators: AsyncGenerator<ChatStreamEvent>[],
-): AsyncGenerator<ChatStreamEvent> {
+export async function* mergeAsyncGenerators<T>(
+  generators: AsyncGenerator<T>[],
+): AsyncGenerator<T> {
   type Entry = {
-    gen: AsyncGenerator<ChatStreamEvent>;
+    gen: AsyncGenerator<T>;
     idx: number;
-    next: Promise<{ result: IteratorResult<ChatStreamEvent>; idx: number }>;
+    next: Promise<{ result: IteratorResult<T>; idx: number }>;
   };
 
   const active: Entry[] = generators.map((gen, idx) => ({
@@ -110,6 +110,12 @@ async function* mergeStreams(
       active[entryIdx].next = active[entryIdx].gen.next().then(result => ({ result, idx }));
     }
   }
+}
+
+function mergeStreams(
+  generators: AsyncGenerator<ChatStreamEvent>[],
+): AsyncGenerator<ChatStreamEvent> {
+  return mergeAsyncGenerators(generators);
 }
 
 export function fetchChatStream(

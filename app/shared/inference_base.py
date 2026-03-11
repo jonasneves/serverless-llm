@@ -155,15 +155,16 @@ def create_inference_app(config: InferenceAppConfig) -> FastAPI:
         kv_cache_quant = os.getenv("KV_CACHE_QUANT", "").strip().lower()
         type_k = None
         type_v = None
-        flash_attn = False
+        flash_attn_env = os.getenv("FLASH_ATTN", "").strip().lower()
+        flash_attn = flash_attn_env in {"1", "true", "yes", "on"}
         if kv_cache_quant in {"1", "true", "yes", "on", "8", "q8"}:
             type_k = 8  # Q8_0
             type_v = 8  # Q8_0
             flash_attn = True  # Required for KV-cache quantization
 
-        print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}, max_concurrent={max_concurrent}")
+        print(f"Loading model with n_ctx={n_ctx}, n_threads={n_threads}, n_batch={n_batch}, max_concurrent={max_concurrent}, flash_attn={flash_attn}")
         if type_k:
-            print(f"  KV-cache quantization enabled: type_k={type_k}, type_v={type_v}, flash_attn={flash_attn}")
+            print(f"  KV-cache quantization enabled: type_k={type_k}, type_v={type_v}")
 
         llama_kwargs = {
             "model_path": model_path,
@@ -178,10 +179,11 @@ def create_inference_app(config: InferenceAppConfig) -> FastAPI:
         if config.chat_format:
             llama_kwargs["chat_format"] = config.chat_format
 
+        if flash_attn:
+            llama_kwargs["flash_attn"] = flash_attn
         if type_k is not None:
             llama_kwargs["type_k"] = type_k
             llama_kwargs["type_v"] = type_v
-            llama_kwargs["flash_attn"] = flash_attn
 
         llm = Llama(**llama_kwargs)
         print("Model loaded successfully!")

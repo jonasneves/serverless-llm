@@ -5,7 +5,7 @@
 
 import { splitThinkingContent } from '../utils/thinking';
 import { ANALYZE_RESPONSE_SYSTEM } from '../constants';
-import { streamCompletion } from '../utils/streaming';
+import { streamCompletion, mergeAsyncGenerators } from '../utils/streaming';
 
 export interface AnalyzeEvent {
   type: 'analyze_start' | 'model_start' | 'model_chunk' | 'model_response' | 'model_error' | 'analyze_complete' | 'error';
@@ -218,27 +218,10 @@ export async function* runAnalyze(params: AnalyzeParams): AsyncGenerator<Analyze
     }
   }
 
-  // Merge all model streams concurrently using Promise.race (no polling)
-  type ActiveEntry = {
-    gen: AsyncGenerator<AnalyzeEvent>;
-    idx: number;
-    next: Promise<{ result: IteratorResult<AnalyzeEvent>; idx: number }>;
-  };
-
-  const active: ActiveEntry[] = participants.map((modelId, idx) => {
-    const gen = streamModel(modelId);
-    return { gen, idx, next: gen.next().then(result => ({ result, idx })) };
-  });
-
-  while (active.length > 0) {
-    const { result, idx } = await Promise.race(active.map(e => e.next));
-    const entryIdx = active.findIndex(e => e.idx === idx);
-    if (result.done) {
-      active.splice(entryIdx, 1);
-    } else {
-      yield result.value;
-      active[entryIdx].next = active[entryIdx].gen.next().then(result => ({ result, idx }));
-    }
+  // Merge all model streams concurrently using shared utility (no polling)
+  const streams = participants.map(modelId => streamModel(modelId));
+  for await (const event of mergeAsyncGenerators(streams)) {
+    yield event;
   }
 
   if (results.length === 0) {
