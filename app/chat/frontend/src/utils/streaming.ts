@@ -112,12 +112,6 @@ export async function* mergeAsyncGenerators<T>(
   }
 }
 
-function mergeStreams(
-  generators: AsyncGenerator<ChatStreamEvent>[],
-): AsyncGenerator<ChatStreamEvent> {
-  return mergeAsyncGenerators(generators);
-}
-
 export function fetchChatStream(
   payload: ChatStreamPayload,
   signal?: AbortSignal,
@@ -128,7 +122,7 @@ export function fetchChatStream(
     return streamModel(models[0], rest, signal);
   }
 
-  return mergeStreams(
+  return mergeAsyncGenerators(
     models.map(model => streamModel(model, rest, signal)),
   );
 }
