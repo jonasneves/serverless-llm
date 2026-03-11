@@ -130,7 +130,8 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
         const typeColor = model.type === 'self-hosted' ? '#10b981' : '#3b82f6';
         const effectiveColor = hasError ? errorColor : typeColor;
         const isProcessing = isSpeaking && !hasError;
-        const cardStyles = getCardStyles({ hasError, isProcessing, isSelected, errorColor, processingColor, typeColor });
+        const isCloudModel = model.type === 'github';
+        const cardStyles = getCardStyles({ hasError, isProcessing, isSelected, errorColor, processingColor, typeColor, isCloudModel });
 
         const styleTransform = getCardTransform({
           mode,
@@ -243,7 +244,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               }}
               onMouseEnter={() => isCircleMode && setHoveredCard(model.id)}
               onMouseLeave={() => isCircleMode && setHoveredCard(null)}
-              className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
+              className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''} ${isCloudModel && !hasError && !isSpeaking ? 'cloud-model-card' : ''}`}
               style={{
                 background: cardStyles.background,
                 backdropFilter: isCircleMode ? undefined : 'blur(8px)',
@@ -662,6 +663,7 @@ interface CardStyleParams {
   errorColor: string;
   processingColor: string;
   typeColor: string;
+  isCloudModel: boolean;
 }
 
 export function renderSvgContent(content: string): React.ReactNode {
@@ -675,8 +677,11 @@ export function renderSvgContent(content: string): React.ReactNode {
   return null;
 }
 
-function getCardStyles({ hasError, isProcessing, isSelected, errorColor, processingColor, typeColor }: CardStyleParams) {
-  const baseBackground = 'rgba(30, 41, 59, 0.85)';
+function getCardStyles({ hasError, isProcessing, isSelected, errorColor, processingColor, typeColor, isCloudModel }: CardStyleParams) {
+  const baseBackground = isCloudModel ? 'rgba(20, 35, 55, 0.9)' : 'rgba(30, 41, 59, 0.85)';
+  const cloudBorder = '1px solid rgba(56, 189, 248, 0.35)';
+  const cloudGlowColor = 'rgba(56, 189, 248, 0.12)';
+  const defaultBorder = '1px solid rgba(71, 85, 105, 0.5)';
 
   if (hasError) {
     return {
@@ -699,9 +704,16 @@ function getCardStyles({ hasError, isProcessing, isSelected, errorColor, process
       shadow: `0 0 20px ${typeColor}30, inset 0 1px 1px rgba(255,255,255,0.1)`,
     };
   }
+  if (isCloudModel) {
+    return {
+      background: baseBackground,
+      border: cloudBorder,
+      shadow: `0 4px 20px rgba(0,0,0,0.3), 0 0 24px ${cloudGlowColor}, inset 0 1px 1px rgba(255,255,255,0.05)`,
+    };
+  }
   return {
     background: baseBackground,
-    border: '1px solid rgba(71, 85, 105, 0.5)',
+    border: defaultBorder,
     shadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)',
   };
 }

@@ -234,3 +234,19 @@ aside summary,
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Cloud model card pulse animation */
+@keyframes cloud-card-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.cloud-model-card {
+  animation: cloud-card-pulse 3s ease-in-out infinite;
+}
