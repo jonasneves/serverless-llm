@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Model, ChatHistoryEntry, Mode } from '../types';
 import FormattedContent from './FormattedContent';
 import { MessageSquare, RotateCcw } from 'lucide-react';
-import { MODE_EXAMPLE_PROMPTS } from '../constants';
+import { MODE_RECIPES } from '../constants';
 
 interface DiscussionTranscriptProps {
     history: ChatHistoryEntry[];
@@ -35,8 +35,8 @@ export default function DiscussionTranscript({
     const containerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
-    // Get example prompts for current mode
-    const examplePrompts = (mode ? MODE_EXAMPLE_PROMPTS[mode] : null) ?? [];
+    // Get recipe cards for current mode
+    const recipeCards = (mode ? MODE_RECIPES[mode] : null) ?? [];
 
     // Auto-scroll to bottom when history changes
     useEffect(() => {
@@ -213,18 +213,24 @@ export default function DiscussionTranscript({
                         <MessageSquare size={48} className="mb-4 opacity-50" />
                         <p className="text-lg mb-8 opacity-50">Start a discussion to see the transcript.</p>
 
-                        {examplePrompts.length > 0 && onSelectPrompt && (
-                            <div className="flex flex-col gap-3 w-full items-center">
-                                <p className="text-sm text-slate-400 text-center mb-2">Try an example:</p>
-                                {examplePrompts.map((example, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => onSelectPrompt(example)}
-                                        className="w-[85%] max-w-[340px] text-sm text-slate-300 hover:text-blue-400 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/40 hover:border-blue-400/40 rounded-xl px-5 py-3 transition-all active:scale-[0.98] text-left"
-                                    >
-                                        {example}
-                                    </button>
-                                ))}
+                        {recipeCards.length > 0 && onSelectPrompt && (
+                            <div className="flex flex-col gap-4 w-full items-center">
+                                <p className="text-sm text-slate-400 text-center">Try a workflow recipe:</p>
+                                <div className="flex flex-wrap gap-2 justify-center max-w-[640px] px-4">
+                                    {recipeCards.map((recipe, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => onSelectPrompt(recipe.prompt)}
+                                            className="flex items-center gap-[10px] px-4 py-[10px] bg-slate-800/60 border border-slate-700/30 rounded-xl cursor-pointer hover:bg-slate-700/70 hover:border-indigo-400/40 hover:-translate-y-px transition-all min-w-[180px] flex-1 basis-[calc(50%-8px)] max-w-[calc(50%-4px)]"
+                                        >
+                                            <span className="text-xl leading-none shrink-0">{recipe.emoji}</span>
+                                            <div className="flex flex-col gap-0.5 min-w-0">
+                                                <span className="text-xs font-semibold text-slate-100/95 whitespace-nowrap">{recipe.label}</span>
+                                                <span className="text-[10px] text-slate-400/70 whitespace-nowrap overflow-hidden text-ellipsis">{recipe.description}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

@@ -37,11 +37,11 @@ const ModeIcons: Record<Mode, React.ReactNode> = {
   ),
 };
 
-const MODES: { value: Mode; label: string }[] = [
-  { value: 'chat', label: 'Chat' },
-  { value: 'compare', label: 'Compare' },
-  { value: 'analyze', label: 'Analyze' },
-  { value: 'debate', label: 'Debate' }
+const MODES: { value: Mode; label: string; subtitle: string }[] = [
+  { value: 'chat', label: 'Chat', subtitle: 'Experimental' },
+  { value: 'compare', label: 'Compare', subtitle: 'Side-by-side' },
+  { value: 'analyze', label: 'Analyze', subtitle: 'Orchestrated synthesis' },
+  { value: 'debate', label: 'Debate', subtitle: 'Multi-model discussion' }
 ];
 
 export default function Header({
@@ -173,6 +173,7 @@ export default function Header({
               role="radiogroup"
               aria-label="Mode selection"
               data-gesture-mode-track="true"
+              style={{ minHeight: '44px' }}
             >
               {/* Sliding indicator */}
               <div
@@ -191,12 +192,19 @@ export default function Header({
                   aria-checked={mode === m.value}
                   aria-label={m.label}
                   title={m.label}
-                  className={`relative z-10 py-2 sm:py-1.5 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 min-h-[44px] sm:min-h-0 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex items-center justify-center text-center ${mode === m.value
+                  className={`relative z-10 py-1.5 sm:py-1 px-3 text-[11px] sm:text-xs font-medium transition-colors duration-200 active:scale-95 focus:outline-none focus-visible:outline-none flex-1 flex flex-col items-center justify-center text-center gap-[1px] ${mode === m.value
                     ? 'text-white'
                     : 'text-slate-400 hover:text-slate-200'
                     }`}
                 >
-                  {m.label}
+                  <span>{m.label}</span>
+                  <span className={`text-[8px] tracking-[0.04em] font-normal leading-none whitespace-nowrap transition-opacity duration-200 ${mode === m.value
+                    ? 'opacity-65'
+                    : 'opacity-45 group-hover:opacity-70'
+                    }`}
+                  >
+                    {m.subtitle}
+                  </span>
                 </button>
               ))}
             </div>

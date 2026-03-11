@@ -100,19 +100,89 @@ export const CURATED_TOPICS: TopicPrompt[] = [
   },
 ];
 
-// Mode-specific example prompts for "try an example" (hardcoded, not in ticker)
-// Designed for demo brevity: built-in constraints, opinionated/fun, quick to read
-export const MODE_EXAMPLE_PROMPTS: Partial<Record<Mode, string[]>> = {
+// Mode-specific recipe cards for empty state
+// Each recipe has emoji, label, description, and prompt template
+export interface RecipeCard {
+  emoji: string;
+  label: string;
+  description: string;
+  prompt: string;
+}
+
+export const MODE_RECIPES: Partial<Record<Mode, RecipeCard[]>> = {
+  compare: [
+    {
+      emoji: '🔍',
+      label: 'Hallucination Detector',
+      description: 'See which models hallucinate',
+      prompt: 'Is this actually true? Give evidence: '
+    },
+    {
+      emoji: '📊',
+      label: 'Model Shootout',
+      description: 'Find the best model for a task',
+      prompt: 'Answer precisely in one paragraph: '
+    },
+    {
+      emoji: '🧬',
+      label: 'Personality Test',
+      description: 'See how models differ in voice',
+      prompt: 'What is your honest opinion on: '
+    },
+    {
+      emoji: '⏱️',
+      label: 'Speed vs Quality',
+      description: 'Compare latency and output quality',
+      prompt: 'Write a concise function that '
+    }
+  ],
   analyze: [
-    "What's the most important programming principle?",
-    "Should code comments explain 'what' or 'why'?",
-    "Is TypeScript worth the extra complexity?",
+    {
+      emoji: '🧠',
+      label: 'Collective Intelligence',
+      description: 'Many models, one synthesis',
+      prompt: 'Research and synthesize all perspectives on: '
+    },
+    {
+      emoji: '⚖️',
+      label: 'Tradeoff Analysis',
+      description: 'Weigh every angle',
+      prompt: 'What are the real tradeoffs between '
+    },
+    {
+      emoji: '🔬',
+      label: 'Small vs Big',
+      description: 'Can small models match GPT-4.1?',
+      prompt: 'Answer this and I\'ll compare quality: '
+    }
   ],
   debate: [
-    "Tabs or spaces? Give your verdict.",
-    "Should AI be allowed to write its own code?",
-    "What will never be automated by AI?",
-  ],
+    {
+      emoji: '🤔',
+      label: 'Devil\'s Advocate',
+      description: 'Force models to disagree',
+      prompt: 'Argue for and against: '
+    },
+    {
+      emoji: '🔮',
+      label: 'Predict the Future',
+      description: 'Competing forecasts',
+      prompt: 'What will happen in 5 years with: '
+    },
+    {
+      emoji: '⚔️',
+      label: 'Tech Holy War',
+      description: 'Pick a hot take, watch them fight',
+      prompt: ''
+    }
+  ]
+};
+
+// Legacy string prompts for backwards compatibility
+export const MODE_EXAMPLE_PROMPTS: Partial<Record<Mode, string[]>> = {
+  compare: MODE_RECIPES.compare?.map(r => r.prompt) || [],
+  analyze: MODE_RECIPES.analyze?.map(r => r.prompt) || [],
+  debate: MODE_RECIPES.debate?.map(r => r.prompt) || [],
 };
 
 export const TOPIC_PACKS: TopicPack[] = [
