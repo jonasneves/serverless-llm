@@ -2,7 +2,7 @@
  * Heuristic scoring engine for spatial reasoning task answers
  */
 
-import { extractCardinals, extractKeywords } from './spatialAnswerExtraction';
+import { extractDirectionSequence, extractKeywords } from './spatialAnswerExtraction';
 
 export interface ScoringResult {
   accuracy: number;
@@ -40,24 +40,26 @@ export function scoreSpatialAnswer(
   }
 
   if (taskFormat === 'direction') {
-    // Check cardinal direction matches
-    const expectedDirs = extractCardinals(exp);
-    const predictedDirs = extractCardinals(pred);
+    const expectedSequence = extractDirectionSequence(exp);
+    const predictedSequence = extractDirectionSequence(pred);
 
-    if (expectedDirs.length === 0 && predictedDirs.length === 0) {
+    if (expectedSequence.length === 0 && predictedSequence.length === 0) {
       return { accuracy: 0.5, reasoning: 'No cardinal directions found' };
     }
 
-    if (expectedDirs.length === 0) {
+    if (expectedSequence.length === 0) {
       return { accuracy: 0.3, reasoning: 'Predicted directions but none expected' };
     }
 
-    const overlap = expectedDirs.filter(d => predictedDirs.includes(d)).length;
-    const accuracy = overlap / expectedDirs.length;
+    const positionalMatches = expectedSequence.filter((direction, index) => predictedSequence[index] === direction).length;
+    const lengthPenalty = predictedSequence.length === expectedSequence.length
+      ? 0
+      : Math.min(0.25, Math.abs(predictedSequence.length - expectedSequence.length) * 0.05);
+    const accuracy = Math.max(0, (positionalMatches / expectedSequence.length) - lengthPenalty);
 
     return {
-      accuracy: Math.max(0, accuracy),
-      reasoning: `Matched ${overlap}/${expectedDirs.length} directions`
+      accuracy,
+      reasoning: `Matched ${positionalMatches}/${expectedSequence.length} directions in order`
     };
   }
 

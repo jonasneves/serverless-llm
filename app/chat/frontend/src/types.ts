@@ -76,6 +76,7 @@ export const COGNITIVE_LEVEL_NAMES: Record<CognitiveLevel, string> = {
 };
 
 export type SpatialBenchmarkSuiteId = 'stepgame' | 'spartqa' | 'sparc';
+export type BenchmarkProfile = 'quick' | 'balanced' | 'full';
 
 export interface SpatialTask {
   id: string;
@@ -101,6 +102,7 @@ export interface SpatialBenchmarkSuite {
 
 export interface BenchmarkConfig {
   mode: 'spatial_reasoning';
+  benchmark_profile: BenchmarkProfile;
   benchmark_suite: SpatialBenchmarkSuiteId | 'all';
   task_category: 'route' | 'relationship' | 'perspective' | 'all';
   num_tasks: number;

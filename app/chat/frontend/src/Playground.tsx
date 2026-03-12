@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Model, Mode, Position, BackgroundStyle } from './types';
+import { Model, Mode, Position, BackgroundStyle, BenchmarkProfile } from './types';
 import { BG_STYLES, PLAYGROUND_BACKGROUND, LAYOUT, UI_BUILDER_PROMPT } from './constants';
 import ModelDock from './components/ModelDock';
 import PromptInput from './components/PromptInput';
@@ -28,6 +28,7 @@ const GestureControl = lazy(() => import('./components/GestureControl'));
 const HandBackground = lazy(() => import('./components/HandBackground'));
 const ChatView = lazy(() => import('./components/ChatView'));
 import ErrorBoundary from './components/ErrorBoundary';
+import BenchmarkControls from './components/BenchmarkControls';
 
 import type { ChatViewHandle, ChatMessage } from './components/ChatView';
 
@@ -149,6 +150,15 @@ function PlaygroundInner() {
   const [persistedBenchmarkModels, setPersistedBenchmarkModels] = usePersistedSetting<string[]>(
     'playground_benchmark_selected_models',
     [],
+  );
+  const [benchmarkProfile, setBenchmarkProfile] = usePersistedSetting<BenchmarkProfile>(
+    'playground_benchmark_profile',
+    'balanced',
+    {
+      serialize: value => value,
+      deserialize: (stored, fallback) =>
+        ['quick', 'balanced', 'full'].includes(stored) ? (stored as BenchmarkProfile) : fallback,
+    },
   );
 
   const persistedByMode = useMemo(() => ({
@@ -851,6 +861,7 @@ function PlaygroundInner() {
     buildCarryoverHistory,
     setModelsData,
     modelIdToName,
+    benchmarkProfile,
     setExecutionTimes,
     setIsGenerating,
     setIsSynthesizing,
@@ -1334,6 +1345,12 @@ function PlaygroundInner() {
             {/* Right Panel: Transcript (Analyze, Debate modes only) */}
             {mode !== 'compare' && (
               <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
+                {mode === 'benchmark' && (
+                  <BenchmarkControls
+                    profile={benchmarkProfile}
+                    onChange={setBenchmarkProfile}
+                  />
+                )}
                 <Suspense fallback={null}>
                   <DiscussionTranscript
                     history={history}
@@ -1348,7 +1365,7 @@ function PlaygroundInner() {
                       }
                     }}
                     onNewSession={handleNewSession}
-                    className="pt-24 pb-6 mask-fade-top"
+                    className={mode === 'benchmark' ? 'pb-6 mask-fade-top' : 'pt-24 pb-6 mask-fade-top'}
                     phaseLabel={phaseLabel}
                     isGenerating={isGenerating}
                     isSynthesizing={isSynthesizing}
@@ -1437,7 +1454,7 @@ function PlaygroundInner() {
             onSendMessage={sendMessage}
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
-            placeholder={mode === 'compare' ? undefined : mode === 'benchmark' ? "Type anything to run benchmark..." : "Steer the discussion..."}
+            placeholder={mode === 'compare' ? undefined : mode === 'benchmark' ? "Type anything to run the selected benchmark profile..." : "Steer the discussion..."}
             className={`fixed bottom-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300 ${mode === 'compare' ? 'right-0' : 'right-[400px] xl:right-[480px]'}`}
             style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           />

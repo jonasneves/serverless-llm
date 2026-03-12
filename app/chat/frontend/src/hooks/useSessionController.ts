@@ -1,13 +1,14 @@
 import { Dispatch, SetStateAction } from 'react';
 import { GENERATION_DEFAULTS, isThinkingModel } from '../constants';
-import { SPATIAL_BENCHMARK_SUITE_MAP, SPATIAL_BENCHMARK_SUITES } from '../data/spatialBenchmarkSuites';
+import { SPATIAL_BENCHMARK_SUITE_MAP } from '../data/spatialBenchmarkSuites';
 import { fetchChatStream } from '../utils/streaming';
-import { ChatHistoryEntry, Mode, Model, BenchmarkResult } from '../types';
+import { ChatHistoryEntry, Mode, Model, BenchmarkResult, BenchmarkProfile } from '../types';
 import { ExecutionTimeData } from '../components/ExecutionTimeDisplay';
 import { parseThinkingChunk, ThinkingState } from '../utils/thinkingParser';
 import { runAnalyze } from '../engines/analyzeEngine';
 import { runDebate } from '../engines/debateEngine';
 import { runSpatialReasoning } from '../engines/spatialReasoningEngine';
+import { getTasksForBenchmarkProfile } from '../utils/spatialBenchmarkSelection';
 
 // Sentinel prefix that cannot appear in normal text or model output (null bytes).
 // renderSvgContent in ArenaCanvas checks for this exact prefix before calling
@@ -44,6 +45,7 @@ interface SessionControllerParams {
   // — model data & lookups —
   modelsData: Model[];
   modelIdToName: (id: string) => string;
+  benchmarkProfile: BenchmarkProfile;
   modelKeyMap: Record<string, string>;
   getModelEndpoints: (models: Model[]) => Record<string, string>;
   setModelsData: React.Dispatch<React.SetStateAction<Model[]>>;
@@ -118,6 +120,7 @@ export function useSessionController(params: SessionControllerParams) {
     buildCarryoverHistory,
     setModelsData,
     modelIdToName,
+    benchmarkProfile,
     setExecutionTimes,
     setIsGenerating,
     setIsSynthesizing,
@@ -580,8 +583,7 @@ export function useSessionController(params: SessionControllerParams) {
 
       const modelEndpoints = getModelEndpoints(modelsData);
 
-      const allTasks = SPATIAL_BENCHMARK_SUITES.flatMap((suite) => suite.tasks);
-      const tasksToRun = allTasks;
+      const tasksToRun = getTasksForBenchmarkProfile(benchmarkProfile);
 
       const benchmarkResults: BenchmarkResult[] = [];
 

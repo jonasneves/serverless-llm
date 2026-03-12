@@ -527,7 +527,7 @@ export default function BenchmarkResults({ results }: BenchmarkResultsProps) {
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-teal-300">Spatial Benchmark Observatory</div>
             <h3 className="text-2xl font-semibold tracking-tight text-slate-50">StepGame, SPARTQA, and SPaRC as separate signals, not one blended score.</h3>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              This dashboard treats the recommended stack as three complementary source-aligned starter suites: symbolic composition, richer text grounding, and hard pathfinding stress tests.
+              This dashboard treats the benchmark as three complementary official suites: symbolic composition, richer text grounding, and hard pathfinding stress tests.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
