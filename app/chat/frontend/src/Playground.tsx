@@ -32,8 +32,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import type { ChatViewHandle, ChatMessage } from './components/ChatView';
 
 const BACKGROUND_IGNORE_SELECTOR = 'button, input, textarea, select, a, [role="button"], [data-no-background], [data-card]';
-const ARENA_MODES: Mode[] = ['compare', 'analyze', 'debate'];
-const SMART_DEFAULT_LIMITS: Record<string, number> = { compare: Infinity, analyze: 4, debate: 3 };
+const ARENA_MODES: Mode[] = ['compare', 'analyze', 'debate', 'benchmark'];
+const SMART_DEFAULT_LIMITS: Record<string, number> = { compare: Infinity, analyze: 4, debate: 3, benchmark: Infinity };
 
 function PlaygroundInner() {
   const gestureCtx = useGesture();
@@ -146,13 +146,18 @@ function PlaygroundInner() {
     'playground_debate_selected_models',
     [],
   );
+  const [persistedBenchmarkModels, setPersistedBenchmarkModels] = usePersistedSetting<string[]>(
+    'playground_benchmark_selected_models',
+    [],
+  );
 
   const persistedByMode = useMemo(() => ({
     compare: { get: persistedCompareModels, set: setPersistedCompareModels },
     analyze: { get: persistedAnalyzeModels, set: setPersistedAnalyzeModels },
     debate: { get: persistedDebateModels, set: setPersistedDebateModels },
-  }), [persistedCompareModels, persistedAnalyzeModels, persistedDebateModels,
-       setPersistedCompareModels, setPersistedAnalyzeModels, setPersistedDebateModels]);
+    benchmark: { get: persistedBenchmarkModels, set: setPersistedBenchmarkModels },
+  }), [persistedCompareModels, persistedAnalyzeModels, persistedDebateModels, persistedBenchmarkModels,
+       setPersistedCompareModels, setPersistedAnalyzeModels, setPersistedDebateModels, setPersistedBenchmarkModels]);
 
   const handleToggleModel = useCallback((modelId: string) => {
     const model = modelsData.find(m => m.id === modelId);
@@ -618,11 +623,11 @@ function PlaygroundInner() {
     if (limit === undefined) return [];
 
     const available = modelsData
-      .filter(m => m.id !== 'auto')
+      .filter(m => m.id !== 'auto' && onlineModelIds.has(m.id))
       .map(m => m.id);
 
     return available.slice(0, limit);
-  }, [modelsData]);
+  }, [modelsData, onlineModelIds]);
 
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
@@ -1330,7 +1335,9 @@ function PlaygroundInner() {
                     models={modelsData}
                     mode={mode}
                     onSelectPrompt={(prompt) => {
-                      if (inputRef.current) {
+                      if (mode === 'benchmark') {
+                        sendMessage(prompt || 'benchmark');
+                      } else if (inputRef.current) {
                         inputRef.current.value = prompt;
                         inputRef.current.focus();
                       }
@@ -1415,7 +1422,7 @@ function PlaygroundInner() {
         </Suspense>
       )}
 
-      {/* Fixed Prompt Input for Compare, Analyze, and Debate Modes */}
+      {/* Fixed Prompt Input for Arena Modes */}
       {
         ARENA_MODES.includes(mode) && (
           <PromptInput
@@ -1425,7 +1432,7 @@ function PlaygroundInner() {
             onSendMessage={sendMessage}
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
-            placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
+            placeholder={mode === 'compare' ? undefined : mode === 'benchmark' ? "Type anything to run benchmark..." : "Steer the discussion..."}
             className={`fixed bottom-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300 ${mode === 'compare' ? 'right-0' : 'right-[400px] xl:right-[480px]'}`}
             style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           />
