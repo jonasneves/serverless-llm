@@ -36,10 +36,8 @@ interface SpatialReasoningParams {
   modelIdToName?: (id: string) => string;
 }
 
-const DEFAULT_SYSTEM_PROMPT = `You are answering a spatial reasoning question. Be accurate and clear.
-- Answer directly and concisely
-- Show your reasoning
-- Keep to 100-200 words`;
+const DEFAULT_SYSTEM_PROMPT = `Answer this spatial reasoning question.
+State your answer first, then explain your reasoning in 2-3 sentences.`;
 
 /**
  * Run spatial reasoning benchmark on a single task with multiple models
@@ -91,12 +89,15 @@ export async function* runSpatialReasoning(
 
   let currentModel: string | null = null;
   let currentChunks: string[] = [];
+  const modelStartTimes: Record<string, number> = {};
+  const modelResponseTimes: Record<string, number> = {};
 
   // Stream responses and collect them
   for await (const event of fetchChatStream(payload, signal)) {
     if (event.event === 'start') {
       currentModel = event.model_id;
       currentChunks = [];
+      modelStartTimes[event.model_id] = Date.now();
       yield {
         type: 'model_start',
         model_id: event.model_id,
@@ -111,6 +112,7 @@ export async function* runSpatialReasoning(
       };
     } else if (event.event === 'done' && currentModel) {
       const fullResponse = currentChunks.join('');
+      modelResponseTimes[currentModel] = Date.now() - (modelStartTimes[currentModel] ?? Date.now());
       collectedResponses.push({
         model_id: currentModel,
         response: fullResponse,
@@ -146,7 +148,7 @@ export async function* runSpatialReasoning(
       predicted_answer: predictedAnswer,
       accuracy: scoreResult.accuracy,
       reasoning_depth: reasoningDepth,
-      response_time_ms: 0, // Would need to track timing separately
+      response_time_ms: modelResponseTimes[resp.model_id] ?? 0,
     };
   });
 

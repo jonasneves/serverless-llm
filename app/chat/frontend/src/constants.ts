@@ -175,6 +175,26 @@ export const MODE_RECIPES: Partial<Record<Mode, RecipeCard[]>> = {
       description: 'Pick a hot take, watch them fight',
       prompt: ''
     }
+  ],
+  benchmark: [
+    {
+      emoji: '🧭',
+      label: 'Quick Spatial Test',
+      description: '5 tasks across all levels',
+      prompt: ''
+    },
+    {
+      emoji: '🧠',
+      label: 'Perspective Challenge',
+      description: 'L4-L5 egocentric tasks',
+      prompt: ''
+    },
+    {
+      emoji: '📐',
+      label: 'Full Benchmark',
+      description: 'All 25 tasks, all levels',
+      prompt: ''
+    }
   ]
 };
 
@@ -304,184 +324,258 @@ export const LAYOUT = {
   scrollClamp: 200,     // Max scroll offset in either direction (px)
 };
 
-// System prompts for orchestration modes - focused and directive
-export const ANALYZE_RESPONSE_SYSTEM = `You are analyzing a question in a multi-model session.
+// System prompts for orchestration modes
+export const ANALYZE_RESPONSE_SYSTEM = `Analyze this question independently.
+State your position, then support it with evidence. 50-150 words.`;
 
-Focus on:
-- Accuracy: direct, objective reasoning
-- Clarity: explain step-by-step
-- Conciseness: 50-150 words
-- No preamble or meta-commentary`;
-
-export const DEBATE_TURN_SYSTEM = `You are responding to a question in a multi-model debate.
-
-Your turn:
-- Answer directly and clearly
-- Build on or challenge prior points if relevant
-- Show your reasoning explicitly
-- Keep to 50-150 words`;
+export const DEBATE_TURN_SYSTEM = `Respond to this question considering prior responses.
+Agree, challenge, or add new evidence. Reference specific points. 50-150 words.`;
 
 // Spatial reasoning benchmark tasks
-// Hand-curated tasks grounded in 2025-2026 spatial reasoning research (SpatialBench, SpatialText, SnorkelSpatial)
+// Organized by cognitive level (SpatialText 2026, SnorkelSpatial, StepGame)
+// L1 Retrieval, L2 Topology, L3 Symbolic, L4 Egocentric, L5 Mental Rotation
 
 export const SPATIAL_REASONING_TASKS: Record<string, SpatialTask[]> = {
   route: [
+    // L1 — direct retrieval
     {
       id: 'route-001',
       category: 'route',
-      prompt: `You are standing at the front door of a house.
-The living room is through the left doorway, with a sofa facing the east wall.
-The kitchen is south of the living room, accessed through a doorway on the far wall.
-Describe how to reach the kitchen from where you are standing.`,
-      expected_answer: 'turn left, enter living room, walk to the south wall, pass through doorway into kitchen',
+      cognitive_level: 1,
+      prompt: `You are at the center of a circular plaza. North is the park entrance. East is the fountain. West is the market. South is the town hall.\nWhich direction is the market?`,
+      expected_answer: 'west',
       answer_format: 'direction',
       difficulty: 'easy'
     },
     {
       id: 'route-002',
       category: 'route',
-      prompt: `Imagine you are in a museum. You enter through the main entrance facing north.
-To your right (east) is the sculpture gallery. Beyond that is the painting hall.
-The café is west of the main entrance.
-If you want to visit the painting hall first, then the café, describe your route.`,
+      cognitive_level: 1,
+      prompt: `You are at the front door of a house. The living room is through the left doorway. The kitchen is south of the living room, through a doorway on the far wall.\nDescribe how to reach the kitchen.`,
+      expected_answer: 'turn left, enter living room, walk to the south wall, pass through doorway into kitchen',
+      answer_format: 'direction',
+      difficulty: 'easy'
+    },
+    // L2 — topology (betweenness, adjacency)
+    {
+      id: 'route-003',
+      category: 'route',
+      cognitive_level: 2,
+      prompt: `You enter a museum facing north. To your right (east) is the sculpture gallery. Beyond that is the painting hall. The café is west of the entrance.\nTo visit the painting hall then the café, describe your route.`,
       expected_answer: 'turn right, enter sculpture gallery, continue east to painting hall, then return west past entrance to café',
       answer_format: 'direction',
       difficulty: 'medium'
     },
     {
-      id: 'route-003',
-      category: 'route',
-      prompt: `You are at the center of a circular plaza. North is the park entrance.
-East of center is the fountain. West of center is the market.
-South of center is the town hall.
-To reach the market from where you are, which direction do you walk?`,
-      expected_answer: 'west',
-      answer_format: 'direction',
-      difficulty: 'easy'
-    },
-    {
       id: 'route-004',
       category: 'route',
-      prompt: `You are in a library facing a bookshelf. The reference desk is to your right.
-Behind you (past the entrance you came from) is the children's section.
-To your left is the reading area.
-If you need to go to the reference desk, then the children's section, describe your sequence of turns.`,
-      expected_answer: 'turn right to reach reference desk, then turn around and walk back past entrance to reach children\'s section',
+      cognitive_level: 2,
+      prompt: `You are in a library facing a bookshelf. The reference desk is to your right. Behind you is the children's section. To your left is the reading area.\nTo go to the reference desk then the children's section, describe your turns.`,
+      expected_answer: 'turn right to reach reference desk, then turn around and walk back past entrance to children\'s section',
+      answer_format: 'direction',
+      difficulty: 'medium'
+    },
+    // L3 — symbolic multi-hop
+    {
+      id: 'route-005',
+      category: 'route',
+      cognitive_level: 3,
+      prompt: `Room A is north of Room B. Room B is west of Room C. Room C is north of Room D. Room D is east of Room E.\nTo walk from Room A to Room E, list the cardinal directions in order.`,
+      expected_answer: 'south, east, south, west',
       answer_format: 'direction',
       difficulty: 'medium'
     },
     {
-      id: 'route-005',
+      id: 'route-006',
       category: 'route',
-      prompt: `Starting at the corner of Main Street and Oak Avenue, facing east along Main Street.
-The bank is on your right (south side).
-The pharmacy is across the street on your left (north side).
-To reach the pharmacy, what do you do?`,
-      expected_answer: 'cross the street to the left, or turn left to face north then cross',
+      cognitive_level: 3,
+      prompt: `The bakery is north of the park. The library is east of the bakery. The gym is south of the library. The café is west of the gym.\nWhere is the café relative to the park?`,
+      expected_answer: 'east',
       answer_format: 'direction',
-      difficulty: 'easy'
+      difficulty: 'medium'
+    },
+    // L4 — egocentric route with turn
+    {
+      id: 'route-007',
+      category: 'route',
+      cognitive_level: 4,
+      prompt: `You are walking north along a corridor. You turn right at the first intersection, then left at the second intersection.\nWhat absolute direction are you now walking?`,
+      expected_answer: 'north',
+      answer_format: 'direction',
+      difficulty: 'hard'
+    },
+    {
+      id: 'route-008',
+      category: 'route',
+      cognitive_level: 4,
+      prompt: `You face east. You turn left, walk 10 steps, turn right, walk 5 steps, then turn right again.\nWhat absolute direction are you now facing?`,
+      expected_answer: 'east',
+      answer_format: 'direction',
+      difficulty: 'hard'
     }
   ],
   relationship: [
+    // L1 — direct retrieval
     {
-      id: 'relationship-001',
+      id: 'rel-001',
       category: 'relationship',
-      prompt: `Scene: A round table is in the center of the room.
-A red chair is on the north side, a blue chair on the west side, a green chair on the south side.
-What color chair is directly opposite the red chair?`,
+      cognitive_level: 1,
+      prompt: `A round table has a red chair on the north side, a blue chair on the west side, and a green chair on the south side.\nWhat color chair is directly opposite the red chair?`,
       expected_answer: 'green',
       answer_format: 'entity',
       difficulty: 'easy'
     },
     {
-      id: 'relationship-002',
+      id: 'rel-002',
       category: 'relationship',
-      prompt: `In a rectangular arrangement: Alice sits north, Bob sits east of Alice, Carol sits south of Bob.
-If David sits west of Carol, where is David relative to Alice?`,
-      expected_answer: 'west of Alice',
-      answer_format: 'entity',
-      difficulty: 'medium'
-    },
-    {
-      id: 'relationship-003',
-      category: 'relationship',
-      prompt: `A book is on a shelf above a box.
-The box is to the left of a lamp.
-The lamp is to the right of a plant.
-If the plant is on the left, what is the correct left-to-right order on the ground level?`,
-      expected_answer: 'plant, box, lamp',
-      answer_format: 'entity',
-      difficulty: 'medium'
-    },
-    {
-      id: 'relationship-004',
-      category: 'relationship',
-      prompt: `Three buildings arranged in a line: Town Hall is in the center.
-The Library is to the left (west) of Town Hall.
-The School is to the right (east) of Town Hall.
-Which building is furthest east?`,
+      cognitive_level: 1,
+      prompt: `Three buildings in a line: Library (west), Town Hall (center), School (east).\nWhich building is furthest east?`,
       expected_answer: 'School',
       answer_format: 'entity',
       difficulty: 'easy'
     },
+    // L2 — topology (betweenness, containment)
     {
-      id: 'relationship-005',
+      id: 'rel-003',
       category: 'relationship',
-      prompt: `In a parking lot: A red car is parked north of a blue car.
-The blue car is parked east of a yellow car.
-Is the red car north or south of the yellow car?`,
+      cognitive_level: 2,
+      prompt: `A desk is between the door and the window. A lamp is on the desk. The bookshelf is behind the door.\nIs the lamp between the door and the window?`,
+      expected_answer: 'yes',
+      answer_format: 'entity',
+      difficulty: 'easy'
+    },
+    {
+      id: 'rel-004',
+      category: 'relationship',
+      cognitive_level: 2,
+      prompt: `A red car is parked north of a blue car. The blue car is east of a yellow car.\nIs the red car north or south of the yellow car?`,
       expected_answer: 'north and east',
       answer_format: 'description',
       difficulty: 'medium'
-    }
-  ],
-  perspective: [
+    },
+    // L3 — symbolic multi-hop chains
     {
-      id: 'perspective-001',
-      category: 'perspective',
-      prompt: `You are standing in the garden facing north toward the house.
-To your left is the oak tree. To your right is the shed.
-In absolute coordinates (where north is up), describe the positions of the tree and shed relative to the house.`,
-      expected_answer: 'oak tree is west of observer, shed is east of observer',
+      id: 'rel-005',
+      category: 'relationship',
+      cognitive_level: 3,
+      prompt: `Alice sits north of Bob. Bob sits east of Carol. Carol sits north of David.\nWhere is Alice relative to David?`,
+      expected_answer: 'north and east',
       answer_format: 'description',
       difficulty: 'medium'
     },
     {
-      id: 'perspective-002',
+      id: 'rel-006',
+      category: 'relationship',
+      cognitive_level: 3,
+      prompt: `A is left of B. B is above C. C is right of D. D is below E.\nWhere is A relative to E?`,
+      expected_answer: 'right of E, or east of E',
+      answer_format: 'description',
+      difficulty: 'medium'
+    },
+    {
+      id: 'rel-007',
+      category: 'relationship',
+      cognitive_level: 3,
+      prompt: `The plant is left of the box. The box is left of the lamp. A book is on a shelf above the box.\nWhat is the left-to-right order on the ground level?`,
+      expected_answer: 'plant, box, lamp',
+      answer_format: 'entity',
+      difficulty: 'medium'
+    },
+    // L5 — mental rotation of relationship layout
+    {
+      id: 'rel-008',
+      category: 'relationship',
+      cognitive_level: 5,
+      prompt: `In a room: the sofa is on the north wall, the TV is on the south wall, the bookshelf is on the east wall, the door is on the west wall.\nIf you rotate the entire layout 90 degrees clockwise, what is now on the north wall?`,
+      expected_answer: 'door',
+      answer_format: 'entity',
+      difficulty: 'hard'
+    },
+    {
+      id: 'rel-009',
+      category: 'relationship',
+      cognitive_level: 5,
+      prompt: `Four people sit at a square table: Amy (north), Ben (east), Cora (south), Dan (west).\nIf everyone rotates one seat clockwise, who now sits on the north side?`,
+      expected_answer: 'Dan',
+      answer_format: 'entity',
+      difficulty: 'hard'
+    }
+  ],
+  perspective: [
+    // L2 — simple perspective mapping
+    {
+      id: 'persp-001',
       category: 'perspective',
-      prompt: `Imagine a person facing east with a river on their right.
-In absolute terms, which direction is the river?`,
+      cognitive_level: 2,
+      prompt: `A person faces east with a river on their right.\nIn absolute terms, which direction is the river?`,
       expected_answer: 'south',
       answer_format: 'direction',
       difficulty: 'easy'
     },
     {
-      id: 'perspective-003',
+      id: 'persp-002',
       category: 'perspective',
-      prompt: `You are sitting at a dining table facing your friend across from you.
-Your friend\'s right hand points toward the window.
-In absolute terms, which wall is the window on?`,
-      expected_answer: 'depends on which direction you are facing',
-      answer_format: 'description',
-      difficulty: 'hard'
-    },
-    {
-      id: 'perspective-004',
-      category: 'perspective',
-      prompt: `A person is walking north. They turn 90 degrees to their right.
-In which absolute direction are they now walking?`,
+      cognitive_level: 2,
+      prompt: `A person walking north turns 90 degrees to their right.\nWhat absolute direction are they now walking?`,
       expected_answer: 'east',
       answer_format: 'direction',
       difficulty: 'easy'
     },
+    // L4 — egocentric transforms
     {
-      id: 'perspective-005',
+      id: 'persp-003',
       category: 'perspective',
-      prompt: `You are facing west. A car is to your left.
-In absolute terms, which direction is the car from you?`,
+      cognitive_level: 4,
+      prompt: `You face west. A car is to your left.\nIn absolute terms, which direction is the car?`,
       expected_answer: 'south',
       answer_format: 'direction',
       difficulty: 'medium'
+    },
+    {
+      id: 'persp-004',
+      category: 'perspective',
+      cognitive_level: 4,
+      prompt: `You stand in a garden facing north. The oak tree is to your left, the shed is to your right.\nIn absolute coordinates, where are the tree and shed?`,
+      expected_answer: 'oak tree is west, shed is east',
+      answer_format: 'description',
+      difficulty: 'medium'
+    },
+    {
+      id: 'persp-005',
+      category: 'perspective',
+      cognitive_level: 4,
+      prompt: `You face south. A building is ahead and to your left.\nIn absolute terms, what direction is the building?`,
+      expected_answer: 'south-east or southeast',
+      answer_format: 'direction',
+      difficulty: 'medium'
+    },
+    // L5 — mental rotation
+    {
+      id: 'persp-006',
+      category: 'perspective',
+      cognitive_level: 5,
+      prompt: `A room layout: table in center, lamp to the north, chair to the east, plant to the south, door to the west.\nRotate the entire layout 180 degrees. What is now north of the table?`,
+      expected_answer: 'plant',
+      answer_format: 'entity',
+      difficulty: 'hard'
+    },
+    {
+      id: 'persp-007',
+      category: 'perspective',
+      cognitive_level: 5,
+      prompt: `You face north. The park is ahead, the school is to your right, the hospital is behind you.\nYou turn to face west. What is now to your right?`,
+      expected_answer: 'park',
+      answer_format: 'entity',
+      difficulty: 'hard'
+    },
+    {
+      id: 'persp-008',
+      category: 'perspective',
+      cognitive_level: 5,
+      prompt: `On a map: City A is north of City B. City C is east of City B.\nIf you flip the map upside down (rotate 180 degrees), where is City A relative to City B?`,
+      expected_answer: 'south',
+      answer_format: 'direction',
+      difficulty: 'hard'
     }
   ]
 };

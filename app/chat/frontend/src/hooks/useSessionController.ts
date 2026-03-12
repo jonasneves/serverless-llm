@@ -579,9 +579,8 @@ export function useSessionController(params: SessionControllerParams) {
 
       const modelEndpoints = getModelEndpoints(modelsData);
 
-      // Get spatial tasks - use all categories and up to 3 tasks
       const allTasks = Object.values(SPATIAL_REASONING_TASKS).flat();
-      const tasksToRun = allTasks.slice(0, 3); // MVP: run 3 tasks
+      const tasksToRun = allTasks;
 
       const benchmarkResults: BenchmarkResult[] = [];
 
@@ -614,6 +613,7 @@ export function useSessionController(params: SessionControllerParams) {
               task_id: task.id,
               task_text: task.prompt,
               category: task.category,
+              cognitive_level: task.cognitive_level,
               expected_answer: task.expected_answer,
               model_results: event.results,
             };

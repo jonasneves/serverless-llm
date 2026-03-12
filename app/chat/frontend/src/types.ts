@@ -65,9 +65,20 @@ export type ChatHistoryEntry = {
 };
 
 // Spatial reasoning benchmark types
+export type CognitiveLevel = 1 | 2 | 3 | 4 | 5;
+
+export const COGNITIVE_LEVEL_NAMES: Record<CognitiveLevel, string> = {
+  1: 'Retrieval',
+  2: 'Topology',
+  3: 'Symbolic',
+  4: 'Egocentric',
+  5: 'Mental Rotation',
+};
+
 export interface SpatialTask {
   id: string;
   category: 'route' | 'relationship' | 'perspective';
+  cognitive_level: CognitiveLevel;
   prompt: string;
   expected_answer: string;
   answer_format: 'free_text' | 'direction' | 'entity' | 'description';
@@ -94,6 +105,7 @@ export interface BenchmarkResult {
   task_id: string;
   task_text: string;
   category: 'route' | 'relationship' | 'perspective';
+  cognitive_level: CognitiveLevel;
   expected_answer: string;
   model_results: SpatialResult[];
 }
