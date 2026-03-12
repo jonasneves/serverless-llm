@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>lm-arena — Spatial Reasoning</title>
+  <link rel="stylesheet" href="./shared.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    h1 { font-size: 20px; font-weight: 600; }
+
+    .caveat-banner {
+      border-left: 3px solid var(--accent);
+      background: rgba(31,111,235,.06);
+      padding: 10px 14px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin-bottom: 36px;
+      line-height: 1.5;
+    }
+    .caveat-banner strong { color: var(--accent-hover); }
+
+    /* Section headers */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      margin-top: 40px;
+    }
+    .section-header:first-of-type { margin-top: 0; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .section-desc {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    /* Chart grid */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .chart-card.full-width {
+      grid-column: 1 / -1;
+    }
+    .chart-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 4px;
+    }
+    .chart-sublabel {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      opacity: 0.7;
+    }
+
+    /* Level legend */
+    .level-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 28px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .level-tag {
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .level-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* Summary table */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+    .summary-model {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .summary-model .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .summary-value {
+      font-size: 22px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .summary-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* State */
+    .state-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 14px; padding-top: 80px; color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="header-title">lm-arena</span>
+  <span class="header-sub">/ spatial reasoning</span>
+  <div class="header-sep"></div>
+  <nav class="header-nav">
+    <a href="/">Chat</a>
+    <a href="/benchmarks.html">Benchmarks</a>
+    <a href="/admin.html">Admin</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="state-wrap">
+    <div class="spinner"></div>
+    <p>Loading charts&hellip;</p>
+  </div>
+</main>
+
+<footer>
+  <a href="https://github.com/lm-arena/lm-arena.github.io" target="_blank">lm-arena/lm-arena.github.io</a>
+  <a href="/benchmarks.html">general benchmarks</a>
+</footer>
+
+<script>
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const ECHARTS_CDN = 'https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js';
+
+const MODEL_COLORS = {
+  qwen:       '#C678DD',
+  lfm2:       '#3EC9A7',
+  nanbeige:   '#ABB2BF',
+  smollm3:    '#E5A00D',
+  phireasoning:'#61AFEF',
+  lfm2mini:   '#56B6C2',
+  lfm2thinking:'#98C379',
+  jancode:    '#7CB9E8',
+  falcon:     '#98C379',
+  gemma3n:    '#4285F4',
+  qwen7b:     '#C678DD',
+  qwenclaude27b:'#D19A66',
+  gptoss:     '#10A37F',
+};
+
+const LEVEL_COLORS = [
+  '#3fb950', // L1 green
+  '#58a6ff', // L2 blue
+  '#d29922', // L3 amber
+  '#f47067', // L4 red-orange
+  '#f85149', // L5 red
+];
+
+const CT = '#8b949e';
+const CB = '#30363d';
+const CG = 'rgba(48,54,61,0.5)';
+
+// ─── SAMPLE DATA ──────────────────────────────────────────────────────────────
+
+const SAMPLE_DATA = {
+  models: ['nanbeige', 'qwen', 'smollm3', 'lfm2'],
+  modelNames: {
+    nanbeige: 'Nanbeige4.1-3B',
+    qwen: 'Qwen3.5 4B',
+    smollm3: 'SmolLM3 3B',
+    lfm2: 'LFM2.5 1.2B',
+  },
+  levels: [
+    { level: 1, name: 'Retrieval' },
+    { level: 2, name: 'Topology' },
+    { level: 3, name: 'Symbolic' },
+    { level: 4, name: 'Egocentric' },
+    { level: 5, name: 'Mental Rotation' },
+  ],
+  accuracy: {
+    nanbeige: [0.90, 0.80, 0.65, 0.45, 0.25],
+    qwen:     [0.85, 0.70, 0.55, 0.30, 0.15],
+    smollm3:  [0.75, 0.60, 0.40, 0.20, 0.10],
+    lfm2:     [0.60, 0.50, 0.35, 0.15, 0.05],
+  },
+  categoryAccuracy: {
+    nanbeige: { route: 0.75, relationship: 0.65, perspective: 0.50 },
+    qwen:     { route: 0.65, relationship: 0.55, perspective: 0.40 },
+    smollm3:  { route: 0.55, relationship: 0.45, perspective: 0.30 },
+    lfm2:     { route: 0.45, relationship: 0.35, perspective: 0.25 },
+  },
+  taskResults: [
+    { model: 'qwen', level: 1, category: 'relationship', accuracy: 1.0, responseTimeMs: 1200 },
+    { model: 'qwen', level: 1, category: 'route', accuracy: 0.7, responseTimeMs: 1100 },
+    { model: 'qwen', level: 2, category: 'relationship', accuracy: 0.8, responseTimeMs: 1500 },
+    { model: 'qwen', level: 2, category: 'route', accuracy: 0.6, responseTimeMs: 1400 },
+    { model: 'qwen', level: 3, category: 'route', accuracy: 0.5, responseTimeMs: 2100 },
+    { model: 'qwen', level: 3, category: 'relationship', accuracy: 0.6, responseTimeMs: 1900 },
+    { model: 'qwen', level: 4, category: 'perspective', accuracy: 0.2, responseTimeMs: 2800 },
+    { model: 'qwen', level: 4, category: 'route', accuracy: 0.4, responseTimeMs: 2500 },
+    { model: 'qwen', level: 5, category: 'perspective', accuracy: 0.0, responseTimeMs: 3200 },
+    { model: 'qwen', level: 5, category: 'relationship', accuracy: 0.3, responseTimeMs: 3000 },
+    { model: 'lfm2', level: 1, category: 'relationship', accuracy: 0.8, responseTimeMs: 800 },
+    { model: 'lfm2', level: 1, category: 'route', accuracy: 0.4, responseTimeMs: 750 },
+    { model: 'lfm2', level: 2, category: 'route', accuracy: 0.5, responseTimeMs: 900 },
+    { model: 'lfm2', level: 2, category: 'relationship', accuracy: 0.5, responseTimeMs: 950 },
+    { model: 'lfm2', level: 3, category: 'route', accuracy: 0.3, responseTimeMs: 1100 },
+    { model: 'lfm2', level: 3, category: 'relationship', accuracy: 0.4, responseTimeMs: 1050 },
+    { model: 'lfm2', level: 4, category: 'perspective', accuracy: 0.0, responseTimeMs: 1300 },
+    { model: 'lfm2', level: 4, category: 'route', accuracy: 0.3, responseTimeMs: 1200 },
+    { model: 'lfm2', level: 5, category: 'perspective', accuracy: 0.0, responseTimeMs: 1500 },
+    { model: 'lfm2', level: 5, category: 'relationship', accuracy: 0.1, responseTimeMs: 1400 },
+    { model: 'nanbeige', level: 1, category: 'relationship', accuracy: 1.0, responseTimeMs: 2000 },
+    { model: 'nanbeige', level: 1, category: 'route', accuracy: 0.8, responseTimeMs: 1800 },
+    { model: 'nanbeige', level: 2, category: 'relationship', accuracy: 0.8, responseTimeMs: 2500 },
+    { model: 'nanbeige', level: 2, category: 'route', accuracy: 0.8, responseTimeMs: 2300 },
+    { model: 'nanbeige', level: 3, category: 'route', accuracy: 0.6, responseTimeMs: 3000 },
+    { model: 'nanbeige', level: 3, category: 'relationship', accuracy: 0.7, responseTimeMs: 2800 },
+    { model: 'nanbeige', level: 4, category: 'perspective', accuracy: 0.4, responseTimeMs: 3500 },
+    { model: 'nanbeige', level: 4, category: 'route', accuracy: 0.5, responseTimeMs: 3200 },
+    { model: 'nanbeige', level: 5, category: 'perspective', accuracy: 0.2, responseTimeMs: 4000 },
+    { model: 'nanbeige', level: 5, category: 'relationship', accuracy: 0.3, responseTimeMs: 3800 },
+    { model: 'smollm3', level: 1, category: 'relationship', accuracy: 0.8, responseTimeMs: 600 },
+    { model: 'smollm3', level: 1, category: 'route', accuracy: 0.7, responseTimeMs: 550 },
+    { model: 'smollm3', level: 2, category: 'route', accuracy: 0.6, responseTimeMs: 700 },
+    { model: 'smollm3', level: 2, category: 'relationship', accuracy: 0.6, responseTimeMs: 720 },
+    { model: 'smollm3', level: 3, category: 'route', accuracy: 0.4, responseTimeMs: 850 },
+    { model: 'smollm3', level: 3, category: 'relationship', accuracy: 0.4, responseTimeMs: 880 },
+    { model: 'smollm3', level: 4, category: 'perspective', accuracy: 0.2, responseTimeMs: 950 },
+    { model: 'smollm3', level: 4, category: 'route', accuracy: 0.2, responseTimeMs: 920 },
+    { model: 'smollm3', level: 5, category: 'perspective', accuracy: 0.0, responseTimeMs: 1100 },
+    { model: 'smollm3', level: 5, category: 'relationship', accuracy: 0.2, responseTimeMs: 1050 },
+  ],
+};
+
+const $main = document.getElementById('main');
+
+// ─── UTILITIES ────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function mColor(model) { return MODEL_COLORS[model] || '#8b949e'; }
+function mName(model) { return SAMPLE_DATA.modelNames[model] || model; }
+
+function axisBase() {
+  return {
+    axisLine:  { lineStyle: { color: CB } },
+    axisTick:  { lineStyle: { color: CB } },
+    axisLabel: { color: CT, fontSize: 11 },
+    splitLine: { lineStyle: { color: CG } },
+  };
+}
+
+function tooltipBase() {
+  return {
+    backgroundColor: '#1c2128',
+    borderColor: CB,
+    textStyle: { color: '#e6edf3', fontSize: 12 },
+    extraCssText: 'border-radius:6px',
+  };
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('script load failed'));
+    document.head.appendChild(s);
+  });
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+
+function renderPage() {
+  const d = SAMPLE_DATA;
+
+  // Summary cards
+  const summaryHtml = d.models.map(m => {
+    const avg = d.accuracy[m].reduce((a, b) => a + b, 0) / d.accuracy[m].length;
+    const best = Math.max(...d.accuracy[m]);
+    const worst = Math.min(...d.accuracy[m]);
+    return `<div class="summary-card">
+      <div class="summary-model"><span class="dot" style="background:${mColor(m)}"></span>${esc(mName(m))}</div>
+      <div class="summary-value" style="color:${mColor(m)}">${Math.round(avg * 100)}%</div>
+      <div class="summary-sub">L1 ${Math.round(best * 100)}% &rarr; L5 ${Math.round(worst * 100)}%</div>
+    </div>`;
+  }).join('');
+
+  // Level legend
+  const legendHtml = d.levels.map((l, i) =>
+    `<span class="level-tag"><span class="level-dot" style="background:${LEVEL_COLORS[i]}"></span>L${l.level} ${esc(l.name)}</span>`
+  ).join('');
+
+  $main.innerHTML = `
+    <div class="page-header">
+      <h1>Spatial Reasoning</h1>
+    </div>
+
+    <div class="caveat-banner">
+      <strong>Sample data.</strong>
+      Results shown are illustrative. Live benchmark results will populate from model evaluations
+      across 25 spatial tasks at 5 cognitive levels (SpatialText 2026, SnorkelSpatial, StepGame).
+    </div>
+
+    <div class="level-legend">${legendHtml}</div>
+
+    <div class="summary-grid">${summaryHtml}</div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-label">Cognitive Level Profile</div>
+        <div class="chart-sublabel">Accuracy across 5 cognitive levels per model</div>
+        <div id="chart-radar" style="height:360px"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-label">Accuracy Heatmap</div>
+        <div class="chart-sublabel">Models &times; cognitive levels &mdash; darker = higher accuracy</div>
+        <div id="chart-heatmap" style="height:360px"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-label">Category Breakdown</div>
+        <div class="chart-sublabel">Accuracy by task category, grouped by model</div>
+        <div id="chart-category" style="height:320px"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-label">Speed vs Accuracy</div>
+        <div class="chart-sublabel">Response time vs accuracy per task &mdash; size encodes cognitive level</div>
+        <div id="chart-scatter" style="height:320px"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-label">Degradation Curves</div>
+        <div class="chart-sublabel">Accuracy drop-off from L1 to L5 per model</div>
+        <div id="chart-area" style="height:320px"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-label">Parallel Coordinates</div>
+        <div class="chart-sublabel">Each line traces one model across all 5 cognitive levels</div>
+        <div id="chart-parallel" style="height:320px"></div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── CHART BUILDERS ───────────────────────────────────────────────────────────
+
+function buildRadar() {
+  const d = SAMPLE_DATA;
+  return {
+    backgroundColor: 'transparent',
+    tooltip: { ...tooltipBase() },
+    legend: {
+      bottom: 0,
+      textStyle: { color: CT, fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    radar: {
+      indicator: d.levels.map(l => ({ name: `L${l.level} ${l.name}`, max: 1 })),
+      shape: 'polygon',
+      splitNumber: 4,
+      center: ['50%', '48%'],
+      radius: '65%',
+      axisName: { color: '#cbd5e1', fontSize: 11 },
+      splitLine: { lineStyle: { color: CB } },
+      splitArea: { areaStyle: { color: ['transparent', 'rgba(48,54,61,0.12)'] } },
+      axisLine: { lineStyle: { color: CB } },
+    },
+    series: [{
+      type: 'radar',
+      data: d.models.map(m => ({
+        name: mName(m),
+        value: d.accuracy[m],
+        areaStyle: { opacity: 0.12 },
+        lineStyle: { width: 2 },
+        itemStyle: { color: mColor(m) },
+        symbol: 'circle',
+        symbolSize: 5,
+      })),
+    }],
+  };
+}
+
+function buildHeatmap() {
+  const d = SAMPLE_DATA;
+  const data = [];
+  d.models.forEach((m, mi) => {
+    d.accuracy[m].forEach((acc, li) => {
+      data.push([li, mi, acc]);
+    });
+  });
+
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      ...tooltipBase(),
+      formatter: p => {
+        const li = p.data[0];
+        const mi = p.data[1];
+        const acc = p.data[2];
+        return `${esc(mName(d.models[mi]))}<br/>L${li + 1} ${d.levels[li].name}: ${Math.round(acc * 100)}%`;
+      },
+    },
+    grid: { left: 110, right: 40, top: 16, bottom: 40 },
+    xAxis: {
+      type: 'category',
+      data: d.levels.map(l => `L${l.level}`),
+      axisLabel: { color: CT, fontSize: 11 },
+      axisLine: { lineStyle: { color: CB } },
+      axisTick: { show: false },
+      splitArea: { show: false },
+    },
+    yAxis: {
+      type: 'category',
+      data: d.models.map(m => mName(m)),
+      axisLabel: { color: CT, fontSize: 11, width: 100, overflow: 'truncate' },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitArea: { show: false },
+    },
+    visualMap: {
+      min: 0,
+      max: 1,
+      calculable: false,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 0,
+      itemWidth: 14,
+      itemHeight: 120,
+      textStyle: { color: CT, fontSize: 10 },
+      formatter: v => Math.round(v * 100) + '%',
+      inRange: {
+        color: ['#161b22', '#1a3a2a', '#2d6a4f', '#40916c', '#52b788', '#95d5b2'],
+      },
+    },
+    series: [{
+      type: 'heatmap',
+      data,
+      label: {
+        show: true,
+        color: '#e6edf3',
+        fontSize: 12,
+        fontWeight: 600,
+        formatter: p => Math.round(p.data[2] * 100) + '%',
+      },
+      emphasis: {
+        itemStyle: { borderColor: '#e6edf3', borderWidth: 1 },
+      },
+    }],
+  };
+}
+
+function buildCategory() {
+  const d = SAMPLE_DATA;
+  const categories = ['Route', 'Relationship', 'Perspective'];
+  const catKeys = ['route', 'relationship', 'perspective'];
+
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      ...tooltipBase(),
+      formatter: params => params.map(p =>
+        `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px"></span>${esc(p.seriesName)}: ${Math.round(p.value * 100)}%`
+      ).join('<br/>'),
+    },
+    legend: {
+      bottom: 0,
+      textStyle: { color: CT, fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    grid: { left: 48, right: 16, top: 16, bottom: 44 },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      ...axisBase(),
+    },
+    yAxis: {
+      type: 'value',
+      max: 1,
+      axisLabel: { color: CT, fontSize: 10, formatter: v => Math.round(v * 100) + '%' },
+      ...axisBase(),
+    },
+    series: d.models.map(m => ({
+      name: mName(m),
+      type: 'bar',
+      data: catKeys.map(c => d.categoryAccuracy[m][c]),
+      itemStyle: { color: mColor(m), borderRadius: [3, 3, 0, 0] },
+      barMaxWidth: 28,
+    })),
+  };
+}
+
+function buildScatter() {
+  const d = SAMPLE_DATA;
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      ...tooltipBase(),
+      formatter: p => {
+        const r = p.data;
+        return `<strong>${esc(mName(r[3]))}</strong><br/>`
+          + `L${r[4]} ${d.levels[r[4] - 1].name}<br/>`
+          + `Accuracy: ${Math.round(r[1] * 100)}%<br/>`
+          + `Time: ${r[0].toFixed(0)}ms`;
+      },
+    },
+    legend: {
+      bottom: 0,
+      textStyle: { color: CT, fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    grid: { left: 52, right: 20, top: 16, bottom: 48 },
+    xAxis: {
+      type: 'value',
+      name: 'Response time (ms)',
+      nameLocation: 'middle',
+      nameGap: 28,
+      nameTextStyle: { color: CT, fontSize: 11 },
+      axisLabel: { color: CT, fontSize: 10 },
+      ...axisBase(),
+    },
+    yAxis: {
+      type: 'value',
+      name: 'Accuracy',
+      nameLocation: 'middle',
+      nameGap: 36,
+      nameTextStyle: { color: CT, fontSize: 11 },
+      min: 0, max: 1,
+      axisLabel: { color: CT, fontSize: 10, formatter: v => Math.round(v * 100) + '%' },
+      ...axisBase(),
+    },
+    series: d.models.map(m => ({
+      name: mName(m),
+      type: 'scatter',
+      data: d.taskResults
+        .filter(t => t.model === m)
+        .map(t => [t.responseTimeMs, t.accuracy, 6 + t.level * 4, m, t.level]),
+      symbolSize: p => p[2],
+      itemStyle: { color: mColor(m), opacity: 0.8 },
+      emphasis: { scale: 1.3 },
+    })),
+  };
+}
+
+function buildArea() {
+  const d = SAMPLE_DATA;
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      ...tooltipBase(),
+      formatter: params => params.map(p =>
+        `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px"></span>${esc(p.seriesName)}: ${Math.round(p.value * 100)}%`
+      ).join('<br/>'),
+    },
+    legend: {
+      bottom: 0,
+      textStyle: { color: CT, fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    grid: { left: 48, right: 16, top: 16, bottom: 44 },
+    xAxis: {
+      type: 'category',
+      data: d.levels.map(l => `L${l.level} ${l.name}`),
+      axisLabel: { color: CT, fontSize: 10 },
+      ...axisBase(),
+      boundaryGap: false,
+    },
+    yAxis: {
+      type: 'value',
+      max: 1,
+      axisLabel: { color: CT, fontSize: 10, formatter: v => Math.round(v * 100) + '%' },
+      ...axisBase(),
+    },
+    series: d.models.map(m => ({
+      name: mName(m),
+      type: 'line',
+      data: d.accuracy[m],
+      smooth: 0.3,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.08 },
+      itemStyle: { color: mColor(m) },
+    })),
+  };
+}
+
+function buildParallel() {
+  const d = SAMPLE_DATA;
+  return {
+    backgroundColor: 'transparent',
+    parallelAxis: d.levels.map((l, i) => ({
+      dim: i,
+      name: `L${l.level}\n${l.name}`,
+      min: 0,
+      max: 1,
+      nameTextStyle: { color: CT, fontSize: 10 },
+      axisLabel: { color: CT, fontSize: 10, formatter: v => Math.round(v * 100) + '%' },
+      axisLine: { lineStyle: { color: CB } },
+      axisTick: { lineStyle: { color: CB } },
+      splitLine: { lineStyle: { color: CG } },
+    })),
+    parallel: {
+      left: 60,
+      right: 60,
+      top: 20,
+      bottom: 44,
+      parallelAxisDefault: {
+        nameGap: 28,
+      },
+    },
+    legend: {
+      bottom: 0,
+      textStyle: { color: CT, fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    series: d.models.map(m => ({
+      name: mName(m),
+      type: 'parallel',
+      data: [d.accuracy[m]],
+      lineStyle: {
+        color: mColor(m),
+        width: 3,
+        opacity: 0.75,
+      },
+      emphasis: {
+        lineStyle: { width: 5, opacity: 1 },
+      },
+    })),
+  };
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+const charts = [];
+
+function initCharts() {
+  const ids = ['chart-radar', 'chart-heatmap', 'chart-category', 'chart-scatter', 'chart-area', 'chart-parallel'];
+  const builders = [buildRadar, buildHeatmap, buildCategory, buildScatter, buildArea, buildParallel];
+
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const chart = echarts.init(el, null, { renderer: 'canvas' });
+    chart.setOption(builders[i](), { notMerge: true });
+    charts.push(chart);
+  });
+
+  window.addEventListener('resize', () => charts.forEach(c => c.resize()));
+}
+
+async function init() {
+  try {
+    await loadScript(ECHARTS_CDN);
+    renderPage();
+    initCharts();
+  } catch (e) {
+    $main.innerHTML = `<div class="state-wrap"><p>Failed to load: ${esc(e.message)}</p></div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

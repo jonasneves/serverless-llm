@@ -9,9 +9,9 @@ const CORS_HEADERS = {
 // Regenerate with: make sync-worker-config
 // Must be updated whenever routing_category fields change in config/models.py.
 const ROUTE_MAP = {
-  reasoning:       ['nanbeige', 'phireasoning', 'lfm2thinking', 'r1qwen', 'falcon', 'dasd'],
-  general:         ['qwen', 'lfm2', 'gemma3n', 'lfm2mini', 'gemma', 'phi', 'llama'],
-  function_calling:['smollm3', 'rnj', 'functiongemma', 'gptoss', 'agentcpm'],
+  reasoning:       ['nanbeige', 'qwenclaude27b', 'phireasoning', 'lfm2thinking', 'falcon'],
+  general:         ['qwen', 'lfm2', 'gemma3n', 'lfm2mini', 'qwen7b'],
+  function_calling:['smollm3', 'gptoss'],
   coding:          ['jancode'],
 };
 
