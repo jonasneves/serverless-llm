@@ -141,6 +141,10 @@ export default function Header({
   }, [isMobileMenuOpen]);
 
   const handleModeSelect = (newMode: Mode) => {
+    if (newMode === 'benchmark') {
+      window.location.hash = '#/benchmark';
+      return;
+    }
     setMode(newMode);
     setHoveredCard(null);
     clearSelection();
