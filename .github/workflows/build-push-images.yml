@@ -57,8 +57,8 @@ jobs:
             # Extract changed model directories (includes -inference)
             CHANGED_MODELS=$(echo "$CHANGED_FILES" | grep -E '^app/.+-inference/' | cut -d'/' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
 
-            # If shared/ changed, rebuild all; otherwise build only changed models
-            if echo "$CHANGED_FILES" | grep -q '^app/shared/'; then
+            # If shared/ or config/ changed, rebuild all; otherwise build only changed models
+            if echo "$CHANGED_FILES" | grep -qE '^(app/shared/|config/)'; then
               MODELS="all"
             elif [ -n "$CHANGED_MODELS" ]; then
               MODELS="$CHANGED_MODELS"
