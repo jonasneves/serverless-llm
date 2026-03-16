@@ -1,0 +1,504 @@
+{
+  "lfm2mini": {
+    "model": "lfm2mini",
+    "date": "2026-03-16",
+    "run_at": "2026-03-16T20:12:51.338111+00:00",
+    "functional": true,
+    "suites": {
+      "mmlu": {
+        "prompts": 10,
+        "answered": 10,
+        "correct": 8,
+        "accuracy": 0.8,
+        "p50_ms": 1361.7,
+        "max_ms": 3703.5,
+        "traces": [
+          {
+            "prompt": "What is the chemical symbol for gold?",
+            "expected": "Au",
+            "response": "The chemical symbol for gold is Au.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 470.1
+          },
+          {
+            "prompt": "Which planet is closest to the Sun?",
+            "expected": "Mercury",
+            "response": "Methuselhaeolus venarum is the closest planet to the Sun in our Solar System (notably in our own solar system), but it's extremely close - about 0.6 astronomical units (AU) away. It's an irregularly shaped moon, so its distance and orbital period are not fixed and vary. This distance causes it to receive the same amount of sunlight as one day on Earth. However, Methuselhaeolus venarum is relatively short-lived - he takes approximately 5 Earth years to complete one orbit around the Sun.",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 1517.0
+          },
+          {
+            "prompt": "What is the square root of 144?",
+            "expected": "12",
+            "response": "To find the square root of 144, we need to identify a number that, when multiplied by itself, equals 144.\nWe know that 12 multiplied by 12 equals 144, so the square root of 144 is 12.\nTherefore, the square root of 144 is 12.\nThe answer is: 12",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 1117.0
+          },
+          {
+            "prompt": "Who wrote Romeo and Juliet?",
+            "expected": "Shakespeare",
+            "response": "The playwright who wrote \"Romeo and Juliet\" is William Shakespeare. Written in the early 16th century, this tragic romantic comedy is considered one of the greatest works of English-language drama and one of the most famous plays in the world.\n\nShakespeare's influence on the novel is profound, and his masterpiece reflects the dramatic and intense themes of love and conflict that permeate his work. The story's intricate plot, memorable characters, and Shakespearean language are evident in \"Romeo and Juliet.\"\n\nShakespeare wrote the play during the reign of Queen Elizabeth I, and it is often credited to him as being the earliest surviving work to achieve widespread fame and acclaim. His original script includes an extensive number of lines, and the dialogue is notable for its poetic and lyrical nature, capturing the essence of the tragic love story that drives the narrative.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 2810.3
+          },
+          {
+            "prompt": "What is the capital of France?",
+            "expected": "Paris",
+            "response": "The capital of France is Paris. It is a city located at the heart of the country, and it is the most populous city and the cultural, political, and financial center of France. It is renowned for its historical landmarks, like the Eiffel Tower, Notre-Dame Cathedral, and the Louvre Museum.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 1112.3
+          },
+          {
+            "prompt": "How many sides does a hexagon have?",
+            "expected": "6",
+            "response": "A hexagon has **6 sides**. \n\nHere's how to figure it:\n\n* **Angles:** A hexagon has six angles, each measuring 120 degrees (6 * 60\u00b0).\n* **Sides and Angles:** The sum of the angles in a triangle is always 180 degrees. Since a triangle has three angles, a hexagon's total angle sum would be 180\u00b0 * 6 = 1080\u00b0.\n* **Equating:**  Since the sum of all interior angles of a hexagon is 720\u00b0 (6 * 120\u00b0), we can set up the equation: 6 * 120\u00b0 = 1080\u00b0.\n* **Solving:** Simplifying, we get 720\u00b0 = 1080\u00b0. This equation is not possible.  This means the previous assumption that a hexagon can have more than 6 sides is incorrect. \n\n\n\nLet me know if you'd like to try another geometry problem! \n",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 3517.4
+          },
+          {
+            "prompt": "What gas do plants absorb from the atmosphere?",
+            "expected": "CO2",
+            "response": "The gas plants absorb from the atmosphere is oxygen (O2). Plants use oxygen as a nutrient, a byproduct of photosynthesis, and it is essential for their growth and survival. This process occurs primarily in their leaves, where specialized structures called stomata open and close to regulate the exchange of gases between the plant and its surroundings.",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 1318.2
+          },
+          {
+            "prompt": "In what year did World War II end?",
+            "expected": "1945",
+            "response": "World War II officially ended on September 2, 1945. This marked the conclusion of the military campaign led by the Axis powers, including Japan, Italy, and Germany, against the Allied powers, led by the United States, Great Britain, and France. The final declaration of war was signed on September 2, 1945, in Washington D.C., by President Harry S. Truman of the United States of America. This year, as it is known today, marks the end of one of the most destructive conflicts in world history.\n\nThe war began with the invasion of Poland by Germany on September 1, 1939, and involved the subsequent attacks on British and American ports, as well as the invasion of Italy and the Eastern Front in World War II. It was the first major conflict in which the Soviet Union was involved on its Eastern Front, where the Battle of Stalingrad is often considered a pivotal turning point. The Allied forces eventually defeated Axis powers in the Pacific Ocean and were able to secure key territories in the Mediterranean and European landbases, leading to the unconditional surrender of Nazi Germany, Japan, and Italy on May 8, 1945.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 3703.5
+          },
+          {
+            "prompt": "What is the boiling point of water in Celsius?",
+            "expected": "100",
+            "response": "The boiling point of water in Celsius is 100 degrees Celsius at standard atmospheric pressure. However, this does not mean the boiling point of pure water is 100 degrees Celsius. At standard atmospheric pressure, water boils at 100 degrees Celsius. The boiling point can vary slightly depending on pressure: at high pressures, the boiling point of water decreases to around 90 degrees Celsius.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 1405.1
+          },
+          {
+            "prompt": "How many bones are in the adult human body?",
+            "expected": "206",
+            "response": "The adult human body has 206 bones. These bones are classified into three types of connective tissue: cartilage, bone, and ligaments, along with the four main types of cartilage: hyaline, fibrocartilage, elastic, and adipose. This makes up a total of 206 bones in the adult human.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 1260.4
+          }
+        ]
+      },
+      "instruct": {
+        "prompts": 8,
+        "answered": 8,
+        "correct": 3,
+        "accuracy": 0.375,
+        "p50_ms": 395.5,
+        "max_ms": 952.4,
+        "traces": [
+          {
+            "prompt": "Respond with exactly one word: the color of the sky.",
+            "expected": "blue",
+            "response": "Crimson.",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 622.4
+          },
+          {
+            "prompt": "Respond with exactly one word: the opposite of hot.",
+            "expected": "cold",
+            "response": "The opposite of hot is cold.",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 368.4
+          },
+          {
+            "prompt": "Respond with exactly one word: the first month of the year.",
+            "expected": "january",
+            "response": "January.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 283.7
+          },
+          {
+            "prompt": "Respond with exactly one word: the number of days in a week.",
+            "expected": "7",
+            "response": "7",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 227.6
+          },
+          {
+            "prompt": "Respond with exactly one word: what is 2 + 2?",
+            "expected": "4",
+            "response": "Five.",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 952.4
+          },
+          {
+            "prompt": "Respond with exactly one word: what metal is used in electrical wires?",
+            "expected": "copper",
+            "response": "Copper.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 533.1
+          },
+          {
+            "prompt": "Respond with exactly one word: the largest ocean.",
+            "expected": "pacific",
+            "response": "The largest ocean is the Pacific.",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 285.6
+          },
+          {
+            "prompt": "Respond with exactly one word: what do bees produce?",
+            "expected": "honey",
+            "response": "Pollen.",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 422.6
+          }
+        ]
+      },
+      "gsm8k": {
+        "prompts": 5,
+        "answered": 5,
+        "correct": 2,
+        "accuracy": 0.4,
+        "p50_ms": 344.1,
+        "max_ms": 2460.8,
+        "traces": [
+          {
+            "prompt": "If a train travels 60 km/h for 2 hours, how many km does it travel? Answer with the number only.",
+            "expected": "120",
+            "response": "120 km",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 284.8
+          },
+          {
+            "prompt": "A store sells 3 apples for $2. How much do 9 apples cost? Answer with the number only.",
+            "expected": "6",
+            "response": "$18",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 344.1
+          },
+          {
+            "prompt": "There are 24 students in a class. 1/3 are absent. How many are present? Answer with the number only.",
+            "expected": "16",
+            "response": "12",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 774.1
+          },
+          {
+            "prompt": "A rectangle has length 8 and width 5. What is its area? Answer with the number only.",
+            "expected": "40",
+            "response": "40\n\nThe area of a rectangle can be calculated using the formula:\n\\[ \\text{Area} = \\text{length} \\times \\text{width} \\]\nHere, the length is 8 and the width is 5. Substituting these values into the formula gives:\n\\[ \\text{Area} = 8 \\times 5 \\]\n\\[ \\text{Area} = 40 \\]\n\nSo the area of the rectangle is 40.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 2460.8
+          },
+          {
+            "prompt": "If 5 workers finish a job in 10 days, how many days for 10 workers? Answer with the number only.",
+            "expected": "5",
+            "response": "50",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 340.4
+          }
+        ]
+      }
+    },
+    "overall": {
+      "p50_ms": 774.1,
+      "max_ms": 3703.5,
+      "avg_tokens_per_sec": 29.7,
+      "tps_label": "chunks/s"
+    }
+  },
+  "lfm2spatial": {
+    "model": "lfm2spatial",
+    "date": "2026-03-16",
+    "run_at": "2026-03-16T20:12:30.575989+00:00",
+    "functional": true,
+    "suites": {
+      "mmlu": {
+        "prompts": 10,
+        "answered": 10,
+        "correct": 6,
+        "accuracy": 0.6,
+        "p50_ms": 323.4,
+        "max_ms": 941.1,
+        "traces": [
+          {
+            "prompt": "What is the chemical symbol for gold?",
+            "expected": "Au",
+            "response": "Au",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 413.1
+          },
+          {
+            "prompt": "Which planet is closest to the Sun?",
+            "expected": "Mercury",
+            "response": "Venus",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 275.0
+          },
+          {
+            "prompt": "What is the square root of 144?",
+            "expected": "12",
+            "response": "4",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 317.4
+          },
+          {
+            "prompt": "Who wrote Romeo and Juliet?",
+            "expected": "Shakespeare",
+            "response": "William Shakespeare",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 200.4
+          },
+          {
+            "prompt": "What is the capital of France?",
+            "expected": "Paris",
+            "response": "Paris",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 255.6
+          },
+          {
+            "prompt": "How many sides does a hexagon have?",
+            "expected": "6",
+            "response": "A hexagon has 6 sides.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 330.1
+          },
+          {
+            "prompt": "What gas do plants absorb from the atmosphere?",
+            "expected": "CO2",
+            "response": "Oxygen",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 329.4
+          },
+          {
+            "prompt": "In what year did World War II end?",
+            "expected": "1945",
+            "response": "World War II ended in 1945.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 451.9
+          },
+          {
+            "prompt": "What is the boiling point of water in Celsius?",
+            "expected": "100",
+            "response": "4.17",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 269.3
+          },
+          {
+            "prompt": "How many bones are in the adult human body?",
+            "expected": "206",
+            "response": "The adult human body contains approximately 206 bones. These bones are classified into five groups: axial, costal, synovial, foraminoid, and mandible (upper mandible), with each bone forming a specific shape and playing important roles in various functions.",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 941.1
+          }
+        ]
+      },
+      "instruct": {
+        "prompts": 8,
+        "answered": 8,
+        "correct": 3,
+        "accuracy": 0.375,
+        "p50_ms": 240.7,
+        "max_ms": 338.9,
+        "traces": [
+          {
+            "prompt": "Respond with exactly one word: the color of the sky.",
+            "expected": "blue",
+            "response": "blue",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 234.1
+          },
+          {
+            "prompt": "Respond with exactly one word: the opposite of hot.",
+            "expected": "cold",
+            "response": "cool",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 221.4
+          },
+          {
+            "prompt": "Respond with exactly one word: the first month of the year.",
+            "expected": "january",
+            "response": "January",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 275.7
+          },
+          {
+            "prompt": "Respond with exactly one word: the number of days in a week.",
+            "expected": "7",
+            "response": "Monday",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 233.4
+          },
+          {
+            "prompt": "Respond with exactly one word: what is 2 + 2?",
+            "expected": "4",
+            "response": "four",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 243.1
+          },
+          {
+            "prompt": "Respond with exactly one word: what metal is used in electrical wires?",
+            "expected": "copper",
+            "response": "copper",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 248.1
+          },
+          {
+            "prompt": "Respond with exactly one word: the largest ocean.",
+            "expected": "pacific",
+            "response": "Greatest",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 238.4
+          },
+          {
+            "prompt": "Respond with exactly one word: what do bees produce?",
+            "expected": "honey",
+            "response": "milk",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 338.9
+          }
+        ]
+      },
+      "gsm8k": {
+        "prompts": 5,
+        "answered": 5,
+        "correct": 2,
+        "accuracy": 0.4,
+        "p50_ms": 705.9,
+        "max_ms": 1050.2,
+        "traces": [
+          {
+            "prompt": "If a train travels 60 km/h for 2 hours, how many km does it travel? Answer with the number only.",
+            "expected": "120",
+            "response": "120",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 607.3
+          },
+          {
+            "prompt": "A store sells 3 apples for $2. How much do 9 apples cost? Answer with the number only.",
+            "expected": "6",
+            "response": "72",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 573.9
+          },
+          {
+            "prompt": "There are 24 students in a class. 1/3 are absent. How many are present? Answer with the number only.",
+            "expected": "16",
+            "response": "36",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 963.1
+          },
+          {
+            "prompt": "A rectangle has length 8 and width 5. What is its area? Answer with the number only.",
+            "expected": "40",
+            "response": "40",
+            "responded": true,
+            "timed_out": false,
+            "correct": true,
+            "latency_ms": 705.9
+          },
+          {
+            "prompt": "If 5 workers finish a job in 10 days, how many days for 10 workers? Answer with the number only.",
+            "expected": "5",
+            "response": "10",
+            "responded": true,
+            "timed_out": false,
+            "correct": false,
+            "latency_ms": 1050.2
+          }
+        ]
+      }
+    },
+    "overall": {
+      "p50_ms": 317.4,
+      "max_ms": 1050.2,
+      "avg_tokens_per_sec": 8.5,
+      "tps_label": "chunks/s"
+    }
+  }
+}
