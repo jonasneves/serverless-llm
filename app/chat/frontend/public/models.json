@@ -100,6 +100,17 @@
       "routing_category": "general"
     },
     {
+      "id": "lfm2-350m-stepgame",
+      "key": "lfm2spatial",
+      "name": "LFM2 350M StepGame",
+      "type": "self-hosted",
+      "priority": 7,
+      "context_length": 8192,
+      "owned_by": "liquidai",
+      "description": "LFM2 350M fine-tuned on StepGame spatial reasoning (16% → 74% accuracy)",
+      "routing_category": "general"
+    },
+    {
       "id": "falcon-h1r-7b",
       "key": "falcon",
       "name": "Falcon H1R 7B",

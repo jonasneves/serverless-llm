@@ -10,7 +10,7 @@ const CORS_HEADERS = {
 // Must be updated whenever routing_category fields change in config/models.py.
 const ROUTE_MAP = {
   reasoning:       ['nanbeige', 'qwenclaude27b', 'phireasoning', 'lfm2thinking', 'falcon'],
-  general:         ['qwen', 'lfm2', 'gemma3n', 'lfm2mini', 'qwen7b'],
+  general:         ['qwen', 'lfm2', 'gemma3n', 'lfm2mini', 'lfm2spatial', 'qwen7b'],
   function_calling:['smollm3', 'gptoss'],
   coding:          ['jancode'],
 };

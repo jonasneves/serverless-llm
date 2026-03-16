@@ -73,6 +73,14 @@
       "rank": 6
     },
     {
+      "key": "lfm2spatial",
+      "name": "LFM2 350M StepGame",
+      "localPort": 8112,
+      "category": "small",
+      "modelId": "lfm2-350m-stepgame",
+      "rank": 7
+    },
+    {
       "key": "falcon",
       "name": "Falcon H1R 7B",
       "localPort": 8202,
