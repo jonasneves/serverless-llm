@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Sync inference.yml model choices whenever config/models.py is staged.
-if git diff --cached --name-only | grep -q 'config/models.py'; then
-  python3 scripts/sync_workflow_choices.py
-  git add .github/workflows/inference.yml
+# Sync derived files when config/models.py is staged.
+set -euo pipefail
+
+if git diff --cached --name-only | grep -q "^config/models\.py$"; then
+    python scripts/sync_workflow_choices.py
+    git add .github/workflows/inference.yml
+    python scripts/generate_models_json.py
+    git add app/chat/frontend/public/models.json
 fi

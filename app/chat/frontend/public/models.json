@@ -100,17 +100,6 @@
       "routing_category": "general"
     },
     {
-      "id": "lfm2-350m-nk-risk",
-      "key": "lfm2nk",
-      "name": "LFM2 350M NK Risk",
-      "type": "self-hosted",
-      "priority": 8,
-      "context_length": 8192,
-      "owned_by": "signal38",
-      "description": "LFM2 350M fine-tuned on GDELT NK military events — geopolitical risk analyst",
-      "routing_category": "general"
-    },
-    {
       "id": "lfm2-350m-stepgame",
       "key": "lfm2spatial",
       "name": "LFM2 350M StepGame",
@@ -118,7 +107,7 @@
       "priority": 7,
       "context_length": 8192,
       "owned_by": "liquidai",
-      "description": "LFM2 350M fine-tuned on StepGame spatial reasoning (16% → 74% accuracy)",
+      "description": "LFM2 350M fine-tuned on StepGame spatial reasoning (16% → 70% accuracy)",
       "routing_category": "general"
     },
     {
@@ -131,6 +120,17 @@
       "owned_by": "tii",
       "description": "Transformer-Mamba hybrid, AIME 88.1%, LiveCodeBench 68.6%, 256K context",
       "routing_category": "reasoning"
+    },
+    {
+      "id": "lfm2-350m-nk-risk",
+      "key": "lfm2nk",
+      "name": "LFM2 350M NK Risk",
+      "type": "self-hosted",
+      "priority": 8,
+      "context_length": 8192,
+      "owned_by": "signal38",
+      "description": "LFM2 350M fine-tuned on GDELT NK military events — geopolitical risk analyst",
+      "routing_category": "general"
     },
     {
       "id": "jan-code-4b",
@@ -728,6 +728,5 @@
       ]
     }
   ],
-  "fetchedAt": "2026-03-11T23:24:04.638Z",
-  "source": "build-time"
+  "source": "config/models.py"
 }

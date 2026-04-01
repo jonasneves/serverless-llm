@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 """
-Generate static models.json for frontend fallback
-Reads from config/models.py (single source of truth)
+Sync self-hosted entries in models.json from config/models.py.
+
+Run directly to update models.json in place:
+    python scripts/generate_models_json.py
+
+Wired as a pre-commit hook — runs automatically when config/models.py is staged.
+API model entries (type != "self-hosted") are preserved unchanged.
 """
 
 import json
 import sys
 from pathlib import Path
 
-# Add parent to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
 
 from config.models import get_inference_models
 
-def main():
-    models = get_inference_models()
+MODELS_JSON = ROOT / "app/chat/frontend/public/models.json"
 
-    # Transform to frontend format
-    local_models = [
+
+def build_self_hosted():
+    return [
         {
             "id": m.model_id,
             "key": m.name,
@@ -29,15 +34,19 @@ def main():
             "description": m.description,
             "routing_category": m.routing_category,
         }
-        for m in models
+        for m in get_inference_models()
     ]
 
-    output = {
-        "models": local_models,
-        "source": "config/models.py"
-    }
 
-    print(json.dumps(output, indent=2))
+def main():
+    existing = json.loads(MODELS_JSON.read_text())
+    api_models = [m for m in existing["models"] if m.get("type") != "self-hosted"]
+    existing["models"] = build_self_hosted() + api_models
+    existing["source"] = "config/models.py"
+    existing.pop("fetchedAt", None)
+    MODELS_JSON.write_text(json.dumps(existing, indent=2, ensure_ascii=False) + "\n")
+    print(f"Updated {MODELS_JSON.relative_to(ROOT)}")
+
 
 if __name__ == "__main__":
     main()
