@@ -34,7 +34,7 @@ runs:
           "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ inputs.workflow_file }}/runs?status=in_progress")
 
         PREVIOUS_RUN_ID=$(echo "$API_RESPONSE" | jq -r \
-          ".workflow_runs[] | select(.id < ${{ github.run_id }} and (.display_title | startswith(\"${{ inputs.model_name }}\"))) | .id" \
+          ".workflow_runs[] | select(.id < ${{ github.run_id }} and (.display_title == \"${{ inputs.model_name }}\")) | .id" \
           | head -1)
 
         if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ]; then

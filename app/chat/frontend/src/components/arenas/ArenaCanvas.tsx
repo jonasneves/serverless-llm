@@ -244,7 +244,7 @@ export function ArenaCanvas(props: ArenaCanvasProps) {
               }}
               onMouseEnter={() => isCircleMode && setHoveredCard(model.id)}
               onMouseLeave={() => isCircleMode && setHoveredCard(null)}
-              className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''} ${isCloudModel && !hasError && !isSpeaking ? 'cloud-model-card' : ''}`}
+              className={`relative cursor-grab active:cursor-grabbing card-hover ${isCircleMode ? 'rounded-full' : ''} ${isSelected ? 'card-selected' : ''} ${isSpeaking ? 'card-speaking' : ''}`}
               style={{
                 background: cardStyles.background,
                 backdropFilter: isCircleMode ? undefined : 'blur(8px)',

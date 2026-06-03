@@ -64,6 +64,16 @@
   will-change: transform;
 }
 
+/* Breathing glow while a model is actively responding (no scale — just light) */
+@keyframes card-speaking-glow {
+  0%, 100% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.20), inset 0 1px 1px rgba(255, 255, 255, 0.1); }
+  50%      { box-shadow: 0 0 30px rgba(251, 191, 36, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.1); }
+}
+
+.card-speaking {
+  animation: card-speaking-glow 1.8s ease-in-out infinite;
+}
+
 .card-hover:hover:not(.card-selected):not(.card-speaking) {
   transform: scale(1.02) !important;
 }
