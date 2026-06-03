@@ -127,7 +127,7 @@ function PlaygroundInner() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [persistedChatModels, setPersistedChatModels] = usePersistedSetting<string[]>(
     'playground_chat_selected_models',
-    ['lfm2.5-1.2b-instruct'], // Default to fastest model (will fallback if offline)
+    ['auto'], // Route through the gateway to whatever is online; picking a model replaces it
   );
   const chatSelectedModels = useMemo(
     () => new Set(persistedChatModels.filter(id => modelsData.some(m => m.id === id))),

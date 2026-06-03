@@ -71,7 +71,7 @@ async function* streamModel(
     if (BROWSER_CAPABLE_MODEL_IDS.has(model)) {
       yield* streamBrowser(model, payload.messages, signal);
     } else {
-      yield { event: 'error', model_id: model, error: true, content: `No endpoint configured for model: ${model}` };
+      yield { event: 'error', model_id: model, error: true, content: 'This model is offline — its inference server isn\'t running. Launch it or pick another model.' };
     }
     return;
   }
