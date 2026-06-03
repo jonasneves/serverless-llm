@@ -8,9 +8,6 @@ on:
       - main
     paths:
       - 'app/shared/**'
-      - 'app/*/Dockerfile'
-      - 'app/*/requirements.txt'
-      - 'app/*/inference_server.py'
       - 'config/**'
       - '.github/workflows/build-push-images.yml'
   workflow_dispatch:
@@ -54,14 +51,9 @@ jobs:
             echo "Changed files:"
             echo "$CHANGED_FILES"
 
-            # Extract changed model directories (includes -inference)
-            CHANGED_MODELS=$(echo "$CHANGED_FILES" | grep -E '^app/.+-inference/' | cut -d'/' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
-
-            # If shared/ or config/ changed, rebuild all; otherwise build only changed models
+            # Images are built only from app/shared/ and config/; rebuild all when either changes.
             if echo "$CHANGED_FILES" | grep -qE '^(app/shared/|config/)'; then
               MODELS="all"
-            elif [ -n "$CHANGED_MODELS" ]; then
-              MODELS="$CHANGED_MODELS"
             else
               MODELS=""
             fi

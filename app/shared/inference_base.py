@@ -46,13 +46,9 @@ class InferenceAppConfig:
     # Default HF repo + file (can be overridden via env)
     default_repo: str
     default_file: str
-    chat_format: Optional[str] = None
 
-    # llama.cpp tuning - 4 threads matches GitHub Actions ARM runner vCPUs
     default_n_ctx: int = 4096
-    default_n_threads: int = 4
     n_batch: int = 256
-    last_n_tokens_size: int = 64
 
 
 class ChatMessage(BaseModel):
@@ -108,9 +104,7 @@ def create_app_for_model(model_name: str) -> FastAPI:
         owned_by=model.owned_by or model.name,
         default_repo=model.hf_repo,
         default_file=model.hf_file,
-        chat_format=model.chat_format,
         default_n_ctx=model.n_ctx,
-        default_n_threads=model.n_threads,
         n_batch=model.n_batch,
     )
 
@@ -140,7 +134,7 @@ def create_inference_app(config: InferenceAppConfig) -> FastAPI:
     # Model state and concurrency gate
     llm: Optional[Llama] = None
     n_ctx = int(os.getenv("N_CTX", str(config.default_n_ctx)))
-    n_threads = int(os.getenv("N_THREADS", str(config.default_n_threads)))
+    n_threads = int(os.getenv("N_THREADS", str(os.cpu_count() or 4)))
     n_batch = int(os.getenv("N_BATCH", str(config.n_batch)))
     max_concurrent = int(os.getenv("MAX_CONCURRENT", "2"))
     inference_lock = asyncio.Semaphore(max_concurrent)
@@ -173,11 +167,8 @@ def create_inference_app(config: InferenceAppConfig) -> FastAPI:
             "use_mlock": True,
             "use_mmap": True,
             "n_batch": n_batch,
-            "last_n_tokens_size": config.last_n_tokens_size,
             "verbose": True,
         }
-        if config.chat_format:
-            llama_kwargs["chat_format"] = config.chat_format
 
         if flash_attn:
             llama_kwargs["flash_attn"] = flash_attn

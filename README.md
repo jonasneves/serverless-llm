@@ -28,13 +28,13 @@ Live results at [lm-arena.github.io/benchmarks.html](https://lm-arena.github.io/
 ## Local Development
 
 ```bash
-# Run a model server
-docker compose --profile qwen up
+# Launch a model server (runs on GitHub Actions, exposed via Cloudflare tunnel)
+make inference MODEL=qwen
 
-# Run multiple
-docker compose --profile qwen --profile phi up
+# Launch all configured models
+make up
 
-# Run frontend (calls inference servers directly)
+# Run frontend locally
 cd app/chat/frontend
 npm install
 npm run dev

@@ -38,10 +38,7 @@ class ModelConfig:
     hf_repo: str | None = None
     hf_file: str | None = None
     owned_by: str | None = None
-    chat_format: str | None = None
-    workflow_file: str | None = None
     n_ctx: int = 4096
-    n_threads: int = 4
     n_batch: int = 256
     max_concurrent: int = 2
     kv_cache_quant: bool = True
@@ -50,33 +47,11 @@ class ModelConfig:
     routing_category: str | None = None
     # Dockerfile variant: "inference" (llama-cpp-python) or "llama-server" (builds from source)
     dockerfile: str = "inference"
-    
-    @property
-    def service_url(self) -> str:
-        """Local development URL."""
-        return f"http://localhost:{self.port}"
 
     @property
     def env_var(self) -> str:
         """Environment variable name for this model's URL."""
         return f"{self.name.upper()}_API_URL"
-
-    @property
-    def internal_url(self) -> str:
-        """URL for docker-compose internal networking."""
-        return f"http://{self.name}:8000"
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization and chat backend config."""
-        return {
-            "id": self.model_id,
-            "name": self.display_name,
-            "env": self.env_var,
-            "default_url": self.service_url,
-            "service": self.name,
-            "default": self.default,
-            "rank": self.rank,
-        }
 
 
 # =============================================================================
@@ -308,6 +283,24 @@ MODELS: dict[str, ModelConfig] = {
         max_concurrent=2,
         routing_category="general",
     ),
+    "lfm2moe": ModelConfig(
+        name="lfm2moe",
+        port=8203,
+        category=ModelCategory.MEDIUM,
+        model_id="lfm2.5-8b-a1b",
+        display_name="LFM2.5 8B-A1B",
+        inference_dir="lfm2-inference",
+        description="Hybrid MoE, 8.3B total / 1.5B active, 128K context — largest model in the arena",
+        rank=3,
+        hf_repo="LiquidAI/LFM2.5-8B-A1B-GGUF",
+        hf_file="LFM2.5-8B-A1B-Q4_K_M.gguf",
+        owned_by="liquidai",
+        n_ctx=8192,
+        n_batch=512,
+        max_concurrent=2,
+        routing_category="general",
+        dockerfile="llama-server",
+    ),
     # Reasoning models
     "nanbeige": ModelConfig(
         name="nanbeige",
@@ -338,7 +331,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/gpt-oss-20b-GGUF",
         hf_file="gpt-oss-20b-Q6_K.gguf",
         owned_by="openai",
-        workflow_file="inference.yml",
         routing_category="function_calling",
     ),
 }
@@ -433,7 +425,6 @@ if __name__ == "__main__":
                     "model_file": m.hf_file,
                     "display_name": m.display_name,
                     "n_ctx": m.n_ctx,
-                    "n_threads": m.n_threads,
                     "n_batch": m.n_batch,
                     "max_concurrent": m.max_concurrent,
                     "kv_cache_quant": m.kv_cache_quant,

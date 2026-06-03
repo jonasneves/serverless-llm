@@ -57,7 +57,6 @@ runs:
         MODEL_REPO=$(echo "$CONFIG" | jq -r '.model_repo')
         MODEL_FILE=$(echo "$CONFIG" | jq -r '.model_file')
         N_CTX=$(echo "$CONFIG" | jq -r '.n_ctx')
-        N_THREADS=$(echo "$CONFIG" | jq -r '.n_threads')
         N_BATCH=$(echo "$CONFIG" | jq -r '.n_batch')
         MAX_CONCURRENT=$(echo "$CONFIG" | jq -r '.max_concurrent')
         KV_CACHE_QUANT=$(echo "$CONFIG" | jq -r 'if .kv_cache_quant then "true" else "false" end')
@@ -67,13 +66,12 @@ runs:
         echo "model_repo=$MODEL_REPO" >> $GITHUB_OUTPUT
         echo "model_file=$MODEL_FILE" >> $GITHUB_OUTPUT
         echo "n_ctx=$N_CTX" >> $GITHUB_OUTPUT
-        echo "n_threads=$N_THREADS" >> $GITHUB_OUTPUT
         echo "n_batch=$N_BATCH" >> $GITHUB_OUTPUT
         echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
         echo "kv_cache_quant=$KV_CACHE_QUANT" >> $GITHUB_OUTPUT
         echo "flash_attn=$FLASH_ATTN" >> $GITHUB_OUTPUT
 
-        echo "✓ Config for $MODEL: dir=$MODEL_DIR, n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT, flash_attn=$FLASH_ATTN"
+        echo "✓ Config for $MODEL: dir=$MODEL_DIR, n_ctx=$N_CTX, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT, flash_attn=$FLASH_ATTN"
 
     - name: Setup swap
       shell: bash
@@ -110,7 +108,6 @@ runs:
         PORT: ${{ inputs.port }}
         HF_TOKEN: ${{ inputs.hf_token }}
         N_CTX: ${{ steps.config.outputs.n_ctx }}
-        N_THREADS: ${{ steps.config.outputs.n_threads }}
         N_BATCH: ${{ steps.config.outputs.n_batch }}
         MAX_CONCURRENT: ${{ steps.config.outputs.max_concurrent }}
         KV_CACHE_QUANT: ${{ steps.config.outputs.kv_cache_quant }}
@@ -127,14 +124,13 @@ runs:
           -e INSTANCE_ID="1" \
           -e GITHUB_SHA="${{ github.sha }}" \
           -e N_CTX="$N_CTX" \
-          -e N_THREADS="$N_THREADS" \
           -e N_BATCH="$N_BATCH" \
           -e MAX_CONCURRENT="$MAX_CONCURRENT" \
           -e KV_CACHE_QUANT="$KV_CACHE_QUANT" \
           -e FLASH_ATTN="$FLASH_ATTN" \
           ${{ inputs.model_name }}-inference:latest
 
-        echo "✓ Started with: n_ctx=$N_CTX, n_threads=$N_THREADS, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT, flash_attn=$FLASH_ATTN"
+        echo "✓ Started with: n_ctx=$N_CTX, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT, flash_attn=$FLASH_ATTN"
 
         HEALTHY=false
         for i in {1..30}; do
@@ -253,7 +249,6 @@ runs:
         TUNNEL_WRITE_KEY: ${{ inputs.tunnel_write_key }}
         GH_TOKEN: ${{ inputs.github_token }}
         MODEL_NAME: ${{ inputs.model_name }}
-        WORKFLOW_FILE: ${{ inputs.workflow_file }}
       run: |
         REGISTRY="https://tunnel-registry.jonasneves.workers.dev"
 

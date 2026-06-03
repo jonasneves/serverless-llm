@@ -2,7 +2,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS, POST',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Expose-Headers': 'X-Routed-Model, X-Route-Category, X-Route-Classifier',
+  'Access-Control-Expose-Headers': 'X-Routed-Model, X-Route-Category',
 };
 
 // Generated from config/models.py --route-map (models listed in rank order).
@@ -10,7 +10,7 @@ const CORS_HEADERS = {
 // Must be updated whenever routing_category fields change in config/models.py.
 const ROUTE_MAP = {
   reasoning:       ['nanbeige', 'qwenclaude27b', 'phireasoning', 'lfm2thinking', 'falcon'],
-  general:         ['qwen', 'lfm2', 'gemma3n', 'lfm2mini', 'lfm2spatial', 'qwen7b'],
+  general:         ['qwen', 'lfm2moe', 'lfm2', 'gemma3n', 'lfm2mini', 'lfm2spatial', 'lfm2nk', 'qwen7b'],
   function_calling:['smollm3', 'gptoss'],
   coding:          ['jancode'],
 };
@@ -169,54 +169,14 @@ async function getAvailableModels(env) {
   return Object.fromEntries(entries.filter(Boolean));
 }
 
-async function routeAuto(env, body) {
+async function routeAuto(env) {
   const available = await getAvailableModels(env);
   const modelKeys = Object.keys(available);
   if (modelKeys.length === 0) return null;
 
   const generalCandidates = ROUTE_MAP.general || [];
   const fallbackKey = generalCandidates.find(k => available[k]) || modelKeys[0];
-  const fallbackUrl = available[fallbackKey];
-  const classifierUrl = available['functiongemma'];
-
-  if (classifierUrl) {
-    const firstUserMsg = body.messages?.find(m => m.role === 'user')?.content || '';
-    try {
-      const classRes = await fetch(`${classifierUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'functiongemma-270m-it',
-          messages: [
-            {
-              role: 'system',
-              content: 'Classify this user message into one category. Respond with JSON only: {"category": "coding"|"reasoning"|"function_calling"|"general"}',
-            },
-            { role: 'user', content: firstUserMsg },
-          ],
-          max_tokens: 32,
-          stream: false,
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (classRes.ok) {
-        const classData = await classRes.json();
-        const text = classData.choices?.[0]?.message?.content || '';
-        const jsonMatch = text.match(/\{[^}]+\}/);
-        if (jsonMatch) {
-          const { category } = JSON.parse(jsonMatch[0]);
-          const candidates = ROUTE_MAP[category] || ROUTE_MAP.general;
-          for (const candidate of candidates) {
-            if (available[candidate]) {
-              return { url: available[candidate], modelKey: candidate, category, classifier: 'functiongemma' };
-            }
-          }
-        }
-      }
-    } catch {}
-  }
-
-  return { url: fallbackUrl, modelKey: fallbackKey, category: 'general' };
+  return { url: available[fallbackKey], modelKey: fallbackKey, category: 'general' };
 }
 
 async function handleChatCompletions(request, env) {
@@ -232,7 +192,7 @@ async function handleChatCompletions(request, env) {
   let routingHeaders = {};
 
   if (model === 'auto') {
-    const routed = await routeAuto(env, body);
+    const routed = await routeAuto(env);
     if (!routed) {
       return jsonResponse(
         { error: { message: 'No models available', type: 'service_unavailable' } },
@@ -243,7 +203,6 @@ async function handleChatCompletions(request, env) {
     routingHeaders = {
       'X-Routed-Model': routed.modelKey,
       'X-Route-Category': routed.category,
-      ...(routed.classifier ? { 'X-Route-Classifier': routed.classifier } : {}),
     };
   } else {
     const raw = await env.TUNNELS_KV.get(`tunnel:${model}`);

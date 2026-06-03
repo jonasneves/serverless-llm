@@ -8,7 +8,7 @@ import subprocess
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -29,15 +29,12 @@ class LlamaServerConfig:
     owned_by: str
     default_repo: str
     default_file: str
-    default_port: int
     n_ctx: int = 4096
-    n_threads: int = 4
     n_batch: int = 256
     max_concurrent: int = 2
     startup_timeout: int = 300
     flash_attn: bool = True
     kv_cache_quant: bool = True
-    extra_args: Optional[List[str]] = None
 
 
 def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
@@ -45,7 +42,7 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
     model_repo = os.getenv("MODEL_REPO", config.default_repo)
     model_file = os.getenv("MODEL_FILE", config.default_file)
     n_ctx = int(os.getenv("N_CTX", str(config.n_ctx)))
-    n_threads = int(os.getenv("N_THREADS", str(config.n_threads)))
+    n_threads = int(os.getenv("N_THREADS", str(os.cpu_count() or 4)))
     n_batch = int(os.getenv("N_BATCH", str(config.n_batch)))
     max_concurrent = int(os.getenv("MAX_CONCURRENT", str(config.max_concurrent)))
     kv_cache_quant = os.getenv("KV_CACHE_QUANT", "true" if config.kv_cache_quant else "false").lower() in {"1", "true", "yes", "on"}
@@ -144,9 +141,6 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
 
         if kv_cache_quant:
             cmd.extend(["--cache-type-k", "q8_0", "--cache-type-v", "q8_0"])
-
-        if config.extra_args:
-            cmd.extend(config.extra_args)
 
         logger.info(f"Starting llama-server: {' '.join(cmd)}")
 
@@ -310,9 +304,7 @@ def create_llama_server_app_for_model(model_name: str) -> FastAPI:
         owned_by=m.owned_by or m.name,
         default_repo=m.hf_repo,
         default_file=m.hf_file,
-        default_port=m.port,
         n_ctx=m.n_ctx,
-        n_threads=m.n_threads,
         n_batch=m.n_batch,
         max_concurrent=m.max_concurrent,
         flash_attn=m.flash_attn,

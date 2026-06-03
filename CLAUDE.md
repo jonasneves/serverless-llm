@@ -15,4 +15,3 @@ LLM playground running on GitHub Actions, exposed via Cloudflare quick tunnels. 
 `app/*/` — inference server containers (run on GitHub Actions)
 `app/tunnel-registry/` — Cloudflare Worker mapping model names to active tunnel URLs
 `config/models.py` — single source of truth: ports, HF repos, model metadata
-`docker-compose.yml` — local development

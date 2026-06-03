@@ -12,6 +12,7 @@ run-name: "${{ inputs.model }}"
           - qwen
           - qwenclaude27b
           - smollm3
+          - lfm2moe
           - lfm2
           - phireasoning
           - lfm2thinking

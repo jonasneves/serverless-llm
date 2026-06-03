@@ -79,9 +79,8 @@ export default function HandBackground({
   useEffect(() => {
     const init = async () => {
       try {
-        const isExtension = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
-        const wasmPath = isExtension ? '/mediapipe' : 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm';
-        const modelPath = isExtension ? '/mediapipe/gesture_recognizer.task' : 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
+        const wasmPath = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm';
+        const modelPath = 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
 
         const vision = await FilesetResolver.forVisionTasks(wasmPath);
         const recognizer = await GestureRecognizer.createFromOptions(vision, {

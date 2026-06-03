@@ -45,6 +45,17 @@
       "routing_category": "function_calling"
     },
     {
+      "id": "lfm2.5-8b-a1b",
+      "key": "lfm2moe",
+      "name": "LFM2.5 8B-A1B",
+      "type": "self-hosted",
+      "priority": 3,
+      "context_length": 8192,
+      "owned_by": "liquidai",
+      "description": "Hybrid MoE, 8.3B total / 1.5B active, 128K context — largest model in the arena",
+      "routing_category": "general"
+    },
+    {
       "id": "lfm2.5-1.2b-instruct",
       "key": "lfm2",
       "name": "LFM2.5 1.2B",

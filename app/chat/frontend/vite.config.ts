@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react-swc'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
-  plugins: [react({ tsDecorators: true })],
+  plugins: [react()],
   server: {
     proxy: {
       '/api': {
