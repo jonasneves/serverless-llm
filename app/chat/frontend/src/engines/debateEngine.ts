@@ -7,7 +7,7 @@ import { splitThinkingContent } from '../utils/thinking';
 import { DEBATE_TURN_SYSTEM } from '../constants';
 import { streamCompletion } from '../utils/streaming';
 
-export interface DebateTurn {
+interface DebateTurn {
   turn_number: number;
   round_number: number;
   model_id: string;

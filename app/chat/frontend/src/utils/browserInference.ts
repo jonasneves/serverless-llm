@@ -7,7 +7,7 @@
 const HF_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
 
 // model.id → HuggingFace Hub repo ID
-export const BROWSER_MODELS: Record<string, string> = {
+const BROWSER_MODELS: Record<string, string> = {
   'lfm2-350m': 'onnx-community/LFM2-350M-ONNX',
 };
 

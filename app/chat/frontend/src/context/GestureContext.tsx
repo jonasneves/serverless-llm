@@ -71,5 +71,3 @@ export function useGesture() {
 export function useGestureOptional() {
   return useContext(GestureContext);
 }
-
-export default GestureContext;

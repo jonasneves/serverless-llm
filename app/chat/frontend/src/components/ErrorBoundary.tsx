@@ -16,7 +16,7 @@ interface State {
  * Error Boundary for catching React errors including lazy load failures.
  * Provides a retry button to recover without full page refresh.
  */
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };

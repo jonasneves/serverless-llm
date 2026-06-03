@@ -2,7 +2,7 @@ import { streamBrowser, BROWSER_CAPABLE_MODEL_IDS } from './browserInference';
 
 const GITHUB_MODELS_URL = 'https://models.github.ai/inference/chat/completions';
 
-export type RoutingEvent = {
+type RoutingEvent = {
   event: 'routing';
   model_id: string;
   routed_to: string;
@@ -10,33 +10,33 @@ export type RoutingEvent = {
   classifier: string | null;
 };
 
-export type ErrorEvent = {
+type ErrorEvent = {
   event: 'error';
   model_id: string;
   error: true;
   content: string;
 };
 
-export type StartEvent = {
+type StartEvent = {
   event: 'start';
   model_id: string;
   model: string;
 };
 
-export type TokenEvent = {
+type TokenEvent = {
   event: 'token';
   model_id: string;
   model: string;
   content: string;
 };
 
-export type DoneEvent = {
+type DoneEvent = {
   event: 'done';
   model_id: string;
   model: string;
 };
 
-export type InfoEvent = {
+type InfoEvent = {
   event: 'info';
   model_id?: string;
   content: string;
@@ -286,7 +286,7 @@ function* parseSseData(line: string): Generator<SseDeltaEvent, 'done' | 'error' 
   return null;
 }
 
-export async function* readSseStream(
+async function* readSseStream(
   body: ReadableStream<Uint8Array>,
 ): AsyncGenerator<SseDeltaEvent> {
   const reader = body.getReader();
