@@ -120,10 +120,6 @@ function PlaygroundInner() {
     return !model || model.type !== 'github';
   }, [mode, githubAuth, modelsData]);
 
-  const canAddApiGroup = useCallback((): boolean => {
-    return mode === 'chat' || !!githubAuth?.token;
-  }, [mode, githubAuth]);
-
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [persistedChatModels, setPersistedChatModels] = usePersistedSetting<string[]>(
     'playground_chat_selected_models',
@@ -425,7 +421,7 @@ function PlaygroundInner() {
       return;
     }
 
-    if (type === 'github' && !canAddApiGroup()) {
+    if (type === 'github' && mode !== 'chat' && !githubAuth?.token) {
       showApiLimitToast('Connect GitHub in Settings to use API models');
       return;
     }

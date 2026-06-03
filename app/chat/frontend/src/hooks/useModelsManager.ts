@@ -33,6 +33,7 @@ interface ModelsApiResponse {
 }
 
 const TUNNEL_REGISTRY = 'https://tunnel-registry.jonasneves.workers.dev';
+const IS_DEV = window.location.hostname === 'localhost';
 
 export function useModelsManager() {
   const [modelsData, setModelsData] = useState<Model[]>([]);
@@ -174,7 +175,6 @@ export function useModelsManager() {
 
   const getModelEndpoints = useCallback((models: Model[]): Record<string, string> => {
     const endpoints: Record<string, string> = {};
-    const isDev = window.location.hostname === 'localhost';
 
     models.forEach(model => {
       if (model.id === 'auto') {
@@ -184,7 +184,7 @@ export function useModelsManager() {
       }
       if (model.type === 'self-hosted') {
         const service = SERVICES.find(s => s.modelId === model.id);
-        if (isDev) {
+        if (IS_DEV) {
           endpoints[model.id] = `http://localhost:${service?.localPort ?? 8000}/v1`;
         } else if (service && onlineKeys.has(service.key)) {
           endpoints[model.id] = `${TUNNEL_REGISTRY}/v1`;
@@ -198,10 +198,9 @@ export function useModelsManager() {
   }, [onlineKeys]);
 
   const onlineModelIds = useMemo(() => {
-    const isDev = window.location.hostname === 'localhost';
     // GitHub models are always reachable via the GitHub Models API
     const githubModelIds = modelsData.filter(m => m.type === 'github').map(m => m.id);
-    if (isDev) return new Set([...modelsData.filter(m => m.type === 'self-hosted').map(m => m.id), ...githubModelIds]);
+    if (IS_DEV) return new Set([...modelsData.filter(m => m.type === 'self-hosted').map(m => m.id), ...githubModelIds]);
     const online = new Set<string>(githubModelIds);
     for (const service of SERVICES) {
       if (onlineKeys.has(service.key)) online.add(service.modelId);

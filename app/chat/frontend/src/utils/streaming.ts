@@ -264,6 +264,28 @@ export async function* streamCompletion(
  * delta events. The caller is responsible for the fetch() call and for
  * checking response.ok before passing the body here.
  */
+// Parse one `data: ...` SSE line into delta events. Returns 'done'/'error' when
+// the line terminates the stream, otherwise null.
+function* parseSseData(line: string): Generator<SseDeltaEvent, 'done' | 'error' | null> {
+  const data = line.slice(6);
+  if (data === '[DONE]') {
+    yield { type: 'done' };
+    return 'done';
+  }
+  try {
+    const parsed = JSON.parse(data);
+    if (parsed.error) {
+      yield { type: 'error', error: String(parsed.error) };
+      return 'error';
+    }
+    const content = parsed.choices?.[0]?.delta?.content;
+    if (content) yield { type: 'chunk', content };
+  } catch {
+    // Skip malformed JSON
+  }
+  return null;
+}
+
 export async function* readSseStream(
   body: ReadableStream<Uint8Array>,
 ): AsyncGenerator<SseDeltaEvent> {
@@ -283,51 +305,16 @@ export async function* readSseStream(
 
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          yieldedDone = true;
-          yield { type: 'done' };
-          return;
-        }
-
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) {
-            yield { type: 'error', error: String(parsed.error) };
-            return;
-          }
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) {
-            yield { type: 'chunk', content };
-          }
-        } catch {
-          // Skip malformed JSON
-        }
+        const term = yield* parseSseData(line);
+        if (term === 'done') { yieldedDone = true; return; }
+        if (term === 'error') return;
       }
     }
 
     // Flush any remaining content in the buffer that arrived without a trailing newline.
     const remaining = buffer.trim();
     if (remaining.startsWith('data: ')) {
-      const data = remaining.slice(6);
-      if (data === '[DONE]') {
-        yieldedDone = true;
-        yield { type: 'done' };
-      } else {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) {
-            yield { type: 'error', error: String(parsed.error) };
-          } else {
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              yield { type: 'chunk', content };
-            }
-          }
-        } catch {
-          // Skip malformed JSON
-        }
-      }
+      if ((yield* parseSseData(remaining)) === 'done') yieldedDone = true;
     }
 
     // If the server closed without sending [DONE], emit a fallback so callers
