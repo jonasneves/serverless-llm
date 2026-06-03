@@ -6,7 +6,6 @@ interface ModelDockProps {
   showDock: boolean;
   availableModels: Model[];
   allSelectedByType: Record<'self-hosted' | 'github', boolean>;
-  totalModelsByType: Record<'self-hosted' | 'github', number>;
   handleDragStart: (e: React.DragEvent, modelId: string) => void;
   handleModelToggle: (modelId: string) => void;
   handleAddGroup: (type: 'self-hosted' | 'github') => void;
@@ -25,7 +24,6 @@ export default function ModelDock({
   showDock,
   availableModels,
   allSelectedByType,
-  totalModelsByType,
   handleDragStart,
   handleModelToggle,
   handleAddGroup,

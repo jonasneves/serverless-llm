@@ -48,7 +48,6 @@ function PlaygroundInner() {
     moderator,
     setModerator,
     availableModels,
-    totalModelsByType,
     allSelectedByType,
     modelIdToName,
     isLoading: isLoadingModels,
@@ -476,7 +475,7 @@ function PlaygroundInner() {
     };
 
     const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         if (entry.target === visualizationAreaRef.current) {
           calculateLayout();
         }
@@ -1188,7 +1187,6 @@ function PlaygroundInner() {
           showDock={showDock}
           availableModels={availableModels}
           allSelectedByType={allSelectedByType}
-          totalModelsByType={totalModelsByType}
           handleDragStart={handleDockDragStart}
           handleModelToggle={handleModelToggle}
           handleAddGroup={handleAddGroup}

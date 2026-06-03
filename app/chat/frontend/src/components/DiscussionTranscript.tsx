@@ -73,7 +73,7 @@ export default function DiscussionTranscript({
 
         if (isChairman) {
             let name = 'Analysis';
-            let text = entry.content;
+            const text = entry.content;
 
             if (entry.kind === 'compare_summary') {
                 name = 'Summary';

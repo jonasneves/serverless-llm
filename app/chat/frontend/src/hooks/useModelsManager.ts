@@ -149,7 +149,7 @@ export function useModelsManager() {
     [modelsData, selected],
   );
 
-  const { totalModelsByType, allSelectedByType } = useMemo(() => {
+  const { allSelectedByType } = useMemo(() => {
     const total = {
       'self-hosted': modelsData.filter(m => m.id !== 'auto' && m.type === 'self-hosted').length,
       github: modelsData.filter(m => m.type === 'github').length,
@@ -160,7 +160,6 @@ export function useModelsManager() {
     };
 
     return {
-      totalModelsByType: total,
       allSelectedByType: {
         'self-hosted': total['self-hosted'] > 0 && selectedCount['self-hosted'] === total['self-hosted'],
         github: total.github > 0 && selectedCount.github === total.github,
@@ -224,7 +223,6 @@ export function useModelsManager() {
     moderator,
     setModerator,
     availableModels,
-    totalModelsByType,
     allSelectedByType,
     modelIdToName,
     isLoading,

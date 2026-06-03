@@ -104,7 +104,7 @@ export default function StatusIndicator({
             </svg>
           </div>
         );
-      case 'error':
+      case 'error': {
         const errorColor = '#ef4444';
         return (
           <div
@@ -126,6 +126,7 @@ export default function StatusIndicator({
             </svg>
           </div>
         );
+      }
       case 'waiting':
         return (
           <div className="relative flex items-center justify-center" style={indicatorSizeStyle}>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Hand, X, Camera, HelpCircle, Check, Navigation } from 'lucide-react';
+import { Hand, X, Camera, Check, Navigation } from 'lucide-react';
 import { useGesture } from '../context/GestureContext';
 
 const STORAGE_KEY = 'gesture-control-skip-intro';

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help build lint format clean update-models sync-worker-config sync-workflow-choices route-map tunnels-secret install-hooks inference deploy build-images down _purge-inference-history
+.PHONY: help build lint lint-web knip format clean update-models sync-worker-config sync-workflow-choices route-map tunnels-secret install-hooks inference deploy build-images down _purge-inference-history
 
 -include .env
 export
@@ -13,6 +13,8 @@ help:
 	@echo ""
 	@echo "\033[2mCode\033[0m"
 	@echo "  \033[36mlint\033[0m            Check Python code"
+	@echo "  \033[36mlint-web\033[0m        Lint frontend (eslint: unused vars, hooks)"
+	@echo "  \033[36mknip\033[0m            Audit frontend for dead exports/files/deps"
 	@echo "  \033[36mformat\033[0m          Format Python code"
 	@echo "  \033[36mupdate-models\033[0m   Refresh GitHub models in models.json"
 	@echo "  \033[36msync-worker-config\033[0m Regenerate ROUTE_MAP in worker.js from config/models.py"
@@ -36,6 +38,12 @@ build:
 lint:
 	@command -v ruff >/dev/null || { echo "Install: pip install ruff"; exit 1; }
 	ruff check app scripts config
+
+lint-web:
+	cd app/chat/frontend && npm run lint
+
+knip:
+	cd app/chat/frontend && npm run knip
 
 format:
 	@command -v ruff >/dev/null || { echo "Install: pip install ruff"; exit 1; }

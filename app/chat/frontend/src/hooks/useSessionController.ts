@@ -105,7 +105,6 @@ export function useSessionController(params: SessionControllerParams) {
     setDiscussionTurnsByModel,
     resetFailedModels,
     markModelFailed,
-    failedModelsRef,
     currentDiscussionTurnRef,
     sessionModelIdsRef,
     abortControllerRef,
