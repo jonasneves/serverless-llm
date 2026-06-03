@@ -7,7 +7,7 @@ LLM playground running on GitHub Actions, exposed via Cloudflare quick tunnels. 
 - `make build` — build frontend
 - `make lint` / `make format` — Python code quality
 - `make inference MODEL=<name>` — launch one inference server
-- `make up` / `make down` — launch or cancel all inference servers
+- `make down` — cancel all inference servers (launch all via `admin.html` → `inference-all.yml`)
 
 ## Architecture
 

@@ -31,8 +31,8 @@ Live results at [lm-arena.github.io/benchmarks.html](https://lm-arena.github.io/
 # Launch a model server (runs on GitHub Actions, exposed via Cloudflare tunnel)
 make inference MODEL=qwen
 
-# Launch all configured models
-make up
+# Launch / manage all models from the browser console
+open app/chat/frontend/public/admin.html
 
 # Run frontend locally
 cd app/chat/frontend

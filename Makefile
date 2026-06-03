@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help build lint format clean update-models sync-worker-config sync-workflow-choices route-map tunnels-secret install-hooks inference deploy build-images up down _purge-inference-history
+.PHONY: help build lint format clean update-models sync-worker-config sync-workflow-choices route-map tunnels-secret install-hooks inference deploy build-images down _purge-inference-history
 
 -include .env
 export
@@ -24,7 +24,6 @@ help:
 	@echo "\033[2mInference (GitHub Actions)\033[0m"
 	@echo "  \033[36minference\033[0m       Run MODEL=<name> [HOURS=5]"
 	@echo "  \033[36mbuild-images\033[0m    Build Docker images [MODELS=all|<inference-dir,...>] [NO_CACHE=false]"
-	@echo "  \033[36mup\033[0m              Launch all inference models [HOURS=5]"
 	@echo "  \033[36mdown\033[0m            Cancel all in-progress workflow runs"
 	@echo ""
 	@echo "\033[2mTunnels\033[0m"
@@ -81,12 +80,6 @@ deploy:
 
 build-images:
 	gh workflow run build-push-images.yml -f models=$(or $(MODELS),all) -f no_cache=$(or $(NO_CACHE),false)
-
-up: _purge-inference-history
-	@for model in $$(python3 config/models.py --inference-names | jq -r '.[]'); do \
-		printf "\033[36mStarting $$model...\033[0m\n"; \
-		gh workflow run inference.yml -f model=$$model; \
-	done
 
 down:
 	@gh run list --status in_progress --json databaseId,displayTitle --jq '.[] | "\(.databaseId) \(.displayTitle)"' | \
