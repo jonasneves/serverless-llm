@@ -33,6 +33,14 @@
       "rank": 3
     },
     {
+      "key": "lfm2moe",
+      "name": "LFM2.5 8B-A1B",
+      "localPort": 8203,
+      "category": "medium",
+      "modelId": "lfm2.5-8b-a1b",
+      "rank": 3
+    },
+    {
       "key": "lfm2",
       "name": "LFM2.5 1.2B",
       "localPort": 8105,
@@ -46,6 +54,14 @@
       "localPort": 8111,
       "category": "reasoning",
       "modelId": "phi-4-mini-reasoning",
+      "rank": 4
+    },
+    {
+      "key": "gemma4",
+      "name": "Gemma 4 12B",
+      "localPort": 8207,
+      "category": "medium",
+      "modelId": "gemma-4-12b-it",
       "rank": 4
     },
     {
@@ -66,10 +82,10 @@
     },
     {
       "key": "lfm2mini",
-      "name": "LFM2 350M",
+      "name": "LFM2.5 350M",
       "localPort": 8110,
       "category": "small",
-      "modelId": "lfm2-350m",
+      "modelId": "lfm2.5-350m",
       "rank": 6
     },
     {

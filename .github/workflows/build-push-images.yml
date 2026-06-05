@@ -117,7 +117,8 @@ jobs:
         id: config
         run: |
           # Pinned llama.cpp release: update when new architecture support is needed
-          LLAMA_COMMIT="b8261"
+          # b8909 (2026-04-24): first build past the full gemma4 arch/tokenizer/template fixes
+          LLAMA_COMMIT="b8909"
           MODEL="${{ matrix.model }}"
           # Derive short model name from inference_dir (e.g. "lfm2-inference" -> "lfm2")
           MODEL_NAME=$(echo "$MODEL" | sed 's/-inference$//')

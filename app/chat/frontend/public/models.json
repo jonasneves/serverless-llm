@@ -78,6 +78,17 @@
       "routing_category": "reasoning"
     },
     {
+      "id": "gemma-4-12b-it",
+      "key": "gemma4",
+      "name": "Gemma 4 12B",
+      "type": "self-hosted",
+      "priority": 4,
+      "context_length": 8192,
+      "owned_by": "google",
+      "description": "Gemma 4 unified 12B, 256K context, Apache 2.0 — largest dense model in the arena",
+      "routing_category": "general"
+    },
+    {
       "id": "lfm2.5-1.2b-thinking",
       "key": "lfm2thinking",
       "name": "LFM2.5 1.2B Thinking",
@@ -739,5 +750,6 @@
       ]
     }
   ],
-  "source": "config/models.py"
+  "fetchedAt": "2026-06-05T17:47:25.058Z",
+  "source": "build-time"
 }
