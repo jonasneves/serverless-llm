@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help build lint lint-web knip format clean update-models sync-worker-config sync-workflow-choices route-map tunnels-secret install-hooks inference deploy build-images down _purge-inference-history
+.PHONY: help build lint lint-web knip format clean update-models sync-worker-config sync-workflow-choices sync-readme route-map tunnels-secret install-hooks inference deploy build-images down _purge-inference-history
 
 -include .env
 export
@@ -19,6 +19,7 @@ help:
 	@echo "  \033[36mupdate-models\033[0m   Refresh GitHub models in models.json"
 	@echo "  \033[36msync-worker-config\033[0m Regenerate ROUTE_MAP in worker.js from config/models.py"
 	@echo "  \033[36msync-workflow-choices\033[0m Regenerate model choices in inference.yml from config/models.py"
+	@echo "  \033[36msync-readme\033[0m     Regenerate the model table in README.md from config/models.py"
 	@echo "  \033[36minstall-hooks\033[0m   Install git hooks from scripts/hooks/"
 	@echo "  \033[36mroute-map\033[0m       Print ROUTE_MAP JSON from config/models.py for copy-paste"
 	@echo "  \033[36mclean\033[0m           Remove caches"
@@ -57,6 +58,9 @@ sync-worker-config:
 
 sync-workflow-choices:
 	python3 scripts/sync_workflow_choices.py
+
+sync-readme:
+	python3 scripts/sync_readme_models.py
 
 install-hooks:
 	@for hook in scripts/hooks/*; do \

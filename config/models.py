@@ -412,6 +412,18 @@ if __name__ == "__main__":
             print(json.dumps({"services": services}, indent=2))
             sys.exit(0)
 
+        if arg == "--readme-models":
+            rows = [
+                "| # | Model | Class | Highlights |",
+                "|:--|:------|:------|:-----------|",
+            ]
+            for m in get_inference_models():
+                rows.append(
+                    f"| {m.rank} | **{m.display_name}** | {m.category.value} | {m.description or ''} |"
+                )
+            print("\n".join(rows))
+            sys.exit(0)
+
         if arg == "--route-map":
             from collections import defaultdict
             route_map: dict[str, list[str]] = defaultdict(list)

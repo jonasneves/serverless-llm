@@ -26,16 +26,16 @@ GitHub Pages (static frontend)
 │   ├── build-push-images.yml                  # Build and push Docker images to GHCR
 │   └── deploy.yml                             # Deploy frontend to GitHub Pages
 ├── app/
-│   ├── shared/                                # Shared Dockerfiles and Python inference code
-│   ├── <model>-inference/                     # Per-model inference_server.py
+│   ├── shared/                                # Dockerfiles + shared entry points (read MODEL_NAME)
 │   ├── tunnel-registry/                       # Cloudflare Worker: active tunnel URL registry
 │   └── chat/frontend/                         # Vite + React frontend
 ├── config/
 │   └── models.py                              # Single source of truth: ports, HF repos, inference settings
-├── scripts/
-│   ├── generate_extension_config.py           # Regenerate frontend JSON configs from models.py
-│   └── update_github_models.py                # Refresh GitHub Models catalog
-└── docker-compose.yml                         # Local development
+└── scripts/
+    ├── sync_worker_config.py                  # Regenerate Worker ROUTE_MAP from models.py
+    ├── sync_workflow_choices.py               # Regenerate inference.yml model choices from models.py
+    ├── sync_readme_models.py                  # Regenerate README model table from models.py
+    └── update_github_models.py                # Refresh GitHub Models catalog
 ```
 
 ## Configuration
