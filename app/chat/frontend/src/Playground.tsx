@@ -27,6 +27,7 @@ const DiscussionTranscript = lazy(() => import('./components/DiscussionTranscrip
 const GestureControl = lazy(() => import('./components/GestureControl'));
 const HandBackground = lazy(() => import('./components/HandBackground'));
 const ChatView = lazy(() => import('./components/ChatView'));
+const ExtractView = lazy(() => import('./components/ExtractView'));
 import ErrorBoundary from './components/ErrorBoundary';
 
 import type { ChatViewHandle, ChatMessage } from './components/ChatView';
@@ -78,6 +79,7 @@ function PlaygroundInner() {
   const [showDock, setShowDock] = useState(false);
   const [gridCols, setGridCols] = useState(2);
   const [showSettings, setShowSettings] = useState(false);
+  const [showExtract, setShowExtract] = useState(false);
   const [githubAuth, setGithubAuth] = usePersistedSetting<GitHubAuth | null>('github_auth', null);
 
   const handleConnectGitHub = useCallback(async () => {
@@ -963,6 +965,11 @@ function PlaygroundInner() {
       onClick={handleBackgroundClick}
       onContextMenu={handleBackgroundContextMenu}
     >
+      {showExtract && (
+        <Suspense fallback={null}>
+          <ExtractView onClose={() => setShowExtract(false)} />
+        </Suspense>
+      )}
       {gestureCtx.isActive && (
         <Suspense fallback={null}>
           <HandBackground
@@ -1012,6 +1019,7 @@ function PlaygroundInner() {
         showDock={showDock}
         setShowDock={setShowDock}
         onOpenSettings={() => setShowSettings(true)}
+        onOpenExtract={() => setShowExtract(true)}
         isAuthenticated={!!githubAuth?.token}
         gestureButtonSlot={
           <Suspense fallback={null}>

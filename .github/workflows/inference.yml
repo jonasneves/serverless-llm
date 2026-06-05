@@ -15,10 +15,13 @@ run-name: "${{ inputs.model }}"
           - lfm2moe
           - lfm2
           - phireasoning
+          - gemma4
           - lfm2thinking
           - gemma3n
           - lfm2mini
+          - lfm2vl
           - lfm2spatial
+          - lfm2vlmini
           - falcon
           - lfm2nk
           - jancode

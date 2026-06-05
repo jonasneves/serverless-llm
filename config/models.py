@@ -47,6 +47,11 @@ class ModelConfig:
     routing_category: str | None = None
     # Dockerfile variant: "inference" (llama-cpp-python) or "llama-server" (builds from source)
     dockerfile: str = "inference"
+    # Optional multimodal projector (mmproj GGUF) for vision models. When set, it is
+    # downloaded alongside hf_file (from mmproj_repo, defaulting to hf_repo) and passed
+    # to llama-server via --mmproj, enabling image input. llama-server only.
+    mmproj_file: str | None = None
+    mmproj_repo: str | None = None
 
     @property
     def env_var(self) -> str:
@@ -163,6 +168,44 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=4,
+        routing_category="general",
+        dockerfile="llama-server",
+    ),
+    "lfm2vl": ModelConfig(
+        name="lfm2vl",
+        port=8106,
+        category=ModelCategory.SMALL,
+        model_id="lfm2.5-vl-1.6b-extract",
+        display_name="LFM2.5 VL 1.6B Extract",
+        inference_dir="lfm2-inference",
+        description="Vision model — image + field list → structured JSON. In-car, document scan, inspection",
+        rank=6,
+        hf_repo="LiquidAI/LFM2.5-VL-1.6B-Extract-GGUF",
+        hf_file="LFM2.5-VL-1.6B-Extract-Q4_K_M.gguf",
+        mmproj_file="mmproj-LFM2.5-VL-1.6B-Extract-Q8_0.gguf",
+        owned_by="liquidai",
+        n_ctx=8192,
+        n_batch=512,
+        max_concurrent=2,
+        routing_category="general",
+        dockerfile="llama-server",
+    ),
+    "lfm2vlmini": ModelConfig(
+        name="lfm2vlmini",
+        port=8107,
+        category=ModelCategory.SMALL,
+        model_id="lfm2.5-vl-450m-extract",
+        display_name="LFM2.5 VL 450M Extract",
+        inference_dir="lfm2mini-inference",
+        description="450M vision model — image + field list → structured JSON, edge-tier extraction",
+        rank=7,
+        hf_repo="LiquidAI/LFM2.5-VL-450M-Extract-GGUF",
+        hf_file="LFM2.5-VL-450M-Extract-Q4_K_M.gguf",
+        mmproj_file="mmproj-LFM2.5-VL-450M-Extract-Q8_0.gguf",
+        owned_by="liquidai",
+        n_ctx=8192,
+        n_batch=512,
+        max_concurrent=3,
         routing_category="general",
         dockerfile="llama-server",
     ),

@@ -52,7 +52,7 @@
       "priority": 3,
       "context_length": 8192,
       "owned_by": "liquidai",
-      "description": "Hybrid MoE, 8.3B total / 1.5B active, 128K context — largest model in the arena",
+      "description": "Hybrid MoE, 8.3B total / 1.5B active, 128K context \u2014 largest model in the arena",
       "routing_category": "general"
     },
     {
@@ -85,7 +85,7 @@
       "priority": 4,
       "context_length": 8192,
       "owned_by": "google",
-      "description": "Gemma 4 unified 12B, 256K context, Apache 2.0 — largest dense model in the arena",
+      "description": "Gemma 4 unified 12B, 256K context, Apache 2.0 \u2014 largest dense model in the arena",
       "routing_category": "general"
     },
     {
@@ -118,7 +118,18 @@
       "priority": 6,
       "context_length": 8192,
       "owned_by": "liquidai",
-      "description": "255 tok/s on Jetson, 33ms TTFT, 229MB — fastest model in the arena",
+      "description": "255 tok/s on Jetson, 33ms TTFT, 229MB \u2014 fastest model in the arena",
+      "routing_category": "general"
+    },
+    {
+      "id": "lfm2.5-vl-1.6b-extract",
+      "key": "lfm2vl",
+      "name": "LFM2.5 VL 1.6B Extract",
+      "type": "self-hosted",
+      "priority": 6,
+      "context_length": 8192,
+      "owned_by": "liquidai",
+      "description": "Vision model \u2014 image + field list \u2192 structured JSON. In-car, document scan, inspection",
       "routing_category": "general"
     },
     {
@@ -129,7 +140,18 @@
       "priority": 7,
       "context_length": 8192,
       "owned_by": "liquidai",
-      "description": "LFM2 350M fine-tuned on StepGame spatial reasoning (16% → 70% accuracy)",
+      "description": "LFM2 350M fine-tuned on StepGame spatial reasoning (16% \u2192 70% accuracy)",
+      "routing_category": "general"
+    },
+    {
+      "id": "lfm2.5-vl-450m-extract",
+      "key": "lfm2vlmini",
+      "name": "LFM2.5 VL 450M Extract",
+      "type": "self-hosted",
+      "priority": 7,
+      "context_length": 8192,
+      "owned_by": "liquidai",
+      "description": "450M vision model \u2014 image + field list \u2192 structured JSON, edge-tier extraction",
       "routing_category": "general"
     },
     {
@@ -151,7 +173,7 @@
       "priority": 8,
       "context_length": 8192,
       "owned_by": "signal38",
-      "description": "LFM2 350M fine-tuned on GDELT NK military events — geopolitical risk analyst",
+      "description": "LFM2 350M fine-tuned on GDELT NK military events \u2014 geopolitical risk analyst",
       "routing_category": "general"
     },
     {
@@ -750,6 +772,6 @@
       ]
     }
   ],
-  "fetchedAt": "2026-06-05T17:47:25.058Z",
+  "fetchedAt": "2026-06-05T18:21:42.755Z",
   "source": "build-time"
 }

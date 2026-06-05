@@ -39,7 +39,9 @@ Self-hosted LLM inference with **GitHub Actions as the compute**. Each model run
 | 5 | **LFM2.5 1.2B Thinking** | small | Thinking variant of LFM2.5, hybrid architecture with reasoning traces |
 | 5 | **Gemma 3n E4B** | medium | MatFormer: 8B params, 4B memory footprint, LMArena 1300+ (first sub-10B) |
 | 6 | **LFM2.5 350M** | small | 255 tok/s on Jetson, 33ms TTFT, 229MB — fastest model in the arena |
+| 6 | **LFM2.5 VL 1.6B Extract** | small | Vision model — image + field list → structured JSON. In-car, document scan, inspection |
 | 7 | **LFM2 350M StepGame** | small | LFM2 350M fine-tuned on StepGame spatial reasoning (16% → 70% accuracy) |
+| 7 | **LFM2.5 VL 450M Extract** | small | 450M vision model — image + field list → structured JSON, edge-tier extraction |
 | 7 | **Falcon H1R 7B** | medium | Transformer-Mamba hybrid, AIME 88.1%, LiveCodeBench 68.6%, 256K context |
 | 8 | **LFM2 350M NK Risk** | small | LFM2 350M fine-tuned on GDELT NK military events — geopolitical risk analyst |
 | 8 | **Jan-code 4B** | small | Code-focused 4B model by Jan, 2.72GB Q4_K_M |

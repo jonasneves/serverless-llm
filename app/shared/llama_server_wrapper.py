@@ -35,6 +35,10 @@ class LlamaServerConfig:
     startup_timeout: int = 300
     flash_attn: bool = True
     kv_cache_quant: bool = True
+    # Vision models: multimodal projector. When set, downloaded from mmproj_repo
+    # (defaults to default_repo) and passed to llama-server via --mmproj.
+    mmproj_file: Optional[str] = None
+    mmproj_repo: Optional[str] = None
 
 
 def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
@@ -49,6 +53,8 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
     flash_attn = os.getenv("FLASH_ATTN", "true" if config.flash_attn else "false").lower() in {"1", "true", "yes", "on"}
     hf_token = os.getenv("HF_TOKEN")
     startup_timeout = int(os.getenv("STARTUP_TIMEOUT", str(config.startup_timeout)))
+    mmproj_file = os.getenv("MMPROJ_FILE", config.mmproj_file)
+    mmproj_repo = os.getenv("MMPROJ_REPO", config.mmproj_repo) or model_repo
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -56,7 +62,8 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
         import asyncio
         check_llama_server()
         model_path = await asyncio.to_thread(download_model)
-        llama_process = await asyncio.to_thread(start_llama_server, model_path)
+        mmproj_path = await asyncio.to_thread(download_mmproj) if mmproj_file else None
+        llama_process = await asyncio.to_thread(start_llama_server, model_path, mmproj_path)
         http_client = httpx.AsyncClient(
             base_url=f"http://127.0.0.1:{LLAMA_SERVER_PORT}",
             timeout=300.0,
@@ -114,6 +121,19 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
         logger.info(f"Model downloaded to: {model_path}")
         return model_path
 
+    def download_mmproj() -> str:
+        cache_dir = os.getenv("HF_HOME", "/app/.cache/huggingface")
+
+        logger.info(f"Downloading mmproj: {mmproj_repo}/{mmproj_file}")
+        mmproj_path = hf_hub_download(
+            repo_id=mmproj_repo,
+            filename=mmproj_file,
+            cache_dir=cache_dir,
+            token=hf_token,
+        )
+        logger.info(f"mmproj downloaded to: {mmproj_path}")
+        return mmproj_path
+
     log_path = "/tmp/llama-server.log"
 
     def read_server_log() -> str:
@@ -123,7 +143,7 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
         except Exception:
             return "(log unavailable)"
 
-    def start_llama_server(model_path: str) -> subprocess.Popen:
+    def start_llama_server(model_path: str, mmproj_path: Optional[str] = None) -> subprocess.Popen:
         cmd = [
             "/usr/local/bin/llama-server",
             "--model", model_path,
@@ -135,6 +155,9 @@ def create_llama_server_app(config: LlamaServerConfig) -> FastAPI:
             "--parallel", str(max_concurrent),
             "--cont-batching",
         ]
+
+        if mmproj_path:
+            cmd.extend(["--mmproj", mmproj_path])
 
         if flash_attn:
             cmd.extend(["--flash-attn", "auto"])
@@ -309,5 +332,7 @@ def create_llama_server_app_for_model(model_name: str) -> FastAPI:
         max_concurrent=m.max_concurrent,
         flash_attn=m.flash_attn,
         kv_cache_quant=m.kv_cache_quant,
+        mmproj_file=m.mmproj_file,
+        mmproj_repo=m.mmproj_repo,
     )
     return create_llama_server_app(config)

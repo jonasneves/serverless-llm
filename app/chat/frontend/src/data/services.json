@@ -89,11 +89,27 @@
       "rank": 6
     },
     {
+      "key": "lfm2vl",
+      "name": "LFM2.5 VL 1.6B Extract",
+      "localPort": 8106,
+      "category": "small",
+      "modelId": "lfm2.5-vl-1.6b-extract",
+      "rank": 6
+    },
+    {
       "key": "lfm2spatial",
       "name": "LFM2 350M StepGame",
       "localPort": 8112,
       "category": "small",
       "modelId": "lfm2-350m-stepgame",
+      "rank": 7
+    },
+    {
+      "key": "lfm2vlmini",
+      "name": "LFM2.5 VL 450M Extract",
+      "localPort": 8107,
+      "category": "small",
+      "modelId": "lfm2.5-vl-450m-extract",
       "rank": 7
     },
     {
