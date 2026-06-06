@@ -52,6 +52,9 @@ class ModelConfig:
     # to llama-server via --mmproj, enabling image input. llama-server only.
     mmproj_file: str | None = None
     mmproj_repo: str | None = None
+    # Vision model: hidden from the text chat/compare dock (its surface is the
+    # Extract camera view). Still routed for the server/mmproj path.
+    vision: bool = False
 
     @property
     def env_var(self) -> str:
@@ -189,6 +192,7 @@ MODELS: dict[str, ModelConfig] = {
         max_concurrent=2,
         routing_category="general",
         dockerfile="llama-server",
+        vision=True,
     ),
     "lfm2vlmini": ModelConfig(
         name="lfm2vlmini",
@@ -208,6 +212,7 @@ MODELS: dict[str, ModelConfig] = {
         max_concurrent=3,
         routing_category="general",
         dockerfile="llama-server",
+        vision=True,
     ),
     "phireasoning": ModelConfig(
         name="phireasoning",

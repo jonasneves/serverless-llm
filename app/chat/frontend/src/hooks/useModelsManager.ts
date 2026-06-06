@@ -26,6 +26,7 @@ interface ModelsApiModel {
   context_length?: number;
   default?: boolean;
   routing_category?: string | null;
+  vision?: boolean;
 }
 
 interface ModelsApiResponse {
@@ -73,6 +74,8 @@ export function useModelsManager() {
 
       const apiModels = data.models
         .filter((model) => model.type !== 'external')
+        // Vision models live behind the Extract camera view, not the text dock
+        .filter((model) => !model.vision)
         .map((model) => {
           const modelType: 'self-hosted' | 'github' =
             (model.type === 'github' || model.type === 'api') ? 'github' : 'self-hosted';

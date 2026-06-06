@@ -7,7 +7,9 @@
 // Call shape mirrors the proven catwatcher loop (AutoModelForImageTextToText +
 // AutoProcessor + RawImage). The module + weights load lazily on first use.
 
-const HF_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
+// @4 — the lfm2_vl architecture landed in transformers.js v4; v3 throws
+// "Unsupported model type: lfm2_vl". Matches catwatcher's proven loader.
+const HF_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4';
 
 export type VlModelId = '450m' | '1.6b';
 
