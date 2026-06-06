@@ -74,7 +74,7 @@ interface ChatMessageItemProps {
 }
 
 function getMessageBubbleClasses(role: 'user' | 'assistant', hasError?: boolean): string {
-    const base = 'group relative max-w-[85%] rounded-2xl px-4 py-3';
+    const base = 'group relative max-w-[92%] sm:max-w-[85%] rounded-2xl px-3.5 sm:px-4 py-3';
     if (role === 'user') {
         return `${base} bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-sm`;
     }
@@ -139,7 +139,7 @@ const ChatMessageItem = memo(({ msg, idx, gesturesActive, uiBuilderEnabled, isCo
                         className={`absolute bottom-2 right-2 p-1.5 rounded-md transition-all ${
                             isCopied
                                 ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'opacity-0 group-hover:opacity-100 bg-slate-700/70 text-slate-400'
+                                : 'show-on-touch opacity-0 group-hover:opacity-100 bg-slate-700/70 text-slate-400'
                         }`}
                     >
                         {isCopied ? <Check size={12} /> : <Copy size={12} />}
@@ -511,7 +511,7 @@ const ChatView = forwardRef<ChatViewHandle, ChatViewProps>(({
                         const timing = streamingTiming.get(modelId);
                         return (
                             <div key={modelId} className="flex justify-start">
-                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-4 py-3 bg-slate-800/60 border border-amber-500/30 text-slate-200">
+                                <div className="max-w-[92%] sm:max-w-[85%] rounded-2xl rounded-tl-sm px-3.5 sm:px-4 py-3 bg-slate-800/60 border border-amber-500/30 text-slate-200">
                                     <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
                                         <div className="w-3 h-3 border-2 border-amber-400/50 border-t-amber-400 rounded-full animate-spin" />
                                         {model?.name || modelId}

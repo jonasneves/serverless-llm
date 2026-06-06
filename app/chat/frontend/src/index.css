@@ -242,3 +242,11 @@ aside summary,
   -webkit-user-select: none;
 }
 
+/* Touch devices have no hover state, so hover-revealed controls (e.g. the
+   message copy button) would never appear. Force them visible there. */
+@media (hover: none) and (pointer: coarse) {
+  .show-on-touch {
+    opacity: 1 !important;
+  }
+}
+

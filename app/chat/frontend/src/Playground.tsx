@@ -80,6 +80,9 @@ function PlaygroundInner() {
   const [gridCols, setGridCols] = useState(2);
   const [showSettings, setShowSettings] = useState(false);
   const [showExtract, setShowExtract] = useState(false);
+  // On narrow screens the analyze/debate transcript becomes a slide-in drawer
+  // instead of a fixed side column; this controls its open state.
+  const [showTranscript, setShowTranscript] = useState(false);
   const [githubAuth, setGithubAuth] = usePersistedSetting<GitHubAuth | null>('github_auth', null);
 
   const handleConnectGitHub = useCallback(async () => {
@@ -631,6 +634,7 @@ function PlaygroundInner() {
   const handleModeChange = useCallback((nextMode: Mode) => {
     if (nextMode === mode) return;
     triggerLineTransition();
+    setShowTranscript(false);
 
     // Save current arena mode selection before switching
     const current = persistedByMode[mode as keyof typeof persistedByMode];
@@ -1175,13 +1179,9 @@ function PlaygroundInner() {
         }
       />
 
-      {/* Content Wrapper with Sidebar Offset */}
-      <div
-        style={{
-          paddingLeft: '1.5rem',
-          paddingRight: '0',
-        }}
-      >
+      {/* Content Wrapper with Sidebar Offset (no left gutter on mobile) */}
+      <div className="pl-0 sm:pl-6">
+
         {/* Dock Backdrop */}
         {showDock && (
           <div
@@ -1210,7 +1210,7 @@ function PlaygroundInner() {
 
         {/* Chat View */}
         {mode === 'chat' && (
-          <div className="flex h-screen w-full relative z-[10]">
+          <div className="flex h-[100dvh] w-full relative z-[10]">
             <div className="flex-1 relative px-2 sm:px-6 pt-20 pb-6">
               <ErrorBoundary>
                 <Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 gap-2"><div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Loading...</div>}>
@@ -1242,7 +1242,7 @@ function PlaygroundInner() {
 
         {/* Main Content Area (Arena/Transcript) - Hidden in Chat Mode */}
         {mode !== 'chat' && (
-          <div className="flex h-screen w-full relative">
+          <div className="flex h-[100dvh] w-full relative">
             {/* Left/Main Visualization Area */}
             <div className={`relative flex-1 transition-all duration-300 flex flex-col pt-24`}>
               <div
@@ -1320,30 +1320,69 @@ function PlaygroundInner() {
               </div>
             </div>
 
-            {/* Right Panel: Transcript (Analyze, Debate modes) */}
+            {/* Right Panel: Transcript (Analyze, Debate modes).
+                lg+: fixed side column. Below lg: slide-in drawer toggled by the
+                floating button so the arena gets the full viewport width. */}
             {mode !== 'compare' && (
-              <div className="transcript-panel w-[400px] xl:w-[480px] flex flex-col border-l border-white/5 bg-slate-900/20 backdrop-blur-sm z-40 relative h-full">
-                <Suspense fallback={null}>
-                  <DiscussionTranscript
-                    history={history}
-                    models={modelsData}
-                    mode={mode}
-                    onSelectPrompt={(prompt) => {
-                      if (inputRef.current) {
-                        inputRef.current.value = prompt;
-                        inputRef.current.focus();
-                      }
-                    }}
-                    onNewSession={handleNewSession}
-                    className="pt-24 pb-6 mask-fade-top"
-                    phaseLabel={phaseLabel}
-                    isGenerating={isGenerating}
-                    isSynthesizing={isSynthesizing}
-                    speakingCount={speaking.size}
-                    totalParticipants={selectedModels.length}
+              <>
+                {/* Mobile toggle */}
+                <button
+                  onClick={() => setShowTranscript(true)}
+                  className="lg:hidden fixed bottom-24 right-3 z-[90] flex items-center gap-1.5 px-3 py-2 rounded-full bg-slate-800/90 border border-slate-700/60 text-slate-200 text-xs font-medium backdrop-blur-md shadow-lg active:scale-95 transition-all"
+                  style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+                  aria-label="Show transcript"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  Transcript
+                </button>
+
+                {/* Mobile backdrop */}
+                {showTranscript && (
+                  <div
+                    className="lg:hidden fixed inset-0 z-[105] bg-black/50 backdrop-blur-sm transition-opacity"
+                    onClick={() => setShowTranscript(false)}
                   />
-                </Suspense>
-              </div>
+                )}
+
+                <div
+                  className={`transcript-panel flex flex-col border-l border-white/5 bg-slate-900/95 lg:bg-slate-900/20 backdrop-blur-md lg:backdrop-blur-sm h-full transition-transform duration-300
+                    fixed inset-y-0 right-0 w-full max-w-md z-[110]
+                    ${showTranscript ? 'translate-x-0' : 'translate-x-full'}
+                    lg:static lg:translate-x-0 lg:w-[400px] xl:w-[480px] lg:max-w-none lg:z-40`}
+                >
+                  {/* Mobile close button */}
+                  <button
+                    onClick={() => setShowTranscript(false)}
+                    className="lg:hidden absolute top-4 right-3 z-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors active:scale-95"
+                    aria-label="Close transcript"
+                  >
+                    <span className="text-2xl leading-none">×</span>
+                  </button>
+                  <Suspense fallback={null}>
+                    <DiscussionTranscript
+                      history={history}
+                      models={modelsData}
+                      mode={mode}
+                      onSelectPrompt={(prompt) => {
+                        if (inputRef.current) {
+                          inputRef.current.value = prompt;
+                          inputRef.current.focus();
+                        }
+                        setShowTranscript(false);
+                      }}
+                      onNewSession={handleNewSession}
+                      className="pt-24 pb-6 mask-fade-top"
+                      phaseLabel={phaseLabel}
+                      isGenerating={isGenerating}
+                      isSynthesizing={isSynthesizing}
+                      speakingCount={speaking.size}
+                      totalParticipants={selectedModels.length}
+                    />
+                  </Suspense>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -1429,7 +1468,7 @@ function PlaygroundInner() {
             isGenerating={isGenerating || isSynthesizing}
             onStop={handleStop}
             placeholder={mode === 'compare' ? undefined : "Steer the discussion..."}
-            className={`fixed bottom-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300 ${mode === 'compare' ? 'right-0' : 'right-[400px] xl:right-[480px]'}`}
+            className={`fixed bottom-0 left-0 z-[100] pb-6 px-3 sm:px-4 flex justify-center items-end pointer-events-none transition-all duration-300 ${mode === 'compare' ? 'right-0' : 'right-0 lg:right-[400px] xl:right-[480px]'}`}
             style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           />
         )
