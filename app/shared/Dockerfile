@@ -1,13 +1,11 @@
 # =============================================================================
-# llama-server Inference Dockerfile
+# Inference Dockerfile
 # =============================================================================
 # Builds llama.cpp from source and runs models via the native llama-server
-# binary. Used by models whose architecture requires a newer llama.cpp than
-# llama-cpp-python packages (lfm2, lfm2mini, lfm2thinking, qwen, jancode,
-# falcon).
+# binary. Shared by every model — MODEL_NAME (config/models.py key) is set at
+# runtime, not baked into the image.
 #
 # Build args:
-#   MODEL_NAME   - Model name from config/models.py (e.g., "lfm2", "qwen")
 #   LLAMA_COMMIT - llama.cpp git tag/SHA to pin (invalidates clone layer cache)
 # =============================================================================
 
@@ -76,7 +74,7 @@ RUN useradd -m -u 10000 appuser
 
 WORKDIR /app
 
-COPY app/shared/requirements-llama-server.txt requirements.txt
+COPY app/shared/requirements.txt requirements.txt
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY --chown=appuser:appuser app/shared/ ./shared/
@@ -95,4 +93,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["python3", "shared/llama_inference_server.py"]
+CMD ["python3", "shared/inference_server.py"]
