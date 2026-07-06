@@ -4,7 +4,7 @@
 
 ```
 GitHub Actions runner
-  └── Docker: inference server (llama-cpp-python or llama-server)
+  └── Docker: inference server (native llama-server binary)
         └── cloudflared quick tunnel → <random>.trycloudflare.com
               └── registered in tunnel-registry Worker
 
@@ -24,15 +24,15 @@ GitHub Pages (static frontend)
 │   ├── inference.yml                          # Dispatch: reads config, calls reusable workflow
 │   ├── reusable-inference-containerized.yml   # Core: pull image, run server, start tunnel, monitor
 │   ├── build-push-images.yml                  # Build and push Docker images to GHCR
+│   ├── verify-generated.yml                   # CI: regenerate derivatives, fail on drift from config/models.py
 │   └── deploy.yml                             # Deploy frontend to GitHub Pages
 ├── app/
-│   ├── shared/                                # Dockerfiles + shared entry points (read MODEL_NAME)
+│   ├── shared/                                # Dockerfile + shared entry point (reads MODEL_NAME)
 │   ├── tunnel-registry/                       # Cloudflare Worker: active tunnel URL registry
 │   └── chat/frontend/                         # Vite + React frontend
 ├── config/
 │   └── models.py                              # Single source of truth: ports, HF repos, inference settings
 └── scripts/
-    ├── sync_worker_config.py                  # Regenerate Worker ROUTE_MAP from models.py
     ├── sync_workflow_choices.py               # Regenerate inference.yml model choices from models.py
     ├── sync_readme_models.py                  # Regenerate README model table from models.py
     └── update_github_models.py                # Refresh GitHub Models catalog
@@ -73,16 +73,7 @@ Streaming is supported — set `"stream": true`. If a model is offline the respo
 
 ### Auto-routing
 
-`"model": "auto"` classifies the prompt and routes to the best available model:
-
-| Category | Preferred models |
-|---|---|
-| `coding` | jancode |
-| `reasoning` | nanbeige, phireasoning, falcon, qwenclaude27b |
-| `function_calling` | smollm3, gptoss, rnj |
-| `general` | qwen, qwen7b, lfm2 |
-
-Falls back to any available model if routing fails.
+`"model": "auto"` picks the best online model by rank, preferring non-reasoning models (reasoning models are slower and emit thinking traces). Each model self-reports its `rank` and `reasoning` flag at tunnel registration, so there is no separate routing table to keep in sync.
 
 ### Python
 
@@ -103,5 +94,3 @@ print(response.choices[0].message.content)
 ### Per-model tunnel API
 
 Each inference server also exposes its own OpenAI-compatible API directly at its tunnel URL. Tunnel URLs are ephemeral — fetch the current URL from `GET /tunnel/{model}` first.
-
-Add `"include_perf": true` to get queue/compute timing in the response.

@@ -9,7 +9,7 @@
       "context_length": 2048,
       "owned_by": "nanbeige",
       "description": "AIME 90.4%, GPQA 82.2%, outperforms Qwen3-32B on reasoning",
-      "routing_category": "reasoning",
+      "reasoning": true,
       "vision": false
     },
     {
@@ -21,7 +21,7 @@
       "context_length": 4096,
       "owned_by": "qwen",
       "description": "Multilingual (201 langs), 256K context, thinking mode, Apache 2.0",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -33,7 +33,7 @@
       "context_length": 8192,
       "owned_by": "jackrong",
       "description": "27B reasoning distilled from Claude 4.6 Opus, preserved thinking mode, strong agentic capabilities",
-      "routing_category": "reasoning",
+      "reasoning": true,
       "vision": false
     },
     {
@@ -45,7 +45,7 @@
       "context_length": 4096,
       "owned_by": "huggingfacetb",
       "description": "Hybrid reasoning (36.7% AIME), tool-calling (92.3% BFCL), 64K context",
-      "routing_category": "function_calling",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -57,7 +57,7 @@
       "context_length": 8192,
       "owned_by": "liquidai",
       "description": "Hybrid MoE, 8.3B total / 1.5B active, 128K context — largest model in the arena",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -69,7 +69,7 @@
       "context_length": 4096,
       "owned_by": "liquidai",
       "description": "Hybrid LFM2 model, 8 languages, edge-optimized with RL tuning",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -81,7 +81,7 @@
       "context_length": 8192,
       "owned_by": "microsoft",
       "description": "3.8B matching o1-mini on math, outperforms R1-distill-7B, 128K context",
-      "routing_category": "reasoning",
+      "reasoning": true,
       "vision": false
     },
     {
@@ -93,7 +93,7 @@
       "context_length": 8192,
       "owned_by": "google",
       "description": "Gemma 4 unified 12B, 256K context, Apache 2.0 — largest dense model in the arena",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -105,7 +105,7 @@
       "context_length": 4096,
       "owned_by": "liquidai",
       "description": "Thinking variant of LFM2.5, hybrid architecture with reasoning traces",
-      "routing_category": "reasoning",
+      "reasoning": true,
       "vision": false
     },
     {
@@ -117,7 +117,7 @@
       "context_length": 8192,
       "owned_by": "google",
       "description": "MatFormer: 8B params, 4B memory footprint, LMArena 1300+ (first sub-10B)",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -129,7 +129,7 @@
       "context_length": 8192,
       "owned_by": "liquidai",
       "description": "255 tok/s on Jetson, 33ms TTFT, 229MB — fastest model in the arena",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -141,7 +141,7 @@
       "context_length": 8192,
       "owned_by": "liquidai",
       "description": "Vision model — image + field list → structured JSON. In-car, document scan, inspection",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": true
     },
     {
@@ -153,7 +153,7 @@
       "context_length": 8192,
       "owned_by": "liquidai",
       "description": "LFM2 350M fine-tuned on StepGame spatial reasoning (16% → 70% accuracy)",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -165,7 +165,7 @@
       "context_length": 8192,
       "owned_by": "liquidai",
       "description": "450M vision model — image + field list → structured JSON, edge-tier extraction",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": true
     },
     {
@@ -177,7 +177,7 @@
       "context_length": 4096,
       "owned_by": "tii",
       "description": "Transformer-Mamba hybrid, AIME 88.1%, LiveCodeBench 68.6%, 256K context",
-      "routing_category": "reasoning",
+      "reasoning": true,
       "vision": false
     },
     {
@@ -189,7 +189,7 @@
       "context_length": 8192,
       "owned_by": "signal38",
       "description": "LFM2 350M fine-tuned on GDELT NK military events — geopolitical risk analyst",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -201,7 +201,7 @@
       "context_length": 4096,
       "owned_by": "janhq",
       "description": "Code-focused 4B model by Jan, 2.72GB Q4_K_M",
-      "routing_category": "coding",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -213,7 +213,7 @@
       "context_length": 4096,
       "owned_by": "qwen",
       "description": "Multilingual (201 langs), 256K context, thinking mode, Apache 2.0",
-      "routing_category": "general",
+      "reasoning": false,
       "vision": false
     },
     {
@@ -225,7 +225,7 @@
       "context_length": 4096,
       "owned_by": "openai",
       "description": "MoE (21B params / 3.6B active), function calling, agentic operations",
-      "routing_category": "function_calling",
+      "reasoning": false,
       "vision": false
     },
     {

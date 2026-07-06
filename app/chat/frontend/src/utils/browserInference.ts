@@ -1,10 +1,10 @@
-// In-browser inference fallback using @huggingface/transformers@3 (CDN).
+// In-browser inference fallback using @huggingface/transformers@4 (CDN).
 // Loaded lazily — only when the corresponding server endpoint is offline.
 //
 // Usage pattern: server-side endpoint resolves to null → streamBrowser() takes over.
 // The pipeline is cached across calls; the first invocation downloads the ONNX weights (~230 MB).
 
-const HF_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
+const HF_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4';
 
 // model.id → HuggingFace Hub repo ID
 const BROWSER_MODELS: Record<string, string> = {

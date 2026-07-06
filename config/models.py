@@ -3,7 +3,7 @@ Centralized model configuration for lm-arena.
 
 This is the SINGLE SOURCE OF TRUTH for:
 - Port mappings
-- Model metadata  
+- Model metadata
 - Subdomain configuration
 - Model IDs and display names
 
@@ -18,6 +18,7 @@ from enum import Enum
 
 class ModelCategory(Enum):
     """Model category for port allocation and grouping."""
+
     SMALL = "small"
     MEDIUM = "medium"
     REASONING = "reasoning"
@@ -26,6 +27,7 @@ class ModelCategory(Enum):
 @dataclass
 class ModelConfig:
     """Configuration for a single model."""
+
     name: str
     port: int
     category: ModelCategory
@@ -43,10 +45,9 @@ class ModelConfig:
     max_concurrent: int = 2
     kv_cache_quant: bool = True
     flash_attn: bool = True
-    # Routing category for auto-routing (general/coding/reasoning/function_calling)
-    routing_category: str | None = None
-    # Dockerfile variant: "inference" (llama-cpp-python) or "llama-server" (builds from source)
-    dockerfile: str = "inference"
+    # Reasoning/thinking model: excluded from the gateway's "auto" pick (slow,
+    # emits thinking traces) and flagged in the frontend for trace rendering.
+    reasoning: bool = False
     # Optional multimodal projector (mmproj GGUF) for vision models. When set, it is
     # downloaded alongside hf_file (from mmproj_repo, defaulting to hf_repo) and passed
     # to llama-server via --mmproj, enabling image input. llama-server only.
@@ -85,8 +86,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/Qwen3.5-4B-GGUF",
         hf_file="Qwen3.5-4B-Q4_K_M.gguf",
         owned_by="qwen",
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     "smollm3": ModelConfig(
         name="smollm3",
@@ -102,7 +101,6 @@ MODELS: dict[str, ModelConfig] = {
         owned_by="huggingfacetb",
         n_batch=512,
         max_concurrent=3,
-        routing_category="function_calling",
     ),
     "lfm2": ModelConfig(
         name="lfm2",
@@ -117,8 +115,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
         hf_file="LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
         owned_by="liquidai",
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     "lfm2mini": ModelConfig(
         name="lfm2mini",
@@ -135,8 +131,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=4,
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     "lfm2nk": ModelConfig(
         name="lfm2nk",
@@ -153,8 +147,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=4,
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     "lfm2spatial": ModelConfig(
         name="lfm2spatial",
@@ -171,8 +163,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=4,
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     "lfm2vl": ModelConfig(
         name="lfm2vl",
@@ -190,8 +180,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=2,
-        routing_category="general",
-        dockerfile="llama-server",
         vision=True,
     ),
     "lfm2vlmini": ModelConfig(
@@ -210,8 +198,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=3,
-        routing_category="general",
-        dockerfile="llama-server",
         vision=True,
     ),
     "phireasoning": ModelConfig(
@@ -229,7 +215,7 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=3,
-        routing_category="reasoning",
+        reasoning=True,
     ),
     "lfm2thinking": ModelConfig(
         name="lfm2thinking",
@@ -245,8 +231,7 @@ MODELS: dict[str, ModelConfig] = {
         owned_by="liquidai",
         kv_cache_quant=False,
         flash_attn=False,
-        routing_category="reasoning",
-        dockerfile="llama-server",
+        reasoning=True,
     ),
     "jancode": ModelConfig(
         name="jancode",
@@ -262,10 +247,7 @@ MODELS: dict[str, ModelConfig] = {
         owned_by="janhq",
         n_batch=512,
         max_concurrent=3,
-        routing_category="coding",
-        dockerfile="llama-server",
     ),
-
     # Medium models (7B-30B params)
     "qwen7b": ModelConfig(
         name="qwen7b",
@@ -279,8 +261,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/Qwen3.5-9B-GGUF",
         hf_file="Qwen3.5-9B-Q4_K_M.gguf",
         owned_by="qwen",
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     "qwenclaude27b": ModelConfig(
         name="qwenclaude27b",
@@ -296,8 +276,7 @@ MODELS: dict[str, ModelConfig] = {
         owned_by="jackrong",
         n_ctx=8192,
         max_concurrent=1,
-        routing_category="reasoning",
-        dockerfile="llama-server",
+        reasoning=True,
     ),
     "falcon": ModelConfig(
         name="falcon",
@@ -311,8 +290,7 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/Falcon-H1R-7B-GGUF",
         hf_file="Falcon-H1R-7B-Q4_K_M.gguf",
         owned_by="tii",
-        routing_category="reasoning",
-        dockerfile="llama-server",
+        reasoning=True,
     ),
     "gemma3n": ModelConfig(
         name="gemma3n",
@@ -329,7 +307,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=256,
         max_concurrent=2,
-        routing_category="general",
     ),
     "gemma4": ModelConfig(
         name="gemma4",
@@ -346,8 +323,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=256,
         max_concurrent=1,
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     "lfm2moe": ModelConfig(
         name="lfm2moe",
@@ -364,8 +339,6 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=8192,
         n_batch=512,
         max_concurrent=2,
-        routing_category="general",
-        dockerfile="llama-server",
     ),
     # Reasoning models
     "nanbeige": ModelConfig(
@@ -383,7 +356,7 @@ MODELS: dict[str, ModelConfig] = {
         n_ctx=2048,
         n_batch=512,
         max_concurrent=4,
-        routing_category="reasoning",
+        reasoning=True,
     ),
     "gptoss": ModelConfig(
         name="gptoss",
@@ -397,7 +370,6 @@ MODELS: dict[str, ModelConfig] = {
         hf_repo="unsloth/gpt-oss-20b-GGUF",
         hf_file="gpt-oss-20b-Q6_K.gguf",
         owned_by="openai",
-        routing_category="function_calling",
     ),
 }
 
@@ -405,6 +377,7 @@ MODELS: dict[str, ModelConfig] = {
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def get_model(name: str) -> ModelConfig:
     """Get model config by name."""
@@ -425,7 +398,6 @@ def get_default_model() -> ModelConfig:
         if m.default:
             return m
     return get_inference_models()[0]
-
 
 
 if __name__ == "__main__":
@@ -472,15 +444,6 @@ if __name__ == "__main__":
             print("\n".join(rows))
             sys.exit(0)
 
-        if arg == "--route-map":
-            from collections import defaultdict
-            route_map: dict[str, list[str]] = defaultdict(list)
-            for m in get_inference_models():
-                if m.routing_category:
-                    route_map[m.routing_category].append(m.name)
-            print(json.dumps(dict(route_map), indent=2))
-            sys.exit(0)
-
         # CLI mode: python config/models.py <model_name> [field]
         model_name = arg
         try:
@@ -496,19 +459,24 @@ if __name__ == "__main__":
                     sys.exit(1)
             else:
                 # Output all config as JSON for workflow parsing
-                print(json.dumps({
-                    "model_name": m.name,
-                    "model_dir": m.inference_dir,
-                    "model_repo": m.hf_repo,
-                    "model_file": m.hf_file,
-                    "display_name": m.display_name,
-                    "n_ctx": m.n_ctx,
-                    "n_batch": m.n_batch,
-                    "max_concurrent": m.max_concurrent,
-                    "kv_cache_quant": m.kv_cache_quant,
-                    "flash_attn": m.flash_attn,
-                    "dockerfile": m.dockerfile,
-                }))
+                print(
+                    json.dumps(
+                        {
+                            "model_name": m.name,
+                            "model_dir": m.inference_dir,
+                            "model_repo": m.hf_repo,
+                            "model_file": m.hf_file,
+                            "display_name": m.display_name,
+                            "n_ctx": m.n_ctx,
+                            "n_batch": m.n_batch,
+                            "max_concurrent": m.max_concurrent,
+                            "kv_cache_quant": m.kv_cache_quant,
+                            "flash_attn": m.flash_attn,
+                            "rank": m.rank,
+                            "reasoning": m.reasoning,
+                        }
+                    )
+                )
         except KeyError as e:
             print(str(e), file=sys.stderr)
             sys.exit(1)

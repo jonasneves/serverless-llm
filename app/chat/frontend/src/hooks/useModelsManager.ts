@@ -25,7 +25,7 @@ interface ModelsApiModel {
   priority?: number;
   context_length?: number;
   default?: boolean;
-  routing_category?: string | null;
+  reasoning?: boolean;
   vision?: boolean;
 }
 
@@ -88,7 +88,7 @@ export function useModelsManager() {
             priority: model.priority,
             context_length: model.context_length,
             default: model.default,
-            routing_category: model.routing_category,
+            reasoning: model.reasoning,
           };
         });
 

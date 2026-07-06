@@ -61,6 +61,8 @@ runs:
         MAX_CONCURRENT=$(echo "$CONFIG" | jq -r '.max_concurrent')
         KV_CACHE_QUANT=$(echo "$CONFIG" | jq -r 'if .kv_cache_quant then "true" else "false" end')
         FLASH_ATTN=$(echo "$CONFIG" | jq -r 'if .flash_attn then "true" else "false" end')
+        RANK=$(echo "$CONFIG" | jq -r '.rank')
+        REASONING=$(echo "$CONFIG" | jq -r 'if .reasoning then "true" else "false" end')
 
         echo "model_dir=$MODEL_DIR" >> $GITHUB_OUTPUT
         echo "model_repo=$MODEL_REPO" >> $GITHUB_OUTPUT
@@ -70,6 +72,8 @@ runs:
         echo "max_concurrent=$MAX_CONCURRENT" >> $GITHUB_OUTPUT
         echo "kv_cache_quant=$KV_CACHE_QUANT" >> $GITHUB_OUTPUT
         echo "flash_attn=$FLASH_ATTN" >> $GITHUB_OUTPUT
+        echo "rank=$RANK" >> $GITHUB_OUTPUT
+        echo "reasoning=$REASONING" >> $GITHUB_OUTPUT
 
         echo "✓ Config for $MODEL: dir=$MODEL_DIR, n_ctx=$N_CTX, n_batch=$N_BATCH, max_concurrent=$MAX_CONCURRENT, kv_cache_quant=$KV_CACHE_QUANT, flash_attn=$FLASH_ATTN"
 
@@ -210,7 +214,7 @@ runs:
         curl -fsSL -X PUT \
           -H "Authorization: Bearer $TUNNEL_WRITE_KEY" \
           -H "Content-Type: application/json" \
-          -d "{\"url\": \"$TUNNEL_URL\", \"runner_account\": \"${{ github.repository_owner }}\"}" \
+          -d "{\"url\": \"$TUNNEL_URL\", \"runner_account\": \"${{ github.repository_owner }}\", \"rank\": ${{ steps.config.outputs.rank }}, \"reasoning\": ${{ steps.config.outputs.reasoning }}}" \
           "https://tunnel-registry.jonasneves.workers.dev/tunnel/${{ inputs.model_name }}"
         echo "✓ Registered tunnel for ${{ inputs.model_name }}"
 
@@ -263,7 +267,7 @@ runs:
           curl -fsSL -X PUT \
             -H "Authorization: Bearer $TUNNEL_WRITE_KEY" \
             -H "Content-Type: application/json" \
-            -d "{\"url\": \"$url\", \"runner_account\": \"${{ github.repository_owner }}\"}" \
+            -d "{\"url\": \"$url\", \"runner_account\": \"${{ github.repository_owner }}\", \"rank\": ${{ steps.config.outputs.rank }}, \"reasoning\": ${{ steps.config.outputs.reasoning }}}" \
             "$REGISTRY/tunnel/$MODEL_NAME" > /dev/null || true
           echo "✓ Re-registered tunnel: $url"
         }

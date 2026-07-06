@@ -21,7 +21,7 @@ Self-hosted LLM inference with **GitHub Actions as the compute**. Each model run
 
 - **No idle cost** — compute is ephemeral Actions minutes, alive only during a run; nothing to keep warm.
 - **No infra to own** — Pages serves the static app, a Worker holds the registry, Cloudflare opens the tunnel. There is no backend to deploy.
-- **One source of truth** — [`config/models.py`](config/models.py) defines every model (ports, HF repo, quant, context, routing). The frontend's `services.json`, the Worker's `ROUTE_MAP`, the workflow's model choices, and the table below are all *generated* from it.
+- **One source of truth** — [`config/models.py`](config/models.py) defines every model (ports, HF repo, quant, context, rank). The frontend's `services.json`, the workflow's model choices, and the table below are all *generated* from it.
 
 ## Models
 
@@ -49,7 +49,7 @@ Self-hosted LLM inference with **GitHub Actions as the compute**. Each model run
 | 13 | **GPT-OSS 20B** | reasoning | MoE (21B params / 3.6B active), function calling, agentic operations |
 <!-- END MODELS -->
 
-Live latency / throughput → [benchmarks.html](https://lm-arena.github.io/benchmarks.html). Per-model architecture notes → [`docs/models/`](docs/models/).
+Live latency / throughput → [benchmarks.html](https://lm-arena.github.io/benchmarks.html). Architecture notes for select models (growing set) → [`docs/models/`](docs/models/).
 
 ## Run it
 
@@ -63,7 +63,7 @@ Launch / manage the whole fleet from the browser: open `app/chat/frontend/public
 
 ## Internals
 
-[`config/models.py`](config/models.py) is the single source of truth. Add a model = add one `ModelConfig`, then regenerate the derivatives — `make build` (services.json), `make sync-worker-config` (Worker `ROUTE_MAP`), `make sync-workflow-choices` (inference.yml), `make sync-readme` (this table). The CI build matrix reads the config directly, so new models are picked up automatically.
+[`config/models.py`](config/models.py) is the single source of truth. Add a model = add one `ModelConfig`, then regenerate the derivatives — `make build` (services.json), `make sync-workflow-choices` (inference.yml), `make sync-readme` (this table). The CI build matrix reads the config directly, so new models are picked up automatically.
 
 Deep architecture (workflows, data flow, layout) → [`docs/architecture.md`](docs/architecture.md). AI build-context → [`CLAUDE.md`](CLAUDE.md).
 

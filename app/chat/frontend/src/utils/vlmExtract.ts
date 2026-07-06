@@ -1,4 +1,4 @@
-// In-browser vision extraction using @huggingface/transformers@3 (CDN, WebGPU).
+// In-browser vision extraction using @huggingface/transformers@4 (CDN, WebGPU).
 // Runs an LFM2.5-VL ONNX model entirely client-side: capture a video frame, prompt
 // the model with a field list, get back parsed JSON. No inference server needed —
 // works on the static Pages deploy. The Extract fine-tune ships only as GGUF (server

@@ -34,7 +34,7 @@ def build_self_hosted():
             "context_length": m.n_ctx,
             "owned_by": m.owned_by,
             "description": m.description,
-            "routing_category": m.routing_category,
+            "reasoning": m.reasoning,
             "vision": m.vision,
         }
         for m in get_inference_models()

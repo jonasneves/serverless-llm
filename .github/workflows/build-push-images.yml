@@ -120,31 +120,12 @@ jobs:
           # b8909 (2026-04-24): first build past the full gemma4 arch/tokenizer/template fixes
           LLAMA_COMMIT="b8909"
           MODEL="${{ matrix.model }}"
-          # Derive short model name from inference_dir (e.g. "lfm2-inference" -> "lfm2")
-          MODEL_NAME=$(echo "$MODEL" | sed 's/-inference$//')
-          CONFIG=$(python3 config/models.py "$MODEL_NAME" 2>/dev/null || echo '{}')
-          DOCKERFILE_TYPE=$(echo "$CONFIG" | jq -r '.dockerfile // "inference"')
+          DOCKERFILE="./app/shared/Dockerfile"
+          HASH=$(sha256sum "$DOCKERFILE" | cut -c1-8)
 
-          if [ "$DOCKERFILE_TYPE" = "llama-server" ]; then
-            DOCKERFILE="./app/shared/Dockerfile.llama-server"
-            CONTEXT="."
-            # Only LLAMA_COMMIT is a build arg; MODEL_NAME is set at runtime
-            echo "build_args=LLAMA_COMMIT=$LLAMA_COMMIT" >> $GITHUB_OUTPUT
-          else
-            DOCKERFILE="./app/shared/Dockerfile.inference"
-            CONTEXT="."
-            # Dockerfile.inference uses MODEL_NAME at runtime (env var), not a build arg
-            echo "build_args=" >> $GITHUB_OUTPUT
-          fi
-
-          if [ -f "$DOCKERFILE" ]; then
-            HASH=$(sha256sum "$DOCKERFILE" | cut -c1-8)
-          else
-            HASH="missing"
-          fi
-
+          echo "build_args=LLAMA_COMMIT=$LLAMA_COMMIT" >> $GITHUB_OUTPUT
           echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
-          echo "context=$CONTEXT" >> $GITHUB_OUTPUT
+          echo "context=." >> $GITHUB_OUTPUT
           echo "scope=$MODEL-$HASH" >> $GITHUB_OUTPUT
           echo "Using Dockerfile: $DOCKERFILE (scope: $MODEL-$HASH)"
 

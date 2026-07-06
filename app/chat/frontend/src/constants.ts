@@ -3,9 +3,9 @@ import { BackgroundStyle, Mode, Model, TopicPack, TopicPrompt, TrendingTopic } f
 export const SELF_HOSTED_DEFAULT_PRIORITY = 50;
 export const GITHUB_DEFAULT_PRIORITY = 100;
 
-// Derived at runtime from models.json routing_category field — no manual sync needed
+// Derived at runtime from models.json reasoning field — no manual sync needed
 export function isThinkingModel(modelId: string, models: Model[]): boolean {
-  return models.find(m => m.id === modelId)?.routing_category === 'reasoning';
+  return !!models.find(m => m.id === modelId)?.reasoning;
 }
 
 export function getModelPriority(modelId: string, modelType: 'self-hosted' | 'github', dynamicPriority?: number): number {

@@ -1,0 +1,52 @@
+name: Verify generated files
+
+# config/models.py is the single source of truth; several files are generated
+# from it (README table, inference.yml choices, services.json, models.json).
+# Regenerate them all and fail if anything drifts from what's committed —
+# catches any hand-edited derivative or a config change whose derivative sync
+# was forgotten, for every current and future generator at once.
+
+on:
+  pull_request:
+    paths:
+      - 'config/models.py'
+      - 'scripts/**'
+      - 'README.md'
+      - '.github/workflows/inference.yml'
+      - 'app/chat/frontend/public/models.json'
+      - 'app/chat/frontend/src/data/services.json'
+  push:
+    branches: [main]
+    paths:
+      - 'config/models.py'
+      - 'scripts/**'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Regenerate derivatives
+        run: |
+          python3 scripts/sync_workflow_choices.py
+          python3 scripts/sync_readme_models.py
+          python3 scripts/generate_models_json.py > /dev/null
+          python3 config/models.py --services-json > app/chat/frontend/src/data/services.json
+      - name: Fail on drift
+        run: |
+          if ! git diff --exit-code -- \
+            README.md \
+            .github/workflows/inference.yml \
+            app/chat/frontend/public/models.json \
+            app/chat/frontend/src/data/services.json
+          then
+            echo ""
+            echo "Generated files are out of date with config/models.py."
+            echo "Run: make sync-workflow-choices sync-readme && python3 scripts/generate_models_json.py && python3 config/models.py --services-json > app/chat/frontend/src/data/services.json"
+            exit 1
+          fi

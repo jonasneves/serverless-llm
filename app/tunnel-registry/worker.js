@@ -2,17 +2,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS, POST',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Expose-Headers': 'X-Routed-Model, X-Route-Category',
-};
-
-// Generated from config/models.py --route-map (models listed in rank order).
-// Regenerate with: make sync-worker-config
-// Must be updated whenever routing_category fields change in config/models.py.
-const ROUTE_MAP = {
-  reasoning:       ['nanbeige', 'qwenclaude27b', 'phireasoning', 'lfm2thinking', 'falcon'],
-  general:         ['qwen', 'lfm2moe', 'lfm2', 'gemma4', 'gemma3n', 'lfm2mini', 'lfm2vl', 'lfm2spatial', 'lfm2vlmini', 'lfm2nk', 'qwen7b'],
-  function_calling:['smollm3', 'gptoss'],
-  coding:          ['jancode'],
+  'Access-Control-Expose-Headers': 'X-Routed-Model',
 };
 
 function jsonResponse(data, status = 200) {
@@ -41,14 +31,22 @@ async function isGitHubAdmin(token) {
   }
 }
 
-// Supports both legacy plain-URL strings and new JSON format { url, runner_account }
+// Supports both legacy plain-URL strings and the JSON format
+// { url, runner_account, rank, reasoning } — rank/reasoning are self-described
+// by each model at registration time (from config/models.py) and drive the
+// "auto" pick, so there is no routing table to keep in sync here.
 function parseTunnelValue(raw) {
   if (!raw) return null;
   try {
     const obj = JSON.parse(raw);
-    return { url: obj.url, runner_account: obj.runner_account || null };
+    return {
+      url: obj.url,
+      runner_account: obj.runner_account || null,
+      rank: Number.isFinite(obj.rank) ? obj.rank : 99,
+      reasoning: !!obj.reasoning,
+    };
   } catch {
-    return { url: raw, runner_account: null };
+    return { url: raw, runner_account: null, rank: 99, reasoning: false };
   }
 }
 
@@ -75,9 +73,14 @@ async function handleTunnelGet(env, model) {
 
 async function handleTunnelPut(request, env, model) {
   if (!isAuthorized(request, env)) return jsonResponse({ error: 'unauthorized' }, 401);
-  const { url, runner_account } = await request.json();
+  const { url, runner_account, rank, reasoning } = await request.json();
   if (!url?.startsWith('https://')) return jsonResponse({ error: 'invalid url' }, 400);
-  const value = JSON.stringify({ url, runner_account: runner_account || null });
+  const value = JSON.stringify({
+    url,
+    runner_account: runner_account || null,
+    rank: Number.isFinite(rank) ? rank : 99,
+    reasoning: !!reasoning,
+  });
   // Fresh registration clears any pending signal
   await Promise.all([
     env.TUNNELS_KV.put(`tunnel:${model}`, value, { expirationTtl: 21600 }),
@@ -141,7 +144,7 @@ async function handleSignalPut(request, env, model) {
   return jsonResponse({ ok: true, model, signal });
 }
 
-// ── Feature 1: OpenAI-compatible API Gateway ────────────────────────────────
+// ── OpenAI-compatible API Gateway ─────────────────────────────────────────
 
 async function handleModelsGet(env) {
   const list = await env.TUNNELS_KV.list({ prefix: 'tunnel:' });
@@ -155,28 +158,18 @@ async function handleModelsGet(env) {
   return jsonResponse({ object: 'list', data });
 }
 
-// ── Feature 2: Capability routing ───────────────────────────────────────────
-
-// Returns { model_key: url } for all online models
-async function getAvailableModels(env) {
-  const list = await env.TUNNELS_KV.list({ prefix: 'tunnel:' });
-  const entries = await Promise.all(list.keys.map(async ({ name }) => {
-    const model = name.slice('tunnel:'.length);
-    const raw = await env.TUNNELS_KV.get(name);
-    const parsed = parseTunnelValue(raw);
-    return parsed?.url ? [model, parsed.url] : null;
-  }));
-  return Object.fromEntries(entries.filter(Boolean));
-}
-
+// "auto": best online model by self-described rank, preferring non-reasoning
+// models (reasoning models are slow and emit thinking traces).
 async function routeAuto(env) {
-  const available = await getAvailableModels(env);
-  const modelKeys = Object.keys(available);
-  if (modelKeys.length === 0) return null;
+  const list = await env.TUNNELS_KV.list({ prefix: 'tunnel:' });
+  const online = (await Promise.all(list.keys.map(async ({ name }) => {
+    const parsed = parseTunnelValue(await env.TUNNELS_KV.get(name));
+    return parsed?.url ? { modelKey: name.slice('tunnel:'.length), ...parsed } : null;
+  }))).filter(Boolean);
+  if (online.length === 0) return null;
 
-  const generalCandidates = ROUTE_MAP.general || [];
-  const fallbackKey = generalCandidates.find(k => available[k]) || modelKeys[0];
-  return { url: available[fallbackKey], modelKey: fallbackKey, category: 'general' };
+  online.sort((a, b) => (a.reasoning - b.reasoning) || (a.rank - b.rank));
+  return online[0];
 }
 
 async function handleChatCompletions(request, env) {
@@ -200,10 +193,7 @@ async function handleChatCompletions(request, env) {
       );
     }
     targetUrl = routed.url;
-    routingHeaders = {
-      'X-Routed-Model': routed.modelKey,
-      'X-Route-Category': routed.category,
-    };
+    routingHeaders = { 'X-Routed-Model': routed.modelKey };
   } else {
     const raw = await env.TUNNELS_KV.get(`tunnel:${model}`);
     const parsed = parseTunnelValue(raw);
@@ -242,7 +232,7 @@ async function handleChatCompletions(request, env) {
   });
 }
 
-// ── Feature 3: Benchmarks ────────────────────────────────────────────────────
+// ── Benchmarks ───────────────────────────────────────────────────────────────
 
 async function handleBenchmarksGet(env) {
   const list = await env.TUNNELS_KV.list({ prefix: 'benchmark:' });
@@ -277,11 +267,11 @@ export default {
     if (pathname === '/health' && method === 'GET') return new Response('ok');
     if (pathname === '/purge' && method === 'POST') return handlePurge(env);
 
-    // Feature 1: OpenAI-compatible API
+    // OpenAI-compatible API
     if (pathname === '/v1/models' && method === 'GET') return handleModelsGet(env);
     if (pathname === '/v1/chat/completions' && method === 'POST') return handleChatCompletions(request, env);
 
-    // Feature 3: Benchmarks
+    // Benchmarks
     if (pathname === '/benchmarks' && method === 'GET') return handleBenchmarksGet(env);
 
     const benchmarkMatch = pathname.match(/^\/benchmark\/([^/]+)$/);

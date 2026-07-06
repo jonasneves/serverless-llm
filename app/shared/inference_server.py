@@ -1,20 +1,24 @@
 """
-Universal GGUF Inference Server Entry Point
+Universal inference server entry point.
 
-Auto-detects model from MODEL_NAME environment variable.
-All standard llama-cpp-python models use this single entry point.
+MODEL_NAME env var selects the model from config/models.py. Shared by every
+model so no per-model entry point file is needed.
 """
-
 import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 import uvicorn
-from inference_base import create_app_for_model
+from shared.llama_server_wrapper import create_llama_server_app_for_model
+from config.models import get_model
 
 MODEL_NAME = os.environ.get("MODEL_NAME")
 if not MODEL_NAME:
-    raise RuntimeError("MODEL_NAME environment variable is required")
+    print("ERROR: MODEL_NAME environment variable is required", file=sys.stderr)
+    sys.exit(1)
 
-app = create_app_for_model(MODEL_NAME)
+m = get_model(MODEL_NAME)
+app = create_llama_server_app_for_model(MODEL_NAME)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", str(m.port))))

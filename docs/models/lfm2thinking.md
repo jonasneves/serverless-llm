@@ -6,7 +6,7 @@ Hybrid architecture from LiquidAI discovered via hardware-in-the-loop search. Pe
 
 - Flash attention disabled (`flash_attn=False`): LiquidAI's design explicitly excludes Flash Attention — the architecture was optimized for CPU inference where short convolutions outperform it. Enabling `--flash-attn` in llama.cpp causes `llama_decode returned -1`.
 - KV cache quantization disabled (`kv_cache_quant=False`): empirically causes `llama_decode returned -1` on this architecture.
-- Runs via llama-server wrapper (llama-cpp-python bindings incompatible with this architecture).
+- Runs via the native llama-server binary (llama-cpp-python bindings are incompatible with this architecture — the reason `flash_attn`/`kv_cache_quant` had to be flagged off here in the first place).
 
 ## Sources
 

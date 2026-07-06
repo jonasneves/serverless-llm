@@ -1,9 +1,0 @@
-# Requirements for llama-server wrapper models (rnj, qwen, lfm2, falcon)
-# These models run llama-server directly instead of llama-cpp-python bindings
-# because their architectures require a newer llama.cpp than llama-cpp-python ships
-
-fastapi>=0.104.1
-uvicorn[standard]>=0.24.0
-huggingface-hub>=0.20.0
-pydantic>=2.0.0
-httpx>=0.25.0
